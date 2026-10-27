@@ -5,8 +5,8 @@
 # It is not a gate and it is not held by `check-tables.sh` the way the ten
 # checks are, because it proves nothing about itself: everything here is also
 # done by the gate, in more shapes and under more builds. What this is for
-# is the loop — a build, the language run, the boundary crossed, a diagnostic
-# said — so that a change that breaks one of those is known about in the second
+# is the loop -- a build, the language run, the boundary crossed, a diagnostic
+# said -- so that a change that breaks one of those is known about in the second
 # after it is made rather than in the minute.
 #
 # ctest runs it as the test `fast`. The whole gate is what "it passes" means.
@@ -134,7 +134,7 @@ fi
 
 # A program that will not stop, stopped. The three memory ceilings are held by
 # `check-ceilings.sh` and this is the fourth: a budget in steps, which is the
-# one an embedding host cannot work around from outside. See D921.
+# one an embedding host cannot work around from outside.
 cat >"$scratch"/spin.kest <<'KEST'
 module spin
 
@@ -164,7 +164,7 @@ fn main() -> i32 {
 KEST
 # And the work an instruction does that is not a step. This one takes four
 # steps and copies four hundred thousand bytes, which is what a budget that
-# only counted steps could not see at all. See D950.
+# only counted steps could not see at all.
 cat >"$scratch"/weighs.kest <<'KEST'
 module weighs
 

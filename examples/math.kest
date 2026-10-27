@@ -3,7 +3,7 @@ module examples.math
 // The first program anybody writes, which is where the shapes a language is
 // made of are easiest to see: a loop that carries a number, a loop that
 // carries two, and a chain of `if` that answers with a piece of text. Nothing
-// here is about the library or the boundary — it is what a function, a
+// here is about the library or the boundary -- it is what a function, a
 // `while` and an `else if` do.
 
 import std.io

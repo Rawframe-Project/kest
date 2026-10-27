@@ -157,7 +157,7 @@ static Spread spread_of(long long *samples, long long count) {
    worst; a distribution needs each one, and the only place each one exists is
    the moment it finishes. A run that cannot keep another keeps the ones it has
    and says how many there were, because a measurement short of samples is
-   worth more than a run that stopped. See D1027. */
+   worth more than a run that stopped. */
 typedef struct {
     KestPause *kept;
     long long count;
@@ -391,10 +391,10 @@ int main(int argc, char **argv) {
     KestRuntime *runtime = host == NULL ? NULL : kest_start(build, host, NULL);
 #ifdef KEST_MEASURE_BUILT
     /* A generated file for this same program is linked beside this one, and
-       binding it is the whole of what a host does with one (D1111). What is
+       binding it is the whole of what a host does with one. What is
        timed below is then the release engine rather than the machine, which
        is the other half of every number this instrument answers. `kest emit
-       --c` writes the file and `bench/tails.sh` builds this. See D1124. */
+       --c` writes the file and `bench/tails.sh` builds this. */
     if (runtime != NULL && !kest_natives_here(runtime)) {
         fprintf(stderr, "measure: this C was written from another program\n");
         kest_build_free(build);
@@ -556,7 +556,7 @@ int main(int argc, char **argv) {
            four times for a millisecond each and a call that pauses once for
            four has the same first row and a different second. The report this
            belongs to used to print only the first and call it a pause
-           distribution. See D1027. */
+           distribution. */
         say_spread("per call", walking);
         printf("%-14s %9.1f%% of the middle call\n", "which is",
                calling.middle == 0

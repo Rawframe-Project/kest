@@ -12,7 +12,7 @@
 // starts, anything else whole -- with the comment written above it. Markdown,
 // or the same as JSON. The words are the file's own and nothing is made up: a
 // declaration nobody wrote a comment above is said with nothing under it.
-// False when there was no room for the file's comments. See D1258.
+// False when there was no room for the file's comments.
 bool kest_doc(const KestUnitInfo *file, KestArena *arena, bool json,
               FILE *out);
 

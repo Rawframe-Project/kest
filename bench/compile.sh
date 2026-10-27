@@ -8,7 +8,7 @@
 # is in the languages that write a copy per type, C++ and Rust compiled to an
 # object as a game's build would. Written to `bench/compile.tsv` for
 # `bench/chart.py`. Not part of the gate, for the reason none of `bench`
-# is. See D1273.
+# is.
 #
 # Where each comparator is, the way `bench/compare.sh` takes them, and
 # `KEST_QJS` for QuickJS's `qjs`, `KEST_CXX` a C++ compiler and `KEST_RUSTC`

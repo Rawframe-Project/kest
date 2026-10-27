@@ -7,10 +7,10 @@ import std.io
 // it cannot: a C `struct { float m[4]; int32_t tag; }` is twenty bytes with
 // the floats inside it, and until there was a way to say "that many" the only
 // Kest struct with the same bytes had four separately named fields nobody
-// could walk (D064).
+// could walk.
 //
 // So it is a value, like a struct: copying one copies all of it, and passing
-// one passes all of it. `[T]` is the other thing — a handle to something that
+// one passes all of it. `[T]` is the other thing -- a handle to something that
 // can grow, shared by every name that holds it.
 
 struct Transform {

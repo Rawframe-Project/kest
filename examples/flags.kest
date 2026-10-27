@@ -4,7 +4,7 @@ import std.io
 
 // Bits, which is what a `u8` of state actually is. A struct with eight `bool`
 // fields is eight slots and eight compares; this is one of each, and it is
-// what a host hands across the boundary anyway (D016: the layout is C's).
+// what a host hands across the boundary anyway (the layout is C's).
 //
 // A `flags` declaration names the set and names each bit. Which bit a name
 // stands for is where it was written, so there are no powers of two to get
@@ -12,8 +12,8 @@ import std.io
 // is refused rather than silently meaning something.
 //
 // `&` binds tighter than `==`, so `state & flag == flag` reads as one thing
-// and means it. That is the one place C is known to be wrong, and D032 says
-// why Kest does not repeat it.
+// and means it. That is the one place C is known to be wrong, and Kest does
+// not repeat it.
 
 flags State: u8 {
     Moving
@@ -25,8 +25,7 @@ flags State: u8 {
 // The width is written rather than counted off the names, because it is what
 // a host sees. Every set in this tree was over a `u8` until this one, so the
 // arithmetic, the walk, the two conversions and the text of a set were held at
-// one width only — and a width is the one thing about a set that a host reads.
-// See D503.
+// one width only -- and a width is the one thing about a set that a host reads.
 flags Wide: u32 {
     First
     Second
@@ -35,8 +34,8 @@ flags Wide: u32 {
 
 // And the two widths between and above them, which a program may declare and
 // nothing here had. What says they are worth having written down is that a set
-// is a kind of its own to a host since D897, one kind per width — so a width
-// nothing declares is a kind nothing has ever laid out.
+// is a kind of its own to a host, one kind per width, so a width nothing
+// declares is a kind nothing has ever laid out.
 flags Middle: u16 {
     Low
     High
@@ -49,7 +48,7 @@ flags Widest: u64 {
 
 // Each of the four is read where it is handed over, which is what makes a
 // width a kind: a set crossing a frame is laid out, and a width nothing hands
-// over is a layout nothing has ever written. See D897.
+// over is a layout nothing has ever written.
 fn middling(m: Middle) -> i32 no.alloc {
     return i32(u16(m))
 }
@@ -92,7 +91,7 @@ fn firstOf(state: State) -> State no.alloc {
 }
 
 // A reference is a generation and an index packed into one number, which is
-// how the runtime's own `ref<T>` is built (D014). The language can say it.
+// how the runtime's own `ref<T>` is built. The language can say it.
 fn pack(generation: i32, index: i32) -> i64 no.alloc {
     return i64(generation) << 32 | i64(index)
 }
@@ -142,7 +141,7 @@ fn main() -> i32 {
         return 13
     }
     // A left shift wraps at the declared width the way every other
-    // arithmetic does (D018).
+    // arithmetic does.
     if u8(1) << 8 != 0 {
         return 9
     }

@@ -284,7 +284,7 @@ jobs:
   # own build for MSVC, the library and the host compiled with the runtime
   # raylib was built with, and the game's files beside the program. Built
   # rather than played: a hosted Windows runner has no OpenGL 3.3 to open a
-  # window with. See D1270.
+  # window with.
   tetris-windows:
     needs: changes
     if: needs.changes.outputs.code == 'true'

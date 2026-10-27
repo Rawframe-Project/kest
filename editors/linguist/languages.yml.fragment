@@ -7,8 +7,8 @@
 # leave it out: `script/update-ids` generates it when the entry is added. It is
 # theirs to give and not this project's to write down.
 #
-# Rehearsed against upstream on 2026-09-19, at linguist ee4fb24, and everything
-# that can be done from here passed. See D1019:
+# Rehearsed against upstream at linguist ee4fb24, and everything that can be
+# done from here passed:
 #
 #   this entry inserted in `lib/linguist/languages.yml`, alphabetically
 #   `script/update-ids --check` names Kest as the one missing an ID

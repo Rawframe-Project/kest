@@ -8,7 +8,7 @@ import std.math
 // times, each step feeding the next, so that one bit different anywhere is a
 // different answer at the end. `sim.lua` and `sim.js` are the same steps.
 // `bench/determinism.sh` runs each on every machine CI has and writes down
-// whether one language answered the same everywhere. See D1274.
+// whether one language answered the same everywhere.
 fn main() -> i32 {
     let x: f64 = 0.5
     let y: f64 = 1.25

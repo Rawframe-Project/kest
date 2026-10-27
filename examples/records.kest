@@ -7,7 +7,7 @@ import std.io
 // while compiling: `for name, value in fields(s)` is written out once a field,
 // `value` is that field of `s` with its own type, and `name` is its name. So
 // `put(out, value)` is the `put` for that field's type, and a field added to
-// `Settler` is saved and loaded with nothing else written. See D1264.
+// `Settler` is saved and loaded with nothing else written.
 
 struct Where {
     x: f32

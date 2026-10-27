@@ -4,7 +4,7 @@ import std.io
 
 // A struct is a value, so a function that changes one changes its own copy.
 // `update` returns the player it produced rather than editing the caller's,
-// which is what D006 means in a program rather than in a decision record.
+// which is what a value means in a program.
 
 struct Player {
     x: f32

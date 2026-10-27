@@ -4,8 +4,7 @@
 // garbage every frame. Built once against each (`-DLUAJIT` for the second),
 // and run with the name the line is to carry. LuaJIT is run twice, with its
 // compiler and with it switched off (`--off`), which is its interpreter; Lua
-// 5.4 twice, with its collector as it comes and with it generational. See
-// D1272 and D1273.
+// 5.4 twice, with its collector as it comes and with it generational.
 //
 //   lua <engine name> bench/hosts/bodies.lua [--off] [--generational]
 //       [--game bench/hosts/tetromino.lua] [--churn bench/hosts/churn.lua]

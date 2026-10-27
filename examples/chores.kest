@@ -7,7 +7,7 @@ import std.io
 // a sequence with a `wait` where a frame ends, rather than as a state machine
 // by hand. Where it is waiting is a case of `ChoreAt` and everything it keeps
 // is a field of `Chore`, so a chore is a value: copied, compared, printed,
-// and started again from any place it could have been waiting at. See D1263.
+// and started again from any place it could have been waiting at.
 
 enum ChoreAt {
     Start

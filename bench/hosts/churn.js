@@ -1,6 +1,6 @@
 // `churn.kest` in JavaScript, for QuickJS: five thousand things, each with a
 // name and an array of tags, every one moved every frame and some replaced by
-// new ones. See D1273.
+// new ones.
 
 let world = [];
 let nextid = 0;

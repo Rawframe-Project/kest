@@ -46,7 +46,7 @@ uint64_t kest_mark_bytes(uint64_t mark, const void *bytes, size_t length) {
 
 uint64_t kest_mark_number(uint64_t mark, uint64_t value, unsigned bytes) {
     // Low byte first, so that the number a fold answers with is about what was
-    // folded rather than about the machine that folded it. See D660.
+    // folded rather than about the machine that folded it.
     for (unsigned at = 0; at < bytes; at++) {
         unsigned char byte = (unsigned char)((value >> (at * 8)) & 0xffU);
         mark = kest_mark_bytes(mark, &byte, 1);
@@ -63,7 +63,7 @@ bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
     // FNV-1a over the bytes, the same way `hash` over text is written in the
     // machine: text is its bytes, and so is a file. Taken here because this
     // already walks the file once for its lines, so it costs the walk it was
-    // going to make anyway. See D658.
+    // going to make anyway.
 
     // A line ends at a line feed, and at a carriage return that has no line
     // feed after it: a file written where lines end with two characters ends
@@ -73,7 +73,7 @@ bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
     // to find.
     // The lines are counted in the same walk as the mark is taken: the mark
     // is a multiplication waiting on the one before, and a byte compared
-    // beside it costs nothing more. See D1276.
+    // beside it costs nothing more.
     uint64_t mark = KEST_MARK_START;
     uint32_t lines = 1;
     for (size_t i = 0; i < length; i++) {
@@ -117,12 +117,12 @@ uint32_t kest_word_distance(const char *a, size_t a_len, const char *b,
 
     // Three rows of a table, kept where a caller need not think about them.
     // What decides the width is what a name can be: names are compared
-    // qualified — `examples.game.npc.Npc` against what somebody wrote — so
+    // qualified -- `examples.game.npc.Npc` against what somebody wrote -- so
     // sixty-four letters was a ceiling a real name could reach, and a name
     // past it was near nothing without a word about why. Two hundred and
     // fifty-six is past anything a reader would write down twice, and three
     // rows of it is three kilobytes of a stack nothing else is using. Past
-    // that, a name is answered for with nothing at all. See D300.
+    // that, a name is answered for with nothing at all.
     uint32_t before[FAR_ENOUGH] = {0};
     uint32_t previous[FAR_ENOUGH];
     uint32_t current[FAR_ENOUGH];
@@ -203,7 +203,7 @@ void kest_diags_init(KestDiags *diags, KestArena *arena) {
     diags->starved = false;
     // Kept, counted, and what was held back: a run of diagnostics keeps
     // everything until somebody says otherwise, which is what compiling does
-    // and what a machine says otherwise about. See D618.
+    // and what a machine says otherwise about.
     diags->most = 0;
     diags->not_said = 0;
     diags->held_back = false;
@@ -233,14 +233,13 @@ bool kest_diags_worked_out(KestDiags *diags) {
 // What a run was trying to say when it found it had nowhere to say it. Kept in
 // the list itself, which is the one place a run with no room left still has:
 // the first one to be lost is the one kept, because what stopped a run is the
-// first thing it could not say and everything after it is a consequence. See
-// D848.
+// first thing it could not say and everything after it is a consequence.
 // What the machine was about to say when it found it had nowhere to say it. It
 // is worth keeping when there was still room to work it out in and worth
 // nothing when there was not: a name nobody declared, where the table the name
 // would have been in could not be grown, is the compiler's afternoon written
 // as the program's mistake. Which of the two it was is what the caller saw
-// before it asked for room to keep this. See D880.
+// before it asked for room to keep this.
 static void keep_the_last_words(KestDiags *diags, const char *code,
                                 const char *format, va_list args,
                                 bool after_the_room) {
@@ -308,7 +307,7 @@ static bool diags_reserve(KestDiags *diags) {
 // for up to the size the list is made at and counts the rest: it does not end,
 // so a program refused every frame would otherwise hand a host that never asks
 // a frame's words for as long as it ran. Nought is no limit, which is what
-// compiling has. See D618.
+// compiling has.
 static bool room_to_keep(KestDiags *diags) {
     if (diags->most != 0 && diags->count >= diags->most) {
         diags->not_said++;
@@ -432,8 +431,8 @@ static void note_on(KestDiags *diags, KestDiag *diag, const KestSource *source,
     bool full = diag->note_count == KEST_MOST_PLACES;
     if (full && !kept) {
         // Counted rather than dropped. What a caller does about it is the
-        // caller's — several of them keep room for a note that says what is
-        // under it — and what happens to one that does not is this.
+        // caller's -- several of them keep room for a note that says what is
+        // under it -- and what happens to one that does not is this.
         diag->left_out++;
         return;
     }
@@ -445,7 +444,7 @@ static void note_on(KestDiags *diags, KestDiag *diag, const KestSource *source,
     // being the one thing left out. Which copy of a generic a body's sentences
     // are about is not the ninth thing a reader wants: it is what the other
     // eight are about, and it used to go last and be dropped first. What is
-    // counted instead is the candidate it displaced. See D762.
+    // counted instead is the candidate it displaced.
     KestNote *note = full ? &diag->notes[KEST_MOST_PLACES - 1]
                           : &diag->notes[diag->note_count++];
     if (full) {
@@ -478,14 +477,14 @@ void kest_diags_note_at(KestDiags *diags, uint32_t which,
     va_start(args, format);
     // Kept, because a note put on a diagnostic that is already finished is a
     // note about the whole of it rather than one more place in it: nothing
-    // reaches back to a diagnostic to add a ninth candidate. See D762.
+    // reaches back to a diagnostic to add a ninth candidate.
     note_on(diags, &diags->items[which], source, span, format, args, true);
     va_end(args);
 }
 
 // The words of one, written again where they are being put. What is absorbed
 // is a machine's, and what a machine says is written in the room it owns and
-// handed back when the machine goes (D617): a diagnostic carried over as it
+// handed back when the machine goes: a diagnostic carried over as it
 // stands is a sentence pointing into memory that went with the machine it came
 // from. The code is this compiler's own and is never in that room.
 static const char *said_again(KestArena *arena, const char *words) {
@@ -501,7 +500,7 @@ void kest_diags_absorb(KestDiags *into, const KestDiags *from) {
         kest_diags_starve(into);
     }
     // What it did not keep goes too: a count of what nobody will ever read is
-    // still the news that there was more of it. See D618.
+    // still the news that there was more of it.
     into->not_said += from->not_said;
     for (uint32_t i = 0; i < from->count; i++) {
         if (!diags_reserve(into)) {
@@ -657,7 +656,7 @@ static void render_frame(const KestSource *source, KestSpan span,
     // line fourteen long and points at nothing for the other twenty-six: what
     // is on the next line is on the next line. Where the line itself was cut
     // it stops at the cut, because the mark after it already says there is
-    // more. See D539.
+    // more.
     if (at + width > shown.end) {
         width = shown.end - at;
     }
@@ -680,7 +679,6 @@ static void render_frame(const KestSource *source, KestSpan span,
 // on a list of diagnostics, because recording it is the one thing a run with
 // no memory can do; which of the two it was is not recorded at all, because
 // the arena the list is kept in is the arena that ran out and it remembers.
-// See D843.
 static const char *starved_code(const KestDiags *diags) {
     if (diags->worked_out) {
         return KEST_WORKED_CODE;
@@ -732,18 +730,18 @@ static const char *starved_says(const KestDiags *diags, char *room,
 // out while it still had room and nothing after: the rest is a guess at what
 // the program would have said next and it reads like an answer. A run that did
 // not starve says all of it, because an allocation refused and coped with is
-// not a mistake in anybody's program. See D880.
+// not a mistake in anybody's program.
 static bool worth_saying(const KestDiags *diags, const KestDiag *one) {
     return !diags->starved || !one->after_the_room;
 }
 
 void kest_diags_render(const KestDiags *diags, FILE *out) {
     // What a program printed before this happened goes first. The two streams
-    // are kept apart on purpose — what a program says is an answer and what
-    // went wrong is not — and a shell that puts both in one pipe reads a
+    // are kept apart on purpose -- what a program says is an answer and what
+    // went wrong is not -- and a shell that puts both in one pipe reads a
     // buffer that empties when the run ends, so the failure would arrive
     // before the lines that led to it. Which is a lie about the order things
-    // happened in, told by the machine that watched them happen. See D308.
+    // happened in, told by the machine that watched them happen.
     if (out != stdout) {
         fflush(stdout);
     }
@@ -816,7 +814,7 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
     // And what was not kept, for the same reason and in the same place: a
     // machine holds so much of what nobody has asked for and counts the rest,
     // and a list that stopped where a reader would take it for the end would
-    // be the one thing a report must not be. See D618 and D200.
+    // be the one thing a report must not be.
     if (diags->not_said > 0) {
         fprintf(out, "and %u more since, which this machine did not keep\n\n",
                 diags->not_said);
@@ -883,7 +881,7 @@ void kest_diags_write_json(const KestDiags *diags, FILE *out) {
     // field a tool reads before it knows what the rest of them mean. It is
     // written here rather than at each command because every one of those goes
     // through this door: a command that wrote its own would be a command that
-    // could forget. See D947.
+    // could forget.
     fprintf(out, "\"schema\":%d,", KEST_JSON_SCHEMA);
     fputs("\"diagnostics\":[", out);
     uint32_t said = 0;
@@ -951,7 +949,7 @@ void kest_diags_write_json(const KestDiags *diags, FILE *out) {
         // Written out here rather than made and put in the list, because
         // making one is what there was no room for. Two of them where there
         // are two things to say: what it was about to say, and that it had
-        // nowhere to say it. See D848.
+        // nowhere to say it.
         char room[160];
         if (diags->last_code[0] != '\0') {
             fprintf(out,

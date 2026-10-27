@@ -14,7 +14,7 @@
 // cost of a dispatch an operation; this costs whatever the host's compiler
 // takes and runs at the cost of nothing between the operations. Neither is the
 // other's replacement: the first is what an iteration wants and the second is
-// what a frame budget wants. See D1092.
+// what a frame budget wants.
 //
 // It writes what it can and says what it cannot. A body holding something this
 // backend has no C for is not a program refused: it is a body the machine
@@ -41,8 +41,7 @@ bool kest_emitc_body(void *writing, const KestIrBody *body);
 // `carried` is every file the program was read from when the program is to
 // carry them, with `library` the root the library's are under: then the host
 // this writes builds from those rather than reading a file, and every word on
-// its command line is the program's. NULL for a host that reads `from`. See
-// D1172.
+// its command line is the program's. NULL for a host that reads `from`.
 const char *kest_emitc_done(KestEmitC *writing, const char *entry,
                             const char *from, const KestFile *carried,
                             uint32_t carried_count, const char *library);

@@ -16,10 +16,10 @@ import std.table
 // disagrees about at least one, and the parts are printed so a reader can see
 // which.
 //
-// It covers, since D1060, the three that are inside the profile and are the
-// host's -- `sqrt`, `floor`, `ceil` -- and the `round` built out of `floor`
-// (D941); and, since D1235, `sin`, `cos`, `atan2` and `pow`, which are written
-// in Kest now rather than being the host's libm.
+// It covers the three that are inside the profile and are the host's --
+// `sqrt`, `floor`, `ceil` -- and the `round` built out of `floor`; and `sin`,
+// `cos`, `atan2` and `pow`, which are written in Kest rather than being the
+// host's libm.
 
 const ANSWER: u64 = 1130490413983204738
 
@@ -118,7 +118,7 @@ fn rounding() -> u64 no.alloc no.host {
 // be kept the usual way, and a thing that is not a number.
 //
 // None of it reads bits: this language has no door onto the bits of a float
-// and should not have one for this. What is read is what a program can see —
+// and should not have one for this. What is read is what a program can see --
 // whether dividing by a signed nought goes one way or the other, how many
 // halvings a smallest number survives before it is nought, and whether a thing
 // that is not a number is equal to itself. A platform that flushes the small
@@ -255,7 +255,7 @@ fn keyed() -> u64 {
 //
 // Negatives are where a floor written as a truncation stops being a floor, and
 // a square root through `f64` and back is where the claim that two roundings
-// are one rounding is either true or not. See D1060.
+// are one rounding is either true or not.
 fn rounded() -> u64 no.alloc deterministic {
     let mark = hash.start
 
@@ -285,9 +285,9 @@ fn rounded() -> u64 no.alloc deterministic {
 }
 
 // The sine, the cosine, where two numbers point and one number to the power of
-// another, at two thousand places, as the bits they are. They were the host's
-// libm until D1235, which was not required to round them correctly, and a
-// function promising `deterministic` could not reach them at all.
+// another, at two thousand places, as the bits they are. The host's libm is not
+// required to round them correctly, and a function promising `deterministic`
+// cannot reach the host, so these are written in Kest.
 fn turned() -> u64 no.alloc no.host deterministic {
     let mark = hash.start
     let at: f64 = 0.0 - 50.0
@@ -304,7 +304,7 @@ fn turned() -> u64 no.alloc no.host deterministic {
     // turn is taken off in three pieces, and past four billion billion,
     // where which quarter it is is no longer known. The machine answers
     // these two with instructions of its own, and this is what holds those
-    // to the library. See D1279.
+    // to the library.
     for i in 0..300 {
         let k = f64(i)
         mark = hash.join(mark, bits(math.sin(1.0e-9 * k)))
@@ -335,7 +335,7 @@ fn turned() -> u64 no.alloc no.host deterministic {
     ]
     // What is not a number is one value as bits and as a hash, whatever sign
     // and payload the processor made it with: x86 makes `inf - inf` with the
-    // sign set and arm64 without it. See D1238.
+    // sign set and arm64 without it.
     let notNumber = infinite - infinite
     mark = hash.join(mark, bits(notNumber))
     mark = hash.join(mark, hash(notNumber))

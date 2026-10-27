@@ -128,7 +128,7 @@ static uint16_t kest_ir_effects(KestIrKind kind) {
 }
 
 // What each of a body's lists starts at, measured over the library and the
-// examples the way a chunk's were in D753: the middle body is forty-one
+// examples the way a chunk's are: the middle body is forty-one
 // operations over six blocks with nine values and four places.
 #define FLOOR_OPS 32
 #define FLOOR_ARGS 32
@@ -166,7 +166,7 @@ KestIrBody *kest_ir_body_begin(KestIrProgram *program) {
 }
 
 // The pass, which is written where the walks it needs are and is named here
-// because this is where it is used. See D1024.
+// because this is where it is used.
 static bool optimize(KestIrProgram *program, KestIrBody *body,
                      KestIrFound *found);
 
@@ -181,7 +181,6 @@ bool kest_ir_body_end(KestIrProgram *program) {
     // body that is not one needs is a diagnostic naming where it was
     // declared, and the backend is what has the diagnostics. A backend is
     // entitled to refuse what it is handed, and this is the one that does.
-    // See D1024.
     uint64_t at = kest_ir_ticked(program->now, program->now_context);
     if (!program->out_of_memory && kest_ir_verify(&program->body) == NULL) {
         program->verifying +=
@@ -395,10 +394,10 @@ static bool passes_through(uint16_t kind) {
     // `if let` in the form that leaves what the optional held: the branch
     // reads one value and leaves part of it, which is what `part` and `meet`
     // beside it do. It was not here, so every name an `if let` bound inside a
-    // block was read as something the block made — and handing one to a call
+    // block was read as something the block made -- and handing one to a call
     // that also takes something older is refused. A frame that walks a world
     // inside a `scratch { }` block and looks each thing up in a table is that
-    // shape, and it could not be written. See D1073.
+    // shape, and it could not be written.
     case KEST_IR_ASK:
         return true;
     default:
@@ -409,7 +408,7 @@ static bool passes_through(uint16_t kind) {
 // Whether a call handed a value of this type could make it bigger: an array or
 // a store, or a shape holding one anywhere inside it. Text cannot grow -- a
 // piece of text is its bytes and how many, and a call is handed a copy of both
-// -- and neither can a number. See D1075.
+// -- and neither can a number.
 static bool can_grow(const KestType *type, uint32_t depth) {
     if (type == NULL || depth > 8) {
         return type != NULL;
@@ -437,7 +436,7 @@ static bool can_grow(const KestType *type, uint32_t depth) {
 // the machine keeps. A run of bytes cannot: copying a piece of text into one
 // copies the bytes, and what the block made is gone with the block. A run of
 // text can, and so can a store of a shape with text in it, and so can a
-// reference to one. This is what tells a keep from a copy. See D966.
+// reference to one. This is what tells a keep from a copy.
 static bool can_keep(const KestType *type) {
     if (type == NULL) {
         return false;
@@ -483,7 +482,6 @@ static bool value_kept(const bool *made, const KestIrBody *body,
 // Whether an operation on a container asks the heap for more room. `fit` and
 // `set` write into what is already there and are what a `scratch { }` block
 // does to a thing that outlives it; `push`, `room` and `add` ask for more.
-// See D972.
 static bool grows_the_heap(KestIrKind kind) {
     switch (kind) {
     case KEST_IR_APPEND:
@@ -615,7 +613,7 @@ const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
             // was emptied by the end of it, and nothing said so. So this is
             // refused where it is written: `fit` and `set` write into room a
             // thing already has and are what a block does, and `push`, `room`
-            // and `add` ask for more and are not. See D972.
+            // and `add` ask for more and are not.
             if (!into && grows_the_heap((KestIrKind)op->kind)) {
                 return "this grows something that outlives the block, and "
                        "what a block takes it gives back";
@@ -637,18 +635,19 @@ const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
         // A call that is handed what the block made and something older to put
         // it in. What a called body does with what it is given is its own, so
         // this is the one shape that cannot be followed and is refused
-        // instead. A crossing into the host is not one of these: see D966.
+        // instead. A crossing into the host is not one of these: the host
+        // keeps a block's rule itself.
         case KEST_IR_CALL:
         case KEST_IR_CALL_VALUE: {
             // A call inside a block, handed something older than the block
             // that can grow, and promising nothing about the heap. What it
             // grew would be grown in the block's memory and given back when
-            // the block ends, which is the same thing D972 refuses when the
+            // the block ends, which is the same thing refused when the
             // growth is written here -- and a call is the one shape that
             // cannot be followed, so it is refused rather than followed. A
             // callee that promises `no.alloc` cannot grow anything, which is
             // what leaves a lookup inside a block a thing a program may still
-            // write. See D1075.
+            // write.
             if (open > 0 && op->imm[2] == 0) {
                 for (uint16_t a = 0; a < op->arg_count; a++) {
                     KestIrRef ref = body->args[op->first_arg + a];
@@ -736,7 +735,7 @@ const char *kest_ir_verify(const KestIrBody *body) {
 // one, and everything between two of those runs in a row. Kept as a bit a
 // place rather than as a list of blocks, because what every pass here asks is
 // "is there a landing between these two operations" and that is a scan of a
-// few words. See D1024.
+// few words.
 static bool lands_between(const KestIrBody *body, uint32_t from, uint32_t to) {
     for (uint32_t i = 0; i < body->op_count; i++) {
         const KestIrOp *op = &body->ops[i];
@@ -893,8 +892,8 @@ static bool never_read_again(const KestIrBody *body, uint32_t at,
         }
         return false;
     }
-    // The end of the body, where the frame goes. See D1024 for why this is
-    // counted and not yet acted on: a slot holding a handle is a root while
+    // The end of the body, where the frame goes. This is counted and not
+    // acted on: a slot holding a handle is a root while
     // the frame stands, and a write taken away is a root taken away.
     return true;
 }
@@ -1032,9 +1031,9 @@ static bool named_by_hand(const KestIrBody *body, const KestIrPlace *place) {
 //
 // It is the one of the four shapes counted above that takes bytes off what the
 // machine moves rather than instructions off what it runs. A copy is a load
-// and a store, and D1023 measured loading and storing at between half and four
-// fifths of every byte this machine moves. See D1025 for why the other three
-// are counted and not done.
+// and a store, and loading and storing are between half and four fifths of
+// every byte this machine moves. The other three are counted and not done,
+// each on its count.
 //
 // It asks about the whole body rather than about what follows, because what
 // follows in the list is not what follows in the run: a body is a flat list
@@ -1141,7 +1140,7 @@ static bool take_the_copy(KestIrProgram *program, KestIrBody *body,
 //
 // Between two verifications, which is what the shape of this is for: what
 // goes in is a body the verifier accepted and what comes out has to be one
-// too. See D1024.
+// too.
 // What there is to do in one body, which is a walk of it per operation for
 // three of the four shapes. It happens when somebody asked and not otherwise:
 // a compile nobody is reading the counts from should not pay for them, and
@@ -1218,7 +1217,7 @@ static bool count_what_there_is(KestIrProgram *program, const KestIrBody *body,
 // it is asked -- a whole number's `<` is its `>=`, and anything's `==` its
 // `!=` -- so what the lowering makes one instruction of stays one, and asked
 // the other way where it cannot be. Nothing may land on the jump that goes,
-// because something arriving there would have had nowhere to go. See D1205.
+// because something arriving there would have had nowhere to go.
 static KestIrKind turned_round(const KestIrOp *compare) {
     bool ordered = compare->type != NULL && !kest_is_float(compare->type) &&
                    !kest_is_a_run(compare->type) &&
@@ -1294,7 +1293,7 @@ static bool optimize(KestIrProgram *program, KestIrBody *body,
     // command line, for the reason `KEST_PLAIN` is: compiling the same
     // program twice and requiring the same answer of both is how a
     // transformation is held to being one that keeps a program's meaning.
-    // D1009 says every optimization is held that way.
+    // Every optimization is held that way.
     static int off = -1;
     if (kest_ir_asked_off("KEST_NOOPT", &off)) {
         return true;

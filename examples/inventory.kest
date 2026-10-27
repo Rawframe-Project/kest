@@ -8,10 +8,10 @@ import std.math
 
 // A container written in Kest rather than built into the language. `[T]`,
 // `store<T>` and `ref<T>` were the only shapes that took a type; a program can
-// write its own now, and a copy is compiled per set it is used with (D040).
+// write its own now, and a copy is compiled per set it is used with.
 //
 // `std.table` is a hash table, and the one thing it needs from the language is
-// `hash`, which applies exactly where `==` does (D042). A key that does not
+// `hash`, which applies exactly where `==` does. A key that does not
 // compare is refused where the copy is made rather than everywhere.
 
 enum Kind {
@@ -41,10 +41,9 @@ struct Slot {
     count: i32
 }
 
-// A place on a map, and the shape of a key this table could not hold until
-// D874: a value laid out flat compares and hashes, so a struct is a key like
-// any other. A struct holding a `[T]` still is not, because what would be
-// compared then is the handle.
+// A place on a map, and a struct as the key: a value laid out flat compares
+// and hashes, so a struct is a key like any other. A struct holding a `[T]`
+// still is not, because what would be compared then is the handle.
 struct At {
     x: i32
     y: i32
@@ -52,8 +51,8 @@ struct At {
 
 // What a lookup is worth where the value is used rather than checked: a name
 // that is not in stock adds nothing, which is what `if let` says and what a
-// fallback could not — `table.get` took an `Item("", 0)` beside the key until
-// D879, and a missing name then added that one's price. See D879.
+// fallback could not: with an `Item("", 0)` handed in beside the key, a missing
+// name would add that one's price.
 fn total(stock: table.Table<text, Item>, names: [text]) -> i32 no.alloc {
     let sum = 0
     for i in 0..len(names) {
@@ -68,7 +67,7 @@ fn total(stock: table.Table<text, Item>, names: [text]) -> i32 no.alloc {
 // is, and answer for the one that is not there rather than growing. `set` may
 // refill, so a body that called it could not promise this at all -- which is
 // the whole reason `fit` is here and is the same sentence `fit` on an array
-// is. See D1063.
+// is.
 fn marked(stock: table.Table<text, Item>, names: [text], by: i32) -> i32 no.alloc {
     let missed = 0
     for i in 0..len(names) {
@@ -110,7 +109,7 @@ fn main() -> i32 {
     // the table's, and is now the table's to reach: sorting `t.keys` would
     // move a key away from its value and leave the table answering with
     // somebody else's, so nothing outside `std.table` can name it. A copy is
-    // what a program sorts. See D693 and D1041.
+    // what a program sorts.
     let names = table.keysOf(stock)
     sort.by(names, sort.ascending)
     if len(names) != 3 || names[0] != "lamp" || names[2] != "sword" {
@@ -139,7 +138,7 @@ fn main() -> i32 {
     // the slot pointing at it has to be found while it is still where it was.
     // Taking the last one out never goes that way, so a table that is only
     // ever shortened from the end leaves the widest thing this library does
-    // unrun — which is what `KEST_DEEP` counts. See D812.
+    // unrun -- which is what `KEST_DEEP` counts.
     let spare: table.Table<text, Item> = table.empty()
     table.set(spare, "shield", Item("shield", 300))
     table.set(spare, "torch", Item("torch", 5))
@@ -191,7 +190,7 @@ fn main() -> i32 {
     }
     // One out from under the last one here as well. This is another copy of
     // the same body, compiled against other types, and a copy is only as run
-    // as the program that calls it. See D812.
+    // as the program that calls it.
     if !table.remove(counts, 0) ||
             table.has(counts, 0) ||
             table.count(counts) != 199 {
@@ -226,7 +225,7 @@ fn main() -> i32 {
     // over its bits the way every other key hashes over its parts. It is the
     // one key whose equality has a value that is not equal to itself, so the
     // hash of nought is written to be the hash of nought however it was
-    // signed — otherwise two keys that compare equal would sit in two places.
+    // signed -- otherwise two keys that compare equal would sit in two places.
     let weights: table.Table<f64, i32> = table.empty()
     let half: f64 = 0.5
     let nothing: f64 = 0.0
@@ -241,7 +240,7 @@ fn main() -> i32 {
     }
 
     // An enum is a key like any other: it compares and it hashes, over the
-    // same parts, which is what makes the two agree (D043).
+    // same parts, which is what makes the two agree.
     let byKind: table.Table<Kind, i32> = table.empty()
     table.set(byKind, Kind.Weapon, 1)
     table.set(byKind, Kind.Potion(3), 2)
@@ -290,7 +289,7 @@ fn main() -> i32 {
     // place is: `At(1, 2)` is the key rather than a handle to one, so two of
     // them holding the same numbers are one key and the second `set` writes
     // over the first. What a table wants of a key is `hash` and `==`, and a
-    // value laid out flat has both. See D874.
+    // value laid out flat has both.
     let ground: table.Table<At, text> = table.empty()
     table.set(ground, At(1, 2), "hill")
     table.set(ground, At(3, 4), "lake")
@@ -321,9 +320,9 @@ fn main() -> i32 {
 
     // What a table counts is what it can find. A key is one key because
     // `hash` and `==` say so, and a value that is not equal to itself is a
-    // different key every time it is handed over — so a table given one would
+    // different key every time it is handed over -- so a table given one would
     // count a pair nothing could find and never be able to take it out. It is
-    // not put in. See D893.
+    // not put in.
     let places: table.Table<f32, text> = table.empty()
     table.set(places, 1.5, "half past one")
     table.set(places, math.sqrt(0.0 - 1.0), "nowhere")
@@ -393,7 +392,7 @@ fn main() -> i32 {
 
     // Three tags side by side in one value, the last carrying a tag ahead of
     // a number, put into a run, read out, changed and written back over
-    // another: each one reads out as it went in. See D1227.
+    // another: each one reads out as it went in.
     let slots: [Slot] = array()
     push(
         slots,

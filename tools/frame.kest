@@ -10,17 +10,18 @@ import std.io
 // declared with.
 //
 // This is not a benchmark suite and there is nowhere it is written down. It
-// answers one question — did the thing this language exists for get slower —
+// answers one question -- did the thing this language exists for get slower --
 // and it is run when somebody wants to know rather than on every change.
 // The gate does not touch it, because a duration is not a pass or a fail.
 //
 // What it measures is the shape the language is for: an array of value structs
 // walked in order and handed one at a time to helpers that take one and give
-// one back, inside a promise that nothing reaches the heap. Everything it does not measure — starting up,
-// compiling, crossing the boundary, allocating — is deliberate. Those are
-// other questions and they would each want their own number.
+// one back, inside a promise that nothing reaches the heap. Everything it does
+// not measure -- starting up, compiling, crossing the boundary, allocating --
+// is deliberate. Those are other questions and they would each want their own
+// number.
 //
-// What it is worth, measured rather than guessed at (D551). Five runs one after
+// What it is worth, measured rather than guessed at. Five runs one after
 // another on a quiet machine gave 131, 132, 132, 131, 133: about one part in a
 // hundred between them. One extra multiply and add per entity took it to 144,
 // and doubling the work took it to 237, so a change of a tenth is one this
@@ -28,7 +29,7 @@ import std.io
 //
 // What it does not show is a tenth across a gap. The first run or two on a cold
 // machine read about a fifth high, because the processor has not decided how
-// fast it is running yet — so two numbers taken minutes apart can differ by
+// fast it is running yet -- so two numbers taken minutes apart can differ by
 // more than a tenth for a reason that is not the language. Run it twice,
 // believe the second, and compare it against a number read the same way.
 //
@@ -61,11 +62,11 @@ struct Npc {
 }
 
 // The work, in two helpers that each take a value struct and give one back.
-// That is the shape D006 is about and the shape `examples/physics.kest` and
-// `examples/ants.kest` are written to show — a frame in this language is
-// helpers called from a hot path, not one body with everything in it — and
-// until D550 this measured a body with everything in it. What a helper costs is
-// exactly the thing a reader of this number wants to know. See D550.
+// That is the shape a value struct is for and the shape `examples/physics.kest`
+// and `examples/ants.kest` are written to show: a frame in this language is
+// helpers called from a hot path, not one body with everything in it. What a
+// helper costs is
+// exactly the thing a reader of this number wants to know.
 fn moved(one: Npc, dt: f32) -> Npc no.alloc {
     return Npc(
         one.x + one.dx * dt,
@@ -85,16 +86,16 @@ fn turned(one: Npc) -> Npc no.alloc {
 
 // And the same frame with those two helpers written out where they are called.
 // It is here for one number: what the two calls cost. A call is the one thing
-// the machine does that is not one instruction — it reads what the callee says
+// the machine does that is not one instruction -- it reads what the callee says
 // about itself, asks twice whether there is room, and writes five fields of a
-// frame — and the only way to weigh it from inside the language is to run the
+// frame -- and the only way to weigh it from inside the language is to run the
 // same work without it. Everything else about the two bodies is the same: the
 // same reads, the same arithmetic, the same writes, in the same order.
 //
 // The two also hold each other. They give back the same count over the same
-// entities, so a change to one of the helpers that is not made here — or made
-// differently — is a difference in the answer rather than a difference in a
-// duration. See D873.
+// entities, so a change to one of the helpers that is not made here -- or made
+// differently -- is a difference in the answer rather than a difference in a
+// duration.
 fn stepAlone(world: [Npc], dt: f32) -> i32 no.alloc {
     let alive = 0
     for i in 0..len(world) {
@@ -202,21 +203,21 @@ fn main() -> i32 {
     // minutes apart can be told apart from two that differ.
     // Each loop against its own worst, and the bigger of the two said: what
     // the calls cost is the difference between two bests, so a round lost in
-    // either of them moves it and a reader has to be told. See D873.
+    // either of them moves it and a reader has to be told.
     let hereSpread = (worst - best) * 100 / best
     let aloneSpread = (worstAlone - alone) * 100 / alone
     let spread = if hereSpread > aloneSpread -> hereSpread else -> aloneSpread
     // And whether to believe it, which is what the spread is for and what a
     // reader would otherwise have to know to work out. It is said rather than
-    // answered with: a busy machine is not a program that failed. See D551.
+    // answered with: a busy machine is not a program that failed.
     let steady = if spread <= 25 -> ""
-        else -> " — the machine was somebody else's"
+        else -> " -- the machine was somebody else's"
     io.print("{each} ns per entity per step, {calling} ns of it the two calls it makes, best of {ROUNDS} over {ENTITIES}, spread {spread}%{steady}")
     // And what the work adds up to, which is a number and not a duration:
     // every entity is alive in every step of every round, so this is exactly
     // `ROUNDS * STEPS * ENTITIES` and nothing else. It is here because an
     // instrument that stops doing its work still prints a number, and a
-    // smaller number reads like a faster machine. See D549.
+    // smaller number reads like a faster machine.
     if seen != ROUNDS * STEPS * ENTITIES * 2 {
         return 1
     }

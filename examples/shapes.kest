@@ -47,7 +47,7 @@ fn far(v: vec2) -> bool no.alloc {
 }
 
 // What a closure would have captured, written beside the function instead.
-// This language has none and does not want any (D1051): what a predicate needs
+// This language has none and does not want any: what a predicate needs
 // is a parameter, so a reader sees it, the promise can still be proved, and
 // there is nothing on the heap whose lifetime anybody has to think about.
 fn nearerTo(a: vec2, b: vec2, from: vec2) -> bool no.alloc no.host {
@@ -59,7 +59,7 @@ fn nearerTo(a: vec2, b: vec2, from: vec2) -> bool no.alloc no.host {
 // never something it has to have, so handing one where none was asked for is
 // allowed and handing none where one was asked for is refused. Nothing in
 // this tree had ever done the allowed half, so tightening the rule by mistake
-// would have passed every check here. See D411.
+// would have passed every check here.
 fn howMany(items: [text], keep: fn(text) -> bool) -> i32 {
     let found = 0
     for one in items {

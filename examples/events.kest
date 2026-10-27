@@ -2,10 +2,10 @@ module examples.events
 
 import std.io
 
-// The host calling in. D007 says the two directions are separate
-// specifications, and W11 measured this one as the wider: one crossing per
-// event spread five implementations over 19.28 times, the widest figure in the
-// workload, and the ordering of two of them reversed against the inward path.
+// The host calling in. The two directions are separate specifications, and
+// this one is the wider: one crossing per event spread five implementations
+// over 19.28 times, the widest figure in the workload, and the ordering of two
+// of them reversed against the inward path.
 //
 // So the shape to write is `onEvents`, which is called once and walks a batch
 // the host lent it. `onEvent` is here because it has to stay expressible, not
@@ -39,7 +39,7 @@ fn main() -> i32 {
     // The two shapes over one list, which is the thing that makes a batch the
     // default rather than a second feature: it answers what one at a time
     // answers. This file said they agree and asked two different questions
-    // with two different inputs. See D556.
+    // with two different inputs.
     let some = [0, 1, 2, 3, 9, 10, 12]
     let atOnce = onEvents(some)
     let oneAtATime = 0

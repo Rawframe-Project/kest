@@ -9,7 +9,7 @@
 // was declared, what else names it, what is wrong with the file -- comes from
 // the same check a build does, over the same tree, through the index the
 // checker writes as it resolves. A second parser inside an editor is a second
-// semantic pipeline, which is the thing this project does not have. See D977.
+// semantic pipeline, which is the thing this project does not have.
 //
 // `library` is where the standard library is, the same answer the command line
 // works out for itself. Returns what the process should exit with.

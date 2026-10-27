@@ -1,10 +1,10 @@
 -- `love-tetronimo`'s `main.lua` as it was written, a Tetris clone for LÖVE by
 -- Przemysław Bądaruk (MIT License, Copyright (c) 2023; the notice is at the
 -- end of this file), which `examples/tetromino.kest` was brought over from
--- (D1268). It is here unchanged so that reloading the same game in each
+--. It is here unchanged so that reloading the same game in each
 -- language can be timed: `bench/hosts` loads it into a running Lua the way a
 -- LÖVE hot-reloader does, beside Kest building `examples/tetromino.kest` and
--- starting a machine on it. See D1273.
+-- starting a machine on it.
 -- constants
 local SCALE = 1.5
 local FPS = 25

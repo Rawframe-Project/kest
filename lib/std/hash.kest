@@ -1,12 +1,12 @@
 module std.hash
 
-// `hash(x)` answers for one value. A program that wants one for several — the
-// two fields it means out of a struct, a run of them, a name and a number —
+// `hash(x)` answers for one value. A program that wants one for several -- the
+// two fields it means out of a struct, a run of them, a name and a number --
 // folds them together, and what it folds them with used to be whatever the
 // reference suggested. Two programs folding the same fields differently are two
 // answers to what reads like one question, so the fold is written once, here,
 // and it is the fold this compiler uses for a program made of several files:
-// FNV-1a over the eight bytes of each number. See D665.
+// FNV-1a over the eight bytes of each number.
 
 // Where a fold begins. Folding into nought would make a run of noughts fold to
 // nought and every value that starts with one look alike.

@@ -4,7 +4,7 @@
 # to `$OUT`. `.github/workflows/determinism.yml` runs this on every machine CI
 # has and puts the lines together into `bench/determinism.tsv`, which says
 # whether one language answered the same everywhere. An engine that is not
-# given is left out. See D1274.
+# given is left out.
 #
 #   PLATFORM=linux-x86_64 KEST=out/dev/kest LUA=lua LUAJIT=luajit LUAU=luau \
 #       NODE=node OUT=answers.tsv sh bench/determinism.sh

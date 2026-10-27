@@ -33,7 +33,7 @@ typedef struct {
     // Of all four of those, the share that went on copies of generic
     // functions: retyped, bound, and written out one per set of types they
     // were called with. It is a share rather than a stage of its own, because
-    // a copy is a body and goes through what a body goes through. See D778.
+    // a copy is a body and goes through what a body goes through.
     uint64_t copies;
     // The resolved form held to what a backend may read.
     uint64_t verifying;
@@ -58,25 +58,25 @@ struct KestBuild {
     // the whole set itself and does not touch this.
     uint32_t reported;
     // And whether the one thing a run with no memory can say has been said.
-    // It is not in the list — making a list entry is what there was no room
-    // for — so what keeps it from being said twice is a bit of its own.
+    // It is not in the list -- making a list entry is what there was no room
+    // for -- so what keeps it from being said twice is a bit of its own.
     bool starve_said;
     bool compiled;
     // Whether the checker keeps where every name was written and what it
     // named. Set between opening a build and checking it, by whoever is going
-    // to ask -- which is the language server and nothing else. See D977.
+    // to ask -- which is the language server and nothing else.
     bool index_names;
     // The one walk of the whole program, worked out when somebody first asks
-    // and handed to everybody who asks after, machines included. See D607.
+    // and handed to everybody who asks after, machines included.
     KestWalk walked;
     // Whether the bodies are written as C as well as as bytecode, and what
     // came out. Said between opening a build and compiling it: the two
     // backends read one body each time one is made, and a body is let go
-    // before the next is built. See D1093.
+    // before the next is built.
     const struct KestCWriter *c_writer;
     const char *c_wrote;
     // Whether the C written carries every file the program was read from, so
-    // that what is built from it needs none of them. See D1172.
+    // that what is built from it needs none of them.
     bool carrying;
     // The clock, or NULL for a build nobody is weighing, and what each stage
     // took by it.
@@ -94,18 +94,18 @@ struct KestBuild {
 // that would cross it and says what it had taken and what it wanted, the way a
 // program stopped by a heap ceiling does; a build without one asks until the
 // machine has nothing left, which is what took a machine down eight times in a
-// day. See D843.
+// day.
 KestBuild *kest_build_open(const char *library, char **paths, int count,
                            size_t room);
 
 // The same with a ceiling on the work compiling may do, which nought leaves
-// off. See `kest_build_within` and D1248.
+// off. See `kest_build_within`.
 KestBuild *kest_build_open_within(const char *library, char **paths, int count,
                                   size_t room, uint64_t work);
 
 // The name something lives under in the file that was named. A host does not
-// need this — `kest_entry` leaves the module off for it — but the command line
-// asks the program's own symbol table, which is registered qualified.
+// need this -- `kest_entry` leaves the module off for it -- but the command
+// line asks the program's own symbol table, which is registered qualified.
 //
 // Asked after the program is emitted, because it reads the module's own alias,
 // which is the field `kest_entry` reads when it looks for the qualified form
@@ -116,8 +116,7 @@ const char *kest_build_name(KestBuild *build, const char *name);
 // it and it is a third again of what a finished build holds, so it is off.
 void kest_build_index_names(KestBuild *build, bool keep);
 // Asks the next emit to call every body where it is called rather than carry
-// small ones to their calls, which is what a profile of calls wants. See
-// D1156.
+// small ones to their calls, which is what a profile of calls wants.
 void kest_build_calls_as_written(KestBuild *build);
 
 // Asks the C this build writes to carry the program's files rather than read
@@ -131,7 +130,7 @@ void kest_build_carries_sources(KestBuild *build);
 //
 // Given between opening a build and checking it. A build never given one
 // weighs nothing and is not slowed by asking: every reading is through one
-// door that answers nought for no clock. See D1026.
+// door that answers nought for no clock.
 void kest_build_clock(KestBuild *build, uint64_t (*now)(void *), void *context,
                       uint64_t reading);
 // What each stage took, by that clock. Nought everywhere when there was none.
@@ -144,7 +143,7 @@ const KestSpent *kest_build_spent(const KestBuild *build);
 // The backend is handed in by whoever asks for it rather than named here: a
 // build that names it is a build every host links, and a host that never
 // writes C carried eighty kilobytes of the writer for nothing. `emitc.h`'s
-// three doors, in that order. See D1282.
+// three doors, in that order.
 typedef struct KestCWriter {
     KestEmitC *(*begin)(KestArena *arena, const KestModule *module);
     bool (*body)(void *writing, const KestIrBody *body);

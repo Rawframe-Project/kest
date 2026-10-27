@@ -9,7 +9,7 @@
 # refusal from the machine for something a door answered that the program
 # could not have made, which is a door that did not look at what it was handed.
 # And that some of them were refused, because a run in which every door
-# answered everything was not handed anything hard. See D1254.
+# answered everything was not handed anything hard.
 set -u
 
 # What the build made: the preset's build directory, out/dev unless

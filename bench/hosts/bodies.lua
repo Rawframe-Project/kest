@@ -7,7 +7,6 @@
 -- against 42 ns a body); so for both of them the bodies are the program's own
 -- tables, filled once, and the host hands over nothing but the call. That is
 -- the cheaper frame -- nothing is written back to the host -- and theirs.
--- See D1272.
 
 local function moved(x, y, dx, dy, wall)
     x = x + dx

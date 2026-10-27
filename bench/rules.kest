@@ -12,7 +12,7 @@ import std.text
 //
 // It is here because a simulation is not a kernel. The work is a lookup, a
 // flag test, a match over what something is, an optional that may be nothing,
-// a timer that has not run down, and a piece of text that names a thing —
+// a timer that has not run down, and a piece of text that names a thing --
 // and a language that is quick at multiplying and slow at any of those is
 // quick at the wrong half.
 //

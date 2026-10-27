@@ -5,9 +5,9 @@ module std.fdlibm
 // are written in Kest rather than declared, so that they are in the
 // deterministic profile: every step of each is an addition, a multiplication or
 // a division, which IEEE-754 rounds the same way on every machine, and the two
-// engines keep each one a step of its own (D1226). Declared, they were the
+// engines keep each one a step of its own. Declared, they were the
 // platform's libm, which is not required to round them correctly, and two
-// platforms could differ in the last bit and then diverge. See D1235.
+// platforms could differ in the last bit and then diverge.
 //
 // They are fdlibm's algorithms, as musl and FreeBSD carry them, and every
 // constant is written as the bits of the one in those sources: a reduction by

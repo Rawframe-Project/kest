@@ -1,8 +1,8 @@
 #ifndef KEST_MEM_H
 #define KEST_MEM_H
 
-// Whether this build checks itself. Several things here are shortcuts — an
-// arena's bounds, an index over the names a program declares — and what says a
+// Whether this build checks itself. Several things here are shortcuts -- an
+// arena's bounds, an index over the names a program declares -- and what says a
 // shortcut is still true is a walk that costs more than the shortcut saves. So
 // they are in the build that is already paying for that sort of thing, and
 // nowhere else.
@@ -11,7 +11,7 @@
 // name and the other answers a question, and a file that only asked the first
 // of them would compile under the second into a build with none of these
 // checks in it and nothing to say so. What says so is `--version`, which reads
-// this. See D330.
+// this.
 #if defined(__SANITIZE_ADDRESS__)
 #define KEST_CHECKED 1
 #elif defined(__has_feature)
@@ -39,7 +39,7 @@ void kest_arena_free(KestArena *arena);
 // other holds, against the other one's ceiling, for as long as it holds it. A
 // stage that works in memory of its own and throws it away -- the bodies a
 // backend writes, the verifier's tables -- is still inside what a host gave a
-// build. See D1247.
+// build.
 KestArena *kest_arena_new_under(KestArena *under);
 
 // What an arena holds, with the most everything taken under it ever held at
@@ -68,11 +68,11 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align);
 void *kest_arena_extend(KestArena *arena, void *last, size_t was, size_t want);
 
 // Where an arena is now, and how to put it back there. A walk that needs room
-// for the length of one answer — working out what a program would have needed,
-// at the moment it ran out — takes it from the heap the program is running on,
+// for the length of one answer -- working out what a program would have needed,
+// at the moment it ran out -- takes it from the heap the program is running on,
 // and a refusal that costs a program memory it never gets back is a frame
 // budget that shrinks every time something goes wrong. What a mark is is the
-// block that was answering and how much of it had gone. See D571.
+// block that was answering and how much of it had gone.
 typedef struct {
     void *block;
     size_t used;
@@ -100,17 +100,17 @@ void kest_arena_reset(KestArena *arena);
 char *kest_arena_strndup(KestArena *arena, const char *text, size_t len);
 
 // How many bytes have been handed out. What a running program allocated is
-// the cost D012 defers, and a number is what makes it a thing a host can see
-// rather than a thing to argue about.
+// the cost freeing it defers, and a number is what makes it a thing a host can
+// see rather than a thing to argue about.
 size_t kest_arena_used(const KestArena *arena);
 
 // And how many it is still holding, which is the same number until something
 // is given back. What a stage leaves behind for the next one is the difference:
 // the tokens a file is read into are dead the moment its tree is made, and an
-// arena that has given them back says so here and not above. See D747.
+// arena that has given them back says so here and not above.
 // How many times it was asked for something, which is what tells a stage that
 // keeps a lot from one that asks a lot: the same bytes in ten allocations and
-// in ten thousand are two different shapes of work. See D752.
+// in ten thousand are two different shapes of work.
 size_t kest_arena_askings(const KestArena *arena);
 
 size_t kest_arena_held(const KestArena *arena);
@@ -118,7 +118,7 @@ size_t kest_arena_held(const KestArena *arena);
 // And how many it has ever handed out, which never goes down. What a stage or
 // a call cost is the difference between two readings of this, and the two
 // numbers above cannot answer that any more: a rewind takes bytes off them,
-// and so does a walk of what a running program can still reach. See D996.
+// and so does a walk of what a running program can still reach.
 size_t kest_arena_taken(const KestArena *arena);
 
 // Counts bytes handed out by an arena that has since been freed as bytes this
@@ -147,7 +147,7 @@ size_t kest_arena_ceiling(const KestArena *arena);
 // Work moved out of an arena is work its ceiling still refuses, so a refusal
 // has to come back the way the charge does: the arena a reader is told about
 // is the one with the ceiling written on it, and it is not the one that was
-// standing there when the allocation failed. See D843.
+// standing there when the allocation failed.
 void kest_arena_also_refused(KestArena *arena, const KestArena *other);
 
 // Whether the last refusal was the ceiling rather than the host. The number
@@ -160,9 +160,9 @@ bool kest_arena_refused_by_ceiling(const KestArena *arena);
 // Whether anything has been refused since the last build opened, over every
 // arena rather than over one. A program is read into an arena of its own and
 // checked into another, so the one that runs out is rarely the one a list of
-// diagnostics is kept in — and what a reader needs to know is not which arena
+// diagnostics is kept in -- and what a reader needs to know is not which arena
 // it was but that there was no room. Set where a refusal is, forgotten where a
-// build begins. See D880.
+// build begins.
 bool kest_arena_refused_anywhere(void);
 void kest_arena_forget_refusals(void);
 
@@ -179,7 +179,7 @@ size_t kest_arena_refused_holding(const KestArena *arena);
 // Whether this arena handed out the address: inside one of its blocks and
 // below what that block has given away. A machine asks it about a pointer it
 // was handed from outside, because reading one it never gave out is reading
-// whatever is at that address — and what a handle is checked for is four bytes
+// whatever is at that address -- and what a handle is checked for is four bytes
 // at the front, which any four bytes can be.
 //
 // What all the blocks sit between answers most of it without a walk, and the
@@ -195,9 +195,9 @@ bool kest_arena_holds(KestArena *arena, const void *at);
 //
 // A ceiling under what has already been handed out takes nothing back: what is
 // out is out, and every allocation after it is refused. Nothing here caps a
-// running arena — the machine caps its heap once, where the heap is made, and
-// the loader and the parser cap a scratch where the scratch is made — so this
-// is what the number means rather than a thing anything does. See D826.
+// running arena -- the machine caps its heap once, where the heap is made, and
+// the loader and the parser cap a scratch where the scratch is made -- so this
+// is what the number means rather than a thing anything does.
 void kest_arena_cap(KestArena *arena, size_t bytes);
 
 #define KEST_ARENA_NEW(arena, type)                                            \

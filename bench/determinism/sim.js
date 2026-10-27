@@ -1,4 +1,4 @@
-// `sim.kest` in JavaScript, for Node: the same steps through `Math`. See D1274.
+// `sim.kest` in JavaScript, for Node: the same steps through `Math`.
 let x = 0.5;
 let y = 1.25;
 let z = 0.0;

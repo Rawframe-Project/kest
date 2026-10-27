@@ -15,7 +15,7 @@
 #
 # Each line a host writes is an engine, a measure, nanoseconds for one of what
 # the measure counts and the answer the work summed to, which has to be the
-# same for every engine; a run whose answers differ is refused. See D1272.
+# same for every engine; a run whose answers differ is refused.
 set -eu
 
 # What the build made: the preset's build directory, out/dev unless
@@ -45,7 +45,7 @@ quiet() {
 cc=${CC:-cc}
 # Every host linked the way a game that cares what it ships links: what
 # nothing reaches is left out, for every engine alike. The library here is
-# built in sections so that there is something to leave out. See D1282.
+# built in sections so that there is something to leave out.
 linked=-Wl,--gc-sections
 cxx=${CXX:-c++}
 # The Tetris clone as it was written in Lua, which the Lua hosts reload the way

@@ -19,7 +19,7 @@ fn isVowel(byte: u8) -> bool no.alloc {
 // Characters walked without paying for them. `charAt` cuts, so asking for
 // every character in turn is one piece of text per character on the heap; the
 // same walk written with `charBytes` and an index reaches nothing, and the
-// promise on this function is what says so — a body that called `charAt` could
+// promise on this function is what says so -- a body that called `charAt` could
 // not keep it, and the compiler would say which line.
 fn wideChars(word: text) -> i32 no.alloc {
     let wide = 0
@@ -35,7 +35,7 @@ fn wideChars(word: text) -> i32 no.alloc {
 
 // Both ways over the same word. Walking back is at most three steps over the
 // middles of a character, and what it lands on is where the walk forwards
-// started — which is the property worth writing down, because either walk on
+// started -- which is the property worth writing down, because either walk on
 // its own can be wrong in a way the other would show.
 fn walksBothWays(word: text) -> bool no.alloc {
     let at = 0
@@ -64,8 +64,8 @@ fn vowels(word: text) -> i32 no.alloc {
 // A walk over text is a walk over what the name held when the walk began. The
 // name is a name like any other and the body may write it; what is being
 // walked does not change, because the walk took the handle and measured it
-// once before the first turn. It is the same rule D053 wrote down for an
-// array, in the one place a text can be walked at all.
+// once before the first turn. It is the same rule as for an array, in the one
+// place a text can be walked at all.
 fn walkedWhole(word: text) -> i32 no.alloc {
     let seen = word
     let count = 0
@@ -141,7 +141,7 @@ fn main() -> i32 {
     // And the characters those bytes spell, which is the other half of the
     // same sentence: four bytes, three characters, and the second of them is
     // two bytes on its own. What a program means by a character is its to say
-    // — this one means what UTF-8 does, which is what `std.text` counts.
+    // -- this one means what UTF-8 does, which is what `std.text` counts.
     if text.chars("hız") != 3 {
         return 6
     }
@@ -256,7 +256,7 @@ fn main() -> i32 {
     // out of what a call gave back. Those are two instructions in the machine,
     // and one of them reads a byte the way this language says one reads and
     // the other used to be the only one anything had ever asked: `ı` is two
-    // bytes, and the first of them is 196, not minus 60. See D439.
+    // bytes, and the first of them is 196, not minus 60.
     let turkish = "ıq"
     let first = 0
     if turkish[first] != 196 || turkish[first + 1] != 177 {
@@ -265,7 +265,7 @@ fn main() -> i32 {
     // And the same bytes read by a walk rather than by an index, which is its
     // own instruction in the machine: `for byte in t` reads the two slots
     // itself, and until this was written every high byte anything looked at
-    // came the other way. See D439.
+    // came the other way.
     let widest = 0
     for byte in turkish {
         if i32(byte) > widest {
@@ -281,7 +281,7 @@ fn main() -> i32 {
     // not following is passed over, a match that ends at the last byte is
     // found, one that would run past it is not, and a match that overlaps the
     // one before it is found where it starts. The search looks for the first
-    // byte and then compares the rest (D1169).
+    // byte and then compares the rest.
     if foundAt("banana", "", 2) != 2 || foundAt("banana", "nab", 0) != 0 - 1 {
         return 22
     }

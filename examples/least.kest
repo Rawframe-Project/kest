@@ -5,7 +5,7 @@ module examples.least
 // as well, so `kest run` answers what the host beside it answers: what it is for is that `examples/least.c` can
 // be read from top to bottom in one sitting, which is what somebody writing
 // their first host needs. Everything else this boundary can do is in
-// `examples/embed.kest` beside the host that reads it. See D624.
+// `examples/embed.kest` beside the host that reads it.
 extern fn Host.write(value: text)
 
 fn greeting(who: text) -> text {
@@ -14,8 +14,8 @@ fn greeting(who: text) -> text {
 
 // An answer the language has no text of its own for, which is where a host
 // with its own structs begins: the machine writes one the way a program writes
-// one since D876, and `examples/embed.c` is the host that lays one out its own
-// way instead. See D628.
+// one, and `examples/embed.c` is the host that lays one out its own
+// way instead.
 struct Pair {
     a: i32
     b: i32
@@ -37,7 +37,7 @@ fn held() -> store<Pair> {
 
 // What the smallest host calls when it is asked for something other than
 // `main`: an answer that is not a number, which a host reads the same way it
-// reads one. See D628.
+// reads one.
 fn motto() -> text {
     return "a host reads what came back the same way, whatever it is"
 }
@@ -46,8 +46,8 @@ fn motto() -> text {
 // its first one has to meet: a program with one of these has no worst chain to
 // add up, so `kest_needs` has no answer and the host has to say how many frames
 // it allows. What a frame costs is the widest body, so the slots follow from
-// the frames — and `examples/least.c` reads both numbers back out of two
-// machines to show it. See D815.
+// the frames -- and `examples/least.c` reads both numbers back out of two
+// machines to show it.
 fn depth(n: i32) -> i32 {
     if n <= 0 {
         return 0

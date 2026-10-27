@@ -3,7 +3,7 @@
 # address, a count and a name: the first two are held where they can be, and
 # this is the third. A name that means two types is a lend of whichever was
 # found first unless something refuses it, and nothing in this tree is a
-# program with two of a name — every example is one module — so the program is
+# program with two of a name -- every example is one module -- so the program is
 # written here.
 set -u
 
@@ -25,8 +25,8 @@ complain() {
 }
 
 # A name that is two types, which is what a host writing `Row` has when two
-# modules declare one. Nothing in this tree is such a program — every example
-# is one module — so the program is three files written here, and the host that
+# modules declare one. Nothing in this tree is such a program -- every example
+# is one module -- so the program is three files written here, and the host that
 # lends to it is ten lines. What it holds is that a lend of a name meaning two
 # things is refused with both of them pointed at, and that the name a host is
 # told to write instead is one that works.
@@ -109,13 +109,13 @@ fi
 rm -rf "$naming" "$naming.c" "$naming.host"
 
 # And what a lend may not hold. Five kinds are a machine word standing for
-# something the machine keeps — the bytes of a piece of text, the header of an
+# something the machine keeps -- the bytes of a piece of text, the header of an
 # array or a store, the place a reference names, the function a value stands
-# for — and three more carry one: a struct, an enum's case, a run of a written
+# for -- and three more carry one: a struct, an enum's case, a run of a written
 # length and an optional. A host lending any of them would hand over a pointer
 # the machine did not put there and cannot take back, so all eight are refused
 # and the message names the one that is the machine's own rather than the shape
-# that carries it. One of the eight was asked for and seven were not. See D544.
+# that carries it. One of the eight was asked for and seven were not.
 holding="$scratch"/holding
 mkdir -p "$holding"
 cat > "$holding/holds.kest" <<'EOF'

@@ -6,7 +6,7 @@ import std.text
 // one, which is what a save, a reload and a record on disk are made of. Every
 // number is written low byte first at its own width, a float as its bits, so
 // what is read back is what was written and the same bytes on every machine.
-// Text is the number of bytes it is, as a `u32`, and then the bytes. See D1171.
+// Text is the number of bytes it is, as a `u32`, and then the bytes.
 
 // Writing is adding to the end of a run of bytes, so a save is a run of these.
 
@@ -224,7 +224,7 @@ fn readF32s(r: Reader) -> [f32] no.host deterministic {
 
 // Text as it was written. Bytes that are not there are read as the empty
 // text and mark the reader short; bytes that are there and are not UTF-8 are
-// refused where they are made into text, the way any bytes are (D971).
+// refused where they are made into text, the way any bytes are.
 fn readText(r: Reader) -> text no.host deterministic {
     let many = i32(readU32(r))
     let at = take(r, many)

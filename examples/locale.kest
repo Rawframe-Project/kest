@@ -7,10 +7,10 @@ import std.text
 // owns UTF-8: that a file is one, that bytes arriving are one, how long a
 // piece of text is in bytes and in characters, how to step forwards and
 // backwards over it, and how to write any character down. It does not own
-// what a language does with characters — which of them go together on screen,
+// what a language does with characters -- which of them go together on screen,
 // which order they sort in, and which letter is the capital of which. Those
 // are a host's, and this program is the line between the two with a program
-// on either side of it. See D1056.
+// on either side of it.
 
 struct Line {
     key: text
@@ -36,7 +36,7 @@ fn catalogue() -> [Line] {
     push(lines, Line("greeting.en", "Hello"))
     // Persian. The mark between the two halves of the word is a zero-width
     // non-joiner: it is part of the spelling and it is invisible, so the file
-    // may not hold one — `K0108` refuses it where it is written — and it is
+    // may not hold one -- `K0108` refuses it where it is written -- and it is
     // written by its number instead. Without an escape for that this language
     // could not spell a Persian verb.
     push(

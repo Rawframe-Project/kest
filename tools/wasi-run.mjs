@@ -1,7 +1,7 @@
 // A command line built as WebAssembly, run by Node's own implementation of
 // WebAssembly's system interface: the first word is the module, the rest are
 // what it is handed, the whole file system is where it can read, and what it
-// answers is the status this comes back with. See D1255.
+// answers is the status this comes back with.
 //
 // A module there starts in `/`, so a path written from where this is run is
 // handed over whole: a word that names something here is that thing, and so is

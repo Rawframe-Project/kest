@@ -109,7 +109,7 @@ KestProject *kest_project_from(KestArena *arena, const char *where,
     kest_project_path(where, path, sizeof(path));
 
     // A manifest handed over is the one there is, and nothing is looked for on
-    // a disk. See D1172.
+    // a disk.
     bool there = handed != NULL;
     char *text = handed != NULL
                      ? kest_arena_strndup(arena, handed, strlen(handed))

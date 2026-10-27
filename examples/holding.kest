@@ -3,7 +3,7 @@ module examples.holding
 import std.io
 
 // What a store holds while it is growing, which is a thing a program can be
-// written to show and was wrong until D1005.
+// written to show: the value being added is a root while the store grows.
 //
 // Adding to a full store takes four runs at once -- the values, the counts,
 // which places are live and which are free -- and any of those may set off the

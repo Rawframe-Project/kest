@@ -1,6 +1,6 @@
 -- `churn.kest` in the Lua that Lua 5.4, LuaJIT and Luau all read: five
 -- thousand things, each with a name and a table of tags, every one moved every
--- frame and some replaced by new ones. See D1273.
+-- frame and some replaced by new ones.
 
 local world = {}
 local nextid = 0

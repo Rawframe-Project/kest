@@ -2,9 +2,9 @@ module examples.engine
 
 // The program an engine drives. `examples/embed.c` is the other host in this
 // tree and is a meta-test: it asks every door this language has, one after
-// another, and is long because the list is. This one is the other thing — a
-// frame loop, a world kept between frames, a save and a reload — written to be
-// read rather than to be complete. See D949.
+// another, and is long because the list is. This one is the other thing -- a
+// frame loop, a world kept between frames, a save and a reload -- written to be
+// read rather than to be complete.
 //
 // What makes it a world rather than a list is that the bodies name each other:
 // each chases the next one round and the last chases the first. A save that
@@ -20,7 +20,6 @@ module examples.engine
 // case after it, and a world saved before that reads back with each of those
 // meaning the one below. It is a shape moving, so the layout's mark has to
 // move with it, and a reload that does not refuse is a world quietly wrong.
-// See D1072.
 enum Doing {
     Drifting
     Chasing
@@ -30,8 +29,8 @@ enum Doing {
 // declaration order: a bit is one shifted by its place in the list, so a bit
 // put in the middle of this doubles every bit after it and a world saved
 // before that reads back with each of them meaning the one below. The layout's
-// mark carries which bits there are since D1076, for the reason it carries the
-// cases above.
+// mark carries which bits there are, for the reason it carries the cases
+// above.
 flags Marks: u8 {
     Seen
     Hit
@@ -246,7 +245,7 @@ fn round(w: World, from: i32) -> i32 no.alloc no.host {
 
 // A query: what the engine asks between frames rather than in one. It makes
 // text and an array to answer, which is what a query does and what a host that
-// wants the answer without the memory marks round. See D957.
+// wants the answer without the memory marks round.
 fn describe(w: World) -> text {
     let said = ""
     for r in w.bodies {

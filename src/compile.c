@@ -14,7 +14,7 @@
 // How many names a program may ask the host for. An extern is named in the
 // instruction that calls it, in two bytes, so the sixty-five-thousand-and-
 // thirty-seventh would be called as whichever one that number wraps to: the
-// host's, with the program's arguments, and nothing said. See D326.
+// host's, with the program's arguments, and nothing said.
 #define MAX_EXTERNS 65536
 _Static_assert(MAX_EXTERNS <= (uint32_t)UINT16_MAX + 1,
                "an extern is named in an instruction in two bytes");
@@ -46,16 +46,16 @@ typedef struct {
     uint32_t depth;
     // The slot holds where the value is rather than the value. A walk binds
     // its name this way when the body only ever reads fields of it, so
-    // reading one field of a wide struct does not copy the rest. See D052.
+    // reading one field of a wide struct does not copy the rest.
     bool is_address;
     // Where the name this body wrote down for it is, so that a thing known
     // after the name was written -- whether the slot holds an address -- can
-    // be written into it rather than lost. See D1081.
+    // be written into it rather than lost.
     uint32_t name_at;
     // The name is a value the chunk holds rather than a place in the frame: a
     // `let` worked out where it was written whose name the body never assigns
     // to. The frame neither builds it nor keeps it, and every reading of the
-    // name is a constant. NULL for every other name. See D887.
+    // name is a constant. NULL for every other name.
     const KestValue *folded;
     const KestType *holds;
     // Where it was written, which is what a body says about a name when it is
@@ -63,7 +63,7 @@ typedef struct {
     KestSpan span;
     // Not a name here: a function written into where it was called sees its
     // own names and no others, and a block run inside one sees the names
-    // where it was written and not the function's. See D1257.
+    // where it was written and not the function's.
     bool hidden;
 } Local;
 
@@ -91,7 +91,7 @@ typedef struct {
     KestIrProgram *ir;
     KestIrBody *body;
     // The function whose body is being compiled, which is told when it is
-    // finished whether it keeps runs. See D1188.
+    // finished whether it keeps runs.
     KestChunk *compiling;
     // The values this walk has made and not yet read, innermost last. It is
     // the shape the tree has: what an expression makes is read by the
@@ -117,52 +117,50 @@ typedef struct {
 
     // What has been deferred and not yet run, innermost last. A block runs
     // what it added when it ends; a `return` runs everything; a `break` runs
-    // what the loop it is leaving added. See D061.
+    // what the loop it is leaving added.
     const KestExpr *deferred[MAX_DEFERS];
     uint16_t defer_count;
 
     // The working-memory blocks this walk is inside, innermost last, each
     // with the slot holding which one it is. A `return`, a `break` or a
     // `continue` out of one closes it on the way; every other way out is the
-    // machine's, because a body that is refused has no code left to run. See
-    // D966.
+    // machine's, because a body that is refused has no code left to run.
     uint16_t regions[MAX_REGIONS];
     uint16_t region_count;
 
     // Compiling an expression always leaves one value behind and compiling a
     // statement leaves none, so following the emit sites gives the exact
-    // depth rather than a bound. Since D809 that is held rather than said:
+    // depth rather than a bound. That is held rather than said:
     // `hold_width` at every expression, and `hold_empty` at every statement.
     uint16_t stack_depth;
     uint16_t stack_high_water;
     // Whether the count was taken below nothing since the last statement.
     // Taking more off than was put on used to stop at nought and carry on,
     // which is a count that is wrong and looks right again by the end of the
-    // statement — the one way either of the two above could be kept by a
-    // compiler that had lost track. See D810.
+    // statement -- the one way either of the two above could be kept by a
+    // compiler that had lost track.
     bool lost_count;
 
-    // A reported problem does not stop the walk: D008 wants one run to report
-    // the whole file. Only running out of memory stops it, because after that
+    // A reported problem does not stop the walk, so one run reports the
+    // whole file. Only running out of memory stops it, because after that
     // nothing further is true, and that is what this says.
     bool out_of_memory;
 
     // Whether a place in an array is wanted as what it is made of rather than
     // as an address. A statement that writes through a place and evaluates
     // something in between asks for this; everything else takes the address,
-    // which is a slot fewer and is safe where nothing runs in between. See
-    // D931.
+    // which is a slot fewer and is safe where nothing runs in between.
     bool place_apart;
 
     // How many walks written out once a turn this is inside. A name such a
     // walk counts with is a value the body holds, so a question about it has
-    // an answer where it is asked. See D1231.
+    // an answer where it is asked.
     uint16_t unrolling;
 
     // The function taking a block that is being written into where it was
     // called, innermost, and how many deep that is; the lowest name that is
     // this body's to see; and the place every instruction is said to come
-    // from while what is written comes from another file. See D1257.
+    // from while what is written comes from another file.
     struct Expanding *expanding;
     uint32_t expansion_depth;
     uint16_t visible_floor;
@@ -171,7 +169,7 @@ typedef struct {
     // A body that resumes: the declaration, where what it resumes from is in
     // the frame and how wide, the slot that says where it is waiting, and the
     // branch the start of the body takes to each `wait`, by the order they
-    // are written in. See D1263.
+    // are written in.
     const KestDecl *resuming;
     uint16_t resume_slot;
     uint16_t resume_size;
@@ -191,7 +189,7 @@ static void refuse(Compiler *compiler, KestSpan span, const char *code,
 
 // What the checker allowed and this cannot emit. Reaching one of these means
 // the two halves of this compiler disagree about what a program is, which is
-// this project's mistake and not the program's — so it says so, in the words
+// this project's mistake and not the program's -- so it says so, in the words
 // the emitted-code proof uses for the same kind of news. A diagnostic rather
 // than an assert, because a program that trips it should be told rather than
 // stopped.
@@ -210,7 +208,7 @@ static void stack_pop(Compiler *compiler, uint16_t count) {
     // Stopping at nought rather than going under it, and remembering that it
     // had to: what is under nothing is not a depth, and a count that clamps
     // is one that comes back to the right answer by the end of the statement
-    // whatever it did in the middle. `hold_empty` reads this. See D810.
+    // whatever it did in the middle. `hold_empty` reads this.
     if (compiler->stack_depth < count) {
         compiler->lost_count = true;
     }
@@ -384,8 +382,8 @@ static Exits one_exit(Compiler *compiler, uint32_t at) {
     return exits;
 }
 
-// Telling a list of branches where they land. There are two lists — the ones
-// a condition left and the ones a `continue` left — and one walk over them.
+// Telling a list of branches where they land. There are two lists -- the ones
+// a condition left and the ones a `continue` left -- and one walk over them.
 static void land_each(Compiler *compiler, const uint32_t *at, uint32_t count) {
     for (uint32_t i = 0; i < count; i++) {
         ir_lands(compiler, at[i]);
@@ -444,7 +442,7 @@ static void bind_local(Compiler *compiler, KestSpan span, uint16_t slot,
     if (local->name == NULL) {
         // A local is found by its name, so one without a name is a slot
         // nothing can reach and a pointer everything that looks for it would
-        // read. See D510.
+        // read.
         compiler->out_of_memory = true;
         return;
     }
@@ -455,7 +453,7 @@ static void bind_local(Compiler *compiler, KestSpan span, uint16_t slot,
 
 // A name for a value the chunk holds. It takes no slot, so the frame is the
 // size it would be if the name had not been written -- which is the point:
-// nothing builds it and nothing keeps it. See D887.
+// nothing builds it and nothing keeps it.
 static void hold_local(Compiler *compiler, KestSpan span, const KestType *type,
                        const KestValue *values, uint16_t slots) {
     if (compiler->local_count == MAX_LOCALS) {
@@ -636,7 +634,7 @@ static uint32_t at_place(Compiler *compiler, KestIrRef base, KestIrRef index,
 }
 
 // One of an array or of a store, as the handle and which one. What reaches it
-// is worked out where it is read or written and not before. See D931.
+// is worked out where it is read or written and not before.
 static uint32_t elem_place(Compiler *compiler, KestIrRef base, KestIrRef index,
                            uint16_t offset, const KestType *element,
                            KestSpan span) {
@@ -811,7 +809,7 @@ static bool dividing_can_leave(const KestType *type) {
 // cast between them has nothing to cut. A `bool` is nought or one and fits in
 // all of them. An unsigned value is nought upwards, so it fits an unsigned type
 // of at least its width and a signed one wider than it; a signed value can be
-// under nought, which no unsigned type holds. See D867.
+// under nought, which no unsigned type holds.
 static bool every_value_fits(const KestType *from, const KestType *to) {
     if (from == NULL || to == NULL || to->tag != KEST_T_INT) {
         return false;
@@ -832,7 +830,7 @@ static bool every_value_fits(const KestType *from, const KestType *to) {
 // A result wider than its type is not the answer the type describes, so it is
 // cut back. Sixty-four bits is the slot, so nothing is cut there. Whether the
 // arithmetic before it takes it into itself is the backend's question and is
-// asked there. See D868.
+// asked there.
 static void ir_narrow(Compiler *compiler, const KestType *type,
                       KestSpan span) {
     if (type == NULL || type->width == 64 ||
@@ -888,7 +886,7 @@ static bool compile_function_value(Compiler *compiler, const KestExpr *expr) {
     }
     // Written down as one that a call through a value may enter. What such a
     // call costs is the worst of these and nothing else, because this is the
-    // only place a function becomes a value. See D814.
+    // only place a function becomes a value.
     compiler->module->functions[index]->as_value = true;
     KestValue which = {0};
     which.integer = index;
@@ -904,7 +902,6 @@ static bool compile_function_value(Compiler *compiler, const KestExpr *expr) {
 // optional, and inside the case of an enum the value's own tag names. And it
 // writes exactly as many as the type takes, a struct with nothing in it being
 // one, because a description one short puts every field after it one out.
-// See D1241.
 static void value_classes(const KestType *type, const KestValue *values,
                           uint8_t *classes, uint32_t *at) {
     if (type != NULL && type->tag == KEST_T_STRUCT && type->member_count > 0) {
@@ -920,7 +917,7 @@ static void value_classes(const KestType *type, const KestValue *values,
         return;
     }
     // A piece of text is two slots: what it is made of, and how many bytes
-    // that is. See D964.
+    // that is.
     if (type != NULL && type->tag == KEST_T_TEXT) {
         classes[(*at)++] = KEST_CONST_TEXT;
         classes[(*at)++] = KEST_CONST_INT;
@@ -958,13 +955,12 @@ static void value_classes(const KestType *type, const KestValue *values,
 static bool constant_run(Compiler *compiler, const KestType *type,
                          const KestValue *values, uint16_t slots,
                          uint32_t *first) {
-    // Worked out into this rather than into a block of the arena, which is
-    // what D676 did for the values these describe and did not do for the
-    // description: `kest_chunk_constant_run` copies what it is handed into the
+    // Worked out into this rather than into a block of the arena:
+    // `kest_chunk_constant_run` copies what it is handed into the
     // chunk, so nothing here outlives the call, and a block taken for it is a
     // block nobody reads and nothing gives back. Sixteen for the same reason
     // the values take sixteen, which is that a run wider than that is a table
-    // rather than a value. See D754.
+    // rather than a value.
     // Nought to start with, because that is what a block of the arena arrives
     // as and what `value_classes` leaves the slots it does not reach: a
     // description read past what was written into it is a constant whose kind
@@ -994,7 +990,7 @@ static bool constant_run(Compiler *compiler, const KestType *type,
 // give a chunk a value it did not have to build -- an expression written where
 // it stands, one of a run read at a position, and a name the frame does not
 // hold -- and a count kept in three places is three answers the day one of
-// them moves. See D887.
+// them moves.
 static void counted_fold(Compiler *compiler, uint16_t slots) {
     if (compiler->body == NULL) {
         return;
@@ -1019,7 +1015,7 @@ static void emit_value_slots(Compiler *compiler, const KestType *type,
 }
 
 // A piece of text the body holds, which is two values: what it is made of and
-// how many bytes that is. See D964.
+// how many bytes that is.
 static void emit_text_constant(Compiler *compiler, const char *bytes,
                                size_t length, const KestType *type,
                                KestSpan span) {
@@ -1051,7 +1047,7 @@ static void emit_constant(Compiler *compiler, KestValue value,
 // and the program was already refused for what is there. Every stage after the
 // one that refused counts slots, so a hole left where a value goes is the
 // compiler telling a reader about its own arithmetic rather than about their
-// program. See D888.
+// program.
 static void emit_nothing_wide(Compiler *compiler, const KestType *type,
                               KestSpan span) {
     uint16_t slots = value_slots(type);
@@ -1076,7 +1072,7 @@ static bool compile_folded(Compiler *compiler, const KestExpr *expr) {
     // A name that is a constant was worked out where it was declared, so this
     // reads what came of that rather than working it out again. Without it a
     // wide constant read forty times was folded forty times, which the count
-    // of folds says out loud. See D675.
+    // of folds says out loud.
     if (expr->kind == KEST_EXPR_NAME || expr->kind == KEST_EXPR_FIELD) {
         const KestSymbol *named = kest_lookup_global(
             compiler->program, span_text(compiler, expr->span),
@@ -1089,10 +1085,10 @@ static bool compile_folded(Compiler *compiler, const KestExpr *expr) {
         }
     }
     // Worked out into this rather than into a block of the arena. Most of what
-    // reaches here is not a constant at all — ninety-one askings to nineteen
-    // answers in one example — and a block taken for each of those is a block
+    // reaches here is not a constant at all -- ninety-one askings to nineteen
+    // answers in one example -- and a block taken for each of those is a block
     // nobody reads and nothing gives back. What comes of a fold is written
-    // into the chunk, so nothing needs to outlive this. See D676.
+    // into the chunk, so nothing needs to outlive this.
     KestValue held[16];
     KestValue *values = held;
     if (slots > (uint16_t)(sizeof(held) / sizeof(held[0]))) {
@@ -1121,8 +1117,8 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
     const KestSymbol *symbol =
         kest_lookup_global(compiler->program, name, expr->span.length);
     // Worked out where it was declared, so every use of it reads what is
-    // already there: a constant read five times was folded five times before
-    // D674, and what was wrong with one was said as many times as it was read.
+    // already there: a constant read five times is folded once, and what is
+    // wrong with one is said once.
     if (symbol != NULL && symbol->is_const && symbol->folded != NULL) {
         emit_value_slots(compiler, symbol->type, symbol->folded,
                          (uint16_t)symbol->folded_slots, expr->span);
@@ -1136,7 +1132,7 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
         // in the words it keeps for a fault of its own, about a program
         // somebody had merely written wrongly. What goes there is nothing of
         // the right width: the program is refused, so nothing runs it, and
-        // what it is worth is that everything after it counts. See D888.
+        // what it is worth is that everything after it counts.
         emit_nothing_wide(compiler, symbol->type, expr->span);
         return;
     }
@@ -1152,9 +1148,9 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
         }
         // Worked out in the file it was written in. What a literal is worth is
         // read out of the source at the span it stands at, and a constant from
-        // another module has spans into that module's file — read against this
+        // another module has spans into that module's file -- read against this
         // one they name whatever bytes happen to be at those offsets, which is
-        // a number nobody wrote. See D665.
+        // a number nobody wrote.
         const KestSource *reading = compiler->program->source;
         if (symbol->source != NULL) {
             compiler->program->source = symbol->source;
@@ -1166,10 +1162,10 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
         if (filled != slots) {
             // Two refusals rather than one. A constant made of itself or
             // divided by nought is a mistake in what was written, and one that
-            // asks for a choice or a call is a rule of this language — the
+            // asks for a choice or a call is a rule of this language -- the
             // first is fixed where it is and the second is written another way
             // altogether. A reader is told either way; a tool sorting refusals
-            // could not tell them apart while both were `K0504`. See D673.
+            // could not tell them apart while both were `K0504`.
             if (never) {
                 refuse(compiler, expr->span, "K0510",
                        "`%.*s` is made while running, so it is not a constant",
@@ -1199,8 +1195,8 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
 // its name to where the element is when that holds, so a body that wants one
 // field of a wide struct does not copy the rest of it.
 //
-// It is the whole body or nothing: one use of the name on its own — passed,
-// returned, compared, assigned to — and the name has to be a value.
+// It is the whole body or nothing: one use of the name on its own -- passed,
+// returned, compared, assigned to -- and the name has to be a value.
 static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
                               const char *name, size_t length,
                               bool fields_are_fine);
@@ -1208,7 +1204,7 @@ static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
 // Both sides here are runs of the source with no nought at either end, which
 // is why this is written out rather than asking `kest_word_same`: that one
 // takes a name this compiler holds against a word a file wrote, and the walk
-// this serves is comparing one word a file wrote against another. See D773.
+// this serves is comparing one word a file wrote against another.
 static bool name_is(Compiler *compiler, const KestExpr *expr, const char *name,
                     size_t length) {
     return expr != NULL && expr->kind == KEST_EXPR_NAME &&
@@ -1385,7 +1381,7 @@ static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
         // nothing and the loop bound its element by address. Written out with
         // no `default` now, the way every list here that has to be complete
         // is, so a statement added to the language stops the build rather
-        // than going quietly missing from two walks. See D1075.
+        // than going quietly missing from two walks.
         case KEST_STMT_SCRATCH:
             if (!reads_only_fields(compiler, &stmt->block, name, length,
                                  fields_are_fine)) {
@@ -1409,7 +1405,7 @@ static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
 }
 
 // Whether anything in here could write into an array. There is no global
-// mutable state in this language (D002's rule for the implementation is the
+// mutable state in this language (the implementation's rule is the
 // language's rule too), so a write reaches an array only through a name in
 // scope or through a call that was handed one. Both are refused rather than
 // told apart, because telling two handles apart is a question this compiler
@@ -1423,7 +1419,7 @@ static bool writes_no_arrays(Compiler *compiler, const KestBlock *block);
 // struct. The walk used to stop at the top, so a body that passed the holder
 // was read as touching nothing and the loop bound its element by address. The
 // element then changed under the body's copy, which is the one thing a value
-// is promised not to do. See D932.
+// is promised not to do.
 static bool holds_a_handle(const KestType *type, uint32_t depth) {
     // A shape can name itself through a reference, so the walk is bounded.
     // Anything that deep holds one of these long before it gets here.
@@ -1677,7 +1673,7 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
     // be one. Held apart all the way down, the element read left the array and
     // the index on the stack instead of the handle, and the statement ended
     // two slots deep -- which the build that checks itself called a fault in
-    // the compiler, because that is what it is. See D1091.
+    // the compiler, because that is what it is.
     bool apart = compiler->place_apart;
     compiler->place_apart = false;
     compile_expr(compiler, expr->index.object);
@@ -1687,7 +1683,7 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
         // Left as the array and the index. What reads or writes it works the
         // address out at that moment, so anything the program does in between
         // -- growing that very array, most of all -- cannot leave this holding
-        // a block nothing will read again. See D931.
+        // a block nothing will read again.
         *offset = 0;
         return true;
     }
@@ -1704,7 +1700,7 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
 
 // What the folder asks about a name while a walk is written out once a turn:
 // the innermost name the body declared by that spelling, and the value it
-// holds, if it holds one. See D1231.
+// holds, if it holds one.
 static bool held_by_body(void *context, const char *name, uint32_t length,
                          const KestValue **value, uint32_t *slots) {
     Compiler *compiler = context;
@@ -1720,7 +1716,7 @@ static bool held_by_body(void *context, const char *name, uint32_t length,
 }
 
 // A fold asked for what it answers rather than as a value a body is given:
-// the counts the costs are read from are left as they were. See D1231.
+// the counts the costs are read from are left as they were.
 static bool fold_quietly(Compiler *compiler, const KestExpr *expr,
                          KestValue *out) {
     KestProgram *program = compiler->program;
@@ -1738,7 +1734,7 @@ static bool fold_quietly(Compiler *compiler, const KestExpr *expr,
 // Whether a truth is settled where it is written, inside a walk written out
 // once a turn and nowhere else: `way == 0` in the turn where `way` is two.
 // `a && b` and `a || b` are settled by the half that settles them, and by the
-// other half where the first does not. See D1231.
+// other half where the first does not.
 static bool known_truth(Compiler *compiler, const KestExpr *expr,
                         bool *truth) {
     if (compiler->unrolling == 0 || expr == NULL || expr->type == NULL ||
@@ -1895,7 +1891,7 @@ static VectorSide vector_side(Compiler *compiler, const KestExpr *side) {
 // operation on what the two sides hold there, the same instruction the same
 // two numbers get anywhere else -- so a vector rounds where its components
 // would, in the machine and in C alike, and nothing proves it but what proves
-// the rest. What is left is one value of `whole`. See D1250.
+// the rest. What is left is one value of `whole`.
 static void vector_arith(Compiler *compiler, KestIrKind does, VectorSide left,
                          VectorSide right, const KestType *whole,
                          KestSpan span) {
@@ -1951,7 +1947,7 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
 
     // Read off the sides rather than off the answer: an answer standing where
     // an optional is wanted has been widened to one by the checker, and the
-    // tag goes on after it the way it does after a call. See D1251.
+    // tag goes on after it the way it does after a call.
     const KestType *left_type = expr->binary.left->type;
     const KestType *right_type = expr->binary.right->type;
     if ((kest_is_vector(left_type) || kest_is_vector(right_type)) &&
@@ -1968,7 +1964,7 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     if (op == KEST_TOK_AMPAMP || op == KEST_TOK_PIPEPIPE) {
         // A first half settled where it is written that did not settle the
         // whole -- `compile_expr` answers the whole where it did -- leaves the
-        // answer to the second. See D1231.
+        // answer to the second.
         bool first;
         if (known_truth(compiler, expr->binary.left, &first)) {
             compile_expr(compiler, expr->binary.right);
@@ -1996,8 +1992,8 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     // An optional against `none`, which asks the flag beside the value and
     // nothing else: the other side is not compiled at all, because what it
     // holds is not part of the question. What is left of the one that is
-    // compiled is its last slot, which is the flag — rotated to the bottom of
-    // the run and the rest dropped. See D727.
+    // compiled is its last slot, which is the flag -- rotated to the bottom of
+    // the run and the rest dropped.
     if ((op == KEST_TOK_EQEQ || op == KEST_TOK_BANGEQ) &&
         (expr->binary.left->kind == KEST_EXPR_NONE) !=
             (expr->binary.right->kind == KEST_EXPR_NONE)) {
@@ -2034,11 +2030,11 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     const KestType *operand = expr->binary.left->type;
 
     // One list of operators, and what each does to the width beside what it
-    // does. It was two lists — which operation, and then which of them leave
-    // the width — and the second had a `default` under it, so an operator
+    // does. It was two lists -- which operation, and then which of them leave
+    // the width -- and the second had a `default` under it, so an operator
     // added to the first would leave the width without anybody deciding it
     // should. `&`, `|`, `^` and `>>` need no narrowing: every bit they
-    // produce was already in range (D018). Which of `f32`, `f64` and a whole
+    // produce was already in range. Which of `f32`, `f64` and a whole
     // number the arithmetic is on is the type's to say and the backend's to
     // read, so there is one addition here and not three.
     switch (op) {
@@ -2099,7 +2095,7 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
         }
         // Two values of one width come off and one truth goes on, whatever
         // the width is: a piece of text is two slots now and an enum is as
-        // many as its widest case. See D964.
+        // many as its widest case.
         uint16_t wide = value_slots(operand);
         if (wide > 1) {
             stack_pop(compiler, (uint16_t)((wide - 1) * 2));
@@ -2125,7 +2121,7 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
 // nothing else: a run of *text* taking a piece of text is one element going
 // on the end the ordinary way, and asking only whether what was handed over
 // was text made `push(words, "alpha")` on a `[text]` copy the bytes of the
-// piece into the run of handles. See D1068.
+// piece into the run of handles.
 static bool appends_text(const KestExpr *expr) {
     if (expr->call.arg_count != 2 || expr->call.args[1]->type == NULL ||
         expr->call.args[1]->type->tag != KEST_T_TEXT) {
@@ -2169,7 +2165,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
     }
 
     // A piece of text is two slots, so what these take and leave is counted
-    // rather than written down as one each. See D964.
+    // rather than written down as one each.
     if (kest_word_same("slice", name, length)) {
         stack_pop(compiler, 4);
         stack_push(compiler, 2);
@@ -2267,7 +2263,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
     }
 
     // A float as its bits and back. The operation is typed by the float at
-    // either end, and carries which way it goes. See D1171.
+    // either end, and carries which way it goes.
     if (kest_word_same("bits", name, length) ||
         kest_word_same("float", name, length)) {
         bool to_bits = kest_word_same("bits", name, length);
@@ -2290,7 +2286,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         // made of is a place and the number the process handed out, and only
         // the place may be hashed -- so the walk that knows what a value is
         // made of does it rather than the instruction that hashes a whole
-        // number. See D1054.
+        // number.
         bool whole = of != NULL && (of->tag == KEST_T_ENUM ||
                                     of->tag == KEST_T_STRUCT ||
                                     of->tag == KEST_T_FIXED ||
@@ -2312,7 +2308,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         // A whole piece of text onto a run of bytes is one move rather than
         // the loop a program would write. Which it is comes from what was
         // handed over, because the checker has already said the two are the
-        // only shapes there are. See D1068.
+        // only shapes there are.
         if (appends_text(expr)) {
             stack_pop(compiler, 3);
             uint32_t whole = ir_emit(compiler, KEST_IR_APPEND_TEXT, array, 2,
@@ -2364,7 +2360,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
                               : value_slots(expr->type->element);
         // And which type a place in it holds, written beside the stride so the
         // machine can say what a handle is of. A stride says how far apart two
-        // places are and nothing about what is in one. See D927.
+        // places are and nothing about what is in one.
         uint16_t holds = layout_of(compiler, expr->type == NULL
                                                  ? NULL
                                                  : expr->type->element);
@@ -2445,8 +2441,8 @@ static void compile_conversion(Compiler *compiler, const KestExpr *expr,
             ir_carries(compiler, at, kest_scalar_of(to), 0, 0);
         } else {
             // A `bool` is already nought or one, and an integer only has to
-            // be cut to the width it is going into — and not even that where
-            // that width already holds every value it has. See D867.
+            // be cut to the width it is going into -- and not even that where
+            // that width already holds every value it has.
             if (!every_value_fits(from, to)) {
                 ir_narrow(compiler, to, expr->span);
             }
@@ -2534,12 +2530,11 @@ static void compile_value_call(Compiler *compiler, const KestExpr *expr) {
     // How wide what it takes is, and what this call is expecting back, which
     // the machine has no other way to know: which function it enters is a
     // number, and a number a host wrote may name one of another shape.
-    // See D835.
     //
     // And whether what it enters promises to reach no heap, which is what
     // says a call inside a working-memory block cannot grow what it was
     // handed. A promise is part of a function's type, so reading it off the
-    // shape here is reading it off the type. See D1075.
+    // shape here is reading it off the type.
     ir_carries(compiler, at, through, coming_back,
                shape != NULL && shape->no_alloc ? 1 : 0);
 }
@@ -2550,7 +2545,7 @@ static void compile_value_call(Compiler *compiler, const KestExpr *expr) {
 // nothing is a value or reaches the heap. What makes that true is which
 // names each can see, which file a span is read from, and which types a
 // generic's names stand for, so each of those is kept for the place a block
-// was written and put back while it runs. See D1257.
+// was written and put back while it runs.
 #define MOST_BLOCKS 8
 #define DEEPEST_EXPANSION 16
 
@@ -2896,7 +2891,7 @@ static void compile_block_call(Compiler *compiler, const KestExpr *expr,
 static void compile_call(Compiler *compiler, const KestExpr *expr) {
     const KestExpr *callee = expr->call.callee;
     // A block this function was handed, called; and a function that takes
-    // one, written in. See D1257.
+    // one, written in.
     if (callee->kind == KEST_EXPR_NAME && !expr->call.method &&
         find_local(compiler, callee->span) == NULL) {
         const BlockBinding *bound = block_named(compiler, callee->span);
@@ -2924,7 +2919,7 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     // written down -- `Vec3(0.0, 1.0, 0.0)` is as settled as a hash is -- and
     // that is a wider change than this one: it makes a struct with nothing in
     // it a constant, which is the one thing that reaches the branch below
-    // holding what an empty one is built as. See D886.
+    // holding what an empty one is built as.
     if (expr->type != NULL &&
         (expr->type->tag == KEST_T_INT || expr->type->tag == KEST_T_FLOAT) &&
         compile_folded(compiler, expr)) {
@@ -2983,11 +2978,11 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     //
     // Except one with no fields, which is a slot all the same: a struct is at
     // least one slot wide so that a value of one is a value, and every other
-    // place in this compiler believes that width — the frame it is passed in,
+    // place in this compiler believes that width -- the frame it is passed in,
     // the slots it is stored to, what a constant of one has to fill. Pushing
     // nothing here left every argument after it a slot low, so
     // `takes(Empty(), 3, 4)` read its numbers out of whatever the stack was
-    // holding. See D807.
+    // holding.
     if (callee->type != NULL && callee->type->tag == KEST_T_STRUCT) {
         if (callee->type->member_count == 0) {
             KestValue nothing = {0};
@@ -3055,7 +3050,7 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     // What the function gives, which is not always what the expression is: a
     // value standing where an optional is wanted is widened by the checker and
     // the tag is emitted after the call, so asking the expression here would
-    // count the tag twice — and a host call carries this number, so it would
+    // count the tag twice -- and a host call carries this number, so it would
     // write over the slot beside its answer.
     uint16_t result_slots =
         callee->type != NULL && callee->type->tag == KEST_T_FN
@@ -3083,7 +3078,6 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
                               result_slots, expr->span);
         // And whether it promises to reach no heap, which is what says a
         // call inside a working-memory block cannot grow what it was handed.
-        // See D1075.
         ir_carries(compiler, at, (uint16_t)index, argument_slots,
                    callee->type != NULL && callee->type->no_alloc ? 1 : 0);
         return;
@@ -3262,7 +3256,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         // body was two constants and a subtraction each time it ran. The
         // folder answers what the machine answers, wrapping included, and
         // does not work out a division by nought, so that stays a refusal
-        // where it runs. See D1160.
+        // where it runs.
         if (expr->type != NULL &&
             (expr->type->tag == KEST_T_INT || expr->type->tag == KEST_T_FLOAT) &&
             compile_folded(compiler, expr)) {
@@ -3284,7 +3278,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         }
         // `box.CELLS` is one name with a dot in it, the same way
         // `sort.ascending` is: a constant another module declared, which
-        // crosses out of the file it is in. See D665.
+        // crosses out of the file it is in.
         const KestSymbol *elsewhere = kest_lookup_global(
             compiler->program, span_text(compiler, expr->span),
             expr->span.length);
@@ -3338,7 +3332,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         // wanted is widened by the checker, and read at the width of the
         // widened type this took the member and the bytes after it out of a
         // struct that has no tag in it. The tag goes on afterwards, the same
-        // as it does after a call and after one of a run. See D809 and D1055.
+        // as it does after a call and after one of a run.
         uint16_t offset = 0;
         if (can_address(compiler, expr) &&
             compile_address(compiler, expr, &offset)) {
@@ -3372,7 +3366,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             // One of a run the chunk holds. The folder cannot see a local, so
             // what says the run is settled is the name rather than another
             // fold -- and a position written down is one value rather than a
-            // reach into the run. See D887.
+            // reach into the run.
             Local *by_name = expr->index.object->kind == KEST_EXPR_NAME
                                  ? find_local(compiler, expr->index.object->span)
                                  : NULL;
@@ -3506,7 +3500,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         // wanted is widened by the checker, and read at the width of the
         // widened type this took the element and the bytes after it out of a
         // run that has no tag in it. The tag goes on afterwards, the same as
-        // it does after a call. See D809.
+        // it does after a call.
         const KestType *one = object == NULL || object->element == NULL
                                   ? expr->type
                                   : object->element;
@@ -3532,8 +3526,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         // first and copied: three numbers in one line of a log were four
         // pieces of text made and three thrown away. Sixteen pieces is as
         // many as the join can say this about. `KEST_NOOPT` makes every
-        // number a text first, which is what the gate holds this to. See
-        // D1277.
+        // number a text first, which is what the gate holds this to.
         //
         // A number on its own is `text.i` and nothing after it: joining one
         // piece is a copy of a text nobody else holds.
@@ -3570,7 +3563,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             // A run of slots whose text is a piece of text, so what the
             // walk of the parts counts has to come back to the two slots one
             // is. An optional is the same shape: what it holds, and a tag
-            // after it. See D964.
+            // after it.
             bool laid_out = type->tag == KEST_T_FLAGS ||
                             type->tag == KEST_T_ENUM ||
                             type->tag == KEST_T_OPTIONAL ||
@@ -3604,7 +3597,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         uint16_t gives = branch->gives ? value_slots(expr->type) : 0;
 
         // A condition settled where it is written: the arm that runs is the
-        // only one compiled, and it leaves what the `if` would. See D1231.
+        // only one compiled, and it leaves what the `if` would.
         bool settled;
         if (branch->binding.length == 0 &&
             known_truth(compiler, branch->condition, &settled)) {
@@ -3748,7 +3741,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             // not answer every combination, and a tag is a case of its type
             // wherever it came from -- a host's is asked at the crossing and
             // one read out of memory where it is read -- so a run that got
-            // past every other arm is in this one. See D1192.
+            // past every other arm is in this one.
             bool last = a + 1 == choose->arm_count;
             uint32_t nexts[8];
             uint32_t next_count = 0;
@@ -3874,13 +3867,13 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
 
 // What an expression left on the stack against what its type says it is. The
 // compiler adds this up as it goes and reads it once, as `stack_high_water`,
-// to say how much operand stack a body needs — and it is the same count the
+// to say how much operand stack a body needs -- and it is the same count the
 // machine moves by, so the two parting company is either a body sized for a
-// stack it does not use or a value read at the wrong width. D808 was the
-// first, over a byte literal counted twice; D809 was the second, an element
-// read at the width of the optional it was about to become. Held at every
+// stack it does not use or a value read at the wrong width: a byte literal
+// counted twice is the first, and an element read at the width of the optional
+// it is about to become is the second. Held at every
 // expression rather than measured afterwards, because the expression is what
-// names it. See D809.
+// names it.
 static void hold_width(Compiler *compiler, const KestExpr *expr,
                        uint16_t before) {
     if (compiler->out_of_memory) {
@@ -3904,7 +3897,7 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr) {
     }
     uint16_t before = compiler->stack_depth;
     // A truth settled where it is written, which is a question about the
-    // count of a walk written out once a turn, is that truth. See D1231.
+    // count of a walk written out once a turn, is that truth.
     bool settled;
     if (known_truth(compiler, expr, &settled)) {
         stack_push(compiler, 1);
@@ -3957,7 +3950,7 @@ static int32_t read_out_of(const KestIrBody *body, KestIrRef value) {
 
 // Whether a call is to a body that keeps runs: compiled already, and doing
 // nothing that could make an array shorter. A body compiled later, and the
-// body being compiled, are not known yet and are taken as not. See D1188.
+// body being compiled, are not known yet and are taken as not.
 static bool calls_a_keeper(const Compiler *compiler, const KestIrOp *op) {
     const KestModule *module = compiler->module;
     if (module == NULL || op->imm[0] >= module->count) {
@@ -4001,7 +3994,7 @@ static bool keeps_runs(const Compiler *compiler) {
 // body that keeps its arrays, since a body handed one may take from it; no
 // taking, emptying or resizing; and no working memory closed. Growing an
 // array is not among them: the bytes may move, and every read asks the
-// handle where they are. See D1187 and D1188.
+// handle where they are.
 static bool walk_keeps(const Compiler *compiler, uint32_t from,
                        uint16_t counter) {
     const KestIrBody *body = compiler->body;
@@ -4083,7 +4076,7 @@ static bool wide_whole(const KestType *type) {
 // small number and plus another -- `i * 2 + 1` -- with nothing between but
 // cutting to a width it fits in: the scale and what is added. The largest the
 // index is, is then the last turn's, and one question asked where the walk
-// begins says it is inside the array. See D1288.
+// begins says it is inside the array.
 static bool counted_at(const KestIrBody *body, KestIrRef value,
                        uint16_t counter, uint32_t *scale, uint32_t *plus,
                        int depth) {
@@ -4129,7 +4122,7 @@ static bool counted_at(const KestIrBody *body, KestIrRef value,
 
 // Whether nothing from `from` on calls anything, reaches the heap or moves
 // what a handle points at: where the elements of an array held there are,
-// and how far apart, stay what they were where the walk began. See D1288.
+// and how far apart, stay what they were where the walk began.
 static bool walk_still(const Compiler *compiler, uint32_t from) {
     const KestIrBody *body = compiler->body;
     for (uint32_t i = from; i < body->op_count; i++) {
@@ -4148,9 +4141,9 @@ static bool walk_still(const Compiler *compiler, uint32_t from) {
 // an array held in a slot nothing from there on stores into, in a walk that
 // counts from nought or more up to what `limit` holds and keeps its arrays:
 // inside the array outright when the array is the one in `measured`, whose
-// length the limit is (D1187), and inside it whenever that array is at least
+// length the limit is, and inside it whenever that array is at least
 // as long as the limit otherwise, which is asked once where the walk begins
-// (D1189). `limit` is -1 for a walk whose limit is the length of `measured`
+//. `limit` is -1 for a walk whose limit is the length of `measured`
 // by construction.
 static void prove_walk(Compiler *compiler, uint32_t from, int32_t measured,
                        uint16_t counter, int32_t limit) {
@@ -4304,10 +4297,10 @@ static void close_walk(Compiler *compiler, Loop *loop, uint32_t exit, Walk walk,
 
 // And what a statement leaves, which is nothing. A statement is where a value
 // is dropped, stored or handed back, so the stack it stands on is the stack the
-// next one stands on — every statement in this tree and in the library is
+// next one stands on -- every statement in this tree and in the library is
 // compiled from nothing and leaves nothing. The count going under nothing on
 // the way is the same fault seen earlier: what clamped at nought is a depth
-// that is wrong and right again by the end. See D810.
+// that is wrong and right again by the end.
 static void hold_empty(Compiler *compiler, const KestStmt *stmt,
                        uint16_t before) {
     if (compiler->out_of_memory) {
@@ -4342,7 +4335,7 @@ static void compile_count(Compiler *compiler, const KestStmt *stmt) {
     uint16_t end_slot = reserve_slot(compiler, 1);
     compile_expr(compiler, stmt->each->until);
     // Whether the end is how long an array held in a slot is, and
-    // which slot: `0..len(xs)` counts through `xs`. See D1187.
+    // which slot: `0..len(xs)` counts through `xs`.
     int32_t measured = -1;
     if (compiler->body != NULL && compiler->body->op_count >= 2 &&
         compiler->body->ops[compiler->body->op_count - 1].kind ==
@@ -4381,7 +4374,7 @@ static void compile_count(Compiler *compiler, const KestStmt *stmt) {
     // the name is the count rather than a copy of it: a load and a
     // store off every turn, which for a loop whose body is small is
     // most of what the turn was. The checker is what knows, because
-    // it is what resolved the name. See D866.
+    // it is what resolved the name.
     if (stmt->each->name_written) {
         uint16_t counter = declare_local(compiler, stmt->each->name,
                                          stmt->each->sequence->type);
@@ -4398,7 +4391,7 @@ static void compile_count(Compiler *compiler, const KestStmt *stmt) {
     // but the loop: every element read at it is inside its array when
     // the array is as long as the limit -- which it is outright where
     // the limit is its length -- if nothing in the walk made it
-    // shorter. See D1187 and D1189.
+    // shorter.
     if (!stmt->each->name_written &&
         written_index(compiler, stmt->each->sequence) >= 0) {
         prove_walk(compiler, loop->start, measured, index_slot,
@@ -4412,7 +4405,7 @@ static void compile_count(Compiler *compiler, const KestStmt *stmt) {
 }
 
 // A walk written out once a turn is at most this many turns. Four is the
-// neighbours of a cell, which is the walk this is for. See D1231.
+// neighbours of a cell, which is the walk this is for.
 #define MOST_UNROLLED 4
 // And its body at most this many operations as a walk, so what is written
 // out stays a small part of what the body around it is.
@@ -4475,8 +4468,7 @@ static void take_back(Compiler *compiler, const Written *to) {
 // What a promise about a body reads of a run of its operations: every effect
 // any of them has, and every body and door any of them calls. Two runs that
 // read the same here are the same to every promise, so a walk written out
-// once a turn is kept only where it reads the same as the walk it was. See
-// D1231.
+// once a turn is kept only where it reads the same as the walk it was.
 typedef struct {
     uint16_t effects;
     uint32_t count;
@@ -4529,7 +4521,7 @@ static bool reach_alike(const Reaches *one, const Reaches *two) {
 }
 
 // The count's first value and how many turns there are, when both are
-// written where the walk is and the turns are few. See D1231.
+// written where the walk is and the turns are few.
 static bool counted_turns(Compiler *compiler, const KestStmt *stmt,
                           int64_t *first, uint32_t *turns) {
     const KestType *counts = stmt->each->sequence->type;
@@ -4574,7 +4566,7 @@ static bool counted_turns(Compiler *compiler, const KestStmt *stmt,
 // The walk written out once a turn: the body as many times as there are
 // turns, the count in each a value the body holds, a `continue` the end of
 // its own turn and a `break` the end of the last. Nothing goes round, so
-// nothing counts, tests or spends a step of a budget. See D1231.
+// nothing counts, tests or spends a step of a budget.
 static void compile_unrolled(Compiler *compiler, const KestStmt *stmt,
                              int64_t first, uint32_t turns) {
     uint16_t names = compiler->local_count;
@@ -4625,7 +4617,7 @@ static void compile_unrolled(Compiler *compiler, const KestStmt *stmt,
 // written where the walk is, compiled again written out once a turn and kept
 // that way if it says nothing the walk did not and reads the same to every
 // promise. `KEST_NOOPT` keeps every walk a walk, which is what the gate and
-// the fuzzer hold the written-out one to. See D1231.
+// the fuzzer hold the written-out one to.
 static void compile_counting(Compiler *compiler, const KestStmt *stmt) {
     static int off = -1;
     int64_t first = 0;
@@ -4661,7 +4653,7 @@ static void compile_counting(Compiler *compiler, const KestStmt *stmt) {
     // What the unrolled form said is taken back with it, unless it was that
     // the build ran out: that is said once, by the stage that ran out, and a
     // count taken back under it was a build that stopped half way and
-    // answered as though it had compiled. See D1284.
+    // answered as though it had compiled.
     if (!compiler->program->diags->starved) {
         compiler->program->diags->count = before.diags;
         compiler->program->diags->error_count = before.errors;
@@ -4714,7 +4706,7 @@ static bool walked_place(Compiler *compiler, const KestExpr *expr,
 // `for name, value in fields(x)`, written out once a field: in each copy the
 // value is that field of `x` where it stands, so writing it writes `x`, and
 // the name is the field's name as text. `continue` goes on to the next field
-// and `break` leaves the walk. See D1264.
+// and `break` leaves the walk.
 static void compile_fields_walk(Compiler *compiler, const KestStmt *stmt) {
     const KestEach *each = stmt->each;
     const KestType *held = each->sequence->type;
@@ -4780,7 +4772,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         // numbers indexed by one is a value a frame does not pay for, and
         // where it was written decided whether that was true. Sixteen for the
         // reason every other fold stops there, which is that a value wider
-        // than that is a table rather than a value. See D887.
+        // than that is a table rather than a value.
         if (!stmt->let.name_written && stmt->let.value != NULL &&
             compiler->body != NULL && size > 0 && size <= 16) {
             KestValue held[16];
@@ -4846,7 +4838,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         if (!in_slots) {
             // Held apart: the array and the index rather than an address
             // worked out from them, because what is between here and the
-            // store may move the block. See D931.
+            // store may move the block.
             compiler->place_apart = true;
             bool made = compile_address(compiler, target, &offset);
             compiler->place_apart = false;
@@ -4857,7 +4849,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             }
         }
         // A vector is read whole and worked out a component at a time, which
-        // is what its operators are anywhere. See D1250.
+        // is what its operators are anywhere.
         bool stepping_vector = stmt->assign.op != KEST_TOK_EQ &&
                                kest_is_vector(target->type);
         uint16_t read = stepping_vector ? size : 1;
@@ -4968,7 +4960,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         // anyway wrote a way out to the end of the body -- a `return` of
         // nothing in a function that gives something, which no run reaches
         // and the verifier, walking every path, cannot tell from one that
-        // does. See D1239.
+        // does.
         Exits exit = {NULL, 0, 0};
         if (opening || stmt->loop.condition == NULL ||
             stmt->loop.condition->kind != KEST_EXPR_BOOL ||
@@ -5049,8 +5041,8 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
 
         // That many of something is a value, so the walk is over a copy of
         // it. Walking it where it stands would let a write to it in the body
-        // change what the walk reads, and D053 says the name is what the
-        // element was when the turn began.
+        // change what the walk reads, and the name is what the element was
+        // when the turn began.
         if (over_run) {
             uint16_t stride = value_slots(sequence->element);
             uint16_t names = compiler->local_count;
@@ -5139,7 +5131,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         compiler->depth++;
 
         // How wide the thing being walked is: a piece of text is two slots
-        // and everything else a walk goes over is one. See D964.
+        // and everything else a walk goes over is one.
         uint16_t walked = value_slots(sequence);
         uint16_t walked_slot = reserve_slot(compiler, walked);
         uint16_t index_slot = reserve_slot(compiler, 1);
@@ -5159,7 +5151,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         // lengthen what it is walking by pushing to it. For a set of bits it
         // is how many names the set declares, which is known here. Either way
         // the limit is a slot beside the count, which is what makes a turn one
-        // instruction. See D094.
+        // instruction.
         bool counted = !over_store;
         uint16_t limit_slot = 0;
         if (counted) {
@@ -5197,8 +5189,8 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
 
         // The loop's own counter stays where nobody can reach it, and the
         // name the author asked for is a copy of it, so assigning to that
-        // name cannot make the walk go wrong — unless nothing assigns to it,
-        // when the name is the counter. See D866.
+        // name cannot make the walk go wrong -- unless nothing assigns to it,
+        // when the name is the counter.
         if (stmt->each->index.length > 0) {
             if (stmt->each->index_written) {
                 uint16_t named =
@@ -5265,7 +5257,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         // the element was when the turn began; an address is what it is now,
         // and the two differ the moment the body writes the array. Nothing
         // here can tell whether a call would write it, so the rule is that
-        // the body does not name the thing being walked at all. See D053.
+        // the body does not name the thing being walked at all.
         const KestExpr *root = stmt->each->sequence;
         while (root != NULL && (root->kind == KEST_EXPR_FIELD ||
                                 root->kind == KEST_EXPR_INDEX)) {
@@ -5334,7 +5326,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             // before this was known. A slot that holds where the element is
             // says so to whatever asks the body about itself -- and what asks
             // is a host reading a stopped machine, which would otherwise be
-            // handed an address as though it were a `Body`. See D1081.
+            // handed an address as though it were a `Body`.
             if (!compiler->ir->out_of_memory) {
                 compiler->body->names[held->name_at].by_address = true;
             }
@@ -5346,7 +5338,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         compile_block(compiler, &stmt->each->body);
         // The element the walk reads each turn is inside the array it is
         // walking, which is held where nothing can name it, if nothing in
-        // the walk made it shorter. See D1187.
+        // the walk made it shorter.
         if (!over_store && !over_text && sequence->tag == KEST_T_ARRAY) {
             prove_walk(compiler, loop->start, walked_slot, index_slot, -1);
         }
@@ -5364,7 +5356,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         // Inside a function written into where it was called, `return` is
         // the end of that function: the answer goes where the call reads it,
         // what the function opened is closed, and the rest of it is jumped
-        // over. See D1257.
+        // over.
         Expanding *here = compiler->expanding;
         if (here != NULL && compiler->local_count >= here->base &&
             compiler->visible_floor == here->base) {
@@ -5398,11 +5390,10 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             size = value_slots(stmt->result->type);
         }
         // The answer is worked out first and then everything outstanding is
-        // run, so what a deferred call sees is what the function decided —
+        // run, so what a deferred call sees is what the function decided --
         // and it works itself out above that answer, which is still on the
         // stack for the `return` to take. Counted the other way round, a body
         // that defers asked for its answer's width less room than it uses.
-        // See D811.
         run_deferred(compiler, 0, stmt->span);
         close_regions(compiler, 0, true, stmt->span);
         stack_pop(compiler, size);
@@ -5417,7 +5408,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         // Where it is waiting written into what it resumes from, that given
         // back, and the next call's way in landed after it. Nothing else is
         // in reach here -- the checker saw to that -- so nothing else has to
-        // be kept. See D1263.
+        // be kept.
         if (compiler->resuming == NULL || stmt->wait.ordinal == 0 ||
             stmt->wait.ordinal > MOST_WAITS) {
             fault(compiler, stmt->span, "this waits in a body that does not "
@@ -5488,7 +5479,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
                                   0, stmt->span);
         // Which slot holds it, and where the names declared inside it start:
         // a value written into a name below that is a value kept past the
-        // block, and the walk over the body reads both. See D966.
+        // block, and the walk over the body reads both.
         ir_carries(compiler, opened, which, compiler->next_slot, 0);
         compiler->regions[compiler->region_count++] = which;
         compile_block(compiler, &stmt->block);
@@ -5535,7 +5526,7 @@ static void close_regions(Compiler *compiler, uint16_t from, bool leaving,
         // ends it is where the walk over the body stops counting; the ones a
         // `return`, a `break` or a `continue` write are the machine putting
         // the heap back on the way past, and the block is still open as far as
-        // what may be kept goes. See D966.
+        // what may be kept goes.
         ir_carries(compiler, at, compiler->regions[i - 1], 0,
                    leaving ? 1 : 0);
     }
@@ -5598,7 +5589,6 @@ static bool open_body(Compiler *compiler, KestChunk *chunk,
     // What the declaration crosses the boundary with, laid out here rather
     // than wherever a body first reached one: what a host can be handed is
     // what the program says it takes, and that is written in the declaration.
-    // See D068.
     if (signature != NULL) {
         if (signature->result != NULL &&
             signature->result->tag != KEST_T_VOID) {
@@ -5691,7 +5681,7 @@ static void waits_in_block(const KestBlock *block, uint32_t *tags,
 
 // The way into a body that resumes: what it resumes from says where it is
 // waiting, and each case a `wait` names is a branch to the line after that
-// `wait`. Any other case starts at the top. See D1263.
+// `wait`. Any other case starts at the top.
 static void resume_where_waiting(Compiler *compiler, const KestBlock *block) {
     const KestDecl *decl = compiler->resuming;
     KestSpan param = {0, 0};
@@ -5749,8 +5739,7 @@ static bool close_body(Compiler *compiler, const KestBlock *block,
     compiler->body->stack_needed = compiler->stack_high_water;
     // What a working-memory block keeps, followed over the whole body rather
     // than watched while it was written: the block is what says a value is
-    // shorter-lived, and what it reaches is a question about the body. See
-    // D966.
+    // shorter-lived, and what it reaches is a question about the body.
     KestSpan escaped = declared;
     const char *keeps = kest_ir_escapes(compiler->body, compiler->ir->arena,
                                         &escaped);
@@ -5775,9 +5764,9 @@ static bool close_body(Compiler *compiler, const KestBlock *block,
     return went;
 }
 
-// Two functions compiled under one name. Not a `fault` — that one takes a
+// Two functions compiled under one name. Not a `fault` -- that one takes a
 // compiler, and this happens while the functions are being registered, before
-// there is one — but the same kind of news, in the same words.
+// there is one -- but the same kind of news, in the same words.
 static void two_of_one_name(KestProgram *program, const char *symbol,
                             KestSpan where) {
     kest_diags_in(program->diags, program->source);
@@ -5800,7 +5789,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
     // The file that was named is the first one, and the whole of what it calls
     // itself is what a host has to be able to leave off: a name lives under
     // `a.math` and a host writes `twice`. The last part alone was enough while
-    // that was where a name lived; it is not now. See D1039.
+    // that was where a name lived; it is not now.
     if (units->count > 0) {
         module->alias = units->items[0].module;
     }
@@ -5825,7 +5814,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             // A generic function has no body of its own. Its copies are
             // registered below, one per set of types it was called with. And
             // one that takes a block has none either: it is written into
-            // every place it is called. See D1257.
+            // every place it is called.
             if (symbol->type->type_param_count > 0 ||
                 kest_takes_a_block(symbol->type)) {
                 continue;
@@ -5869,7 +5858,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         chunk->source = &instance->unit->source;
         // The generic's own declaration, which every copy of it shares: that
         // is what says the copies are copies rather than two functions of a
-        // name. See D612.
+        // name.
         chunk->declared = instance->decl->name;
         chunk->returns_value = instance->decl->function.result != NULL;
         chunk->result_slots = instance->type->result == NULL
@@ -5882,14 +5871,14 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
 
     // Every constant is worked out here, where it is declared, rather than at
     // each use of it. Three things come of that: a constant read five times is
-    // folded once, a constant read no times is still worked out — a program
-    // could carry one that divides by nought and nothing said so — and what is
+    // folded once, a constant read no times is still worked out -- a program
+    // could carry one that divides by nought and nothing said so -- and what is
     // wrong with one is said at the declaration, which is where a reader looks
     // for what a name is.
     //
     // Walked a file at a time, because what a constant is written as is read
     // out of the file it is written in and a name in it may leave off the
-    // module it is under. See D674.
+    // module it is under.
     for (uint32_t u = 0; u < units->count; u++) {
         kest_program_in(program, &units->items[u]);
         kest_diags_in(program->diags, program->source);
@@ -5918,7 +5907,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             // Two refusals written out rather than one with a choice in it:
             // what a code can say is read out of this file, and a message
             // written under two codes at once is a wording neither of them
-            // owns. See D673.
+            // owns.
             if (never) {
                 kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0510",
                                symbol->span,
@@ -5990,7 +5979,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
     // Each copy of a generic function, written from the same body with its
     // type names bound. Nothing about it is a special case except that -- and
     // the clock around it, which is what says what the rule costs in time
-    // rather than in bytes. See D778 and D1026.
+    // rather than in bytes.
     uint64_t copying = kest_ir_ticked(ir->now, ir->now_context);
     for (uint32_t i = 0; i < program->instance_count; i++) {
         const KestInstance *instance = &program->instances[i];
@@ -6029,7 +6018,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
     // Every element type a signature mentions gets a layout, whether or not a
     // body ever reached one. What a host can be handed is what the program
     // says it takes, and that is written in the declarations rather than in
-    // what the bodies happened to compile to. See D068.
+    // what the bodies happened to compile to.
     for (uint32_t i = 0; i < program->global_count; i++) {
         const KestType *type = program->globals[i].type;
         if (type == NULL || type->tag != KEST_T_FN) {

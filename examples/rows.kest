@@ -20,7 +20,7 @@ struct Row {
 // least one slot wide so that a value of one is a value, and a width believed
 // in some places and not others is a value that changes shape on the way. It
 // was believed by the frame a program is called with, by what a constant of
-// one has to fill, and not by the thing that builds one. See D807.
+// one has to fill, and not by the thing that builds one.
 struct Nothing {
 }
 
@@ -76,10 +76,10 @@ fn main() -> i32 {
 
     // The same row reached through a handle rather than where it stands. A
     // run that can grow is memory the program holds an address into, so a
-    // cell inside a row inside it is one address worked out and one load —
+    // cell inside a row inside it is one address worked out and one load --
     // and with both indexes worked out while it runs there is no slot to name
     // and no constant to read from. That is the only way to reach the
-    // instruction that steps an address (D430).
+    // instruction that steps an address.
     let many: [Row] = array()
     push(many, made(1))
     push(many, made(2))
@@ -94,7 +94,7 @@ fn main() -> i32 {
 
     // A struct with nothing in it, built where it stands and read from a
     // constant, with numbers after it either way. Pushed as no slots at all,
-    // both of these answered whatever the stack was holding. See D807.
+    // both of these answered whatever the stack was holding.
     if after(Nothing(), 3, 4) != 304 || after(NOWT, 5, 6) != 506 {
         return 8
     }
@@ -104,7 +104,7 @@ fn main() -> i32 {
     // and a `Row` is that run and a tag. None of it is a handle, so there is
     // one answer to whether two of them are the same and this is it. A struct
     // that held a `[Cell]` instead would be refused, because comparing two
-    // handles answers a different question. See D874.
+    // handles answers a different question.
     if made(1) != made(1) || made(1) == made(2) {
         return 9
     }
@@ -121,9 +121,8 @@ fn main() -> i32 {
     // And what one of these looks like written down, which is what a program
     // writes to build one: the name and the fields in the order they were
     // declared, a run in brackets, a text quoted because the bytes on their
-    // own do not say where a field ends. Not a format chosen for structs —
-    // it is the one a case with a payload has always been written in. See
-    // D876.
+    // own do not say where a field ends. Not a format chosen for structs --
+    // it is the one a case with a payload has always been written in.
     if "{made(4).cells[0]}" != "Cell(1, 0.5)" {
         return 12
     }

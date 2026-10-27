@@ -32,7 +32,7 @@ struct Colonist {
 // changing the caller's -- which is what `K0346` says to do and what the
 // reference says not to work around by putting the counters behind a handle
 // too. `moved` is here for the same reason: a round has two things to say and
-// one of them is the colony. See D1065.
+// one of them is the colony.
 struct Colony {
     people: store<Colonist>
     // The same things counted the other way round: what the colony holds in

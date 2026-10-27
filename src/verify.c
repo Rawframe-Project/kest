@@ -4,7 +4,7 @@
 #include <string.h>
 
 // What a walk says when there was no room to take it in, which is a thing
-// about the machine and not about the chunk. See D1251.
+// about the machine and not about the chunk.
 #define WANTED_ROOM "could not be checked for want of memory"
 
 // Which chunk first reaches the heap, following calls, or -1. `where` is left
@@ -12,7 +12,7 @@
 // Where a promise is broken in what was emitted, and which chunk it is in. The
 // same walk for both promises, because the thing that differs is one
 // instruction: what reaches the heap is a list of them, and what reaches the
-// host is `KEST_OP_CALL_HOST` and nothing else. See D853.
+// host is `KEST_OP_CALL_HOST` and nothing else.
 static int32_t breaks_in(const KestModule *module, uint32_t which,
                          uint8_t *state, uint32_t *where, int about) {
     if (state[which] != 0) {
@@ -34,7 +34,6 @@ static int32_t breaks_in(const KestModule *module, uint32_t which,
         // And a crossing out of the simulation profile, which is a crossing to
         // a door that does not promise it is inside one. `no.host` refuses
         // every crossing; this refuses the ones nobody has vouched for.
-        // See D942.
         if (about == 2 && op == KEST_OP_CALL_HOST) {
             uint16_t door = kest_chunk_u16(chunk, at + 1);
             if (door >= module->extern_count ||
@@ -75,7 +74,7 @@ static KestOperand operand_of(uint8_t op, uint32_t k) {
 // machine reads without asking, proved before it runs. Answers the code and
 // says what was wrong into `said`, or answers NULL. A body whose instructions
 // cannot be told apart has already been refused by the walk above this, which
-// is what makes the table of where each one starts worth building. See D1237.
+// is what makes the table of where each one starts worth building.
 static const char *names_only_what_is_there(const KestModule *module,
                                             const KestChunk *chunk,
                                             uint8_t *starts, char *said,
@@ -199,7 +198,7 @@ static const char *names_only_what_is_there(const KestModule *module,
         // not ask about: turning a run of none rolls one fewer than none,
         // which is every value there could be, and a piece taken past the
         // end of the value it is taken out of is whatever is above the top.
-        // Found by changing instructions nobody's compiler wrote. See D1253.
+        // Found by changing instructions nobody's compiler wrote.
         if (op == KEST_OP_ROTATE && kest_chunk_u16(chunk, at + 1) == 0) {
             snprintf(said, room, "`%s` at %u turns a run of none", name, at);
             return "K0410";
@@ -225,7 +224,7 @@ static const char *names_only_what_is_there(const KestModule *module,
 // body was given room for, and a `return` hands back exactly what the
 // declaration says with nothing under it. The machine moves `top` without
 // asking any of that, so this is what makes an operand an operand. What cannot
-// be reached is not walked, because nothing runs it. See D1239.
+// be reached is not walked, because nothing runs it.
 static const char *stack_on_every_path(const KestModule *module,
                                        const KestChunk *chunk,
                                        uint16_t *depth, uint32_t *work,
@@ -336,8 +335,7 @@ static const char *stack_on_every_path(const KestModule *module,
 // machine keeps nothing beside a value that says what it is: a slot is eight
 // bytes read as a number, as where a piece of text is, or as a handle, by
 // whichever instruction reads it. So what one holds is proved here, before
-// anything runs, for every slot at every instruction a body can reach. See
-// D1242.
+// anything runs, for every slot at every instruction a body can reach.
 typedef enum {
     // Nothing this body wrote: what the frame before it left there, which may
     // be an address, and reading one is a value made out of the machine.
@@ -359,7 +357,7 @@ typedef enum {
     HOLDS_FUNCTION,
     // The tag of an enum, with which of its cases it can be, and a slot of
     // what the case carries, which is what the tag that many slots before it
-    // says it is. See D1242.
+    // says it is.
     HOLDS_TAG,
     HOLDS_PAYLOAD,
     // One of several of those: moved and kept, never read as any of them.
@@ -407,7 +405,7 @@ typedef struct {
     uint32_t enum_room;
     // What proving is counted against, beside everything else compiling
     // does: a walk goes over a place once for every way into it that says
-    // something new, which is more than once. See D1248.
+    // something new, which is more than once.
     KestDiags *diags;
 } Verifying;
 
@@ -1595,7 +1593,7 @@ static const char *kinds_step(Kinds *w) {
     case KEST_OP_FIELD: {
         // `offset`, `size`, `total`: the `size` slots at `offset` of the
         // `total` on top are what is left. One past the end of its value was
-        // refused before this walk and is not followed here. See D1253.
+        // refused before this walk and is not followed here.
         if (u[0] + u[1] > u[2]) {
             return NULL;
         }
@@ -1607,7 +1605,7 @@ static const char *kinds_step(Kinds *w) {
     case KEST_OP_ROTATE: {
         // The top one moved under the rest, so what a case carries is read
         // through its tag first, where the tag still is. A rotation of none
-        // was refused before this walk, and moves nothing here. See D1253.
+        // was refused before this walk, and moves nothing here.
         if (u[0] == 0) {
             return NULL;
         }
@@ -2001,7 +1999,7 @@ static const char *kinds_step(Kinds *w) {
         push_made(w, LENGTH_KIND);
         return NULL;
     // The same, with a piece a number in one slot where its bit is set; the
-    // top of the stack is the last piece. See D1277.
+    // top of the stack is the last piece.
     case KEST_OP_CONCAT_I: {
         if (u[0] > KEST_NUMBERED_MOST || (u[1] >> u[0]) != 0) {
             snprintf(w->said, w->room,
@@ -2714,15 +2712,14 @@ static const char *same_blocks(uint8_t *opened, uint32_t place,
 // the first with what the declaration says the arguments are and nothing in
 // the rest, and folded where two ways meet. Every instruction's reading is
 // held to what it reads; `depth` is where the stack stands at each, which the
-// walk before this one proved. See D1242.
+// walk before this one proved.
 // The places still to walk, nearest the start first. A walk that takes the
 // newest place first reaches the head of a loop before everything that flows
 // into it has, and walks the loop again for each; nearest first walks what
 // comes before a place before the place, so a body is walked about once.
 // Tetromino's 1,189 instructions took 2,106 steps the other way and 1,607
 // this way. The order is what it costs and not what it proves: the walk ends
-// where everything has stopped changing, whichever way it got there. See
-// D1276.
+// where everything has stopped changing, whichever way it got there.
 static void place_push(uint32_t *work, uint32_t *waiting, uint32_t place) {
     uint32_t at = (*waiting)++;
     while (at > 0 && work[(at - 1) / 2] > place) {
@@ -2756,7 +2753,7 @@ static uint32_t place_pop(uint32_t *work, uint32_t *waiting) {
 
 // What a host asked about one slot and the one after it at one place, joined
 // over every time the walk stood there, so what it ends with is what the slot
-// holds on every way into the place. See D1291.
+// holds on every way into the place.
 typedef struct {
     uint32_t at;
     uint32_t slot;
@@ -2978,7 +2975,7 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
     // what the host gave the build, and what it held at its widest is part of
     // what the build cost: `examples/embed.c` builds a program inside what it
     // cost a moment before, and was refused 4,100 bytes short when proving
-    // took from the build's own. See D1237 and D1247.
+    // took from the build's own.
     uint32_t largest = 1;
     for (uint32_t i = 0; i < module->count; i++) {
         if (module->functions[i]->code_count > largest) {
@@ -3016,7 +3013,7 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
     // instruction says it takes lands exactly on the end. A width that is
     // wrong for one instruction puts everything after it out of step, and a
     // walk that reads the middle of an instruction as an instruction is how
-    // half the calls in a program went unseen once (D057).
+    // half the calls in a program went unseen once.
     uint32_t known = (uint32_t)KEST_OP_STOP + 1;
     for (uint32_t i = 0; i < module->count; i++) {
         const KestChunk *chunk = module->functions[i];
@@ -3066,7 +3063,7 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
             held = false;
         }
         // Every number an instruction carries names something that is there,
-        // and every jump lands on an instruction. See D1237.
+        // and every jump lands on an instruction.
         if (wrong == NULL) {
             char said[200];
             const char *code = NULL;
@@ -3136,7 +3133,6 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
     // of it: what the promises would say about it is about code nobody will
     // run. An instruction this machine has not got was once read past the
     // end of the table of widths here; the table answers one for it now.
-    // See D1253 and D1286.
     if (!held) {
         kest_arena_free(scratch);
         return false;

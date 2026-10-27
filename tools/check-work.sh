@@ -8,7 +8,7 @@
 # what it says and refused one unit under it; that a build stopped anywhere
 # between nought and done says K0666 and nothing else; and that a file whose
 # compiling doubles with every line it adds is a count that doubles too, so a
-# ceiling is a bound on the time and not only on the words. See D1248.
+# ceiling is a bound on the time and not only on the words.
 set -u
 
 # What the build made: the preset's build directory, out/dev unless

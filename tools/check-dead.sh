@@ -32,11 +32,11 @@ OBJECTS = os.path.join(BUILD_DIR, "build/release")
 # in no release object and is still called: reading one build and calling it
 # the tree was what said `kest_op_name` was declared and not there. Both are
 # read for what they make and what they ask for; which host calls what is still
-# read out of the release ones, because there is one of each there. See D870.
+# read out of the release ones, because there is one of each there.
 CHECKED = os.path.join(BUILD_DIR, "build/debug")
 # The hosts. A tool that quietly skips one is a tool that says the public
 # header is used when nothing has looked. Three of them: the command line, the
-# one that asks every door, and the engine that drives a world. See D949.
+# one that asks every door, and the engine that drives a world.
 HOSTS = ["main.o", "embed.o", "engine.o"]
 
 failed = 0
@@ -70,8 +70,8 @@ for host in HOSTS:
 declared = {}
 # A body written in a header rather than declared by one. `static inline` is
 # folded into whoever calls it, and where a build does not fold it, it is that
-# object's own by design — so it is a symbol in no object and the rules below
-# read it out of the files that call it instead. See D868.
+# object's own by design -- so it is a symbol in no object and the rules below
+# read it out of the files that call it instead.
 in_headers = {}
 for header in sorted(os.listdir("src")) + ["../include/kest.h"]:
     if not header.endswith(".h"):
@@ -83,7 +83,7 @@ for header in sorted(os.listdir("src")) + ["../include/kest.h"]:
     for name in re.findall(r"\b(kest_[a-z_0-9]+)\s*\(", text):
         declared.setdefault(name, os.path.normpath(path))
     # And a table a header reads rather than calls, which an object makes
-    # the way it makes a function. See D1284.
+    # the way it makes a function.
     for name in re.findall(r"\bextern [^;(){}]*?\b(kest_[a-z_0-9]+)\s*;",
                            text):
         declared.setdefault(name, os.path.normpath(path))
@@ -109,10 +109,9 @@ for path in built:
     mine, theirs, asked = symbols(path)
     # What a build makes is asked of the release one alone. The one that checks
     # itself is built without optimisation, so every `static` function is still
-    # a symbol in it — which is what the compiler was told to do rather than a
+    # a symbol in it -- which is what the compiler was told to do rather than a
     # name written as a public one. What is read out of both is what each asks
-    # for, because that is the half a checked-only call is missing from. See
-    # D870.
+    # for, because that is the half a checked-only call is missing from.
     if path.startswith(OBJECTS):
         for symbol in mine:
             made[symbol] = path
@@ -127,7 +126,7 @@ for path in built:
 # call to one of those doors, that door is dead and this is what says so. The
 # program is written here rather than taken from the tree because it has to
 # hold what provokes both of them: a body written whole, and something in it
-# that can stop. See D1094.
+# that can stop.
 WRITTEN = """module dividing
 
 import std.io
@@ -210,7 +209,7 @@ struct Held {
 }
 
 // One of a fixed run in the frame, at an index worked out while it runs,
-// which is the last of the doors nothing else in the tree reaches. See D1109.
+// which is the last of the doors nothing else in the tree reaches.
 struct Board {
     cells: [i32; 4]
     turn: i32
@@ -247,7 +246,6 @@ fn worlds(many: i32) -> i32 {
 // machine which function it is. And, below, a crossing into the host, which
 // it does not write: what a file it wrote does instead is hand that body to
 // the machine, which is the other door nothing else in the tree reaches.
-// See D1105 and D1107.
 fn through(f: fn(i32) -> i32 no.alloc no.host deterministic,
            n: i32) -> i32 no.alloc no.host deterministic {
     return f(n) + 1
@@ -266,7 +264,7 @@ fn said(what: i32) {
 // an initialiser cannot hold a copy, so a run holding one is a body the
 // machine runs. A file this backend wrote calls it through a door of its own,
 // and that door is the one thing here nothing else in the tree reaches --
-// this tree's own programs are written whole now. See D1105 and D1119.
+// this tree's own programs are written whole now.
 const FAR: [f64; 2] = [1.0 / 0.0, 0.0 - 1.0 / 0.0]
 
 fn scratched(rounds: i32) -> i32 no.host deterministic {
@@ -379,7 +377,7 @@ public = some("the names the public header declares", set(re.findall(
 
 # And the other way round, which is the half no pattern can be wrong about: a
 # function this library makes and no header declares. Nothing can call it, so
-# nothing above holds it to anything — it reads as a name that is simply not
+# nothing above holds it to anything -- it reads as a name that is simply not
 # there, which is what a declaration written in a way this cannot read looks
 # like from here too. The objects say what was made; `nm` is not a pattern.
 for symbol, where in sorted(made.items()):
@@ -409,7 +407,7 @@ for name in sorted(public - command_line - engine):
 # `check.sh` writes a host of its own, compiles it against the public header and
 # throws it away, which is how the one thing neither host in this tree does is
 # asked. What that host calls is not in any object here, so nothing above holds
-# those names to being there — and a header function used only by it would read
+# those names to being there -- and a header function used only by it would read
 # as used to `check.sh` and unused to this.
 #
 # So the rule is that it may only call what a host in the tree already calls.
@@ -432,9 +430,10 @@ for name in sorted(leaned_on):
 #
 # What counts as naming it is the checker's answer rather than a reader's. A
 # name in a comment is a mention and not a use; a name handed around as a value
-# — `sort.by(xs, sort.ascending)` — is a use and is not a call; and one of four
-# functions called `min` is the one that was meant. `check --json` says `named`
-# for each, which is what the checker settled while it resolved the file.
+# -- `sort.by(xs, sort.ascending)` -- is a use and is not a call; and one of
+# four functions called `min` is the one that was meant. `check --json` says
+# `named` for each, which is what the checker settled while it resolved the
+# file.
 def said_of(path):
     ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'check', '--json', path],
                          capture_output=True, text=True,
@@ -448,13 +447,13 @@ def said_of(path):
 library = sorted(glob.glob('lib/std/*.kest'))
 
 # What the library declares, read out of the compiler rather than out of the
-# text: a parameter list has commas inside it — `fn(T, T) -> bool` is one
-# parameter — and a reader that splits on commas is a reader that miscounts.
+# text: a parameter list has commas inside it -- `fn(T, T) -> bool` is one
+# parameter -- and a reader that splits on commas is a reader that miscounts.
 #
 # A declaration is this file's own where it stands under the module the file
 # says it is in. A module is the whole of what a file calls itself, so the
 # first piece of a name is `std` for everything in the library and the name
-# alone can no longer say which file wrote it. See D1039.
+# alone can no longer say which file wrote it.
 declares = {}
 anywhere = set()
 for path in sorted(glob.glob('examples/*.kest') + glob.glob('tools/*.kest')
@@ -479,7 +478,7 @@ for key, path in sorted(declares.items()):
 # The same for what a library declares beside its functions: a constant nobody
 # reads and a shape nobody holds. `check` says these about a program with a
 # `main` in it and cannot say them about a library, because a library is named
-# by whoever imports it — so the whole tree is the importer and this is where
+# by whoever imports it -- so the whole tree is the importer and this is where
 # they are asked.
 #
 # A generic is written once and copied per set of types, and the copy is
@@ -516,12 +515,11 @@ for name, (path, what) in sorted(declared_names.items()):
 # And the same rule one level down, for what the machine can do rather than
 # what a library declares. An instruction the compiler never writes is a `case`
 # in the machine that has never been dispatched to: it is in the reference, it
-# reads as tried, and nothing has ever run it. Twenty one of the hundred and
-# forty six were in that state until D430 went looking.
+# reads as tried, and nothing has ever run it.
 #
 # `emit` is the compiler's own answer to what it wrote, so this is the chunk
 # and not a pattern over the source. Only the examples are asked, because the
-# gate runs every one of them — an instruction written into a file nothing runs
+# gate runs every one of them -- an instruction written into a file nothing runs
 # would be a shorter claim than this one wants to make.
 table = re.search(r'INSTRUCTIONS\[\] = \{(.*?)\n\};',
                   open(os.path.join('src', 'value.c')).read(), re.S)
@@ -534,9 +532,8 @@ instructions = some("the machine's instructions", [] if table is None else [
 # nothing has ever dispatched to, the same as one nothing writes. The build
 # that checks itself counts what it ran, so this is the machine's own answer
 # rather than a reading of the code. What it is worth beyond the claim being
-# true is D889: every instruction the machine has costs every program that
+# true is this: every instruction the machine has costs every program that
 # runs, so one nobody has ever run is a cost with nothing on the other side.
-# See D890.
 emitted = set()
 walked = set()
 held = set()
@@ -574,7 +571,7 @@ for path in sorted(glob.glob('examples/*.kest')):
 # debugger rather than by an example, and `check-commands.sh` drives a program
 # through it. Written down here rather than left out quietly, because an
 # instruction nothing runs and an instruction nothing runs *and nobody
-# noticed* look the same from outside. See D991.
+# noticed* look the same from outside.
 WRITTEN_BY_A_DEBUGGER = {"stop"}
 
 for name in instructions:
@@ -598,11 +595,11 @@ for name in sorted(emitted - set(instructions)):
     failed = 1
 
 # And the same rule again for what a layout says. A layout is what a host is
-# told about a shape — a byte offset a slot and what is there — and the kinds
+# told about a shape -- a byte offset a slot and what is there -- and the kinds
 # it can say are the widths this language has. A kind no shape in the tree
 # holds is a width the machine can lay out and has never laid out beside a C
 # compiler doing the same arithmetic, which is the one place it could be wrong
-# and nothing would say so. Three of the twelve were in that state (D431).
+# and nothing would say so. Three of the twelve were in that state.
 scalars = re.search(r'SCALARS\[\] = \{(.*?)\};',
                     open(os.path.join('src', 'value.c')).read(), re.S)
 kinds = some("the kinds a layout holds",
@@ -626,7 +623,7 @@ for name in sorted(held - set(kinds)):
 #
 # Written down rather than worked out, so that a member added wider than the
 # widest here has to say so. The numbers are meant to go stale the day one
-# legitimately does. See D782.
+# legitimately does.
 WIDEST_NODE = {"expression": 48, "statement": 48, "declaration": 88}
 
 node_said = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'parse', 'examples/words.kest', '--json'],
@@ -648,7 +645,7 @@ if True:
 # is, and `u8` and `bool` are both a byte -- so a reader counting what a module
 # wrote twice counts what it wrote once, which is a measurement that was wrong
 # by sixty per cent until this was printed. The machine reads the same field to
-# pack a value across the host boundary. See D779.
+# pack a value across the host boundary.
 of_told = 0
 of_untold = 0
 for of_path in sorted(glob.glob(os.path.join('examples', '*.kest'))):

@@ -49,7 +49,7 @@ bool kest_resumes_spans(const KestSource *source, const KestDecl *decl,
 // they are not, and some of them have an order. There is no third for `hash`,
 // because `hash` stands for what compares and applies exactly where `==` does
 // -- a word for it would be a second spelling of the first. Nothing here is a
-// thing a program declares for a type of its own. See D1043.
+// thing a program declares for a type of its own.
 static const KestCapabilityName CAPABILITIES[KEST_CAPABILITY_COUNT] = {
     {"compares", KEST_WANTS_COMPARES},
     {"orders", KEST_WANTS_ORDERS},
@@ -254,8 +254,8 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
         } else {
             // What is in it and not how much of it. This said how many
             // statements were in an arm, so two programs that differ in what
-            // an `if` does had one tree — and what says a formatted file means
-            // the same is this tree. See D447.
+            // an `if` does had one tree -- and what says a formatted file means
+            // the same is this tree.
             fputc('\n', out);
             print_block(&branch->then_body, source, depth + 1, out);
             indent(out, depth);

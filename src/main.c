@@ -3,7 +3,7 @@
 // one C itself has measures processor time. Asked for here so that the request
 // is where the reason is. There are two platforms and each has a real
 // monotonic clock, so there is no third branch and no fallback that is not one:
-// see `host_microseconds`. D935, and D970 for the Windows half.
+// see `host_microseconds`.
 #if !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200809L
 #endif
@@ -32,7 +32,7 @@
 // uses -- and brings in some tens of thousands of lines for two functions. The
 // types are what the platform documents: `BOOL` is `int`, `WINAPI` is
 // `__stdcall`, and a `LARGE_INTEGER` is a union whose whole is a signed
-// sixty-four-bit count, which is what is read out of it. See D970.
+// sixty-four-bit count, which is what is read out of it.
 __declspec(dllimport) int __stdcall QueryPerformanceCounter(long long *count);
 __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 
@@ -41,7 +41,7 @@ __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 // so what a program wrote and what came out were different files -- and a
 // language whose gate holds two platforms to saying the same thing byte for
 // byte cannot have one of them adding a byte. What a program writes is what it
-// writes. See D970.
+// writes.
 #include <fcntl.h>
 #include <io.h>
 #define KEST_BYTES_OUT()                                                     \
@@ -87,7 +87,7 @@ __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 
 // The functions this command line calls. `main` is the language's name and is
 // in `kest.h`; the two handlers are this command's own, and everything here
-// that names one of them names it from these — the lists it asks about, the
+// that names one of them names it from these -- the lists it asks about, the
 // lookups it does, and the line the usage prints.
 #define TICK_BULK "onEvents"
 #define TICK_SINGLE "onEvent"
@@ -99,7 +99,7 @@ static const char *const EVERY_CALL[] = {KEST_MAIN, TICK_BULK, TICK_SINGLE,
 // The listing, which works out as it goes what the program needs -- and asks
 // the build's memory for the room to. A listing that ran out of it partway is
 // one that left lines out, so it is said the way a build that ran out is
-// said, rather than handed over short with nothing wrong. See D1247.
+// said, rather than handed over short with nothing wrong.
 static void listed(KestBuild *build, bool json) {
     bool refused_before = kest_arena_refused_by_ceiling(build->arena);
     if (json) {
@@ -253,9 +253,9 @@ static int usage(bool json) {
 
 // What the command line itself refuses, before there is a build to write a
 // diagnostic into: a mistake in the words, and a file the one form could not
-// be written to. These were bare sentences on the standard error — no code, no
-// JSON — so a run asked for JSON answered a tool with a status of 1 and an
-// empty stream, which is the one answer nothing can act on. See D437.
+// be written to. These were bare sentences on the standard error -- no code, no
+// JSON -- so a run asked for JSON answered a tool with a status of 1 and an
+// empty stream, which is the one answer nothing can act on.
 //
 // The code is the caller's rather than this function's so that it stands
 // beside the words it is for, which is where everything that reads this tree
@@ -323,7 +323,7 @@ static void dump_tokens_json(KestArena *arena, const KestToken *tokens,
         // thing about a token that a tool cannot work out from the token: the
         // rule is the lexer's, and a second copy of it in whatever is reading
         // this is a second copy to keep right. What reads it is anything that
-        // writes this language back out. See D397.
+        // writes this language back out.
         fprintf(out, ",\"carries\":%s}",
                 kest_lexer_ends_statement(tokens[i].kind) ? "false" : "true");
     }
@@ -331,11 +331,11 @@ static void dump_tokens_json(KestArena *arena, const KestToken *tokens,
 }
 
 // The stream as a reader sees it, and the comments in their places. A comment
-// is not a token — the parser never sees one — and it was in the object and
+// is not a token -- the parser never sees one -- and it was in the object and
 // nowhere else, so a reader of this looked at a file with every comment in it
 // missing and nothing saying so. What keeps a formatter honest is that a
 // comment is read twice, by the compiler and by the check, and neither reading
-// was one a person could look at. See D595.
+// was one a person could look at.
 static void dump_tokens(KestArena *arena, const KestToken *tokens,
                         uint32_t count, const KestSource *source) {
     uint32_t written = kest_comments(source, NULL, 0);
@@ -387,21 +387,21 @@ static void dump_tokens(KestArena *arena, const KestToken *tokens,
 // Where the program's words went. `Io.write` gives nothing back, so a program
 // cannot be told that its writing failed and does not know; the host is the
 // one that finds out, and here the host is this command line. What it is asked
-// is the stream's own memory of it — a write that failed is remembered by the
-// stream until somebody asks — so this is one question at the end rather than
-// a flag kept by hand at every write. See D344.
+// is the stream's own memory of it -- a write that failed is remembered by the
+// stream until somebody asks -- so this is one question at the end rather than
+// a flag kept by hand at every write.
 static FILE *program_wrote_to = NULL;
 
 // Bound twice, under `Io.write` and under `Host.write`: a program may declare
 // the crossing itself or reach the library's, and what happens is the same
 // thing. One body, because two with one body is a body that can be changed in
-// one of them. See D769.
+// one of them.
 static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
     uint32_t length = 0;
     const char *bytes = kest_text_bytes(frame, &length);
     // Written by its length rather than to a nought: a piece of text cut out
-    // of the middle of another does not end in one. See D964.
+    // of the middle of another does not end in one.
     if (bytes != NULL && length > 0) {
         fwrite(bytes, 1, length, (FILE *)context);
     }
@@ -411,7 +411,7 @@ static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
 // a clock. They are bound here because this host is a command line and a
 // command line may do those things. A host that is a game engine binds the ones
 // it wants a program to have and refuses the rest by not binding them, which is
-// the whole of the capability model. See D925.
+// the whole of the capability model.
 //
 // What was after `--` on the command line, which is what a program asks for
 // when it asks what it was started with. Kept here rather than threaded through
@@ -492,7 +492,7 @@ static void os_file_read(KestValue *frame, KestRuntime *runtime,
     }
     // A nought among the bytes would make text that stops early, and text that
     // stops early is a file read as less than it is. Said as nothing rather
-    // than handed over short. See D344's rule, applied to a file.
+    // than handed over short: a file is all of it or nothing.
     if (memchr(bytes, 0, held) != NULL) {
         free(bytes);
         kest_text(runtime, "", 0, frame);
@@ -634,16 +634,15 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
 // A clock that measures elapsed time and only goes forwards. `clock()` is the
 // processor time this process has used, which is not that: a program that waits
 // for anything reads a clock that stopped, and the `time` target was measuring
-// how busy the processor had been rather than how long a frame took. See D935.
+// how busy the processor had been rather than how long a frame took.
 //
 // Every platform this is built for has a real monotonic clock and this reads
 // it: `QueryPerformanceCounter` on Windows, `CLOCK_MONOTONIC` elsewhere. There
 // is no third case. A wall clock is not a monotonic clock and `clock()` is
-// neither, so neither is written here under that name — a fallback that is not
+// neither, so neither is written here under that name -- a fallback that is not
 // what the function says it is is worse than a platform that will not build,
 // because a build that will not build is read by whoever ports it and a clock
 // that goes backwards is read by nobody until a frame time comes out negative.
-// See D970.
 // The same reading in nanoseconds, which is what this is and what
 // `host_microseconds` is a thousandth of. Two of them because what a program
 // is handed is microseconds and what weighing a compile wants is finer: a
@@ -680,7 +679,7 @@ static int64_t host_microseconds(void) { return host_nanoseconds() / 1000; }
 // The same clock again in the shape a build asks for. A build is weighed only
 // when somebody asked, and what asks is the environment rather than an option,
 // because what it answers is a number about this compiler rather than about
-// the program somebody named. See D1026.
+// the program somebody named.
 static uint64_t compiling_now(void *context) {
     (void)context;
     return (uint64_t)host_nanoseconds();
@@ -750,11 +749,10 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
 // A crossing handed a shape rather than a number: three `f32` in three slots,
 // which is what the layout of a `Point` says the frame holds. The command line
 // is a host like any other and the examples are what it is a host for, so a
-// crossing an example declares is one this has to provide. See D699.
+// crossing an example declares is one this has to provide.
 // A number kept narrower than the slot it comes back in, which is what an
 // `f32` is: what this writes is what `f32(x)` would have made of it, because a
 // host answering anything else is answering a number the program cannot make.
-// See D838.
 static void engine_weigh(KestValue *frame, KestRuntime *runtime,
                          void *context) {
     (void)runtime;
@@ -772,9 +770,9 @@ static void engine_rank(KestValue *frame, KestRuntime *runtime, void *context) {
 // And one handed a value with a tag in it. The tag is slot nought and an `i32`
 // whatever the case is; what is in the slots after it depends on which case the
 // tag names, and a host that reads those asks `kest_case_of` about a layout it
-// kept from binding. The command line keeps none — it is a host for whatever
-// example it was handed — so it answers the one slot of a tagged value that can
-// be read without being told anything: the tag. See D704.
+// kept from binding. The command line keeps none -- it is a host for whatever
+// example it was handed -- so it answers the one slot of a tagged value that
+// can be read without being told anything: the tag.
 static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
     (void)context;
@@ -783,10 +781,10 @@ static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
 }
 
 // And one that answers a value with a tag in it. Which tag is a decision about
-// what the answer means, and the command line has no engine to make one with —
+// what the answer means, and the command line has no engine to make one with --
 // so it answers the tag every enum that has a case has, and writes nothing after
 // it. A host with an opinion writes the tag its case is and then what that case
-// carries, which `kest_case_of` says and this keeps no layout to ask. See D706.
+// carries, which `kest_case_of` says and this keeps no layout to ask.
 static void engine_blame(KestValue *frame, KestRuntime *runtime,
                          void *context) {
     (void)runtime;
@@ -796,9 +794,9 @@ static void engine_blame(KestValue *frame, KestRuntime *runtime,
 
 // And one that answers with a shape: a name and a number. The command line has
 // no engine to be a name of, so it answers with the name it calls itself and a
-// number that is not a claim about anything — what matters here is that the
+// number that is not a claim about anything -- what matters here is that the
 // name is text the machine made, which is the one thing a host answering with a
-// shape can get wrong that nothing else would see. See D719.
+// shape can get wrong that nothing else would see.
 static void engine_who(KestValue *frame, KestRuntime *runtime, void *context) {
     // The same name the program is given when it asks what it is running
     // under, in a shape rather than on its own: one spelling of it, so a host
@@ -848,9 +846,9 @@ static KestHost *make_host(FILE *output, FILE *input) {
 // mistyped number is answered rather than turned into a run nobody wanted.
 #define MAX_EVENTS 65536
 
-// The host calling into the program, in both shapes W11 measured. One call
-// carrying the batch is the shape D007 makes the default; one call per event
-// is kept because it has to remain expressible.
+// The host calling into the program, in both shapes. One call carrying the
+// batch is the default; one call per event is kept because it has to remain
+// expressible.
 // Whether the program's entry takes what this host has to hand it and gives
 // back something this host can read. `tick` carries a batch of `i32`, and a
 // program whose `onEvents` takes something else is told rather than handed the
@@ -927,9 +925,9 @@ static bool takes_events(KestProgram *program, const char *name,
 typedef struct {
     bool ran;
     // What the machine that ran them is made of, beside what the frames cost.
-    // A host reading this is choosing two things at once — how much a frame
-    // costs it and how much having a machine at all costs it — and only one of
-    // them was here. See D576.
+    // A host reading this is choosing two things at once -- how much a frame
+    // costs it and how much having a machine at all costs it -- and only one of
+    // them was here.
     size_t machine;
     uint32_t slots;
     uint32_t frames;
@@ -952,14 +950,14 @@ typedef struct {
     size_t heap;
     // And every byte the run was ever handed, which is what a frame cost: a
     // world that makes a name a frame and lets it go holds nothing at the end
-    // of it and paid for every one. See D996.
+    // of it and paid for every one.
     size_t taken;
     // And what the machine was allowed to put on the heap, which is a number
     // the command line works out rather than one a program reaches: what it
     // was given, less what reading and compiling took and less what a machine
     // for it costs. A reader holding the three against what the command was
     // given is holding this command's own arithmetic, which is the one thing
-    // a run that never reaches its ceiling cannot say. See D849 and D996.
+    // a run that never reaches its ceiling cannot say.
     size_t allowed;
     // How many times the heap was thrown away between events. Without it, a
     // run that allocated nothing and a run that threw everything away say the
@@ -978,15 +976,15 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
     KestProgram *program = build->program;
     KestArena *arena = build->arena;
     // As many as were asked for. This was a static run of the largest number
-    // allowed — a quarter of a megabyte of the command line's own bytes,
+    // allowed -- a quarter of a megabyte of the command line's own bytes,
     // there whether it was asked for one event or none, and mutable state
     // hanging off nothing, which this project does not keep.
     // The command line's own memory, because a lend is the host's block and
     // this command is a host. It used to take the arena the program was
-    // compiled into, which is the machine's own — convenient, and the one
-    // address a lend may not have (D720), because what a program holds of text
+    // compiled into, which is the machine's own -- convenient, and the one
+    // address a lend may not have, because what a program holds of text
     // is a pointer into that arena and a lend is memory a program may write
-    // into. A host owns what it lends. See D721.
+    // into. A host owns what it lends.
     int32_t *events = count > 0 ? calloc((size_t)count, sizeof(int32_t)) : NULL;
     if (count > 0 && events == NULL) {
         return;
@@ -1006,8 +1004,8 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
     const char *single = kest_build_name(build, TICK_SINGLE);
 
     // Whether a handler is there and whether it can be driven is one question
-    // asked in one place. It used to be two — the compiled name and the
-    // declared one — and two ways of asking leave a path where neither
+    // asked in one place. It used to be two -- the compiled name and the
+    // declared one -- and two ways of asking leave a path where neither
     // answers: a name one of them has and the other does not drove nothing and
     // said nothing.
     bool bulk_there = false;
@@ -1146,7 +1144,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
 
         KestDiags diags;
         kest_diags_init(&diags, arena);
-        // And the whole of the work, for the same reason. See D1248.
+        // And the whole of the work, for the same reason.
         diags.work_given = work;
         KestUnits units = {0};
         // `lex` answers with the tokens, so it reads the file and lexes it,
@@ -1171,7 +1169,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
 
         // A token stream is whole whatever was wrong with the file: the lexer
         // makes a token for what it could not read and carries on. A tree is
-        // not — what was refused is missing from it — so it is shown with a
+        // not -- what was refused is missing from it -- so it is shown with a
         // line saying so. What that line answers is the objection to showing
         // it at all, which was that it would say the file is something it is
         // not.
@@ -1201,12 +1199,11 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 // comments, which are not tokens and are printed nowhere else.
                 //
                 // And what reading it cost, the way `check` and `emit` say
-                // what they cost (D572). These two stop where they stop —
-                // `lex` at the tokens and `parse` at the tree — so the three
+                // what they cost. These two stop where they stop --
+                // `lex` at the tokens and `parse` at the tree -- so the three
                 // numbers beside each other are what each stage of reading a
                 // file costs, which nothing could be asked before. Read before
-                // what follows is written, because writing it allocates. See
-                // D640.
+                // what follows is written, because writing it allocates.
                 fputc('{', stdout);
                 kest_diags_write_json(&diags, stdout);
                 fprintf(stdout,
@@ -1219,7 +1216,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 // And what a tree is made of, which is where most of that
                 // went: every expression, statement and declaration the parser
                 // made. A tool that has the cost and the count has what a node
-                // of this compiler weighs. See D641.
+                // of this compiler weighs.
                 if (what == FILE_PARSE && loaded && units.count > 0) {
                     fprintf(stdout, ",\"nodes\":%u", units.items[0].unit.nodes);
                     // And what one weighs on the machine this ran on, which is
@@ -1227,7 +1224,6 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                     // node is fifty-six bytes here and something else where a
                     // pointer is another width. Said beside the count so that
                     // what is compared with what is measured the same way.
-                    // See D688.
                     fprintf(stdout,
                             ",\"nodeBytes\":{\"expression\":%zu"
                             ",\"statement\":%zu,\"declaration\":%zu}",
@@ -1238,7 +1234,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                     // What one token weighs here, for the same reason a node
                     // says what it weighs: a tool that has the cost, the count
                     // and the weight can say whether reading a file cost the
-                    // tokens or the sizes the array grew through. See D746.
+                    // tokens or the sizes the array grew through.
                     fprintf(stdout, ",\"tokenBytes\":%zu,\"tokenRoom\":%u",
                             sizeof(KestToken), kest_lex_room());
                     dump_tokens_json(arena, tokens, found, &alone, stdout);
@@ -1269,7 +1265,6 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
         // and `-w` would have written it over somebody's file. Reading it back
         // is the only thing that can tell. Twice over, because a form that is
         // not the form again is a formatter nobody can leave running on save.
-        // See D386.
         const char *unreadable = NULL;
         if (text != NULL) {
             KestSource again;
@@ -1316,11 +1311,11 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
 
         // What this command says, for whatever is reading it rather than for a
         // person: one object a file, saying whether it is already in the one
-        // form, what was wrong with it if anything was, and — where the
-        // command is the one that answers with a file — the file. A stream
+        // form, what was wrong with it if anything was, and -- where the
+        // command is the one that answers with a file -- the file. A stream
         // that is JSON and a file's contents at once is neither, and a string
         // inside an object is not that: it is the answer where a tool reads
-        // one, which is what asking for JSON is for. See D596.
+        // one, which is what asking for JSON is for.
         if (json) {
             kest_diags_sort(&diags);
             fputc('{', stdout);
@@ -1346,8 +1341,8 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 // so are the bytes after it, so what it has to replace is
                 // that much and its reader keeps their cursor. Found in one
                 // pass from each end over what was read and what was written
-                // — no second reading of the file, and nothing kept but two
-                // numbers. See D597.
+                // -- no second reading of the file, and nothing kept but two
+                // numbers.
                 size_t head = 0;
                 while (!same && head < length && head < source->length &&
                        text[head] == source->text[head]) {
@@ -1404,7 +1399,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
             // way.
             kest_diags_render(&diags, stderr);
             // What this prints is meant to go back over the file, so it is
-            // the one command that shows nothing after a mistake — a form of
+            // the one command that shows nothing after a mistake -- a form of
             // half a program would delete the other half. Saying so is the
             // difference between refusing and appearing to do nothing.
             // Two reasons and two sentences: a file that was read and does
@@ -1452,7 +1447,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
 // What came back, written the way the language writes it.
 // What the language writes for a value, which is what a hole in a string is
 // filled with and nothing else: a value printed here reads the same as one
-// printed by the program. NULL when there is nothing to write — a function
+// printed by the program. NULL when there is nothing to write -- a function
 // that gives nothing back, and then `without` is NULL, or one that gives back
 // something the language has no text for, and then `without` names it.
 // What came back, as words. The machine writes it: `kest_gave_text` is what a
@@ -1546,11 +1541,10 @@ static bool read_room(const char *text, size_t *room, bool json) {
 // And how many instructions a run may have. Written the same way room is, with
 // the same scales, because a reader who has learnt one has learnt the other --
 // and a budget is the same kind of number: a ceiling somebody picked rather
-// than one the program asked for. See D921.
+// than one the program asked for.
 //
 // And how much work compiling may do, which is the same kind of number about
 // the compiler, so it is read by the same words with its own name in them.
-// See D1248.
 static bool read_fuel(const char *text, uint64_t *fuel, const char *of,
                       bool json) {
     char *end = NULL;
@@ -1642,7 +1636,7 @@ static bool spelled_as_float(const char *text) {
 // width it would have had on its own.
 // What a function takes, written the way the language writes it: `(i32, i32)`,
 // and `()` for one that takes nothing. In the arena, because a message is as
-// long as what it says (D193).
+// long as what it says.
 //
 // The marks a message puts round a thing go round the whole of it and never
 // inside: this is one thing, so it is quoted by whoever says it and not by
@@ -1785,7 +1779,7 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
         kest_diags_suggest(&build->diags, "`%s` %s", args[refused], refusal);
     }
     // One note per function of that name, at the line that declares it, which
-    // is where somebody picking between them has to look anyway — as long as
+    // is where somebody picking between them has to look anyway -- as long as
     // they all fit. A list of them that stops is not a place nobody can see,
     // which is what a count is the right answer for: it is a function they
     // could have called and were not shown. So past that they are said
@@ -1809,18 +1803,18 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
 // What a command keeps back out of what it may have, so that a program stopped
 // while it runs can be told what stopped it in the shape everything else is
 // told in: the words, the line, and the caret under it. A run with none of this
-// still says what it was about to say — that is kept in the list of
-// diagnostics itself — but it says it with no file around it.
+// still says what it was about to say -- that is kept in the list of
+// diagnostics itself -- but it says it with no file around it.
 //
 // The list a machine keeps comes first and is the dearest thing in it: sixteen
 // places at two hundred and forty-eight bytes is nearly four kilobytes before a
-// word is written. So it is counted rather than guessed at — four thousand was
+// word is written. So it is counted rather than guessed at -- four thousand was
 // guessed at, and it was sixty-eight bytes short of the list alone. What is
 // added to it is room for the words themselves, several times over.
 //
 // The same number twice over, because the same thing happens twice: the build
 // says what it has to say in its arena and a machine says what it has to say in
-// its own, and both lists are this one. See D849 and D851.
+// its own, and both lists are this one.
 #define ENOUGH_TO_SAY (KEST_MOST_UNREAD * sizeof(KestDiag) + 4096)
 
 // What is left of what this command may have once reading and compiling have
@@ -1829,10 +1823,10 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
 // back, so that the rest belongs to the program alone. `--room` says it is the
 // most this command asks the machine for, all of it, and a build that keeps a
 // ceiling of the whole number while the program runs is a second purse the same
-// size as the first — twenty thousand bytes allowed and twenty-four thousand
+// size as the first -- twenty thousand bytes allowed and twenty-four thousand
 // spent, which is a wall somebody walks through. One byte where there is
 // nothing left, because nought is what no ceiling is and this is not no
-// ceiling. See D849.
+// ceiling.
 static size_t take_the_rest(KestBuild *build, size_t room) {
     if (room == 0) {
         return 0;
@@ -1852,9 +1846,9 @@ static size_t take_the_rest(KestBuild *build, size_t room) {
 // what a host with no answer has always got; the heap is the number this
 // command was given. Answering nothing at all here is what used to happen, and
 // what it meant was that a ceiling asked for stopped applying the moment the
-// question under it could not be answered — a program too big for the sizing
+// question under it could not be answered -- a program too big for the sizing
 // walk to finish inside its own ceiling ran with no ceiling at all, and took
-// thirty times what it had been allowed. See D846.
+// thirty times what it had been allowed.
 static const KestLimits *only_the_heap(KestLimits *least, size_t left) {
     if (left == 0) {
         return NULL;
@@ -1876,7 +1870,7 @@ static const KestLimits *room_for(KestBuild *build, const char *const *entries,
         // throw away the answers for the names beside it and for itself, and
         // what the machine did instead was bound the whole file. Nought frames
         // is as many as usual, which is the ceiling this command line has
-        // always run with. See D822.
+        // always run with.
         if (kest_bound_of(build, entries[i], 0, &one, &why)) {
             asked = true;
             if (one.stack_slots > least->stack_slots) {
@@ -1893,7 +1887,7 @@ static const KestLimits *room_for(KestBuild *build, const char *const *entries,
         // list with nothing else in it, the way the other host in this tree
         // reads every answer this header gives: a reason added to the four
         // stops this command line compiling rather than being taken for one
-        // of them. See D568.
+        // of them.
         switch (why.reach) {
         case KEST_REACH_NO_NAME:
             continue;
@@ -1914,7 +1908,7 @@ static const KestLimits *room_for(KestBuild *build, const char *const *entries,
     // program runs on. One number covers the whole of what this command asks
     // the machine for, so what compiling has already taken comes off it: a
     // ceiling that meant one thing while compiling and another while running
-    // would be two ceilings with one name. See D843.
+    // would be two ceilings with one name.
     least->heap_bytes = take_the_rest(build, room);
     return least;
 }
@@ -1927,13 +1921,13 @@ static const KestLimits *room_for(KestBuild *build, const char *const *entries,
 //
 // Weighing it means making one. What a machine costs is the arithmetic a
 // machine is made with, and a second copy of that arithmetic here would be two
-// numbers that agree until somebody changes one — a shape this project has
+// numbers that agree until somebody changes one -- a shape this project has
 // been caught by often enough to write down. So the machine is made with a
 // heap of a single byte, asked what it cost, and then told how much of what is
 // left the program may have. One machine rather than two: a machine made to be
 // weighed and thrown away costs a list of diagnostics of its own, and what
 // that showed up as was a program that cost two hundred and sixty bytes more
-// to compile when a ceiling was named. See D850.
+// to compile when a ceiling was named.
 static KestRuntime *a_machine_within(KestBuild *build, KestHost *host,
                                      const char *const *entries,
                                      KestLimits *least, size_t room) {
@@ -1950,12 +1944,12 @@ static KestRuntime *a_machine_within(KestBuild *build, KestHost *host,
     }
     // What it costs, and what saying things costs it. A machine writes what it
     // says in its own room: the list first, which is the dearest thing in it,
-    // and the words after — and hands the room back when a host reads the
+    // and the words after -- and hands the room back when a host reads the
     // report. So what a machine may grow to is what it was made at plus that,
     // and the same number this command keeps back for its own saying is what a
     // machine may spend on its. Weighed at what it can reach rather than at
     // what it starts as, because a wall against the first is a wall against
-    // nothing. See D851.
+    // nothing.
     size_t costs = kest_runtime_cost(runtime) + ENOUGH_TO_SAY;
     if (costs >= rest) {
         KestSpan nowhere = {0, 0};
@@ -1994,7 +1988,6 @@ typedef struct {
 //
 // On the error stream, because what a program wrote is the program's answer
 // and a measurement written into the middle of it is a line nobody asked for.
-// See D979.
 static void say_profile(const KestCounted *counted, const Entered *bodies,
                         uint32_t body_count) {
     fprintf(stderr,
@@ -2018,7 +2011,7 @@ static void say_profile(const KestCounted *counted, const Entered *bodies,
 
 // A project made, checked, run against its own programs, and looked over. Four
 // commands that are about a project rather than about a file, and the project
-// is a manifest of `name value` lines. See D982.
+// is a manifest of `name value` lines.
 static bool write_file(const char *path, const char *bytes, bool json) {
     FILE *file = fopen(path, "wb");
     if (file == NULL) {
@@ -2038,7 +2031,7 @@ static bool write_file(const char *path, const char *bytes, bool json) {
 // with what a program nobody trusts could hand it, for the host that binds
 // those doors to build and run. What is written is a program: it is compiled
 // here before it is said, so what a host is handed is one that builds. The
-// seed is the count after the file. See D1254.
+// seed is the count after the file.
 static int write_hostile(const char *path, uint64_t seed, bool json) {
     if (path == NULL) {
         return refused_at_the_words(json, "K0649", "`hostile` needs a file");
@@ -2101,7 +2094,6 @@ static int write_hostile(const char *path, uint64_t seed, bool json) {
 // What a file declares and what it says about each, for somebody who is going
 // to call it rather than read it. It is built first, so what is described is a
 // program that checks, and a file that does not is refused in its own words.
-// See D1258.
 static int write_doc(const char *executable, const char *path, bool json) {
     if (path == NULL) {
         return refused_at_the_words(json, "K0649", "`%s` needs a file", "doc");
@@ -2352,7 +2344,7 @@ static bool release_parts(const char *executable, char *header, char *archive,
 // where the binary goes, compiled by the compiler this machine names -- `CC`,
 // or `cc` -- against the header and the library above, and taken away again.
 // Answers the binary's name, which is the program's without `.kest`, or NULL
-// with what stopped it said as `K0663`. See D1172.
+// with what stopped it said as `K0663`.
 static char *made_release(const char *executable, const char *program,
                           const char *written, KestDiags *diags) {
     KestSpan nowhere = {0, 0};
@@ -2397,7 +2389,7 @@ static char *made_release(const char *executable, const char *program,
              out, source, archive);
     // A command line built as WebAssembly has no other program to run, so
     // the C compiler a release is made with is out of its reach, and it says
-    // so the way a compiler that is not there is said. See D1255.
+    // so the way a compiler that is not there is said.
 #if defined(__wasi__)
     int status = -1;
     (void)wrote;
@@ -2429,7 +2421,7 @@ static int run(const char *command, const char *executable, char **paths,
         weighing = getenv("KEST_SPENT") == NULL ? 0 : 1;
     }
     int64_t opened = weighing ? host_nanoseconds() : 0;
-    // The binary a release made, once one has. See D1172.
+    // The binary a release made, once one has.
     char *released = NULL;
     KestBuild *build = kest_build_open_within(
         kest_library_path(NULL, executable), paths,
@@ -2440,7 +2432,7 @@ static int run(const char *command, const char *executable, char **paths,
     }
     // A profile counts the calls the program makes, and a debugger stops in
     // them and says which frame it is in, so both are compiled with every one
-    // of them a call. See D1156.
+    // of them a call.
     if (build != NULL && (strcmp(command, "profile") == 0 ||
                           strcmp(command, "debug") == 0)) {
         kest_build_calls_as_written(build);
@@ -2481,11 +2473,11 @@ static int run(const char *command, const char *executable, char **paths,
     bool ticking = strcmp(command, "tick") == 0;
     // `profile` is a run with the machine counting what it does. It is a run
     // rather than a thing of its own so that what is measured is the program
-    // as it is run, and not a program run some other way. See D979.
+    // as it is run, and not a program run some other way.
     bool profiling = strcmp(command, "profile") == 0;
     // `debug` is a run with somebody asking it questions. It is a run rather
     // than a thing of its own so that what is debugged is the program as it is
-    // run, with the same host bound and the same limits. See D991.
+    // run, with the same host bound and the same limits.
     bool debugging = strcmp(command, "debug") == 0;
     bool running = strcmp(command, "run") == 0 || ticking || profiling ||
                    debugging;
@@ -2495,7 +2487,7 @@ static int run(const char *command, const char *executable, char **paths,
     uint32_t body_count = 0;
     // `build` is `emit` with nothing printed: what a build produces is the
     // knowledge that it compiles, because the bytecode is not a format
-    // anything else reads and what ships is the source. See D982.
+    // anything else reads and what ships is the source.
     bool building = strcmp(command, "build") == 0;
     bool emitting = strcmp(command, "emit") == 0 || building;
     bool checking = strcmp(command, "check") == 0;
@@ -2510,7 +2502,7 @@ static int run(const char *command, const char *executable, char **paths,
     // Whether the program answered, which is not the same as what it answered:
     // a `main` that gives nothing back is a shape this language has, and a
     // status of nought is what a run of one is. A tool reading the object
-    // reads the difference; a shell reading the status cannot. See D588.
+    // reads the difference; a shell reading the status cannot.
     bool answered = false;
     // What the called function gave back, which is written once and then
     // either printed or put in the object.
@@ -2529,7 +2521,6 @@ static int run(const char *command, const char *executable, char **paths,
                 // having compiled anything. A listing it had no room to work
                 // out is not written half-way and is not written wrongly: it
                 // is a run that ran out, said where every other one is said.
-                // See D845.
                 if (!kest_program_dump(build->program, build->arena,
                                        build->units.items[0].module, stdout)) {
                     kest_diags_starve(&build->diags);
@@ -2539,7 +2530,7 @@ static int run(const char *command, const char *executable, char **paths,
             bool emitted = kest_build_emit(build);
             // What a release is: the C that carries the program, handed to
             // the compiler a release is built with and linked with this
-            // library, and nothing left behind but the binary. See D1172.
+            // library, and nothing left behind but the binary.
             if (emitted && releasing && build->diags.error_count == 0) {
                 released = made_release(executable, paths[0],
                                         kest_build_c(build), &build->diags);
@@ -2584,8 +2575,7 @@ static int run(const char *command, const char *executable, char **paths,
                 // what the program says while it runs is not: a shell reading
                 // `kest call` wants the value and gets the program's writing
                 // above it otherwise, with nothing to say which line is which.
-                // `--json` has always done this; the words do it too. See
-                // D343.
+                // `--json` has always done this; the words do it too.
                 KestHost *host = make_host(stderr, stdin);
                 KestLimits least = {0, 0, 0, 0};
                 KestRuntime *runtime =
@@ -2611,7 +2601,7 @@ static int run(const char *command, const char *executable, char **paths,
                     // Through the door a host outside this library uses. What
                     // was typed is words, and the machine reads a word as the
                     // type the declaration says and copies what has to be
-                    // copied — a piece of text made out of `argv` would be a
+                    // copied -- a piece of text made out of `argv` would be a
                     // pointer of this host's own, which is the thing that door
                     // exists so that nobody hands over.
                     //
@@ -2650,7 +2640,7 @@ static int run(const char *command, const char *executable, char **paths,
                             // in the module: the compiler lost a chunk it
                             // made. A name the host answers is not that, and
                             // the machine has already said so where the
-                            // `extern` line is — saying it again here would
+                            // `extern` line is -- saying it again here would
                             // be the same news in two voices, and this one
                             // has nowhere to point.
                             kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
@@ -2737,8 +2727,7 @@ static int run(const char *command, const char *executable, char **paths,
                     drive_events(runtime, build, count, given, reset, &ticked);
                     // What the program is holding at the end of it, and what
                     // it was ever handed on the way: the first settles where a
-                    // world settles and the second is what a frame cost. See
-                    // D996.
+                    // world settles and the second is what a frame cost.
                     ticked.heap = kest_heap_used(runtime);
                     ticked.taken = kest_heap_taken(runtime);
                     // And what the machine itself cost, which is a number a
@@ -2822,7 +2811,7 @@ static int run(const char *command, const char *executable, char **paths,
                         // having a machine costs, and what a frame leaves
                         // behind. The first was in the JSON and nowhere in the
                         // words, so a reader of the words had two of the
-                        // three. See D577.
+                        // three.
                         printf("cost      %zu bytes to compile\n",
                                kest_build_cost(build));
                         printf("machine   %zu bytes, %u slots and %u "
@@ -2967,7 +2956,7 @@ static int run(const char *command, const char *executable, char **paths,
         // written down as *cost is visible and provable* had nothing to say
         // about the compiler's own. Read here rather than at the end, because
         // writing what follows allocates too and a number that counted the
-        // writing would grow with how much a tool asked to be told. See D572.
+        // writing would grow with how much a tool asked to be told.
         fprintf(stdout,
                 ",\"cost\":%zu,\"held\":%zu,\"working\":%zu,\"askings\":%zu"
                 ",\"work\":%llu",
@@ -2980,7 +2969,7 @@ static int run(const char *command, const char *executable, char **paths,
         // asks about numbers a program wrote down, so that a count below
         // nought is refused where it is written, and the compiler works out
         // every constant once. Said by every command that builds, so the two
-        // can be read against each other. See D677.
+        // can be read against each other.
         if (build->program != NULL) {
             fprintf(stdout, ",\"folds\":%u,\"asked\":%u",
                     build->program->folds,
@@ -2992,7 +2981,7 @@ static int run(const char *command, const char *executable, char **paths,
         // enough to divide by: how many chunks are copies of something, how
         // many bodies those came from, and how many bytes of code the ones
         // past the first are. A reader with all three can say what the rule
-        // cost here rather than what it costs in general. See D778.
+        // cost here rather than what it costs in general.
         {
             uint32_t from_bodies = 0;
             uint32_t bytes = 0;
@@ -3002,7 +2991,7 @@ static int run(const char *command, const char *executable, char **paths,
                     made, from_bodies, bytes);
             // And what the module itself is still holding, which is the part
             // of `held` that has somewhere to be looked up rather than being
-            // a number with nothing under it. See D784.
+            // a number with nothing under it.
             uint32_t of_code = 0;
             uint32_t of_origins = 0;
             uint32_t of_constants = 0;
@@ -3036,11 +3025,11 @@ static int run(const char *command, const char *executable, char **paths,
         }
         // And what that cost was paid for: every file this build read, and how
         // many bytes each of them is. A cost on its own is a number with
-        // nothing to divide it by — a program that imports the library costs
+        // nothing to divide it by -- a program that imports the library costs
         // what the library costs, and a tool dividing by the file it named
         // would say the program is fifteen times dearer per byte than it is.
         // What a reader wants is bytes of source against bytes of memory, and
-        // only this side knows which files were read to get there. See D656.
+        // only this side knows which files were read to get there.
         fputs(",\"read\":[", stdout);
         for (uint32_t at = 0;; at++) {
             const char *from = kest_build_read(build, at);
@@ -3061,13 +3050,12 @@ static int run(const char *command, const char *executable, char **paths,
         // `math.factorial`, and a tool that read the line and put it in front
         // of a name would ask about one the program has not got. Everything
         // else here is written under it, so it is the one thing a reader needs
-        // to go from a name in the file to a name in this. See D598.
+        // to go from a name in the file to a name in this.
         if (checking) {
             // Read from the file rather than from the module: `check` does not
             // compile, so the module this build would make has no name yet,
-            // and the name is the file's own — the whole of what its `module`
-            // line says, which is what every name in it lives under. See
-            // D1039.
+            // and the name is the file's own -- the whole of what its `module`
+            // line says, which is what every name in it lives under.
             const char *alias = build->units.count > 0
                                     ? build->units.items[0].module
                                     : NULL;
@@ -3085,7 +3073,7 @@ static int run(const char *command, const char *executable, char **paths,
         if (emitting && !building && build->compiled) {
             // And what the machine will run, as one number. Said where the
             // instructions are said, because it is those and not the file they
-            // came from. See D659.
+            // came from.
             fprintf(stdout, ",\"codeMark\":\"%016llx\"",
                     (unsigned long long)kest_build_code_mark(build));
             fputc(',', stdout);
@@ -3105,7 +3093,7 @@ static int run(const char *command, const char *executable, char **paths,
         // nought are two answers and a status says the same thing for both.
         // The words do not say it: what a run writes is what the program
         // wrote, and a number of this command's own put in the middle of that
-        // is a line nobody asked for. See D588.
+        // is a line nobody asked for.
         if (running && !ticking) {
             if (answered) {
                 fprintf(stdout, ",\"answered\":%lld", (long long)exit_code);
@@ -3115,7 +3103,7 @@ static int run(const char *command, const char *executable, char **paths,
         }
         // What the run did, inside the object the run writes rather than
         // beside it: one run is one object, and a second object on another
-        // stream is two things for a tool to put back together. See D979.
+        // stream is two things for a tool to put back together.
         if (was_counted) {
             fprintf(stdout,
                     ",\"profile\":{\"steps\":%llu,\"calls\":%llu,"
@@ -3218,7 +3206,7 @@ static int run(const char *command, const char *executable, char **paths,
         // nanoseconds would be a number nobody measured. What is here is what
         // was walked -- the heap, the host, and whether every operation is in
         // the deterministic profile -- and `could` for a promise the body
-        // keeps and does not make. See D976.
+        // keeps and does not make.
         if (costing && checking && build->program != NULL &&
             build->diags.error_count == 0) {
             kest_program_costs(build->program, stdout);
@@ -3239,7 +3227,7 @@ static int run(const char *command, const char *executable, char **paths,
 // Every program named, run for its answer. A test in this language is a
 // program that checks itself and answers with which check failed, which is
 // what every example here is: there is no framework, and a number is a place
-// in a file. See D982.
+// in a file.
 // Two names, the way a name sorts: what a directory hands back is in whatever
 // order it kept, and what a run of tests says has to be the same every time.
 static int by_name(const void *left, const void *right) {
@@ -3251,7 +3239,7 @@ static int by_name(const void *left, const void *right) {
 // asks: a project says where its tests are and not which they are. Answers how
 // many, with the paths in `into` for the caller to free, and nought for a
 // directory that is not there or has none -- which the caller tells apart,
-// because the second is a project saying something that is not so. See D1082.
+// because the second is a project saying something that is not so.
 static uint32_t tests_under(const char *where, char ***into) {
     *into = NULL;
     char **found = NULL;
@@ -3355,7 +3343,7 @@ int main(int argc, char **argv) {
     // program writes from where it was run -- `examples/colony.kest` saves a
     // day beside itself -- was written at the root of the machine it ran on,
     // and refused where that is nobody's to write. Where it was run from is
-    // what `PWD` says, which the runner hands over. See D1255.
+    // what `PWD` says, which the runner hands over.
     const char *here = getenv("PWD");
     if (here != NULL && here[0] == '/') {
         chdir(here);
@@ -3382,7 +3370,7 @@ int main(int argc, char **argv) {
         // are in, the shape the JSON is in, and which deterministic profile
         // this build holds `deterministic` to -- and the edition it reads a
         // program in, which a project names. Five numbers because they move
-        // for five different reasons. See D974 and D1252.
+        // for five different reasons.
         printf("kest %s%s, abi %u, json %u, profile %s %u, edition %u\n",
                kest_version(), kest_checked() ? " checked" : "",
                kest_abi_version(), (unsigned)KEST_JSON_SCHEMA, named, profile,
@@ -3392,13 +3380,13 @@ int main(int argc, char **argv) {
 
     // The language server, which is this compiler answering an editor rather
     // than a person. It reads and writes one stream each and takes no files:
-    // which file it is about is what the editor says. See D977.
+    // which file it is about is what the editor says.
     if (strcmp(argv[1], "lsp") == 0) {
         return kest_lsp_serve(kest_library_path(NULL, argv[0]), stdin, stdout);
     }
     // The debugger an editor drives. What the program writes goes to the
     // editor's console and what it reads is nothing, because both standard
-    // streams are the protocol. See D1182.
+    // streams are the protocol.
     if (strcmp(argv[1], "dap") == 0) {
         return kest_dap_serve(kest_library_path(NULL, argv[0]), make_host,
                               stdin, stdout);
@@ -3414,20 +3402,20 @@ int main(int argc, char **argv) {
     // refused while they are being read and the form to say it in is one of
     // them: `tick f.kest 2x --json` used to answer a tool with prose, because
     // the word that said which form to answer in came after the one that was
-    // wrong. See D437.
+    // wrong.
     bool json = false;
     for (int i = 2; i < argc; i++) {
         json = json || strcmp(argv[i], "--json") == 0;
     }
     int32_t count = 1024;
     // The most this command may ask the machine for, and nought for as much as
-    // there is, which is what it has always asked for. See D843.
+    // there is, which is what it has always asked for.
     size_t room = 0;
     // And how much work compiling may do, nought for as much as it needs,
-    // which is what it has always been allowed. See D1248.
+    // which is what it has always been allowed.
     uint64_t work = 0;
     // And how many instructions it may run, nought for as many as it takes,
-    // which is what this command has always allowed. See D921.
+    // which is what this command has always allowed.
     uint64_t fuel = KEST_FUEL_UNLIMITED;
     // The events themselves, when `tick` was given a list rather than a count.
     int32_t *given = NULL;
@@ -3435,10 +3423,10 @@ int main(int argc, char **argv) {
     bool reset = false;
     // `check --cost`: what the compiler proved about each body, said to a
     // person. The same facts are in `--json` whether this was asked for or
-    // not, because a tool reads one shape. See D976.
+    // not, because a tool reads one shape.
     bool costing = false;
     // `emit --c`: the same bodies written as C rather than as instructions,
-    // for the compiler a release is built with. See D1093.
+    // for the compiler a release is built with.
     bool writing_c = false;
     bool releasing = false;
     FormatMode mode = FORMAT_PRINT;
@@ -3456,7 +3444,7 @@ int main(int argc, char **argv) {
     // What is after `--` is the program's rather than this command's: a file
     // named there would otherwise be read as another file to compile, and a
     // count as how many events to send. `std.os` is what a program asks for it
-    // through. See D925.
+    // through.
     for (int i = 2; i < argc; i++) {
         if (strcmp(argv[i], "--") == 0) {
             program_args = &argv[i + 1];
@@ -3594,9 +3582,8 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "test") == 0) {
         // Without a file, what the project says its tests are. A project is a
         // thing to be inside rather than a thing to name at every command, the
-        // same way `kest build` works on the entry, and the manifest has said
-        // since D982 that `kest test` runs the programs under this line. It
-        // did not: the line was read and nothing asked for it. See D1082.
+        // same way `kest build` works on the entry, and the manifest says
+        // that `kest test` runs the programs under this line.
         char **found = NULL;
         uint32_t found_count = 0;
         int status = 0;
@@ -3644,7 +3631,7 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "new") == 0) {
         // What was named rather than the word after the command, which may
         // be `--json`: the options are read wherever they are written, and a
-        // project called `--json` is a directory nobody meant. See D1252.
+        // project called `--json` is a directory nobody meant.
         int status = make_project(path_count > 0 ? paths[0] : NULL, json);
         free(paths);
         free(given);
@@ -3670,7 +3657,7 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "doctor") == 0) {
         // The same: `kest doctor --json` looked for a project in a directory
         // called `--json`, found none, and said nothing was wrong with the
-        // one that was there. See D1252.
+        // one that was there.
         int status = look_over(argv[0], path_count > 0 ? paths[0] : "", json);
         free(paths);
         free(given);
@@ -3685,7 +3672,6 @@ int main(int argc, char **argv) {
         // Without a file, what the project says to work on. A project is a
         // thing to be inside rather than a thing to name at every command, so
         // `kest build` in a directory with one is `kest build` on its entry.
-        // See D982.
         char *from_project = NULL;
         if (path_count == 0) {
             KestArena *asking = kest_arena_new();
@@ -3714,7 +3700,7 @@ int main(int argc, char **argv) {
             return usage(json);
         }
         // A release is a build that leaves something behind, and is asked of
-        // `build` alone: a run, a check or an emit leave nothing. See D1172.
+        // `build` alone: a run, a check or an emit leave nothing.
         if (releasing && strcmp(argv[1], "build") != 0) {
             free(from_project);
             free(paths);

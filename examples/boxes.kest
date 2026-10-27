@@ -3,9 +3,9 @@ module examples.boxes
 import std.io
 
 // A shape that takes types, written and used in one file. The library has one
-// and no example did, so every rule about a copy — that it is made from what
+// and no example did, so every rule about a copy -- that it is made from what
 // it is built with, found again after that, and told apart from a copy over
-// other types — was held by nothing that runs. See D501.
+// other types -- was held by nothing that runs.
 
 // One type parameter, used at two types. Nothing is boxed and nothing carries
 // a tag: the copy over `i32` was compiled knowing it holds four bytes.
@@ -24,7 +24,7 @@ struct Pair<A, B> {
 // has: the thing, or why not. `T?` says whether there is one and this says
 // what happened, which is the whole difference between them. A case that
 // carries none of the names -- `Trouble` here -- says nothing about which
-// copy it is, so which copy comes from where the value is going. See D1048.
+// copy it is, so which copy comes from where the value is going.
 enum Answer<T> {
     Held(T)
     Trouble(text)
@@ -77,20 +77,18 @@ fn firstOf<T>(items: [T], fallback: T) -> T no.alloc {
 // One that takes types, handed over rather than called: which copy it is comes
 // from the shape it is going into.
 // A type name inside a run of a written length. `[T; 3]` says what `T` is as
-// plainly as `[T]` does, and until D546 it did not: the walk that works a name
-// out from what was passed had every other shape that carries one and not this,
-// so a generic over a fixed run was a function nothing could call. What it said
-// was that `T` could not be told from what was passed, about an argument it was
-// written in.
+// plainly as `[T]` does: the walk that works a name out from what was passed
+// has to have every shape that carries one, or a generic over a fixed run is a
+// function nothing can call. What it would say is that `T` could not be told
+// from what was passed, about an argument it was written in.
 fn middleOf<T>(run: [T; 3]) -> T no.alloc {
     return run[1]
 }
 
-// The rest of the shapes a type name can hide in, which is what D546 was found
-// by walking: a store hands out a `T`, a reference names one, an optional holds
-// one or nothing, and a shape that takes a type can be what an array is of. Any
-// one of them missing from that walk is a function nothing can call, and
-// nothing here held them.
+// The rest of the shapes a type name can hide in: a store hands out a `T`, a
+// reference names one, an optional holds one or nothing, and a shape that takes
+// a type can be what an array is of. Any one of them missing from that walk is
+// a function nothing can call, and nothing here held them.
 // Each of these mentions its type name in one place and nowhere else, which is
 // what makes it a question: a second parameter written `T` would say what `T`
 // is on its own and the shape would never be looked into.
@@ -180,7 +178,7 @@ fn main() -> i32 {
     }
     // And what it holds read back: an optional worked out where it is
     // written is a constant, and the text inside one was written into the
-    // other backend's C as the address it had while compiling. See D1241.
+    // other backend's C as the address it had while compiling.
     if let word = maybe {
         if word != "here" {
             return 47

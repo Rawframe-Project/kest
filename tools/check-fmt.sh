@@ -69,7 +69,7 @@ def read(path):
         # And that it is where it says it is. Everything below works out where
         # a comment sits from the line and the column it is reported at, and a
         # walk that reported the same place for every one of them would be a
-        # comparison of nothing against nothing. See D449.
+        # comparison of nothing against nothing.
         holds = (written[one["line"] - 1][one["column"] - 1:]
                  if 0 < one["line"] <= len(written) else "")
         if not holds.startswith(one["text"]):
@@ -120,9 +120,9 @@ WHERE
 # The same file written badly, formatted back. Every file here is already in
 # the one form, so formatting one changes nothing and the comparisons above it
 # compare a file with itself: what they can catch is the formatter ceasing to
-# be a no-op, and not much else. This roughs the file up first — a line ended
+# be a no-op, and not much else. This roughs the file up first -- a line ended
 # wherever one may end and carry on, every line at a different indent, a space
-# left at the end of each, every blank line doubled — and requires the one form
+# left at the end of each, every blank line doubled -- and requires the one form
 # of that to be the file, byte for byte. None of those four is part of a
 # program: where the breaks go is the form's to decide, indentation is not read
 # here, space nobody can see is not something anybody wrote, and one blank line
@@ -144,7 +144,7 @@ ran = subprocess.run([kest, "lex", path, "--json"], capture_output=True,
 said = json.loads(ran.stdout)
 # On every line, comments included. What is written inside something that
 # comes out on one line was written about that thing, so a comment left at the
-# end of a statement broken in two belongs above the statement — which is
+# end of a statement broken in two belongs above the statement -- which is
 # where it was when the statement was one line.
 breaks = {}
 for token in said["tokens"]:
@@ -175,7 +175,7 @@ sys.stdout.write("\n".join(lines))
 }
 
 # What was said in a file, one comment a line. A `//` inside a string begins
-# nothing, so the strings are stepped over first — the same rule the formatter
+# nothing, so the strings are stepped over first -- the same rule the formatter
 # reads a file by, and the reason this is not a search for two slashes.
 said() {
     python3 -c '
@@ -217,7 +217,7 @@ for file in "$@"; do
         continue
     fi
     # A language with one form is written in it. Nothing held this before, and
-    # three files had drifted out of it — two of them by being written before
+    # three files had drifted out of it -- two of them by being written before
     # the formatter learned what to do with the line they hold.
     if ! cmp -s "$scratch"/fmt-1 "$file"; then
         echo "not in the one form: $file"
@@ -271,7 +271,7 @@ for file in "$@"; do
     # Two readings of what a comment is: this one, and the compiler's. Both are
     # compared, and they are held to each other word for word. What was here
     # counted the compiler's and compared its own, so a comment the compiler
-    # saw and this reading did not was counted and never looked at — the two
+    # saw and this reading did not was counted and never looked at -- the two
     # numbers agreeing says nothing about the two lists being the same list.
     # The compiler's reading is the one that decides what a comment is; this
     # one is here to see it go quiet.
@@ -356,7 +356,7 @@ rm -f "$commented" "$scratch"/fmt-commented-1
 
 # A comment in every place a file offers, found rather than thought of. The
 # file with comments in it above is written by hand, and what decides whether
-# a place is on it is whoever last thought of one — which is how a comment
+# a place is on it is whoever last thought of one -- which is how a comment
 # written on a closing brace went unasked about for as long as there has been
 # a formatter. So this takes a file that uses most of the grammar and writes
 # one variant per line with a comment at the end of that line, and one with a
@@ -364,7 +364,7 @@ rm -f "$commented" "$scratch"/fmt-commented-1
 # with that comment above the thing it was written about.
 #
 # It found ten places at once: every closing brace in the language. A comment
-# written on the line of a `}` came out above whatever followed the block —
+# written on the line of a `}` came out above whatever followed the block --
 # the next declaration, the next statement, or the end of the file.
 places="$scratch"/fmt-places.kest
 cat > "$places" <<'BASE'
@@ -415,7 +415,7 @@ fn nearest(steps: [i32], want: i32) -> i32? {
 // An `if` and a `match` that give a value, written where something follows
 // them. The arm takes as much as it can, so the brackets are part of what the
 // program means: without them `(if c -> a else -> b) - 2` is an `else` arm of
-// `b - 2`. A formatter that drops them writes a different program. See D1085.
+// `b - 2`. A formatter that drops them writes a different program.
 fn chosen(p: Point, q: Point, d: Door, c: bool) -> i32 {
     let xs: [i32] = array()
     push(xs, 7)
@@ -615,7 +615,6 @@ for i, line in enumerate(base):
             # colon. A sentence that is two blanks and a mark is one nothing
             # can be shown to have caused: what a hole quotes to say it was
             # caught would be almost all of it what somebody else wrote.
-            # See D469.
             print("a comment %s was not kept as it was written: %s"
                   % (what, said), file=sys.stderr)
             failed = 1
@@ -627,8 +626,8 @@ rm -f "$places" "$scratch"/fmt-places-one.kest "$scratch"/fmt-places-two.kest
 
 # A file bigger than the numbers the formatter used to carry: more comments
 # than the run it kept them in, and a chain longer than the one it collected.
-# Both were quiet — the comments past the end were dropped and the chain past
-# the end came out in a shape nobody asked for — and no file in this tree is
+# Both were quiet -- the comments past the end were dropped and the chain past
+# the end came out in a shape nobody asked for -- and no file in this tree is
 # either.
 big="$scratch"/fmt-big.kest
 {
@@ -710,7 +709,7 @@ fi
 rm -f "$crooked" "$crooked.was" "$scratch"/fmt-named
 
 # Lines longer than the one form allows, of every kind the formatter can break
-# — a comparison whose operator is `>`, a match arm whose value goes onto a
+# -- a comparison whose operator is `>`, a match arm whose value goes onto a
 # line of its own, a call whose arguments go one to a line, and an `if` that
 # gives a value. No file in the tree has one of these, which is the whole
 # reason the two mistakes found here lived as long as they did: a check reads
@@ -753,7 +752,7 @@ once="$scratch"/fmt-wide-once.kest
 twice="$scratch"/fmt-wide-twice.kest
 # What `fmt` says for itself is what this asks first. It reads back what it
 # wrote before handing it over, so a formatter that broke one of these lines
-# refuses here rather than printing something the next command chokes on — and
+# refuses here rather than printing something the next command chokes on -- and
 # the two steps under this one are what would catch it if that reading back
 # were taken out, in different words, which is a check that has stopped
 # holding what it says.
@@ -775,7 +774,7 @@ rm -f "$wide" "$once" "$twice" "$scratch"/fmt-wide-said \
 
 # A file written on a machine that ends its lines with two characters. The
 # formatter reads it and writes the one form, which ends lines with one, so
-# what it gives back is a file that differs everywhere — and then it has to be
+# what it gives back is a file that differs everywhere -- and then it has to be
 # stable, or every run would differ again.
 crlf="$scratch"/fmt-crlf.kest
 printf 'module crlf\r\n\r\nfn main() -> i32 {\r\n    return 0\r\n}\r\n' > "$crlf"
@@ -786,7 +785,7 @@ else
     # Written by `printf` rather than as a dollar-quote, which is a shell
     # this one is not: under `/bin/sh` those four characters are themselves,
     # so the sweep looked for a byte no file has and this could never have
-    # said a word. See D465.
+    # said a word.
     returned=$(printf '\r')
     if grep -q "$returned" "$scratch"/fmt-crlf-once; then
         echo "fmt: kept a carriage return in the one form"
@@ -842,8 +841,8 @@ if ! cmp -s "$broken" "$broken.was"; then
 fi
 rm -f "$broken" "$broken.was"
 
-# A name longer than a line. Nothing in this tree has one — every name here is
-# short enough to read — and what a formatter does with a line it cannot make
+# A name longer than a line. Nothing in this tree has one -- every name here is
+# short enough to read -- and what a formatter does with a line it cannot make
 # fit is a thing to decide rather than to discover: it breaks what can break
 # and leaves what cannot. A name is one thing; breaking it in half makes a
 # different name.
@@ -927,7 +926,7 @@ rm -f "$scratch"/said-1 "$scratch"/said-2 "$scratch"/theirs-1 \
 # free to drop it, and every file here would still be called faithful.
 #
 # So: pairs of programs differing in one thing each, one thing of every kind a
-# tree carries — a promise, a type, a name, an order, how a number was spelled,
+# tree carries -- a promise, a type, a name, an order, how a number was spelled,
 # which operator, the shape of what runs. Both have to parse and the two trees
 # have to differ. A pair that stops parsing is this check gone quiet, which is
 # why that is a failure rather than something skipped. It is a sample, and what
@@ -1005,7 +1004,7 @@ PAIRS = [
     # above were a sample; these are the rest, one for every span, type,
     # name and value the printer writes. Each differs in one place and no
     # other, which is what makes it a pair for that one thing: two
-    # programs differing twice hold neither of the two. See D448.
+    # programs differing twice hold neither of the two.
     ("how many an array holds",
      "fn f(a: [i32; 2]) -> i32 {\n    return 0\n}",
      "fn f(a: [i32; 3]) -> i32 {\n    return 0\n}"),

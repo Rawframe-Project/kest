@@ -122,7 +122,7 @@ static void flush_comments_above(Printer *printer, uint32_t offset,
         // Without whatever was left at the end of it. A comment is kept as it
         // was written, and space nobody can see is not something anybody
         // wrote: two files differing only in it are the same words, and a
-        // form that keeps it is a form there are two of. See D395.
+        // form that keeps it is a form there are two of.
         while (span.length > 0) {
             char last = printer->source->text[span.offset + span.length - 1];
             if (last != ' ' && last != '\t') {
@@ -172,7 +172,7 @@ static void lead_through(Printer *printer, uint32_t offset, uint32_t through) {
 //
 // Written out rather than left to a `default`, because a kind of expression
 // added without a decision about this is one more thing a comment could be
-// lifted out of quietly. See D398.
+// lifted out of quietly.
 static bool holds_a_body(const KestExpr *expr) {
     if (expr == NULL) {
         return false;
@@ -250,10 +250,10 @@ static void lead(Printer *printer, uint32_t offset) {
 }
 
 // A dotted name, which is more than one token and is held in one span. What
-// is between the pieces is whitespace a line may have been ended in — `.`
-// carries on to the next line — and none of it is part of the name, so it is
+// is between the pieces is whitespace a line may have been ended in -- `.`
+// carries on to the next line -- and none of it is part of the name, so it is
 // left out rather than copied. Everything else printed from a span is one
-// token and has nothing inside it. See D397.
+// token and has nothing inside it.
 static void print_name(Printer *printer, KestSpan span) {
     for (uint32_t i = 0; i < span.length; i++) {
         char c = printer->source->text[span.offset + i];
@@ -288,8 +288,8 @@ static void print_type(Printer *printer, const KestTypeRef *type) {
         if (type->count.length > 0) {
             put(printer, "; ");
             // A count may be a name with a dot in it, and what a line break
-            // left between the pieces is not part of it — the same reason the
-            // type beside it is printed this way. See D682.
+            // left between the pieces is not part of it -- the same reason the
+            // type beside it is printed this way.
             print_name(printer, type->count);
         }
         put_char(printer, ']');
@@ -310,7 +310,7 @@ static void print_type(Printer *printer, const KestTypeRef *type) {
             print_type(printer, type->element);
         }
         // One order wherever they are written: two orders would be two forms
-        // of one thing, and this language has one form. See D853.
+        // of one thing, and this language has one form.
         if (type->no_alloc) {
             put(printer, " no.alloc");
         }
@@ -325,7 +325,6 @@ static void print_type(Printer *printer, const KestTypeRef *type) {
 }
 
 // The parser's, so the two cannot disagree about where brackets are needed.
-// See D1236.
 static int precedence_of(KestTokenKind op) {
     return kest_binary_precedence(op);
 }
@@ -423,7 +422,7 @@ static void print_items(Printer *printer, KestExpr **items, uint32_t count,
 // no precedence to compare against -- they end where the expression holding
 // them ends -- so one written where something follows is always bracketed.
 // Printing one without was a formatter that wrote a different program and said
-// nothing about it. See D1085.
+// nothing about it.
 static bool takes_what_follows(const KestExpr *expr) {
     return expr != NULL &&
            (expr->kind == KEST_EXPR_IF || expr->kind == KEST_EXPR_MATCH);
@@ -477,7 +476,7 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
     case KEST_EXPR_TEXT: {
         // What is between the holes is the author's and is copied out as
         // written, escapes and all. What is in a hole is code, and code in
-        // this language has one form, so it is printed like any other — flat,
+        // this language has one form, so it is printed like any other -- flat,
         // because a text literal is one line by what it is.
         bool was = printer->flat;
         printer->flat = true;
@@ -543,7 +542,7 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         bool may_break = !printer->counting && !printer->flat;
 
         print_operand(printer, head, level);
-        // All of them or none, like a list — but asked after the left is
+        // All of them or none, like a list -- but asked after the left is
         // printed, and about what is left to print. Asking beforehand, from
         // the flat width of the whole thing, broke chains whose left side had
         // already broken inside itself: `1.0) >` and `0.0001 {` on two lines
@@ -554,11 +553,11 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         // the writing off, and measuring this from inside itself is how it
         // first went round forever.
         // And only where the break would be legal. The operator ends the line,
-        // so the line has to be one that carries on — and `>` is the one
+        // so the line has to be one that carries on -- and `>` is the one
         // operator a line may end after, because `ref<Npc>` ends in one. A
         // chain holding one of those is written on the line it is on however
         // long that is: breaking before the operator would end the line on a
-        // value, which is the same refusal from the other side. See D384.
+        // value, which is the same refusal from the other side.
         bool carries_on = true;
         for (uint32_t i = 0; i < count; i++) {
             if (kest_lexer_ends_statement(operators[i])) {
@@ -572,7 +571,7 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         printer->depth += printer->in_condition ? 2 : 1;
         for (uint32_t i = count; i > 0; i--) {
             // The operator ends the line rather than starting the next one,
-            // because D003 is what makes the break legal: a line that ends in
+            // because that is what makes the break legal: a line that ends in
             // an operator continues, and one that ends in a value does not.
             put_char(printer, ' ');
             print_operator(printer, operators[i - 1]);
@@ -609,7 +608,6 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         put_char(printer, ']');
         break;
     // `|x, y| value`, or `|x| {` and the body. Nothing handed over is `||`.
-    // See D1257.
     case KEST_EXPR_BLOCK: {
         const KestLambda *lambda = expr->lambda;
         put(printer, "|");
@@ -690,16 +688,15 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
             uint32_t begins = arm->span.length > 0 ? arm->span.offset
                                                    : expr->span.offset;
             // An arm that gives a value is one line when it is printed, so
-            // everything written inside it — over however many lines the
-            // author took — belongs above it.
+            // everything written inside it -- over however many lines the
+            // author took -- belongs above it.
             if (arm->value != NULL) {
                 // To the end of the line the value ends on, not to the end of
                 // the value: what is written after it on that line was written
                 // about this arm, and stopping at the value left it above the
-                // arm underneath — a comment about something the author did
+                // arm underneath -- a comment about something the author did
                 // not write it about, which is the mistake `rest_of_line`
                 // exists to prevent and which arms were not going through.
-                // See D389.
                 lead_through(printer, begins,
                              rest_of_line(printer,
                                           arm->value->span.offset +
@@ -825,10 +822,10 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
     if (!bare) {
         // Through the whole of it when the whole of it is one line. A
         // statement written over two lines had whatever was at the end of the
-        // second one left behind, and it came out above the statement after —
+        // second one left behind, and it came out above the statement after --
         // a comment about something the author did not write it about, which
         // is what `rest_of_line` is for and what a statement longer than a
-        // line was slipping past. See D398.
+        // line was slipping past.
         if (prints_flat(stmt) && stmt->span.length > 0) {
             lead_through(printer, stmt->span.offset,
                          rest_of_line(printer, stmt->span.offset +
@@ -961,10 +958,9 @@ static void print_block(Printer *printer, const KestBlock *block,
     }
     // To the end of the line the brace is on, not to the brace: what is
     // written after `}` on that line was written about the block that is
-    // ending, and stopping at the brace left it above whatever came next —
+    // ending, and stopping at the brace left it above whatever came next --
     // the next declaration, the next statement, or the end of the file. It is
     // the same rule `lead` keeps and the same one `match` arms were missing.
-    // See D390.
     flush_comments(printer, rest_of_line(printer, closing));
     printer->depth--;
     indent(printer);
@@ -985,7 +981,7 @@ static void print_type_params(Printer *printer, const KestDecl *decl) {
         // What it has to be able to do, in the order this file writes them in
         // rather than the order they were typed: one form of a file, and a
         // list whose order is a reader's choice is a list two files disagree
-        // about. See D1043.
+        // about.
         uint8_t wants = decl->type_params[i].wants;
         if (wants == 0) {
             continue;
@@ -1057,10 +1053,10 @@ static void print_decl(Printer *printer, const KestDecl *decl,
         // From the first thing written above it rather than from the
         // declaration itself. A comment between two one-line declarations is
         // written about the second of them, so it is where the second one
-        // begins as far as this is concerned — measuring from the declaration
+        // begins as far as this is concerned -- measuring from the declaration
         // counted the comment's own line as a gap, put a blank line in that
         // was not there, and made a file that had been formatted once come
-        // out different when it was formatted again. See D394.
+        // out different when it was formatted again.
         uint32_t begins = decl->span.offset;
         if (printer->comment_next < printer->comment_count &&
             printer->comments[printer->comment_next].offset < begins) {
@@ -1107,9 +1103,9 @@ static void print_decl(Printer *printer, const KestDecl *decl,
         for (uint32_t i = 0; i < decl->record.field_count; i++) {
             const KestField *field = decl->record.fields[i];
             // Where the field before this one ended, which is where its type
-            // ended. A field written over two lines — broken after the `:`,
-            // which carries on — made the next one look further down than it
-            // is, and a blank line went between them. See D397.
+            // ended. A field written over two lines -- broken after the `:`,
+            // which carries on -- made the next one look further down than it
+            // is, and a blank line went between them.
             if (i > 0) {
                 const KestTypeRef *before = decl->record.fields[i - 1]->type;
                 KestSpan ended = before != NULL
@@ -1167,11 +1163,10 @@ static void print_decl(Printer *printer, const KestDecl *decl,
         for (uint32_t i = 0; i < decl->choice.case_count; i++) {
             const KestVariant *variant = decl->choice.cases[i];
             // Where the case before this one ended, which is the end of the
-            // last thing it carries. A case written over two lines — a
-            // payload broken at its comma — made the one after it look two
+            // last thing it carries. A case written over two lines -- a
+            // payload broken at its comma -- made the one after it look two
             // lines down, and a blank line nobody wrote went between them. It
             // is the mistake a statement had, and an arm, and a declaration.
-            // See D396.
             if (i > 0) {
                 const KestVariant *before = decl->choice.cases[i - 1];
                 KestSpan ended = before->payload_count > 0
@@ -1221,7 +1216,7 @@ const char *kest_format(const KestUnit *unit, const KestSource *source,
     printer.source = source;
     printer.arena = arena;
     // As many as there are. This was a run of four thousand and ninety-six,
-    // and a file with more lost the rest without saying so — the count kept
+    // and a file with more lost the rest without saying so -- the count kept
     // was what fitted rather than what was there.
     printer.comment_count = kest_comments(source, NULL, 0);
     if (printer.comment_count > 0) {

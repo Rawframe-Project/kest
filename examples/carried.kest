@@ -2,7 +2,7 @@ module examples.carried
 
 // Small bodies written where they are called rather than called, which is what
 // the lowering does to one of a handful of instructions that can stop nothing
-// (D1156). Every check here is a shape a carried body has to come out of right:
+//. Every check here is a shape a carried body has to come out of right:
 // arguments read where the caller keeps them, in whatever order it keeps them;
 // the last of them read in place and the rest handed over; a body that writes
 // what it was given; a body with more than one way out; one carried body's
