@@ -2129,25 +2129,29 @@ static int write_hostile(const char *path, uint64_t seed, bool json) {
 // What a file declares and what it says about each, for somebody who is going
 // to call it rather than read it. It is built first, so what is described is a
 // program that checks, and a file that does not is refused in its own words.
-static int write_doc(const char *executable, const char *path, bool json) {
+static int write_doc(const char *executable, const char *path, bool json,
+                     size_t room) {
     if (path == NULL) {
         return refused_at_the_words(json, "K0649", "`%s` needs a file", "doc");
     }
     KestBuild *build =
         kest_build(path, kest_library_path(NULL, executable),
                    json ? stdout : stderr,
-                   json ? KEST_FORM_JSON : KEST_FORM_TEXT, 0);
+                   json ? KEST_FORM_JSON : KEST_FORM_TEXT, room);
     if (build == NULL) {
         return 1;
     }
     kest_build_free(build);
     // A build keeps no tree once it has compiled one, so the file is read
     // again, on its own, for its words.
+    // Held to what `--room` says the way the build above was, and given the
+    // whole of it, since the build is gone.
     KestArena *arena = kest_arena_new();
     KestDiags diags;
     KestUnits units = {0};
     bool said = false;
     if (arena != NULL) {
+        kest_arena_cap(arena, room);
         kest_diags_init(&diags, arena);
         said = kest_read_unit(arena, &diags, path, &units) &&
                units.count > 0 &&
@@ -3861,7 +3865,7 @@ int main(int argc, char **argv) {
 
     if (strcmp(argv[1], "doc") == 0) {
         int status =
-            write_doc(argv[0], path_count > 0 ? paths[0] : NULL, json);
+            write_doc(argv[0], path_count > 0 ? paths[0] : NULL, json, room);
         free(paths);
         free(given);
         return status;

@@ -319,6 +319,67 @@ sys.exit(0 if held["schema"] == 4 and
 fi
 rm -rf "$scratch"/hostile
 
+# What `doc` writes for a file it had too little room for is nothing, so the one
+# object on the standard output is the refusal: never half a page with the
+# refusal after it. Asked at every ceiling from one byte up to the one where it
+# fits, over a file with methods and one without.
+mkdir -p "$scratch"/whole
+cat > "$scratch"/whole/whole.c <<'EOF'
+#include <stdbool.h>
+#include <stdio.h>
+
+#include "doc.h"
+#include "mem.h"
+
+int main(int argc, char **argv) {
+    KestArena *reading = kest_arena_new();
+    KestDiags diags;
+    KestUnits units = {0};
+    if (argc < 2 || reading == NULL) {
+        return 2;
+    }
+    kest_diags_init(&diags, reading);
+    if (!kest_read_unit(reading, &diags, argv[1], &units) ||
+        units.count == 0) {
+        return 2;
+    }
+    for (size_t room = 1;; room += 16) {
+        KestArena *arena = kest_arena_new();
+        FILE *out = tmpfile();
+        if (arena == NULL || out == NULL) {
+            return 2;
+        }
+        kest_arena_cap(arena, room);
+        bool made = kest_doc(&units.items[0], arena, &diags, true, out);
+        long wrote = ftell(out);
+        fclose(out);
+        kest_arena_free(arena);
+        if (!made && wrote != 0) {
+            printf("%ld bytes written at %zu bytes of room, and then "
+                   "refused\n", wrote, room);
+            return 1;
+        }
+        if (made) {
+            return 0;
+        }
+    }
+}
+EOF
+if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -Isrc \
+        -o "$scratch"/whole/whole "$scratch"/whole/whole.c \
+        $build_dir/libkest.a -lm 2>"$scratch"/whole/said; then
+    complain "doc: the check of what a refusal leaves did not build"
+    sed 's/^/    /' "$scratch"/whole/said | head -4
+else
+    for file in examples/host.kest examples/inventory.kest; do
+        if ! "$scratch"/whole/whole "$file" >"$scratch"/whole/said 2>&1; then
+            complain "doc: $file was refused with part of it already \
+written: $(head -1 "$scratch"/whole/said)"
+        fi
+    done
+fi
+rm -rf "$scratch"/whole
+
 # One file, asked everything. What it says is what is wrong with it, so a
 # file that is right says nothing at all -- which is what lets these run at
 # once and be read in order afterwards.
