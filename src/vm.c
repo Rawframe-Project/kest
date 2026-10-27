@@ -5330,7 +5330,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      (long long)count, (long long)from, text.length);
                 return false;
             }
-            TEXT_ON(text.bytes + from, count);
+            // Empty text may have no bytes at all, and then `from` is nought:
+            // no offset is taken from a null pointer.
+            TEXT_ON(from == 0 ? text.bytes : text.bytes + from, count);
             NEXT;
         }
         case KEST_OP_TEXT_REST: THREADED(KEST_OP_TEXT_REST) {
@@ -5342,7 +5344,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      (long long)at, text.length);
                 return false;
             }
-            TEXT_ON(text.bytes + at, text.length - (uint32_t)at);
+            TEXT_ON(at == 0 ? text.bytes : text.bytes + at,
+                    text.length - (uint32_t)at);
             NEXT;
         }
         case KEST_OP_TEXT_MATCHES: THREADED(KEST_OP_TEXT_MATCHES) {
@@ -7776,7 +7779,9 @@ void kest_report(KestRuntime *runtime, FILE *out, KestForm form) {
     // A view of the tail rather than anything taken out, so the whole run is
     // still there afterwards.
     KestDiags tail = *runtime->diags;
-    tail.items = runtime->diags->items + from;
+    // Nothing said yet is no array at all, and no offset is taken from that.
+    tail.items =
+        runtime->diags->items == NULL ? NULL : runtime->diags->items + from;
     tail.count = runtime->diags->count - from;
     // The count belongs to what is being written and not to the run it came
     // from, because JSON says it out loud.
