@@ -13,7 +13,7 @@ import src.world
 // counts as hungry is the game's and not this module's. A function value
 // carries its promises in its type, so a rule that allocated could not be
 // passed here at all -- which is the whole reason the promise is part of the
-// type. See D1051.
+// type.
 fn hungry(one: world.Colonist) -> bool no.alloc no.host deterministic {
     return table.orElse(one.carrying, "food", 0) < 2
 }
@@ -37,7 +37,7 @@ fn decide(one: world.Colonist, asking: fn(world.Colonist) -> bool no.alloc no.ho
 
 // One round over the colony, in the room it is standing in. Reading a colonist
 // out, changing it and writing it back is the spelling this language is
-// quickest at (D1038), and every table here was given its room by `refill`
+// quickest at, and every table here was given its room by `refill`
 // before the round began.
 fn round(colony: world.Colony, asking: fn(world.Colonist) -> bool no.alloc no.host deterministic) -> world.Colony no.alloc no.host deterministic {
     let moved = 0
@@ -56,7 +56,7 @@ fn round(colony: world.Colony, asking: fn(world.Colonist) -> bool no.alloc no.ho
             // where the key already is. `set` may grow and so is not a thing a
             // promise can hold; `fit` is `set` with the growth taken out and
             // answers false for a key that is not there, which is what the
-            // colony's first round is for. See D1063.
+            // colony's first round is for.
             let food = table.orElse(one.carrying, "food", 0)
             if next == world.Doing.Working {
                 missed += if table.fit(one.carrying, "food", food + 1) -> 0

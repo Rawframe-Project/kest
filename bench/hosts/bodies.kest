@@ -5,7 +5,7 @@ module bench.hosts.bodies
 // is in the languages this one is measured beside, so every engine does the
 // same arithmetic and answers the same sum. `bodies.lua` and `bodies.js` are
 // the same three functions. The hosts that call them are the ones with the
-// clock in them. See D1272.
+// clock in them.
 
 struct Body {
     x: f64

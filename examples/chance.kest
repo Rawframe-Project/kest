@@ -5,7 +5,7 @@ import std.random
 
 // Placing things with numbers that look random, and being able to do it again.
 // The source is a value the program holds, so two runs from one seed lay the
-// world out the same way — which is what a simulation needs to be worth
+// world out the same way -- which is what a simulation needs to be worth
 // running twice.
 
 struct Spot {
@@ -136,9 +136,9 @@ fn main() -> i32 {
     }
     // One of them, held against what is in the run rather than against the
     // range the run happens to cover. `order` holds every index once, so a
-    // pick that came back nought passed a test for being an index — which is
+    // pick that came back nought passed a test for being an index -- which is
     // how `random.one` answered nought for every array in the language for as
-    // long as it did. See D809.
+    // long as it did.
     let marks: [i32] = array()
     push(marks, 11)
     push(marks, 22)

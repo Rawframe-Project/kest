@@ -3,7 +3,7 @@ module src.ui.say
 import std.text
 
 // What a person reads. One module per language would be one module per
-// language; this is the shape a catalogue has and the boundary D1056 draws:
+// language; this is the shape a catalogue has and where the boundary is:
 // the bytes are this language's and what a language does with characters is
 // not. The French line carries a non-breaking space and the Turkish one has
 // characters ASCII casing is wrong about, both on purpose.

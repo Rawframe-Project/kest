@@ -1,7 +1,7 @@
 /* The other direction, and the one the language cannot measure about itself:
    how long a call *in* from a host takes, against a call the program makes on
-   its own. D007 says the two crossings are separate specifications — the frame
-   a machine writes for a host is not the frame a host writes for it — and
+   its own. The two crossings are separate specifications (the frame a machine
+   writes for a host is not the frame a host writes for it), and
    `tools/crossing.kest` measured only the way out.
  *
  * A host is what does the calling here, so this is C rather than Kest. What it
@@ -14,7 +14,7 @@
  * call in from a host is one `kest_call`: a frame written by the host, the
  * arguments weighed on the way in and the answer weighed on the way back. A
  * call the program makes itself is one hop of a loop inside one `kest_call`,
- * so it carries the loop with it — which is what a call in a program is and
+ * so it carries the loop with it -- which is what a call in a program is and
  * what the frame instrument measures a helper as. Subtracting them says a
  * crossing costs less than nothing, which is true of the arithmetic and of
  * nothing else, so both are printed and neither is taken away from the other.
@@ -78,7 +78,7 @@ static const char *const PROGRAM =
  *
  * The machine is handed back the same number it handed out, so what the loop
  * puts in is what comes out and an instrument that stopped crossing would be
- * caught by the sum at the end. See D1029. */
+ * caught by the sum at the end. */
 typedef struct {
     KestRuntime *runtime;
     int32_t inside;
@@ -102,7 +102,7 @@ static void back(KestValue *frame, KestRuntime *runtime, void *context) {
    standard has rather than what this machine has, so this host compiles where
    the rest of the tree compiles. It counts the processor's time in
    microseconds, which is fine for a round of thirty thousand of them and no
-   use at all for one call — which is why a round is what is timed. */
+   use at all for one call -- which is why a round is what is timed. */
 static long long in_microseconds(void) {
     return (long long)clock() * 1000000 / (long long)CLOCKS_PER_SEC;
 }
@@ -236,13 +236,13 @@ int main(void) {
     printf("%lld ns for a call in from a host and %lld ns for one the program "
            "makes in a loop, best of %d over %d calls, spread %lld%%%s\n",
            there, here, ROUNDS, CALLS, spread,
-           spread <= 25 ? "" : " — the machine was somebody else's");
+           spread <= 25 ? "" : " -- the machine was somebody else's");
 
     /* And the round trip, which is what a boundary is when a host is on both
        sides of it. A round of these is a round of `many` with a crossing out
        and a crossing back in at every hop, so it is read against `here` rather
        than against `there`: what it costs over a call the program makes itself
-       is what going out and coming back costs. See D1029. */
+       is what going out and coming back costs. */
     long long round_trip = 0;
     long long worst_trip = 0;
     for (int round = 0; round < ROUNDS; round++) {
@@ -273,7 +273,7 @@ int main(void) {
            "one the program makes in a loop, best of %d over %d hops, spread "
            "%lld%%%s\n",
            both_ways, here, ROUNDS, CALLS, spread_trip,
-           spread_trip <= 25 ? "" : " — the machine was somebody else's");
+           spread_trip <= 25 ? "" : " -- the machine was somebody else's");
 
     /* And what the work adds up to, which is a number and not a duration: an
        instrument that stops doing its work still prints a duration. Every call

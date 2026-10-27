@@ -25,9 +25,8 @@ enum Turn {
 // What a case carries is a type like any other, and every case in this file
 // carried a number until now. A struct is the one worth writing down: it is
 // several slots rather than one, so the case that holds it is laid out around
-// it — the tag at nought and the fields after it at their own alignment — and
-// the arm that answers it names the whole struct rather than its parts. See
-// D539.
+// it -- the tag at nought and the fields after it at their own alignment -- and
+// the arm that answers it names the whole struct rather than its parts.
 struct Frame {
     at: i32
     wide: i32
@@ -81,20 +80,19 @@ fn describe(door: Door) -> text {
 // A case of an enum is a value like any other, so it is worked out where it is
 // written: the tag and what it carries, and every other slot nought. What it
 // hashes to is worked out there as well, over the same walk the machine makes
-// of the same slots. See D671.
+// of the same slots.
 const SHUT: Door = Door.Shut
 const LOCKED: Door = Door.Locked(7)
 const MARKED: u64 = hash(Door.Locked(7))
 
-// What the folder stops at, which is what makes the pair below a pair. See
-// D668.
+// What the folder stops at, which is what makes the pair below a pair.
 fn asRun(door: Door) -> Door no.alloc {
     return door
 }
 
 fn main() -> i32 {
     // Two doors are one door when they are the same case carrying the same
-    // things, which is what a value of an enum is and all it is (D043).
+    // things, which is what a value of an enum is and all it is.
     let door = Door.Locked(7)
     if door != Door.Locked(7) {
         return 1
@@ -129,7 +127,7 @@ fn main() -> i32 {
     // piece of text is worked out on the stack, so an arm with one needs more
     // room than an arm that answers a word. A body whose widest arm is never
     // run is a body that asks for room nothing here has seen it use, which is
-    // what `KEST_DEEP` counts. See D812.
+    // what `KEST_DEEP` counts.
     if describe(Door.Locked(7)) != "locked with 7" {
         return 14
     }

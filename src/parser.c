@@ -17,16 +17,16 @@ typedef struct {
     // and a note are attached to the diagnostic that came last, whoever made
     // it -- so a message held back while recovering leaves them landing on
     // somebody else's, which is a reader told the rule behind a mistake they
-    // did not make. See D885.
+    // did not make.
     bool spoke;
     bool out_of_memory;
     // What the statement being parsed began with, so a message about where it
     // ended can point back at the word that started it.
     KestToken began_with;
     // Every node made for this file, counted where it is made: a tree is what
-    // reading a file mostly costs, and what it is made of is this. See D641.
+    // reading a file mostly costs, and what it is made of is this.
     uint32_t nodes;
-    // How deep the expression being read is written inside others. See D645.
+    // How deep the expression being read is written inside others.
     uint32_t nesting;
 } Parser;
 
@@ -35,13 +35,13 @@ typedef struct {
 // is not is a list where a copy costs nothing beside what it holds. Sixteen
 // pointers is a hundred and twenty-eight bytes of the C stack per list being
 // read, and lists are read one inside another only as deep as an expression
-// nests, which has a ceiling. See D745.
+// nests, which has a ceiling.
 #define LIST_HELD 16
 
 // A pointer list that fills up here and spills into the arena, and is handed
 // over as exactly what it holds. Nothing it grew through is kept: the arena
 // never gives anything back, so a list that grew in it left every size it
-// passed through behind, and a list of two left eight. See D745.
+// passed through behind, and a list of two left eight.
 typedef struct {
     void **items;
     uint32_t count;
@@ -146,7 +146,7 @@ static void error_at(Parser *parser, KestSpan span, const char *code,
     // out of a file that is wrong -- a NULL where a node goes -- so what a
     // reader would be told is that a line they wrote is bad, about a machine
     // that ran out. The one thing that happened is said by whoever notices
-    // the answer is no. See D748.
+    // the answer is no.
     if (parser->out_of_memory) {
         parser->recovering = true;
         parser->spoke = false;
@@ -201,7 +201,7 @@ static void suggest(Parser *parser, const char *format, ...) {
 
 // Whether what comes next is a condition written inside brackets and nothing
 // else. `if (x < 3) { }` means what `if x < 3 { }` means, and the formatter
-// takes the brackets away — so a file written the first way is a second
+// takes the brackets away -- so a file written the first way is a second
 // spelling of one thing, and this parser accepts one. What says the brackets
 // are the whole of it is what follows the one that closes them: a brace, or
 // the arrow of an `if` that gives a value. Anything else and they are a
@@ -228,7 +228,7 @@ static bool wrapped_whole(Parser *parser) {
     return false;
 }
 
-// `%=` and its like. Four of them are written — `+=`, `-=`, `*=` and `/=` —
+// `%=` and its like. Four of them are written -- `+=`, `-=`, `*=` and `/=` --
 // and the rest are not, because a fifth that appears once in a file is written
 // out. What a reader who writes one gets otherwise is the parser meeting an `=`
 // where a value belongs, which says where it stopped and not what is wrong.
@@ -332,7 +332,7 @@ static bool starts_declaration(KestTokenKind kind) {
 // block belonged to the statement that failed, and reading it as statements of
 // the block around it puts every brace after it out of step: one mistake in an
 // `if let` line became a second message about a `let` three lines down, saying
-// a file holds `module`, `import` and `fn` — in the middle of a function.
+// a file holds `module`, `import` and `fn` -- in the middle of a function.
 static void recover_statement(Parser *parser) {
     uint32_t depth = 0;
     while (!check(parser, KEST_TOK_EOF)) {
@@ -378,12 +378,12 @@ static void recover_declaration(Parser *parser) {
 // this language keeps is one of those wherever it is written. `break` where a
 // field name belongs is refused, recovery stops on it because a statement
 // could begin there, the loop asks for a field again at the same token, and
-// that is the whole of the program from then on — one more copy of one message
+// that is the whole of the program from then on -- one more copy of one message
 // at a time, until the host has no memory left to give it. Six lines did that.
 //
 // So a pass that has eaten nothing eats one and recovers from where that
 // leaves it, which also puts the rest of the line where it belongs: whatever
-// follows a name that cannot be one is not a second mistake. See D841.
+// follows a name that cannot be one is not a second mistake.
 static void recover_from(Parser *parser, uint32_t was) {
     recover_statement(parser);
     if (parser->position == was) {
@@ -416,10 +416,10 @@ static void end_statement(Parser *parser) {
              kest_token_name(found.kind));
     // A ternary, which is what somebody writes who has met a language with
     // one. The statement before it was whole, so what is left is a `?` where a
-    // line should have ended — and `?` means something else here, so a reader
+    // line should have ended -- and `?` means something else here, so a reader
     // shown only the token is being told their `?` is in the wrong place
     // rather than that there is none. The reference says there is no ternary;
-    // this is the reader who has not read it yet. See D884.
+    // this is the reader who has not read it yet.
     if (found.kind == KEST_TOK_QUESTION) {
         suggest(parser,
                 "there is no ternary here and `?` means optional: "
@@ -428,7 +428,7 @@ static void end_statement(Parser *parser) {
     }
     // `Thing { x: 1.0 }`, a struct built the way a language with struct
     // literals builds one. Here it is built by position, the way a function
-    // is called, so the brace is where the line ended. See D1148.
+    // is called, so the brace is where the line ended.
     if (found.kind == KEST_TOK_LBRACE && parser->position >= 1 &&
         parser->tokens[parser->position - 1].kind == KEST_TOK_IDENT &&
         peek_at(parser, 1).kind == KEST_TOK_IDENT &&
@@ -440,7 +440,7 @@ static void end_statement(Parser *parser) {
                 (int)named.length, span_text(parser, named));
     }
     // A statement that begins with a word this language nearly has is a
-    // misspelt keyword, and the message above is about the token after it —
+    // misspelt keyword, and the message above is about the token after it --
     // which is the one thing in the line that is not wrong. So the word is
     // pointed at as well.
     if (parser->spoke && parser->began_with.kind == KEST_TOK_IDENT) {
@@ -487,7 +487,7 @@ static KestSpan parse_path(Parser *parser) {
 // each, because a promise is a thing this language has and a fourth one is a
 // row here rather than a rewrite of what reads them. `check-tables.sh` holds
 // it to what the header names, so a promise a program can write and a host
-// cannot ask about is a check that fails. See D857 and D942.
+// cannot ask about is a check that fails.
 static const struct {
     const char *word;
     bool after_no;
@@ -521,10 +521,11 @@ static void promise_list(char *out, size_t room) {
 
 // What is said about anything else written where a promise goes.
 //
-// A word that is not one of them went unread until D852: the parser found no
-// promise, went looking for a body, found an identifier and said `expected `{``.
+// A word that is not one of them is read: otherwise the parser finds no
+// promise, goes looking for a body, finds an identifier and says
+// `expected `{``.
 // `no` and a dot is somebody writing a promise whatever follows it, so what
-// follows it is read and answered for. See D852 and D853.
+// follows it is read and answered for.
 static void match_promises(Parser *parser, bool *no_alloc, bool *no_host,
                            bool *deterministic) {
     bool *written[] = {no_alloc, no_host, deterministic};
@@ -625,7 +626,7 @@ static KestTypeRef *parse_type(Parser *parser) {
 
     // `block(i32) -> bool` is written the way a function's shape is, and
     // `block` is a word only here: a type that is a name followed by what it
-    // takes. See D1257.
+    // takes.
     bool block = is_word(parser, 0, "block") &&
                  peek_at(parser, 1).kind == KEST_TOK_LPAREN;
     if (check(parser, KEST_TOK_FN) || block) {
@@ -677,7 +678,7 @@ static KestTypeRef *parse_type(Parser *parser) {
                 // A constant from another module is one name with a dot in it,
                 // the same as a type from one is. What it names is looked up
                 // before the constants are symbols, so the type layer finds
-                // the file rather than the name. See D681.
+                // the file rather than the name.
                 type->count = parse_path(parser);
             } else {
                 type->count = current_span(parser);
@@ -688,7 +689,6 @@ static KestTypeRef *parse_type(Parser *parser) {
                     // reader who wrote a run of minus one is being told `-`
                     // is unexpected rather than that a count is a count. A
                     // store says the same thing in its own words at K0351.
-                    // See D885.
                     suggest(parser,
                             found.kind == KEST_TOK_MINUS
                                 ? "how many there are is more than nought; a "
@@ -720,8 +720,7 @@ static KestTypeRef *parse_type(Parser *parser) {
         error_at(parser, found.span, "K0203", "expected a type, found %s",
                  kest_token_name(found.kind));
         // Which of the three it is, because what somebody wrote says which
-        // language they came from and each has a different answer here. See
-        // D515.
+        // language they came from and each has a different answer here.
         if (found.kind == KEST_TOK_STAR || found.kind == KEST_TOK_AMP) {
             suggest(parser,
                     "there are no pointers here: what names a slot "
@@ -852,7 +851,7 @@ static KestExpr *parse_string(Parser *parser, KestSpan span) {
             // What a hole is for, which is the part a reader is missing: the
             // message says what is wrong with the one they wrote and not what
             // one holds, and somebody who wanted a brace in their text has
-            // written the only thing that cannot go in one. See D885.
+            // written the only thing that cannot go in one.
             suggest(parser,
                     close == end
                         ? "close it with `}`, or write `\\{` for a brace "
@@ -921,7 +920,7 @@ static KestExpr *parse_string(Parser *parser, KestSpan span) {
 // that was not used for anything.
 // Everything up to the `}` that closes the arms, for an arm nothing could
 // read. Without it the arms under a bad one are read as statements, and a
-// reader who wrote one thing wrong is told about three. See D512.
+// reader who wrote one thing wrong is told about three.
 static void skip_arms(Parser *parser) {
     uint32_t depth = 1;
     while (depth > 0 && !check(parser, KEST_TOK_EOF)) {
@@ -979,7 +978,7 @@ static KestExpr *parse_match(Parser *parser) {
                     // language where `match` chooses between values writes a
                     // number or `true` here and hears about a token. What it
                     // chooses between is said where the subject is read, and
-                    // the subject is not read until the arms parse. See D512.
+                    // the subject is not read until the arms parse.
                     suggest(parser,
                             "a `match` arm names a case of an "
                             "enum, and `else` answers the rest");
@@ -1041,7 +1040,7 @@ static KestExpr *parse_match(Parser *parser) {
             // every arm written this way is one mistake, rather than the first
             // one and then a line about an arrow for every arm after it. The
             // sentence the expression parser has for a stray block is about
-            // `if`, which is not what was written. See D1147.
+            // `if`, which is not what was written.
             error_at(parser, current_span(parser), "K0204",
                      "expected an expression, found %s",
                      kest_token_name(KEST_TOK_LBRACE));
@@ -1114,7 +1113,7 @@ static KestExpr *parse_match(Parser *parser) {
 // patterns: nothing is compared and nothing is taken apart, so the only thing
 // between `let` and `=` is a name. Said here because the expectation on its own
 // is a message about a token, and what a reader who wrote `if let Some(x) =`
-// needs is the rule. See D513.
+// needs is the rule.
 static bool parse_binding(Parser *parser, KestSpan *name, const char *what) {
     *name = current_span(parser);
     if (!expect(parser, KEST_TOK_IDENT)) {
@@ -1306,7 +1305,7 @@ static KestExpr *parse_primary(Parser *parser) {
         // A block where a value was wanted, which is what somebody writes who
         // has met a language whose blocks are expressions. Here a block is a
         // statement and an `if` is the one thing that gives a value out of
-        // arms. See D515.
+        // arms.
         if (token.kind == KEST_TOK_LBRACE) {
             suggest(parser,
                     "a block is not a value: an `if` gives one "
@@ -1314,11 +1313,11 @@ static KestExpr *parse_primary(Parser *parser) {
         }
         // A comparison with its right side on the next line, which is the one
         // thing a reader writes that this language will not take. A line ends
-        // after `>` because a type ends in one — `giver: ref<Npc>` is a whole
-        // field — so the line ended and what was to be compared with is a
+        // after `>` because a type ends in one -- `giver: ref<Npc>` is a whole
+        // field -- so the line ended and what was to be compared with is a
         // statement of its own. It reads as two mistakes and is one, and the
         // reference spends four paragraphs on the rule; the reader who meets
-        // it is owed the sentence rather than the rule. See D883.
+        // it is owed the sentence rather than the rule.
         bool ended_after_gt =
             token.kind == KEST_TOK_NEWLINE && parser->position >= 1 &&
             parser->tokens[parser->position - 1].kind == KEST_TOK_GT;
@@ -1436,7 +1435,7 @@ static KestExpr *parse_postfix(Parser *parser) {
             KestSpan close = current_span(parser);
             // `Thing(x: 1.0)` is a call from a language that passes by name.
             // Nothing does here: a struct is built, and a function called,
-            // with what it takes in the order it is declared. See D1148.
+            // with what it takes in the order it is declared.
             if (!expect(parser, KEST_TOK_RPAREN) &&
                 check(parser, KEST_TOK_COLON) &&
                 parser->tokens[parser->position - 1].kind == KEST_TOK_IDENT) {
@@ -1459,7 +1458,7 @@ static KestExpr *parse_postfix(Parser *parser) {
             KestSpan name = current_span(parser);
             if (!expect(parser, KEST_TOK_IDENT)) {
                 // `t.0` is what somebody writes who has met tuples. There are
-                // none here: what a struct holds is named. See D514.
+                // none here: what a struct holds is named.
                 suggest(parser,
                         "a field is named, so there is nothing at "
                         "a position to read");
@@ -1583,13 +1582,13 @@ static KestExpr *parse_binary(Parser *parser, int minimum) {
 
 // How deep one expression may be written inside another. A parser of this
 // shape follows nesting with the machine's own stack, and so does everything
-// that walks the tree after it — so a program nested deeper than the stack is
+// that walks the tree after it -- so a program nested deeper than the stack is
 // tall is a crash rather than a refusal, and no amount of memory makes it not
 // one. The deepest expression anything in this tree writes is seven.
 //
 // A number rather than a guard on the stack, because a stack that has run out
 // cannot be asked about portably and a program that is refused knows where it
-// stands. See D645.
+// stands.
 #define MAX_NESTING 128
 
 static KestExpr *parse_expr(Parser *parser) {
@@ -1660,7 +1659,7 @@ static KestStmt *parse_statement(Parser *parser) {
         if (!expect(parser, KEST_TOK_EQ)) {
             // The rule behind the expectation, which is the part worth
             // hearing: a name is given its value where it is written, and
-            // there is no declaring one now and filling it in later. See D506.
+            // there is no declaring one now and filling it in later.
             suggest(parser,
                     "a `let` gives its value where it is written");
             return NULL;
@@ -1680,7 +1679,7 @@ static KestStmt *parse_statement(Parser *parser) {
         // Written until the checker says otherwise, because what turns on this
         // is whether the compiler may put the value in the chunk and leave the
         // frame without it. A name nobody has looked at has to read as one that
-        // is written. See D887.
+        // is written.
         stmt->let.name_written = true;
         return stmt;
     }
@@ -1749,7 +1748,7 @@ static KestStmt *parse_statement(Parser *parser) {
         if (!expect(parser, KEST_TOK_IDENT)) {
             // The same rule in the third place it is written: what stands
             // here is a name for what comes out, and there is nothing else it
-            // could be. See D513.
+            // could be.
             suggest(parser,
                     "a `for` names what it walks over: "
                     "`for one in ...`");
@@ -1800,7 +1799,7 @@ static KestStmt *parse_statement(Parser *parser) {
         // Until the checker has read the body, a name is one the body writes:
         // what a walk does about that is safe for every program, and what it
         // does when nothing writes is safe only for the programs the checker
-        // has said so about. See D866.
+        // has said so about.
         stmt->each->name_written = true;
         stmt->each->index_written = true;
         parse_block(parser, &stmt->each->body);
@@ -1833,7 +1832,7 @@ static KestStmt *parse_statement(Parser *parser) {
     }
 
     // `wait Walking`: a word followed by a name is nothing else a statement can
-    // begin with, so this takes nobody's `wait`. See D1263.
+    // begin with, so this takes nobody's `wait`.
     if (is_word(parser, 0, "wait") &&
         peek_at(parser, 1).kind == KEST_TOK_IDENT) {
         advance(parser);
@@ -1923,7 +1922,7 @@ static KestStmt *parse_statement(Parser *parser) {
 
 // `|x, y| value` or `|x| { ... }`, and `|| ...` for one that is handed
 // nothing. The names are only names: what they are is what the function the
-// block is handed to says it calls it with. See D1257.
+// block is handed to says it calls it with.
 static KestExpr *parse_lambda(Parser *parser) {
     KestSpan start = current_span(parser);
     KestLambda *lambda = KEST_ARENA_NEW(parser->arena, KestLambda);
@@ -2034,8 +2033,7 @@ static KestField *parse_field(Parser *parser) {
     }
     if (!expect(parser, KEST_TOK_COLON)) {
         // `x i32` is what somebody writes who has met Go, and the token this
-        // wanted says nothing about which of the two orders is right. See
-        // D514.
+        // wanted says nothing about which of the two orders is right.
         suggest(parser,
                 "a field is written `name: type`");
         return NULL;
@@ -2187,7 +2185,7 @@ static KestDecl *parse_function(Parser *parser, KestSpan start, bool is_extern) 
         decl->function.result = parse_type(parser);
     }
     // `resumes c.at` before the promises: a word, and one that means this
-    // only here, where nothing else can stand. See D1263.
+    // only here, where nothing else can stand.
     if (!is_extern && is_word(parser, 0, "resumes") &&
         peek_at(parser, 1).kind == KEST_TOK_IDENT) {
         advance(parser);
@@ -2249,11 +2247,11 @@ static KestDecl *parse_declaration(Parser *parser) {
             return NULL;
         }
         // A module-level constant is visible outside the body that defines it,
-        // and D005 declares at every boundary rather than inferring across one.
+        // and a boundary is declared rather than inferred across.
         if (!expect(parser, KEST_TOK_COLON)) {
             // `const N = 1` is what a reader writes first, and the rule it
             // meets is the one above this line: the type is written because
-            // the name crosses a boundary. See D514.
+            // the name crosses a boundary.
             suggest(parser,
                     "a `const` is written with its type: "
                     "`const N: i32 = 1`");
@@ -2294,7 +2292,6 @@ static KestDecl *parse_declaration(Parser *parser) {
             // A word rather than a keyword, for the reason `scratch` is one:
             // a field is a name and a colon, so `own keys: [K]` is a shape no
             // field could have had, and a field may still be called `own`.
-            // See D1041.
             KestSpan own = {0};
             if (is_word(parser, 0, "own") &&
                 peek_at(parser, 1).kind == KEST_TOK_IDENT &&
@@ -2335,7 +2332,7 @@ static KestDecl *parse_declaration(Parser *parser) {
         }
         // An enum takes types the way a struct does, and for the same reason:
         // `Answer<T>` is one shape written once, and the language already has
-        // the other half of it in `T?`. See D1048.
+        // the other half of it in `T?`.
         if (!parse_type_params(parser, decl) ||
             !expect(parser, KEST_TOK_LBRACE)) {
             return NULL;
@@ -2470,7 +2467,7 @@ static KestDecl *parse_declaration(Parser *parser) {
 
     // `flags` beginning a declaration that neither arm above could read.
     // Without this it falls through to the end, where the caret sits on the
-    // word `flags` under a line saying that a file holds `flags`. See D514.
+    // word `flags` under a line saying that a file holds `flags`.
     if (is_word(parser, 0, "flags")) {
         advance(parser);
         if (expect(parser, KEST_TOK_IDENT)) {
@@ -2513,7 +2510,7 @@ bool kest_parse_block_again(KestArena *arena, const KestSource *source,
         return false;
     }
     // Under the same ceiling and counted against it, the way a file's tokens
-    // are. See D843.
+    // are.
     kest_arena_cap(reading, kest_arena_ceiling_left(arena));
     parser.tokens = kest_lex_again(reading, source, diags, span.offset,
                                    span.offset + span.length, &parser.count);
@@ -2535,7 +2532,7 @@ bool kest_parse(KestArena *arena, const KestSource *source, KestDiags *diags,
     // The tokens go in an arena of their own, because nothing wants them once
     // this returns: a node holds a span into the source and never a token, and
     // the source outlives everything. What the parser is holding while it
-    // works is one file's tokens rather than every file's. See D747.
+    // works is one file's tokens rather than every file's.
     KestArena *reading = kest_arena_new();
     if (reading == NULL) {
         return false;
@@ -2547,8 +2544,8 @@ bool kest_parse(KestArena *arena, const KestSource *source, KestDiags *diags,
     parser.tokens = kest_lex_all(reading, source, diags, &parser.count);
     if (parser.tokens == NULL) {
         // The bytes it did ask for before it ran out, which is what a ceiling
-        // was refusing against — and what it was refused, which belongs to the
-        // arena the ceiling is written on rather than to this one. See D843.
+        // was refusing against -- and what it was refused, which belongs to the
+        // arena the ceiling is written on rather than to this one.
         kest_arena_charge(arena, kest_arena_used(reading));
         kest_arena_returned(arena, kest_arena_used(reading));
         kest_arena_also_refused(arena, reading);

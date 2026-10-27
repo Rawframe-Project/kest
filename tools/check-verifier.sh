@@ -11,7 +11,7 @@
 #
 # It reads the module a build made, so what it is written in is C against the
 # library's own headers as well as the public one, written here rather than
-# kept in `tools/` because it is this check's and nothing else's. See D1237.
+# kept in `tools/` because it is this check's and nothing else's.
 set -u
 
 # What the build made: the preset's build directory, out/dev unless
@@ -37,7 +37,7 @@ cat > "$scratch"/refuse.c <<'REFUSE'
 // the end -- and `kest_module_prove` is asked about the module. Each has to be
 // refused with the code for what it is, and the program as it was compiled has
 // to be held. Nothing here runs a chunk: what is asked is only whether the
-// verifier would let it run. See D1237.
+// verifier would let it run.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -194,7 +194,7 @@ int main(int argc, char **argv) {
         {"a concat of no pieces, leaving two slots nothing reads", "concat",
          0, 0, "K0410"},
         // The first `concat.i` is `"{n}ab"`: a number and then a piece of
-        // text, which is `1` in what it says about them. See D1277.
+        // text, which is `1` in what it says about them.
         {"a concat.i saying a piece past the last is a number", "concat.i", 1,
          0xFFFF, "K0410"},
         {"a concat.i reading a piece of text as a number", "concat.i", 1, 2,

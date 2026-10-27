@@ -97,14 +97,13 @@ int kest_write_whole(char *buffer, uint64_t bits, bool is_signed) {
 // the sizes under it and a floor too high costs the room over it. The module's
 // own lists are few and long and one number in bytes does for them; the arrays
 // a chunk holds are three shapes of thing and each has its own, measured.
-// See D753.
 #define FLOOR_BYTES 64
 
 // What a body holds, measured over the library and the examples: the middle
 // body is ninety-two bytes of code in thirty instructions with three
 // constants, and nine in ten are under two hundred and thirty bytes in
 // eighty-five instructions with nine constants. A floor at the middle, so half
-// of them never double and the rest double once. See D753.
+// of them never double and the rest double once.
 #define FLOOR_CODE 128
 #define FLOOR_ORIGINS 32
 #define FLOOR_CONSTANTS 4
@@ -191,8 +190,8 @@ static bool places_grown(KestModule *module) {
 
 KestChunk *kest_module_add(KestModule *module, const char *name) {
     // One name, one function. What a function is compiled under carries what
-    // tells it from the others of its name — what it takes, or what a copy was
-    // given — so two of them here is this project having built one of those
+    // tells it from the others of its name -- what it takes, or what a copy was
+    // given -- so two of them here is this project having built one of those
     // names wrongly, and the second would quietly be the one that runs.
     if (module->place_capacity > 0 &&
         module->places[place_of(module, name)] != 0) {
@@ -208,7 +207,7 @@ KestChunk *kest_module_add(KestModule *module, const char *name) {
     // and the caller said the same thing about both: `two functions are
     // compiled under this name, which the checker allowed`, which is this
     // compiler calling itself wrong about a machine that had simply run out.
-    // Three rungs of a ladder said it before anybody read one. See D853.
+    // Three rungs of a ladder said it before anybody read one.
     if (module->count == module->capacity) {
         void *moved = grow(module->arena, module->functions, module->count,
                            &module->capacity, sizeof(KestChunk *));
@@ -277,18 +276,18 @@ int32_t kest_module_entry(const KestModule *module, const char *name) {
     return kest_module_find(module, qualified);
 }
 
-// What making a copy per set of types costs a module, by the rule D612 already
-// wrote down: two chunks written the same and declared in one place are one
-// generic compiled twice. `bodies` comes back as how many were copied at all
-// and the answer as how many chunks those became, so the difference between
-// them is what the rule cost over compiling each body once, and `bytes` is
-// what that difference is in code.
+// What making a copy per set of types costs a module, by the rule that a chunk
+// says where its declaration is written: two chunks written the same and
+// declared in one place are one generic compiled twice. `bodies` comes back as
+// how many were copied at all and the answer as how many chunks those became,
+// so the difference between them is what the rule cost over compiling each body
+// once, and `bytes` is what that difference is in code.
 // What a module still holds when a build is done, by what asked for it. Four
 // numbers because a total is a number with nothing to divide it by: the code
 // itself and the room it sits in, where every instruction came from, the values
 // worked out where they stood, and the layouts a host is told about. Everything
 // a build holds that is not one of these is the program's rather than the
-// module's -- its source, its types, the names it registered. See D784.
+// module's -- its source, its types, the names it registered.
 void kest_module_holds(const KestModule *module, uint32_t *code,
                        uint32_t *origins, uint32_t *constants,
                        uint32_t *layouts, uint32_t *chunks) {
@@ -368,8 +367,7 @@ uint32_t kest_module_copies(const KestModule *module, const char *name,
 // Whether anything in here is a thing whose value the pieces cannot weigh: a
 // handle is a handle of something, a tag is a tag of an enum, and a set of bits
 // is a set of named ones. Worked out where the layout is made, because the
-// alternative is looking at every piece of every argument of every call. See
-// D840.
+// alternative is looking at every piece of every argument of every call.
 static bool by_the_type(const KestType *type) {
     if (type == NULL) {
         return false;
@@ -423,7 +421,7 @@ static bool holds_a_tag(const KestType *type) {
 
 // A field's name under the one it is a field of, which is what a host asking
 // about a shape reads a piece by. Made where the piece is, because the walk
-// below is the only place that knows both halves. See D946.
+// below is the only place that knows both halves.
 static const char *under(KestArena *arena, const char *path, const char *name,
                          bool an_index) {
     if (path == NULL) {
@@ -454,7 +452,7 @@ static uint16_t describe(KestArena *arena, KestPiece *pieces, uint16_t at,
         // One with nothing in it is one slot all the same, and the piece that
         // says so has to be written: a walk that filled none of them left a
         // host reading whatever the block had been zeroed to, which is the
-        // first kind there is. See D898.
+        // first kind there is.
         if (type->member_count == 0) {
             pieces[at].offset = base;
             pieces[at].kind = KEST_L_NOTHING;
@@ -491,7 +489,6 @@ static uint16_t describe(KestArena *arena, KestPiece *pieces, uint16_t at,
         // rather than saying it is a byte. What is worth saying is what a host
         // cannot work out: a number, this byte and a number is a shape a
         // program can write two ways, and a layout said the same of both.
-        // See D714.
         pieces[at].kind = KEST_L_HELD;
         return at + 1;
     }
@@ -500,15 +497,15 @@ static uint16_t describe(KestArena *arena, KestPiece *pieces, uint16_t at,
     // is done by type; the pieces are here so the count is the truth.
     //
     // Where they sit is the widest case's, which is the case that decided how
-    // big this is. They used to say the tag's own offset — three pieces of one
-    // enum all at nought — and a host reading that would lay its own payload
+    // big this is. They used to say the tag's own offset -- three pieces of one
+    // enum all at nought -- and a host reading that would lay its own payload
     // over the tag.
     if (type->tag == KEST_T_ENUM) {
         // The tag says it is a tag, rather than saying the four bytes it is
         // laid out as. What it is worth saying is what a host cannot work out:
         // a layout of a shape with an enum in it is a run of pieces, and the
         // tag of the field is a whole number among whole numbers unless it
-        // says so. See D708.
+        // says so.
         pieces[at].offset = base;
         pieces[at].kind = KEST_L_TAG;
         pieces[at].name = path;
@@ -618,9 +615,9 @@ uint32_t kest_module_layout_of(const KestModule *module, const char *name,
 // cannot say: which type is in a payload slot depends on the tag, so the layout
 // says `KEST_L_PAYLOAD` there and this says what is really in one. Laid out
 // where the type is laid out, because a host asking afterwards has nowhere to
-// put the answer — and for every enum the type reaches by value rather than for
-// the one that is the type, because a tag inside a shape is a tag a host meets.
-// See D702 and D709.
+// put the answer -- and for every enum the type reaches by value rather than
+// for the one that is the type, because a tag inside a shape is a tag a host
+// meets.
 static bool lay_out_cases(KestModule *module, const KestType *type) {
     if (type == NULL) {
         return true;
@@ -668,13 +665,13 @@ static bool lay_out_cases(KestModule *module, const KestType *type) {
 // Which enum the tag at a piece belongs to, found by walking the type the way
 // its pieces were laid out: the same walk `describe` makes, counting instead of
 // writing. A value that is an enum has its tag at piece nought and one inside a
-// shape has it wherever the fields in front of it end. See D709.
+// shape has it wherever the fields in front of it end.
 // And the same walk for a set of named bits, which is the other kind whose
 // meaning is its declaration order: a bit's value is one shifted by its place
 // in the list, so a bit put in the middle doubles every bit after it. Both are
 // walked by the one function, because a walk that knew about one and stepped
 // over the other would count the pieces differently depending on what it was
-// looking for. See D1076.
+// looking for.
 static const KestType *named_at(const KestType *type, uint16_t want,
                                 uint16_t *at, uint8_t looking);
 
@@ -731,7 +728,7 @@ static const KestType *named_at(const KestType *type, uint16_t want,
 }
 
 // How many slots moving a value takes, which is what the type walk the steps
-// below replaced answered as it went. See D1159.
+// below replaced answered as it went.
 static uint16_t walked_slots(const KestType *type) {
     if (type == NULL) {
         return 1;
@@ -891,7 +888,7 @@ static uint32_t words_of(uint8_t kind) {
 // a shape of a number, a piece of text, two reals and a reference laid end to
 // end is one copy of six words rather than four steps of a walk, which was a
 // sixth of a frame that moves a store of them. Answers where the steps end
-// now. See D1285.
+// now.
 static uint32_t merged(KestMoveStep *steps, uint32_t first, uint32_t end) {
     uint32_t kept = first;
     for (uint32_t i = first; i < end; i++) {
@@ -926,7 +923,7 @@ static uint32_t merged(KestMoveStep *steps, uint32_t first, uint32_t end) {
 // the order each was in. A step says its own slot and its own bytes, so the
 // order moves nothing; what it buys is that the last step of a run is a tag
 // wherever there is one, and a walk goes on into that tag's case rather than
-// calling itself for it. See D1227.
+// calling itself for it.
 static void cases_last(KestMoveStep *steps, uint32_t first, uint32_t end) {
     uint32_t kept = first;
     for (uint32_t i = first; i < end; i++) {
@@ -1032,7 +1029,7 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
     }
     // Every value is moved by its walk, a tag or none: what used to be a loop
     // over the pieces moved one piece a turn of a switch, which was most of
-    // what reading a struct out of an array cost. See D1177.
+    // what reading a struct out of an array cost.
     layout->walk = walk_of(module->arena, type);
     if (layout->walk == NULL) {
         return -1;
@@ -1046,7 +1043,7 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
 // What the tag names and what it carries, out of what the layout above laid
 // out for each case. A host that has read a tag out of slot nought has this and
 // nothing else: the pieces of the case, which are the ones the enum's own
-// layout could not name. See D702.
+// layout could not name.
 const char *kest_case_of(const KestLayout *layout, uint16_t piece, int32_t tag,
                          const KestPiece **carries, uint16_t *count) {
     if (layout == NULL || piece >= layout->count ||
@@ -1125,7 +1122,7 @@ bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
     // An opcode starts an instruction and what follows it does not, so where a
     // thing was written is kept once for the instruction rather than once for
     // every byte of it. Which of the two this byte is comes from the width of
-    // the last opcode, asked of the one table that answers that. See D751.
+    // the last opcode, asked of the one table that answers that.
     if (chunk->code_count == chunk->next_instruction) {
         if (chunk->origin_count == chunk->origin_capacity) {
             uint32_t capacity = chunk->origin_capacity;
@@ -1154,7 +1151,7 @@ void kest_chunk_take_back(KestChunk *chunk, uint32_t to) {
     // now ends, so what it wrote is one origin and one expectation. Both go
     // back with it: a `code_count` moved on its own leaves the next byte
     // looking like an operand and the origin of every instruction after it
-    // off by one. See D804.
+    // off by one.
     chunk->code_count = to;
     if (chunk->next_instruction > to) {
         chunk->next_instruction = to;
@@ -1168,7 +1165,7 @@ uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset) {
     // Walked rather than looked up: a table of where every instruction starts
     // would be the thing this is for getting rid of. What reads one is a
     // program that has already failed, and a walk over a body is nothing
-    // beside writing a message about it. See D751.
+    // beside writing a message about it.
     if (chunk == NULL || chunk->origins == NULL || chunk->code == NULL) {
         return 0;
     }
@@ -1317,11 +1314,11 @@ typedef enum {
     // A constant and then a forward jump, which is five bytes.
     WEIGH = 0x15,
     // Four and five numbers: an element moved by a run and an index read
-    // where they are. See D1167.
+    // where they are.
     U16_X4 = 9,
     U16_X5 = 11,
     // An element by a run and an index, a constant, and a forward jump,
-    // which is eleven bytes. See D1178.
+    // which is eleven bytes.
     WEIGH_ELEMENT = 0x1B,
 } Operands;
 
@@ -1613,12 +1610,11 @@ static bool count_the_call(const KestModule *module, uint32_t which,
         // A function that calls one with no answer has none either, and for
         // the same reason: what a reader asks about a function is whether its
         // own stack can be worked out, and it cannot if anything it reaches
-        // has no bottom. See D601.
+        // has no bottom.
         if (reasons != NULL && callee < module->count) {
             // And where it came from, which is what a reader opens: a
             // function three calls above a `call.value` is told it calls
             // through a value, and the one that does is the one to look at.
-            // See D602.
             reasons[which].reach = reasons[callee].reach != 0
                                        ? reasons[callee].reach
                                        : (uint8_t)why->reach;
@@ -1628,7 +1624,7 @@ static bool count_the_call(const KestModule *module, uint32_t which,
         return false;
     }
     // A body carried rather than called runs in its caller's frame, on both
-    // engines: what it adds is its slots and not a frame. See D1156.
+    // engines: what it adds is its slots and not a frame.
     uint32_t deeper = framed ? depth[callee] : depth[callee] - 1;
     if (deeper > sums->deepest) {
         sums->deepest = deeper;
@@ -1638,7 +1634,7 @@ static bool count_the_call(const KestModule *module, uint32_t which,
     // call carries, so the caller's arguments and the callee's parameters are
     // the same slots counted once. Added whole, a chain of calls was charged
     // its arguments twice at every step -- which is room a host is told to
-    // find and no program reaches. See D813.
+    // find and no program reaches.
     uint32_t callee_adds =
         slots[callee] - module->functions[callee]->param_slots;
     if (callee_adds > sums->widest) {
@@ -1693,7 +1689,7 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
     bool reaches_host = false;
     // Which function the deepest call into the host is in, which is this one
     // until a callee turns out to reach one from further in. A host reads the
-    // number to size a machine and the name to know what to shorten. See D605.
+    // number to size a machine and the name to know what to shorten.
     uint32_t host_started = which;
     Sums sums = {0, 0, false, 0, 0, which};
     for (uint32_t at = 0; at < chunk->code_count;) {
@@ -1703,12 +1699,12 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
             // functions it could enter is: a function becomes a value in one
             // place, and every one that ever does is written down. So the
             // call costs the worst of those, the same way an ordinary call
-            // costs the one it names — and a program that turns none of its
+            // costs the one it names -- and a program that turns none of its
             // functions into a value has no candidates at all, which leaves a
             // host that handed one in and no answer to give. A host that
             // hands in something wider than these meets the machine asking
             // for room at the call and being told no, which is what every
-            // other under-asking meets. See D814.
+            // other under-asking meets.
             bool any = false;
             for (uint32_t maybe = 0; maybe < module->count; maybe++) {
                 if (module->functions[maybe] == NULL ||
@@ -1780,7 +1776,7 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
     }
     // And the bodies carried here rather than called: the other backend
     // still calls them, above this body's own slots, and neither engine gives
-    // one a frame. See D1156.
+    // one a frame.
     for (uint16_t i = 0; i < chunk->carried_count; i++) {
         if (!count_the_call(module, which, chunk->carried[i], state, depth,
                             slots, host_depth, host_slots, host_from, reasons,
@@ -1816,8 +1812,8 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
 // a call to a function the walk is already inside, and everything from that
 // one up to where the walk is now goes round with it. A call through a value
 // is an edge to every function this program ever names as one, the same set
-// D814 measures against, so a loop that closes through a function value is one
-// of these too.
+// its cost is measured against, so a loop that closes through a function value
+// is one of these too.
 static void cycle_walk(const KestModule *module, uint32_t which, uint8_t *state,
                        uint8_t *on_cycle, uint32_t *chain, uint32_t *where,
                        uint32_t depth) {
@@ -1905,7 +1901,7 @@ void kest_module_cycles(const KestModule *module, KestArena *arena,
     // at a host call, above it or below it, so it is not part of where the
     // machine can be when one happens. Walked to a standstill rather than in
     // order, because the graph has loops in it by the time this is asked and
-    // an order is what a loop has not got. See D818.
+    // an order is what a loop has not got.
     uint8_t *to_a_host = on_cycle;
     if (to_host) {
         to_a_host = KEST_ARENA_ARRAY(arena, uint8_t, module->count);
@@ -1955,7 +1951,7 @@ void kest_module_cycles(const KestModule *module, KestArena *arena,
     }
     // Only what the walk got to. A function nothing here reaches cannot stand
     // in a chain of frames under the one asked about, so it is not part of
-    // what that one can want. See D817.
+    // what that one can want.
     for (uint32_t i = 0; i < module->count; i++) {
         const KestChunk *one = module->functions[i];
         uint32_t own =
@@ -2217,7 +2213,7 @@ bool kest_op_allocates(uint8_t op) {
     // Nothing compiles to this, so nothing this proof reads ever holds one.
     // It is here because the switch has no `default` and that is the point of
     // the switch: an instruction added to the language has to be decided
-    // about here rather than let through. See D991.
+    // about here rather than let through.
     case KEST_OP_STOP:
         return false;
     }
@@ -2659,14 +2655,14 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
         host_depth == NULL || host_slots == NULL || host_from == NULL) {
         // Not that there is no answer: a host that frees something and asks
         // again may be told one, and a host told nothing was asked would not
-        // know to. See D566.
+        // know to.
         why->reach = KEST_REACH_NO_ROOM;
         return false;
     }
     memset(state, 0, module->count);
 
     // A host may call anything the program defines, so the answer is the worst
-    // of them — unless a host says which one it calls, and then the answer is
+    // of them -- unless a host says which one it calls, and then the answer is
     // that one and what it reaches. A host that knows is not made to pay for
     // what it will never call.
     uint32_t worst_depth = 0;
@@ -2684,7 +2680,7 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     // and it is not the only one there is: a caller of it has no answer
     // either, and a walk that stopped at the first would leave every other one
     // looking as if it had been worked out. So when somebody wants them all,
-    // the walk carries on and the first reason is kept. See D601.
+    // the walk carries on and the first reason is kept.
     bool answered = true;
     KestReason first = {KEST_REACH_KNOWN, NULL};
     for (uint32_t i = from; i < until; i++) {
@@ -2716,7 +2712,7 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     // And what each of them needs on its own, which the walk above worked out
     // for every function it reached: a host that calls one function is sized
     // for that one rather than for the worst there is, and it does not have to
-    // ask about it by name to be told. See D603.
+    // ask about it by name to be told.
     if (reasons != NULL) {
         for (uint32_t i = 0; i < module->count; i++) {
             if (state[i] == 2) {
@@ -2736,7 +2732,7 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
         // And the function it is in, in the field that says which function an
         // answer is about. A host reads the number to size a machine; the name
         // is what it would have to shorten to make the number smaller, and
-        // nothing said it. See D605.
+        // nothing said it.
         if (worst_host_slots > 0 && started_at < module->count) {
             why->where = module->functions[started_at]->name;
         }
@@ -2797,10 +2793,10 @@ static uint32_t disassemble_one(const KestModule *module,
     }
     case U16_U16:
         // The name of what a call reaches, beside the number that reaches it.
-        // Every other instruction that names something says what it named —
-        // a constant prints its value — and this one printed an index into a
+        // Every other instruction that names something says what it named --
+        // a constant prints its value -- and this one printed an index into a
         // list a reader would have to count. What calls what is the one thing
-        // the emitted code already knows and nobody could read. See D599.
+        // the emitted code already knows and nobody could read.
         if (op == KEST_OP_CALL && module != NULL &&
             read_u16(chunk, offset + 1) < module->count) {
             fprintf(out, "%u  %u  ; %s\n", read_u16(chunk, offset + 1),
@@ -2870,7 +2866,7 @@ static const char *const SCALARS[] = {"i8",  "i16", "i32",     "i64",
                                      "flags32", "flags64", "fn", "ref"};
 
 // A reason built where it is kept, because it names the type the word did not
-// fit in (D193).
+// fit in.
 static const char *reason_of(KestArena *arena, const char *format, ...) {
     va_list args;
     va_list again;
@@ -3016,7 +3012,7 @@ void kest_module_needs_json(const KestModule *module, int32_t only,
 }
 
 // The fold is `kest_mark_bytes`, which is the one arithmetic every mark here is
-// made of; these are what a module is folded in terms of. See D663.
+// made of; these are what a module is folded in terms of.
 static void fold(uint64_t *mark, const void *bytes, size_t length) {
     *mark = kest_mark_bytes(*mark, bytes, length);
 }
@@ -3038,7 +3034,7 @@ uint64_t kest_layout_mark(const KestLayout *layout) {
     fold_number(&mark, layout->align, 2);
     // How many slots it is, which is not how many pieces it has: a piece of
     // text is one piece and two slots, and a host filling a frame is told the
-    // second. See D964.
+    // second.
     fold_number(&mark, layout->slots, 2);
     fold_number(&mark, layout->tagged, 1);
     for (uint16_t p = 0; p < layout->count; p++) {
@@ -3054,7 +3050,7 @@ uint64_t kest_layout_mark(const KestLayout *layout) {
         // before it reads back with each of those meaning the one below. The
         // size does not move, the pieces do not move and nothing else here
         // moved either, so until this was folded the mark said nothing had
-        // changed. See D1072.
+        // changed.
         if (layout->pieces[p].kind == KEST_L_TAG) {
             for (int32_t tag = 0;; tag++) {
                 const char *named = kest_case_of(layout, p, tag, NULL, NULL);
@@ -3070,8 +3066,8 @@ uint64_t kest_layout_mark(const KestLayout *layout) {
         // declared. A bit is one shifted by its place in the list, so a bit
         // put in the middle doubles every bit after it -- and the width, the
         // size, the alignment and every piece stay exactly where they were,
-        // which is the same shape of silence a case put in the middle of an
-        // enum was until D1072. See D1076.
+        // which is the same shape of silence as a case put in the middle of
+        // an enum.
         if (layout->pieces[p].kind < KEST_L_FLAGS8 ||
             layout->pieces[p].kind > KEST_L_FLAGS64) {
             continue;
@@ -3090,10 +3086,10 @@ uint64_t kest_layout_mark(const KestLayout *layout) {
     return mark;
 }
 
-// How many bytes a text constant is. Text is two constants since D964 -- the
-// bytes and how many -- so the count is the one after it, and what a mark is
-// taken over is that many bytes rather than as far as the first nought, which
-// is a byte text may hold since D971. Two pieces of text that are the same up
+// How many bytes a text constant is. Text is two constants -- the bytes and
+// how many -- so the count is the one after it, and what a mark is taken over
+// is that many bytes rather than as far as the first nought, which is a byte
+// text may hold. Two pieces of text that are the same up
 // to a nought and differ after it are two programs, and a mark that could not
 // tell them apart is a reload that says nothing moved.
 static size_t text_constant_length(const KestChunk *chunk, uint32_t which,
@@ -3136,12 +3132,12 @@ uint64_t kest_module_mark(const KestModule *module) {
     }
     // What the machine will run, and nothing about where it was written. The
     // instructions, the constants, the shapes crossing the boundary, the names
-    // a host looks up and the promises it is held to — but not the spans, not
+    // a host looks up and the promises it is held to -- but not the spans, not
     // the origins and not the file, because a program with a comment added is
     // the same program to run and a host caching what it compiled would
     // otherwise throw it away for a reformat. What that costs a reader is that
     // two programs with one mark may say different places when they fail, and
-    // the reference says so. See D659.
+    // the reference says so.
     uint64_t mark = KEST_MARK_START;
     fold_text(&mark, module->alias);
     for (uint32_t at = 0; at < module->count; at++) {
@@ -3190,7 +3186,7 @@ uint64_t kest_module_mark(const KestModule *module) {
         // How wide it is in slots, which is not how many pieces it has: a
         // piece of text is one piece and two slots. A host filling a frame is
         // told the second, so a build where that moved is a build a host has
-        // to be told about. See D964.
+        // to be told about.
         fold_number(&mark, shape->slots, 2);
         fold_number(&mark, shape->tagged, 1);
         for (uint16_t piece = 0; piece < shape->count; piece++) {
@@ -3213,12 +3209,12 @@ void kest_module_disassemble_json(const KestModule *module,
                 i == 0 ? "" : ",", layout->size, layout->align,
                 layout->tagged ? "true" : "false");
         // Which type this is the layout of. Without it two layouts that differ
-        // only in what they are of read as one — every `[T]` is one word
-        // whatever `T` is — and a reader counting what a module holds would
+        // only in what they are of read as one -- every `[T]` is one word
+        // whatever `T` is -- and a reader counting what a module holds would
         // say half of them were written twice. They are not: the machine reads
         // `type` to pack a value across the boundary, to name an enum's cases
         // and to ask whether a value holds its own memory, so `[i32]` and
-        // `[text]` are one shape and two layouts. See D779.
+        // `[text]` are one shape and two layouts.
         if (layout->type != NULL) {
             kest_json_text(kest_type_name(module->arena, layout->type), out);
         } else {
@@ -3230,8 +3226,7 @@ void kest_module_disassemble_json(const KestModule *module,
                     p == 0 ? "" : ",", layout->pieces[p].offset,
                     SCALARS[layout->pieces[p].kind]);
             // Null rather than left out where a piece is nobody's field, so a
-            // tool reading these reads the same shape for every piece. See
-            // D946.
+            // tool reading these reads the same shape for every piece.
             if (layout->pieces[p].name == NULL) {
                 fputs("null", out);
             } else {
@@ -3283,7 +3278,7 @@ void kest_module_disassemble_json(const KestModule *module,
     KestReason why = {KEST_REACH_UNASKED, NULL};
     // One byte a function, which is what saying it about every one of them
     // costs: the walk visits them all anyway, and a reason it does not write
-    // down is a function that looks as if it had been worked out. See D601.
+    // down is a function that looks as if it had been worked out.
     KestNoLeast *reasons =
         module->count == 0
             ? NULL
@@ -3305,14 +3300,14 @@ void kest_module_disassemble_json(const KestModule *module,
         // a listing beside `check` joins the two on it; cutting the name at
         // the `#` is the same rule written a second time, in whoever is
         // reading it. The words form says it as the front of the name, which
-        // is where a person reads it. See D611.
+        // is where a person reads it.
         fputs(",\"wrote\":", out);
         kest_json_text(chunk->wrote, out);
         // And where the declaration it was compiled from is written, under the
         // names `check` lists a declaration's place under: two chunks written
         // the same and declared in one place are one generic compiled twice,
         // and two chunks written the same and declared in two are two
-        // functions of a name. Nothing said which before. See D612.
+        // functions of a name. Nothing said which before.
         if (chunk->source != NULL) {
             uint32_t line = 0;
             uint32_t column = 0;
@@ -3324,12 +3319,12 @@ void kest_module_disassemble_json(const KestModule *module,
         }
         // What the code itself takes, which is the one thing about a compiled
         // function a reader could only get by adding up the instructions
-        // below and knowing how wide each of them is. See D744. Beside it,
+        // below and knowing how wide each of them is. Beside it,
         // the room it is in: a chunk's arrays double from a floor as a body is
         // written, so the room is between what the body took and twice it, and
         // beside every byte of code is four bytes saying where it came from.
         // A reader with both can see what a module holds of a function against
-        // what it wrote. See D750.
+        // what it wrote.
         fprintf(out,
                 ",\"bytes\":%u,\"room\":%u,\"constants\":%u"
                 ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u"
@@ -3386,7 +3381,7 @@ void kest_module_disassemble(const KestModule *module,
     // A file of nothing but generic functions has no bodies: a copy exists
     // where one is called, and nothing here called any. A file that declares
     // nothing has none either, and the sentence has to be true of both. It is
-    // said whatever else there is to show — a file may lay a shape out and
+    // said whatever else there is to show -- a file may lay a shape out and
     // still have nothing with a body in it, which is what `std.sort` became
     // the day its two functions took types.
     if (module->count == 0) {
@@ -3455,8 +3450,8 @@ void kest_module_disassemble(const KestModule *module,
     } else if (why.reach == KEST_REACH_ITSELF ||
                why.reach == KEST_REACH_VALUE) {
         // The two a host answers by picking a number. The others are not about
-        // the program in front of the reader — a build that did not compile
-        // has said so already — so nothing is printed for them here.
+        // the program in front of the reader -- a build that did not compile
+        // has said so already -- so nothing is printed for them here.
         fprintf(out, "needs a number a host picks: `%s` %s\n",
                 why.where == NULL ? "something here" : why.where,
                 kest_reach_name(why.reach));
@@ -3473,7 +3468,7 @@ void kest_module_disassemble(const KestModule *module,
         // looking when they ask why there is no number. The line above says
         // the program has none and names the function; this is that function,
         // and a reader who came here from the disassembly rather than from the
-        // top of it would otherwise have to go back. See D600.
+        // top of it would otherwise have to go back.
         const char *stopped_at = "";
         const char *came_from = "";
         if (reasons != NULL && reasons[i].reach != 0) {
@@ -3503,7 +3498,7 @@ void kest_module_disassemble(const KestModule *module,
         // one chunk the listing is already about the one declaration there is.
         // Under the header and indented, like everything else said about the
         // function above it: a line beginning `fn` is a function, and a count
-        // of them is a thing this tree takes. See D612.
+        // of them is a thing this tree takes.
         bool shared = false;
         for (uint32_t other = 0; other < module->count && !shared; other++) {
             shared = other != i &&
@@ -3536,8 +3531,7 @@ void kest_module_disassemble(const KestModule *module,
 // each expression here is the one written there, bracketed the way that one
 // parses, because a sum taken in another order is another rounding. A multiply
 // and an add stay two roundings however the host's compiler would have them,
-// as they are in the machine and in the C the other backend writes (D1226).
-// See D1279.
+// as they are in the machine and in the C the other backend writes.
 #if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #elif defined(__GNUC__)

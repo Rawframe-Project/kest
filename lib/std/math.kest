@@ -51,7 +51,7 @@ fn max(a: f64, b: f64) -> f64 no.alloc no.host deterministic {
 
 // The smallest `i32` is one further out than the largest, so its distance from
 // nought is not an `i32` and `abs` of it is itself: negating it wraps, which is
-// what D018 says arithmetic does at the end of a width. Nothing here refuses
+// what arithmetic does at the end of a width. Nothing here refuses
 // it, because a value that wraps is what its type says happens; a program that
 // cannot have that answer holds the value away from the edge before asking.
 fn abs(value: i32) -> i32 no.alloc no.host deterministic {
@@ -89,7 +89,7 @@ fn clamp(value: f64, low: f64, high: f64) -> f64 no.alloc no.host deterministic 
 // Whether this is a number to go on with. A float has two answers that are not
 // one: infinity, which is what a number too big to hold comes back as, and the
 // value that is not a number, which is what a question with no answer comes
-// back as — `sqrt` of a negative is that, and so is nought divided by nought.
+// back as -- `sqrt` of a negative is that, and so is nought divided by nought.
 // Both come out of arithmetic without a word said, and neither can be found by
 // comparing, because the one that is not a number is not equal to itself and
 // infinity is equal to itself.
@@ -97,7 +97,7 @@ fn clamp(value: f64, low: f64, high: f64) -> f64 no.alloc no.host deterministic 
 // Every number less itself is nought and neither of those is, which is the
 // whole question and needs no constant. This language has no exponent in a
 // literal, so the largest `f32` cannot be written down and a check against it
-// could not be written here at all. See D378.
+// could not be written here at all.
 fn isNumber(value: f64) -> bool no.alloc no.host deterministic {
     return value - value == 0.0
 }
@@ -145,7 +145,7 @@ fn ceil(value: f32) -> f32 no.alloc deterministic {
 
 // The sine, the cosine, where two numbers point and one number to the power of
 // another are `std.fdlibm`'s, written in Kest and inside the deterministic
-// profile, in both widths here. See D1235.
+// profile, in both widths here.
 fn sin(value: f64) -> f64 no.alloc no.host deterministic {
     return fdlibm.sin(value)
 }
@@ -200,7 +200,7 @@ fn tan(value: f32) -> f32 no.alloc no.host deterministic {
 }
 
 // Nothing outside -1 to 1 has an angle, and asking for one is a question with
-// no answer rather than a number to make up (D013).
+// no answer rather than a number to make up.
 fn asin(value: f64) -> f64? no.alloc deterministic {
     if value < 0.0 - 1.0 || value > 1.0 {
         return none

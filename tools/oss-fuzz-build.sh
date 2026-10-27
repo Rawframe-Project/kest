@@ -5,7 +5,7 @@
 # the library as a starting corpus. Run here with those set the way clang's
 # libFuzzer wants them, it is the same fuzzer as the `fuzz-cover` target.
 # Applying to OSS-Fuzz is a project somebody answers for, with an address to
-# write to, so it is not done from here. See D1253.
+# write to, so it is not done from here.
 set -eu
 cd "$(dirname "$0")/.."
 : "${CC:=clang}"

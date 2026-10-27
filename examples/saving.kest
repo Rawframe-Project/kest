@@ -6,7 +6,7 @@ import std.io
 // A save written into bytes and read back out of them: every kind of thing
 // `std.bytes` writes, at the edges of its width, read back as itself, and a
 // reader asked for more than there is marking itself short rather than
-// stopping. See D1171.
+// stopping.
 
 fn main() -> i32 {
     let out: [u8] = array()

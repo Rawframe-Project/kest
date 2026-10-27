@@ -7,7 +7,7 @@ import std.sort
 
 // Luau's own `bench/tests/pcmmix.lua` in Kest: two stereo buffers of a hundred
 // thousand sixteen-bit samples mixed into a third, made inside what is timed as
-// Luau's is. A buffer of sixteen-bit numbers is a `[i16]` here. See D1267.
+// Luau's is. A buffer of sixteen-bit numbers is a `[i16]` here.
 
 const SAMPLES: i32 = 100000
 

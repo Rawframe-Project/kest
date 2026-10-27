@@ -6,7 +6,7 @@ import std.text
 // A program that reads. `std.io` writes and does not read: a declaration there
 // is a thing every host of every program that imports it has to provide, and an
 // engine has no standard input. So a program that wants one says so itself, and
-// runs under a host that has it — which the command line is.
+// runs under a host that has it -- which the command line is.
 //
 // With nothing on the input this reads nothing, which is what it gets under
 // the gate and what it would get from an empty file. The line it falls back
@@ -25,8 +25,8 @@ struct Item {
 // an item, and neither is one with something that is not a number there.
 //
 // `slice` copies, so this does not promise `no.alloc`: a name has to outlive
-// the line it was cut from, and the other way — holding a place inside the
-// line — is what `scan.kest` does when nothing is kept.
+// the line it was cut from, and the other way -- holding a place inside the
+// line -- is what `scan.kest` does when nothing is kept.
 fn item(line: text) -> Item? {
     if let at = find(line, " ") {
         if let price = text.number(rest(line, at + 1)) {

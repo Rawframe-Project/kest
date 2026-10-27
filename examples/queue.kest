@@ -8,7 +8,7 @@ import std.text
 // hidden behind a container that quietly reorders.
 //
 // When the order does not matter, this is the wrong container: a store hands
-// out references that survive a removal (D014), and removing from one costs
+// out references that survive a removal, and removing from one costs
 // nothing. An array is for when a position means something, and that is
 // exactly when the shift has to happen.
 

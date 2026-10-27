@@ -3,8 +3,8 @@
 # by it for the same words and the same status the machine built for this one
 # answers. A fault in the machine built this way stays inside WebAssembly's own
 # memory, which is what a host that runs it inside a WebAssembly runtime gets
-# for the cost D1255 measured; what is held here is that it is the same
-# language there. See D1255.
+# for what it costs; what is held here is that it is the same
+# language there.
 set -u
 
 # What the build made: the preset's build directory, out/dev unless
@@ -14,7 +14,7 @@ case $build_dir in /*) ;; *) build_dir=$(pwd)/$build_dir ;; esac
 scratch=$(mktemp -d)
 # And a day `examples/settlement.kest` left at the root of the machine, which a
 # build that forgets where it was run writes as whoever may write there: this
-# run's to take away, and only if this run put it there. See D1255.
+# run's to take away, and only if this run put it there.
 at_the_root=false
 [ -e /kest-settlement-day.txt ] && at_the_root=true
 trap 'rm -rf "$scratch"; [ "$at_the_root" = false ] && rm -f /kest-settlement-day.txt' EXIT
@@ -62,7 +62,7 @@ same=0
 # does from `/` unless it is told otherwise: here that was the root of the
 # machine, written as whoever ran it and refused where that is nobody's to
 # write, so the one run that could tell the two apart is the file being where
-# it was run. See D1255.
+# it was run.
 rm -f kest-settlement-day.txt
 KEST_LIB="$here"/lib/ node tools/wasi-run.mjs "$scratch"/kest.wasm run \
     examples/settlement.kest >/dev/null 2>&1 </dev/null
@@ -75,7 +75,7 @@ rm -f kest-settlement-day.txt
 # Each run in a room of this check's own: a program that writes a file where it
 # was run writes it there, and two checks running the colony in the tree at
 # once read each other's day half written -- `status 12` from the one here and
-# nought from the page, which has no disk to share. See D1268.
+# nought from the page, which has no disk to share.
 mkdir -p "$scratch"/runs
 for program in examples/*.kest; do
     grep -q '^fn main(' "$program" || continue
@@ -99,7 +99,7 @@ if [ $same -eq 0 ]; then
 fi
 # And the page: the same module under the system interface the playground
 # gives it in a browser, which is not Node's, over every example that is one
-# file -- what somebody types into the page is one file. See D1266.
+# file -- what somebody types into the page is one file.
 paged=0
 for program in examples/*.kest; do
     grep -q '^fn main(' "$program" || continue

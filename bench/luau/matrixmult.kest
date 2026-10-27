@@ -8,7 +8,7 @@ import std.sort
 // Luau's own `bench/tests/matrixmult.lua`, the same work written in Kest: a
 // hundred by a hundred of random numbers multiplied by itself, the multiply
 // timed and nothing else, twenty-four times, the four slowest thrown away, and
-// each time said the way Luau's `bench_support.lua` says one. See D1267.
+// each time said the way Luau's `bench_support.lua` says one.
 
 fn mmul(a: [[f64]], b: [[f64]]) -> [[f64]] {
     let rows = len(a)

@@ -1,7 +1,7 @@
 // The page: the command line built as WebAssembly, the standard library and a
 // few of the examples, fetched once, and each button a run of the command line
 // over what is in the box. A run is given a budget of steps, so a program that
-// never stops is told so rather than holding the page. See D1266.
+// never stops is told so rather than holding the page.
 import { run } from './wasi.js';
 
 const FUEL = '200000000';

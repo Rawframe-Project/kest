@@ -14,7 +14,6 @@
 // nought in it, a case of every enum, an optional holding nothing. The verifier
 // holds a program to handing each door what the door declares; what the door
 // does with it is the host's to get right, and this is the program that asks.
-// See D1254.
 
 typedef struct {
     KestArena *arena;
@@ -311,8 +310,7 @@ const char *kest_hostile_calls(KestProgram *program, KestArena *arena,
     put(&out,
         "\n// Every door this file declares, called with what a program "
         "nobody\n// trusts could hand it: `kest hostile` wrote this from seed "
-        "%" PRIu64 ".\n// `hostile` says how many `hostileN` there are. See "
-        "D1254.\n",
+        "%" PRIu64 ".\n// `hostile` says how many `hostileN` there are.\n",
         seed);
     for (uint32_t i = 0; i < program->global_count; i++) {
         const KestSymbol *symbol = &program->globals[i];

@@ -7,7 +7,7 @@ import std.sort
 // Luau's own `bench/tests/qsort.lua` in Kest: twelve names sorted ten thousand
 // times, by a quicksort with a random pivot, then backwards by a selection
 // sort, then forwards again, each held to a copy the library sorted. The
-// order is a function handed over, as it is in Luau. See D1267.
+// order is a function handed over, as it is in Luau.
 
 fn before(a: text, b: text) -> bool no.alloc no.host {
     return a < b

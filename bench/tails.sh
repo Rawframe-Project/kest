@@ -10,7 +10,6 @@
 #
 #   bench/tails.sh examples/slice/src/main.kest --samples 50
 #
-# See D1124.
 set -eu
 
 # What the build made: the preset's build directory, out/dev unless

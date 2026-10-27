@@ -30,7 +30,6 @@ typedef struct {
     // What has to stand at the top of the file for this body to read: a run
     // of constants written out where an index can reach it. A body reads one
     // and cannot hold one, because what it reads is decided while it runs.
-    // See D1119.
     Text ahead;
     // Which functions of the module it calls, so that a body calling one this
     // backend did not write can be found and left out as well. A call is a
@@ -43,18 +42,17 @@ typedef struct {
     bool written;
     // Whether it reads its arguments in the frame it was handed rather than
     // out of what it was called with, which every caller then leaves there.
-    // See D1198.
     bool reads_frame;
     // Which of its arguments, a bit each, it reads there -- and so is not
-    // handed as a value at all. See D1199.
+    // handed as a value at all.
     uint32_t in_frame;
     // Whether a body calling it carries it, the way the machine writes a
     // small body into the one that calls it; then its prototype asks the
-    // host's compiler to do the same. See D1202.
+    // host's compiler to do the same.
     bool carried_in;
     // And, for one this backend did not write, whether anything it did write
     // calls it: such a body gets a C function of its own all the same, which
-    // hands the call to the machine. See D1105.
+    // hands the call to the machine.
     bool handed_over;
     const char *why;
 } Body;
@@ -64,8 +62,7 @@ struct KestEmitC {
     // What the module says about itself, which is two things this backend
     // asks: how a value is laid out where memory is shared, and what a body
     // it is about to call promised. Both are known before any body is
-    // compiled, so a call forward is answered the same as a call back. See
-    // D1095.
+    // compiled, so a call forward is answered the same as a call back.
     const KestModule *module;
     // Where what is read while one body is written goes: how deep the stack
     // is at each operation, and which of them a branch lands on. It is put
@@ -79,7 +76,7 @@ struct KestEmitC {
     // which are the two answers this backend does not write out for itself.
     // What a number outside a width becomes and what is left over from
     // dividing two floats are the machine's answers and the folder's alike
-    // (D668, D669): a third copy here would be a third answer the day one of
+    //: a third copy here would be a third answer the day one of
     // them moves, so the file calls the library's.
     bool wants_library;
     bool out_of_memory;
@@ -161,13 +158,13 @@ typedef struct {
     // nothing it does can reach the heap. Worked out once before anything is
     // written, and its opposite is where the body lives: one that can reach
     // the heap keeps its slots and its operands on the machine's stack, where
-    // the collector walks. See D1098.
+    // the collector walks.
     bool no_heap;
     bool on_the_stack;
     // For a body on the machine's stack, which of its slots are kept in a C
     // array of its own rather than on the machine's stack: `SLOT_LOOSE` or
     // `SLOT_FRAME`. NULL for a body not on the machine's stack, whose slots
-    // are all C already. See D1162.
+    // are all C already.
     uint8_t *slot_modes;
     uint32_t *depth;
     bool *known;
@@ -189,22 +186,22 @@ typedef struct {
     char said[96];
     // The operation being written, which is how a branch knows it goes back:
     // a loop, and so a place a host that has asked the program to stop is
-    // asked about. See D1283.
+    // asked about.
     uint32_t at;
 } Walk;
 
-// Where a slot of a body on the machine's stack is kept; see `at_frame` below
-// and D1162.
+// Where a slot of a body on the machine's stack is kept; see `at_frame`
+// below.
 enum { SLOT_FRAME, SLOT_LOOSE };
 
 // Whether the body being written had the one at `which` carried into it by
-// the lowering rather than calling it. See D1156.
+// the lowering rather than calling it.
 // Where each slot of a body on the machine's stack is kept. A slot is loose
 // -- a C variable and nothing else -- only when something says what it holds,
 // a name the body declared or a place it reads or writes, and nothing that
 // says so holds a pointer; and not when its place is handed out: a name that
 // holds where a value is, a run the body indexes while it runs, and the slots
-// a door writes through. NULL for no memory. See D1162.
+// a door writes through. NULL for no memory.
 static void mark_frame(uint8_t *modes, uint32_t slots, uint32_t from,
                        uint32_t many) {
     for (uint32_t k = from; k < from + many && k < slots; k++) {
@@ -422,7 +419,7 @@ static bool depths(Walk *walk) {
     // after a `return` is one nothing reaches -- every arm of a `match` whose
     // arms all return has one -- and what only such branches land on is not
     // written, and neither are they, so it is not a label; one that was would
-    // be a label nothing jumps to. See D1206.
+    // be a label nothing jumps to.
     for (uint32_t i = 0; i < body->op_count; i++) {
         walk->landed[i] = false;
     }
@@ -453,7 +450,7 @@ static bool depths(Walk *walk) {
 // allocate is a body whose handle can go out from under it. A body that
 // cannot allocate at all cannot be in the middle of a collection, so there is
 // nothing to see. What a call reaches is read off the callee's declaration,
-// which the module carries before any body is compiled. See D1095.
+// which the module carries before any body is compiled.
 static bool reaches_no_heap(const KestEmitC *c, const KestIrBody *body) {
     for (uint32_t i = 0; i < body->op_count; i++) {
         const KestIrOp *op = &body->ops[i];
@@ -478,7 +475,7 @@ static bool reaches_no_heap(const KestEmitC *c, const KestIrBody *body) {
 // Whether a body makes a call at all, which is whether it wants the ledger
 // read at the top of it. Asked before anything is written, because the
 // reading goes in the preamble and what is in the body is not known until
-// after. See D1122.
+// after.
 static bool calls_anything(const KestIrBody *body) {
     for (uint32_t i = 0; i < body->op_count; i++) {
         if (body->ops[i].kind == KEST_IR_CALL) {
@@ -505,7 +502,7 @@ static void at_stack(const Walk *walk, Where into, uint32_t slot) {
 // holds nothing the collector looks for is kept in an array of the body's
 // own, which the host's compiler may hold in registers. Keeping every slot in
 // both, written through, was tried and bought nothing: what the reads saved,
-// the writes cost. See D1162.
+// the writes cost.
 static void at_frame(const Walk *walk, Where into, uint32_t slot) {
     snprintf(into, sizeof(Where),
              walk->slot_modes != NULL && walk->slot_modes[slot] == SLOT_LOOSE
@@ -608,11 +605,11 @@ static void move_one(Walk *walk, uint8_t kind, uint32_t slot, uint32_t byte,
 // than the flat list of pieces a layout carries. The machine has both walks
 // and picks between them -- a run of pieces for anything with no tag in it,
 // and the type itself for anything with one, because which slots a payload
-// fills is what the tag says (D710). Here there is one walk, because a walk
+// fills is what the tag says. Here there is one walk, because a walk
 // done while compiling costs nothing at either end and a tag is a `switch`
 // the host's compiler can see through. What the machine does with a loop over
 // a layout for every element is a run of moves here, and that loop is a third
-// of `bench/rules.kest`. See D1028 and D1096.
+// of `bench/rules.kest`.
 //
 // Answers how many slots it moved. `where` is where in the source this is,
 // for the one thing reading a value can refuse: a tag that names no case.
@@ -666,7 +663,7 @@ static uint16_t move_value(Walk *walk, const KestType *type, uint32_t slot,
     // guess where the tag is different from one element to the next. What a
     // case does not carry is nought either way, and a tag with no case behind
     // it is refused reading and writes nothing but itself, as the `switch`
-    // did. See D1232.
+    // did.
     const KestVariantType *carrying = NULL;
     uint64_t carries = 0;
     bool uniform = type->case_count > 0 && type->case_count <= 63;
@@ -764,7 +761,7 @@ static uint16_t move_value(Walk *walk, const KestType *type, uint32_t slot,
         // What the case does not carry is written as nought, because a tag
         // says which reading the bytes beside it have and a case written over
         // a wider one would otherwise leave the wider one's fields under the
-        // new tag. See D711.
+        // new tag.
         say(c, out,
             "        memset(at + %u, 0, %u);\n"
             "        {\n            int32_t tag = (int32_t)%s.integer;\n"
@@ -824,7 +821,7 @@ static uint16_t move_value(Walk *walk, const KestType *type, uint32_t slot,
 //
 // Every one of these is what `vm.c` runs, written the same way round: whole
 // numbers wrap through unsigned because signed overflow in C is undefined
-// (D667), and a narrow float is worked out at its own width and kept in a
+//, and a narrow float is worked out at its own width and kept in a
 // slot as a double.
 static const char *binary_c(uint16_t kind, const KestType *type) {
     bool real = kest_is_float(type);
@@ -917,7 +914,7 @@ static const char *narrow_c(uint16_t scalar) {
 // A run of constants written into the program, read at an index worked out
 // while it runs: a table of tiers, a curve, a list of names. The machine
 // keeps them in the chunk and reads them at the index; this writes them out
-// once at the top of the file and reads them the same way. See D1119.
+// once at the top of the file and reads them the same way.
 static void write_const_at(Walk *walk, const KestIrOp *op, uint32_t index) {
     KestEmitC *c = walk->c;
     const KestIrBody *body = walk->body;
@@ -1048,7 +1045,7 @@ static void write_const(Walk *walk, const KestIrOp *op) {
                 // back -- `%a` writes `inf` and `nan`, which are not
                 // literals -- so what is written is the bits and a copy into
                 // the slot. Every double has those, and the copy is what the
-                // machine does with one anyway. See D1119.
+                // machine does with one anyway.
                 uint64_t bits = 0;
                 memcpy(&bits, &value.real, sizeof bits);
                 say(walk->c, &walk->into->wrote,
@@ -1074,7 +1071,7 @@ static void write_const(Walk *walk, const KestIrOp *op) {
 // Whether a still walk's arrays are read where it begins: only where the walk
 // goes back to what it begins at, which is where that is written. A walk
 // whose every turn leaves has nowhere it begins again, and its elements are
-// read the way any other is. See D1288.
+// read the way any other is.
 static bool still_here(const Walk *walk, const KestIrPlace *place) {
     if (!place->still || place->guard_from >= walk->body->op_count ||
         !walk->landed[place->guard_from] || !walk->known[place->guard_from]) {
@@ -1091,7 +1088,7 @@ static bool still_here(const Walk *walk, const KestIrPlace *place) {
 }
 
 // What a guard is called: the array, the count, the limit, and the scale and
-// what is added to the count for an index worked out of it (D1288).
+// what is added to the count for an index worked out of it.
 typedef char Guard[64];
 
 static void guard_name(Guard into, const KestIrPlace *place) {
@@ -1105,7 +1102,7 @@ static void guard_name(Guard into, const KestIrPlace *place) {
 // the machine asks before it touches one -- that the handle is an array and
 // that the index is inside it -- are a call, because they are the same two
 // questions however wide an element is; the moving is written out, because
-// which piece sits where is known while compiling. See D1095.
+// which piece sits where is known while compiling.
 static bool write_elem(Walk *walk, const KestIrOp *op,
                        const KestIrPlace *place, uint32_t handle,
                        uint32_t value, bool reading) {
@@ -1125,7 +1122,7 @@ static bool write_elem(Walk *walk, const KestIrOp *op,
     at_stack(walk, held, handle);
     at_stack(walk, index, handle + 1);
     // Where the element is, worked out here rather than asked for. A run of
-    // elements is a shape the header says (D1112), so the three things that
+    // elements is a shape the header says, so the three things that
     // have to be true -- that the handle is a run, that the index is one of
     // them, and where one of them sits -- are four lines of C rather than a
     // call. Anything the test does not like goes through `kest_elem_at`,
@@ -1148,16 +1145,16 @@ static bool write_elem(Walk *walk, const KestIrOp *op,
     // the slot holds it. What would have to be proved is that the slot is not
     // written between the uses. The bounds are not invariant -- a `push` may
     // move the bytes and change the length -- and are the part that is
-    // genuinely per-access. See D1141 and D1142.
+    // genuinely per-access.
     //
     // Where the compiler proved the element is inside the array -- one a
     // walk counts through, where nothing in the walk makes the array shorter
-    // or names another -- neither question is asked. See D1187.
+    // or names another -- neither question is asked.
     // And where it is inside the array whenever the array is as long as the
     // walk's limit, which was asked where the walk began: one flag held in a
-    // register rather than three things read out of memory. See D1189.
+    // register rather than three things read out of memory.
     // In a still walk the elements are where they were when it began, which
-    // is what was read there (D1288).
+    // is what was read there.
     char base[48];
     char gap[48];
     if (still_here(walk, place)) {
@@ -1222,7 +1219,7 @@ static bool write_elem(Walk *walk, const KestIrOp *op,
 
 // A field read through an address that was worked out before it. The address
 // is the program's to hold -- an element of an array, and nothing moves under
-// it while it is held, which is what D931 and D996 make true -- so there is
+// it while it is held -- so there is
 // nothing to check here and nothing to call.
 static bool write_at(Walk *walk, const KestIrPlace *place, uint32_t value,
                      uint32_t address) {
@@ -1271,7 +1268,7 @@ static void write_branch(Walk *walk, uint32_t target, uint32_t leaving,
     // ends by itself and is not asked, because it is where a frame spends its
     // time: a check a turn there cost `bench/kernel` a quarter of its cycles.
     // A loop that never ends is a `while`, and that is where the host is
-    // heard. See D1283.
+    // heard.
     if (target <= walk->at && !counted) {
         say(walk->c, &walk->into->wrote,
             "if (--turns == 0) {\n"
@@ -1314,9 +1311,9 @@ static bool goes_back(const KestIrBody *body) {
 // and branches, none of which does either. Operands kept on the machine's
 // stack throughout were stored and read again around every element written,
 // because a byte written through a pointer may be one of them as far as the
-// host's compiler can tell. See D1179.
+// host's compiler can tell.
 // The walks' own questions, asked once where each walk begins: for every
-// array an element of which is guarded by a walk's limit (D1189), whether the
+// array an element of which is guarded by a walk's limit, whether the
 // array held in that slot is a run at least as long as the limit. Declared at
 // the top of the body, because two walks after one another may count in the
 // same slots and ask the same question, and set before the label a walk goes
@@ -1330,7 +1327,7 @@ static bool same_guard(const KestIrPlace *a, const KestIrPlace *b) {
 
 
 // Where the elements of an array are and how far apart, read where a still
-// walk begins, for every element of it the walk reads (D1288): one pair an
+// walk begins, for every element of it the walk reads: one pair an
 // array and a walk.
 static bool still_seen_before(const KestIrBody *body, uint32_t which) {
     const KestIrPlace *place = &body->places[which];
@@ -1428,7 +1425,7 @@ static void ask_guards(Walk *walk, uint32_t head) {
         // And where a still walk's arrays keep their elements: every array
         // one of its elements is read out of, once, whether or not a guard
         // said the reads are inside it, because an element proved inside
-        // its array reads from here too. See D1288.
+        // its array reads from here too.
         for (uint32_t p = 0; p < body->place_count; p++) {
             const KestIrPlace *place = &body->places[p];
             if (place->guard_from != head || !still_here(walk, place) ||
@@ -1514,7 +1511,7 @@ static bool in_memory(const Walk *walk, const KestIrOp *op) {
 // starts at the first argument. One keeping its operands in locals hands
 // over room above its slots and writes them in, when `KA_` says the callee
 // reads them there -- a body in locals reads them out of what it was called
-// with, and writing them for it is a store nothing reads. See D1198.
+// with, and writing them for it is a store nothing reads.
 static void leave_arguments(const Walk *walk, Text *out, uint32_t which,
                             uint32_t base, uint32_t reads) {
     if (walk->on_the_stack || reads == 0) {
@@ -1576,7 +1573,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         if (place->kind == KEST_IR_PLACE_AT) {
             // An address worked out before this, and how far into what it
             // points at the field sits. The machine has an instruction that
-            // does this and the element read before it in one (D1044); here
+            // does this and the element read before it in one; here
             // the two are two lines the host's compiler puts together itself.
             if (!write_at(walk, place, base, reads == 0 ? walk->stack - 1
                                                         : base)) {
@@ -1588,7 +1585,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             // One of a fixed run in the frame, at an index worked out while
             // it runs. The index is held aside because what comes back sits
             // where it was, and the machine's own sentence answers for an
-            // index that is not one of them. See D1109.
+            // index that is not one of them.
             if (reads != 1 || leaves != place->stride) {
                 cannot(walk, "one of a run read at something other than an "
                              "index");
@@ -1750,7 +1747,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             // door the machine goes through too, and the answer the operation
             // wants is where that number stands to nought. Nothing is charged
             // for how far it read: a body written in C has no budget to
-            // charge, which is what D1093 says compiling gives up.
+            // charge, which is what compiling gives up.
             Where fourth;
             if (reads != 4 || leaves != 1) {
                 cannot(walk, "an answer about a piece of text");
@@ -1804,7 +1801,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
                 break;
             }
             // What is left over from dividing two floats is the library's
-            // answer rather than one written again here. See D970.
+            // answer rather than one written again here.
             c->wants_library = true;
             say(c, out, "    %s.real = %skest_left_over(%s.real, %s.real);\n", first,
                 kest_is_narrow(op->type) ? "(double)(float)" : "", second,
@@ -1813,7 +1810,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         }
         // Dividing by nought stops the program where the machine stops it,
         // and the one pair whose quotient does not fit answers what wrapping
-        // says rather than what the host's machine traps on. See D667.
+        // says rather than what the host's machine traps on.
         say(c, out, "    if (%s.integer == 0) {\n", third);
         say(c, out,
             "        return kest_native_stopped(rt, %u, \"K0601\",\n"
@@ -1925,11 +1922,11 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         break;
     case KEST_IR_TO_WHOLE: {
         // Where a number outside the width stops is the library's answer, for
-        // the reason the one above it is. See D669. A number strictly inside
+        // the reason the one above it is. A number strictly inside
         // the width is the library's middle case, which is C's own
         // conversion, so that one is written here and only the ends, what is
         // not a number and a `u64` are asked of the library: a sample mixed
-        // into sixteen bits was a call a sample. See D1280.
+        // into sixteen bits was a call a sample.
         c->wants_library = true;
         at_stack(walk, first, base);
         at_stack(walk, second, base);
@@ -1956,7 +1953,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
     case KEST_IR_BITS:
         // The machine's two instructions, written out; an `f64` and its bits
         // are one slot read two ways, and what is not a number is one value
-        // as bits in either width. See D1171 and D1238.
+        // as bits in either width.
         at_stack(walk, first, base);
         if (op->imm[0] == 0 && !kest_is_narrow(op->type)) {
             say(c, out,
@@ -1998,7 +1995,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             // An address already worked out, stepped by an index worked out
             // while it runs: one of a fixed run inside memory the program
             // holds an address into. The machine's own sentence answers for
-            // an index that is not one of them. See D430 and D1119.
+            // an index that is not one of them.
             if (reads != 2 || leaves != 1) {
                 cannot(walk, "an address stepped by something other than an "
                              "index");
@@ -2026,7 +2023,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         }
         at_stack(walk, first, base);
         at_stack(walk, second, base + 1);
-        // The same four lines the read uses, for the same reason. See D1112.
+        // The same four lines the read uses, for the same reason.
         say(c, out,
             "    {\n        const KestRun *run = (const KestRun *)%s.object;\n"
             "        int64_t which = %s.integer;\n"
@@ -2045,7 +2042,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
     case KEST_IR_TEXT_LEN:
         // How many bytes there are is part of what a piece of text is: the
         // second of its two slots. A read rather than a walk, the same as the
-        // machine's. See D964.
+        // machine's.
         if (reads != 2 || leaves != 1) {
             cannot(walk, "a length of something other than a piece of text");
             break;
@@ -2057,7 +2054,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
     case KEST_IR_TEXT_AT: {
         // The byte at a place: what it is made of, how many bytes that is,
         // and where to look. A comparison and a read rather than a walk,
-        // which is what D964 bought.
+        // because text says how many bytes it is.
         if (reads != 3 || leaves != 1) {
             cannot(walk, "a byte of something other than a piece of text");
             break;
@@ -2076,7 +2073,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // The byte a walk over text is on. The walk took the length before
         // its first turn, so the place is there -- which is the compiler's
         // word, and the verifier's walk cannot prove a place, so it is asked
-        // here as the machine asks it, in its words. See D1245.
+        // here as the machine asks it, in its words.
         Where held;
         Where length;
         if (reads != 0 || leaves != 1) {
@@ -2217,7 +2214,6 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // written, and what comes back sits where the first of them was.
         // A piece whose bit is set in the second number is a signed whole
         // number in one slot, written into the text rather than before it.
-        // See D1277.
         if (op->imm[0] > KEST_NUMBERED_MOST ||
             ((uint32_t)op->imm[1] >> op->imm[0]) != 0 ||
             reads != (uint32_t)op->imm[0] * 2 -
@@ -2257,7 +2253,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // A shape or a reference goes through the walk that knows what a
         // value is made of, because only part of a reference is hashed: the
         // place is the program's and the number above it is the process's
-        // (D1054). Everything else is one slot, or two for text.
+        //. Everything else is one slot, or two for text.
         if (kest_is_a_run(op->type) ||
             (op->type != NULL && op->type->tag == KEST_T_REF)) {
             say(c, out, "    %s.integer = kest_value_hash(rt, %u, &%s);\n",
@@ -2612,10 +2608,10 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         }
         at_stack(walk, first, base);
         // Through a number of its own rather than the operand's address, so
-        // the operands stay the body's own (D1179). A handle that is a run
+        // the operands stay the body's own. A handle that is a run
         // says how long it is where it stands, the same test an element read
         // makes; anything else goes to the door, which says what the machine
-        // says about it. See D1186.
+        // says about it.
         say(c, out,
             "    {\n        int64_t many;\n"
             "        const KestRun *run = (const KestRun *)%s.object;\n"
@@ -2675,7 +2671,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // written, and the ledger entry itself. The three questions are three
         // comparisons and the entry is four stores; what the call to a door
         // cost on top of them was the call, which the host's compiler cannot
-        // hoist a loop-invariant across. See D1122.
+        // hoist a loop-invariant across.
         const KestChunk *callee =
             c->module == NULL || which >= c->module->count
                 ? NULL
@@ -2689,7 +2685,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // not yet: it is named here and written at the top of the file,
         // after every body is. A number read here was nought for every call
         // forward, so the reach the collector walks to stopped below a frame
-        // it had to see. See D1179.
+        // it had to see.
         Where needs;
         snprintf(needs, sizeof(Where), "KN_%u", which);
         if (carried_here(walk, which)) {
@@ -2698,7 +2694,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             // is given no frame there, so it is given none here: nothing in
             // one can stop the program, so there is nothing a frame would be
             // asked for, and two engines that count frames differently are
-            // two numbers a host is told to find. See D1156.
+            // two numbers a host is told to find.
             say(c, out,
                 "    {\n        KV *stands = %s;\n"
                 "        if (stands + %s > led.limit) {\n"
@@ -2766,7 +2762,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // hold a handle in a local only if nothing it does can reach the
         // heap, and a call through a value can. So this body is on the
         // machine's stack, the arguments are already where the callee's
-        // frame goes, and what comes back lands over them. See D1107.
+        // frame goes, and what comes back lands over them.
         if (reads != (uint32_t)op->imm[0] + 1 || leaves != op->imm[1] ||
             !walk->on_the_stack) {
             cannot(walk, "a call through a value handing over something "
@@ -2789,7 +2785,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // makes: the arguments are where the answer goes, and where the
         // machine had got to is what a host calling back in stands on. A body
         // that reaches one of these is on the machine's stack, because a host
-        // may take the heap while it is in there. See D1108.
+        // may take the heap while it is in there.
         if (reads != op->imm[1] || leaves != op->imm[2] ||
             !walk->on_the_stack) {
             cannot(walk, "a crossing handing over something other than what "
@@ -2807,7 +2803,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
     case KEST_IR_REGION_CLOSE: {
         // A block of the heap handed back whole when the block ends. Which
         // block it is lives in a slot of the frame, which is where the
-        // machine keeps it too. See D1119.
+        // machine keeps it too.
         Where held;
         if (reads != 0 || leaves != 0) {
             cannot(walk, "working memory opened around something other than "
@@ -2853,7 +2849,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         at_frame(walk, first, op->imm[0]);
         at_frame(walk, second, op->imm[1]);
         // And an unsigned count stepped in unsigned arithmetic, for the
-        // reason the machine steps it that way. See D1212.
+        // reason the machine steps it that way.
         if (kest_is_unsigned(op->type)) {
             say(c, out,
                 "    %s.integer = (int64_t)((uint64_t)%s.integer + 1u);\n",
@@ -2900,7 +2896,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
 // count that is not one -- and what it worked out goes where the caller says.
 // The machine comes with it because a body that stops says so through the
 // machine, which is what makes a refusal from compiled code read like a
-// refusal from the instructions (D1094).
+// refusal from the instructions.
 //
 // And the frame, which is the run of slots on the machine's stack that this
 // body was given. A body that cannot reach the heap keeps its slots and its
@@ -2908,12 +2904,12 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
 // whatever it calls; one that can reach the heap lives in it, because the
 // collector walks the machine's stack and a local is not on it. Both are
 // called the same way, which is what lets a body be written before the ones
-// it calls. See D1098.
+// it calls.
 // Whether an argument is handed to a body as a value. One the body reads in
 // the frame its caller left it in is not: handing it over as well was a copy
 // in every register and every stack slot a call passes through, for a value
 // nothing read. A body the machine runs for a written one takes all of them,
-// because it writes them into the frame itself. See D1199.
+// because it writes them into the frame itself.
 static bool takes_value(const Body *body, bool as_written, uint16_t p) {
     return !as_written || !body->reads_frame || p >= 32 ||
            ((body->in_frame >> p) & 1u) == 0;
@@ -3053,13 +3049,13 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
         }
         // Which arguments it reads where its caller left them, which is
         // decided before its head is written because its head is what says
-        // so. See D1198 and D1199.
+        // so.
         // And one keeping its operands in locals reads them out of the frame
         // too, when there are more of them than the registers a call has
         // left after the three every body takes: past those, every value is
         // a slot of the C stack the caller writes and this reads, and the
         // caller has written them into the frame already or can. `walk` in
-        // the colony takes twenty-five. See D1207.
+        // the colony takes twenty-five.
         bool from_frame = walk.on_the_stack || body->param_slots > 3;
         into->reads_frame = from_frame;
         into->in_frame = 0;
@@ -3080,14 +3076,14 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
             // sees everything this body is holding, which a local is not.
             // The operands are the body's own, and are written where the
             // machine keeps them, above the slots, around what needs them
-            // there. See D1179.
+            // there.
             say(c, &into->wrote,
                 "    KV *f = frame;\n    KV *sf = frame + %u;\n"
                 "    KV s[%u];\n",
                 (unsigned)body->slot_count,
                 walk.deepest == 0 ? 1u : walk.deepest);
             // And the slots that hold nothing the collector looks for, in an
-            // array of this body's own. See D1162.
+            // array of this body's own.
             if (walk.slot_modes != NULL) {
                 say(c, &into->wrote, "    KV g[%u];\n    (void)g;\n",
                     (unsigned)body->slot_count);
@@ -3105,7 +3101,7 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
             // Where the machine keeps what is standing, read once. Every
             // call below writes its own ledger entry rather than asking a
             // door to: three comparisons and four stores, which a call is a
-            // wall in front of. See D1122.
+            // wall in front of.
             say(c, &into->wrote,
                 "    KestLedger led;\n"
                 "    if (!kest_ledger(rt, &led)) {\n"
@@ -3117,7 +3113,7 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
         // when `KA_` says the callee reads them there -- so an argument whose
         // slot is in that frame is read where it is. Written again, it was a
         // store into the slot a store had just filled, and 10% of the cycles
-        // of compiled `rules`. See D1198.
+        // of compiled `rules`.
         for (uint16_t p = 0; p < body->param_slots; p++) {
             Where param;
             at_frame(&walk, param, p);
@@ -3207,7 +3203,7 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
         // it never reached and so never written -- runs off the end of
         // nothing, and the host's compiler is told so rather than asked to
         // prove it: without this a function that gives back a value ends with
-        // no `return`, which it warns about. Nothing arrives here. See D1274.
+        // no `return`, which it warns about. Nothing arrives here.
         uint32_t last = body->op_count;
         while (last > 0 && !walk.known[last - 1]) {
             last--;
@@ -3255,7 +3251,7 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
 // for it is a C function of the shape a call here expects, whose body is the
 // arguments put into the frame and one call to `kest_call_body`. So a body
 // this backend cannot write costs the program that body and nothing above
-// it, which is what makes half a program worth having. See D1105.
+// it, which is what makes half a program worth having.
 //
 // A body nothing written calls gets nothing: the file is smaller and the
 // symbol would be a symbol nothing names.
@@ -3356,7 +3352,7 @@ static void write_reading_main(KestEmitC *c, Text *file, const char *from) {
 // The start of a host that carries its program: every file it was read from,
 // written into it, and a build from those rather than from a file -- so it
 // runs where there is no source at all, and every word after its own name is
-// the program's. See D1172.
+// the program's.
 static void write_carried_main(KestEmitC *c, Text *file,
                                const KestFile *carried, uint32_t count,
                                const char *library) {
@@ -3405,7 +3401,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "// It is a host of that program as well as a translation of it. A\n"
         "// body this backend had no C for is named below with the reason and\n"
         "// is a body the machine runs, so what this holds is half a program\n"
-        "// and the machine holds the other half. See D1093 and D1094.\n"
+        "// and the machine holds the other half.\n"
         "#include <stdio.h>\n"
         "#include <stdlib.h>\n"
         "#include <string.h>\n"
@@ -3418,7 +3414,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "// them: a compiler left to fuse them where the target has FMA\n"
         "// answers other bits than the machine does. Clang told\n"
         "// `-ffp-contract=fast` heeds no pragma, and is a build that asked\n"
-        "// for other arithmetic. See D1226.\n"
+        "// for other arithmetic.\n"
         "#if defined(__clang__)\n"
         "#pragma STDC FP_CONTRACT OFF\n"
         "#elif defined(__GNUC__)\n"
@@ -3588,7 +3584,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
     // makes no call, and the host's compiler is asked to do the same with
     // its C, where it can be asked: left to itself it kept `worthOf` out of
     // line in `rules`, and a call is a wall in front of everything around
-    // it. See D1202.
+    // it.
     say(c, &file,
         "#if defined(__GNUC__)\n"
         "#define KEST_CARRIED inline __attribute__((always_inline))\n"
@@ -3605,7 +3601,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
     // What the frame of each body takes on the machine's stack, which a call
     // asks for room for and raises the collector's reach to. Written here
     // rather than at the call, because by now every body is lowered and a
-    // call forward is answered the same as a call back. See D1179.
+    // call forward is answered the same as a call back.
     for (uint32_t i = 0; c->module != NULL && i < c->count &&
                          i < c->module->count;
          i++) {
@@ -3620,7 +3616,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
     // And whether each reads its arguments in the frame it is handed, which
     // is whether a caller keeping its operands in locals writes them there.
     // A body the machine runs is handed them as values and writes them in
-    // itself. Known once every body is written, like the size. See D1198.
+    // itself. Known once every body is written, like the size.
     for (uint32_t i = 0; i < c->count; i++) {
         say(c, &file, "#define KA_%u %u\n", i,
             c->bodies[i].written && c->bodies[i].reads_frame ? 1u : 0u);
@@ -3629,7 +3625,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
     // And what a call hands over as values, out of every argument it has:
     // a call is written before the body it calls may be, so it names them
     // all and this keeps the ones the callee takes, each after a comma of
-    // its own so that keeping none leaves nothing. See D1199.
+    // its own so that keeping none leaves nothing.
     for (uint32_t i = 0; i < c->count; i++) {
         const Body *body = &c->bodies[i];
         say(c, &file, "#define KC_%u(", i);
@@ -3647,7 +3643,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
     say(c, &file, "\n");
     // And what a body needs standing at the top of the file: a run of
     // constants written into the program, which a body reads at an index and
-    // cannot hold. See D1119.
+    // cannot hold.
     for (uint32_t i = 0; i < c->count; i++) {
         if (!c->bodies[i].written || c->bodies[i].ahead.bytes == NULL) {
             continue;
@@ -3659,7 +3655,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
     // shape a call here expects: the arguments into the frame the caller
     // already made room for, one call in, and what came back read out of the
     // same frame. It is the whole of what a body the machine runs costs a
-    // body written here. See D1105.
+    // body written here.
     for (uint32_t i = 0; i < c->count; i++) {
         const Body *body = &c->bodies[i];
         if (body->written || !body->handed_over) {
@@ -3759,7 +3755,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "// two programs written this way compiles one of them with\n"
         "// `-DKEST_BOUND=some_other_name`, because two programs' bodies\n"
         "// under one name is a name that says nothing, and a host that has\n"
-        "// a `main` of its own compiles with `-DKEST_NO_MAIN`. See D1111.\n"
+        "// a `main` of its own compiles with `-DKEST_NO_MAIN`.\n"
         "#ifndef KEST_BOUND\n#define KEST_BOUND kest_natives_here\n#endif\n"
         "bool KEST_BOUND(KestRuntime *rt);\n"
         "bool KEST_BOUND(KestRuntime *rt) {\n    return bound(rt);\n}\n");
@@ -3781,7 +3777,6 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
     // host provides -- a clock, a file, what the process was started with,
     // whatever an engine offers -- is the host's to bind and is not bound
     // here: a file this backend wrote is half a program rather than an engine.
-    // See D1094.
     say(c, &file,
         "\n#ifndef KEST_NO_MAIN\n"
         "// What `std.io` asks the host for. Written by its length rather\n"
@@ -3791,7 +3786,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "// runs the program and these are its to provide, the same as the\n"
         "// command line provides them: a program that runs under `kest run`\n"
         "// runs here. Each is one line, because each is one of the host's\n"
-        "// own machine's. See D1109.\n"
+        "// own machine's.\n"
         "#define KEST_ONE_REAL(name, what)                                  \\\n"
         "    static void name(KestValue *frame, KestRuntime *runtime,       \\\n"
         "                     void *context) {                              \\\n"
@@ -3809,7 +3804,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "// run` runs, and eight programs in this tree could be written\n"
         "// whole as C and still not run without them. What the program was\n"
         "// started with is whatever follows the file it was given, which is\n"
-        "// where a command line puts them too. See D1116.\n"
+        "// where a command line puts them too.\n"
         "static int program_args = 0;\n"
         "static char **program_arg = NULL;\n"
         "\n"

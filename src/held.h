@@ -3,7 +3,7 @@
 
 // A machine a host keeps across frames and reloads under a world, made of the
 // public doors and nothing else. What it declares is in `kest.h`, because a
-// host is what calls it. See D1151.
+// host is what calls it.
 #include "kest.h"
 
 #endif

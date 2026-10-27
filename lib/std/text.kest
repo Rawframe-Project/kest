@@ -11,7 +11,7 @@ fn number(digits: text) -> i32? no.alloc no.host deterministic {
     // seen: an `i32` given more than it holds wraps without a word, and a text
     // spelling a number this cannot give back is a text this cannot read. The
     // bound inside the walk is one past the largest, because the smallest is
-    // one further out than the largest and is spelled with a sign. See D376.
+    // one further out than the largest and is spelled with a sign.
     let value: i64 = 0
     let negative = false
     let seen = 0
@@ -50,7 +50,7 @@ fn number(digits: text) -> i32? no.alloc no.host deterministic {
 // refused with a rule saying a program that means that can say it another way
 // -- which is not true of a program handed the text by this language. `.5`,
 // `+1.5`, a space in front and a second point are still nothing, because
-// nothing here writes those. See D1084.
+// nothing here writes those.
 //
 // Worked out a digit at a time in `f64` and narrowed once, which is the same
 // two roundings every other number in this module goes through.
@@ -162,8 +162,8 @@ fn real(digits: text) -> f32? no.alloc no.host deterministic {
     // this module may not ask it: importing a module is requiring every
     // `extern` it declares of every host of every program that imports this
     // one, and `std.math` declares seven. So the question is written here, and
-    // it is the same one — every number less itself is nought, and neither
-    // infinity nor the value that is not a number is. See D378.
+    // it is the same one -- every number less itself is nought, and neither
+    // infinity nor the value that is not a number is.
     if narrowed - narrowed != 0.0 {
         return none
     }
@@ -187,7 +187,7 @@ fn fixed(value: f32, places: i32) -> text no.host deterministic {
     // too big to count in whole parts. A value is not a number exactly when it
     // is not equal to itself, which is what this language says about that
     // value and the one question this module can ask without importing
-    // another. See D1084.
+    // another.
     if value != value {
         return "{value}"
     }
@@ -332,7 +332,7 @@ fn charWidth(piece: text) -> i32 no.alloc no.host deterministic {
 // Where the character before this place begins, counted in bytes. Walking back
 // is what UTF-8 is for: the middle of a character says so in every one of its
 // bytes, so a walk back is at most three steps and needs nothing kept from the
-// walk forwards. What it lands on has to reach where it started from — bytes
+// walk forwards. What it lands on has to reach where it started from -- bytes
 // that disagree are a byte on its own, which is what walking forwards makes of
 // them too, so the two walks agree about every place in any text at all.
 fn charBack(subject: text, at: i32) -> i32 no.alloc no.host deterministic {
@@ -361,7 +361,7 @@ fn chars(subject: text) -> i32 no.alloc no.host deterministic {
     // Walked by keeping what is left rather than by counting from the start.
     // `rest` costs the bytes it steps over and nothing else, so the whole walk
     // reads the text once; an index would make every step measure from the
-    // beginning again. See D374.
+    // beginning again.
     let count = 0
     let tail = subject
     while tail != "" {
@@ -421,7 +421,7 @@ fn trim(subject: text) -> text no.alloc no.host deterministic {
     // direction: `rest` steps a byte at a time and `tail[0]` is the byte it is
     // standing on, where `subject[to - 1]` is the walk from the front again on
     // every step. Where the last thing that is not a space ended is what the
-    // walk remembers. See D375.
+    // walk remembers.
     let from = 0
     let tail = subject
     while tail != "" && isSpace(tail[0]) {
@@ -447,7 +447,7 @@ fn trim(subject: text) -> text no.alloc no.host deterministic {
 // subject that ends with a separator has an empty piece after it. Stopping
 // where the text ran out instead lost the last piece whenever it was the empty
 // one, so `split("a,b,", ",")` was two pieces and joining them back gave
-// `a,b`. See D892.
+// `a,b`.
 fn split(subject: text, separator: text) -> [text] no.host deterministic {
     let pieces: [text] = array()
     if len(separator) == 0 {
@@ -457,7 +457,7 @@ fn split(subject: text, separator: text) -> [text] no.host deterministic {
 
     // Each piece is copied once and what is left is not copied at all, which
     // is what `rest` is for: the remainder of a piece of text is a place
-    // inside it. See D375.
+    // inside it.
     let tail = subject
     let more = true
     while more {
@@ -491,7 +491,7 @@ fn append(out: [u8], piece: text) no.host deterministic {
 // fitted, and a piece that did not is a buffer that has not changed at all --
 // all of it goes in or none of it does, because a piece half written is a
 // piece nobody can take back. It used to go in a byte at a time and leave what
-// fitted, which is what a loop can do and a move cannot. See D940 and D1068.
+// fitted, which is what a loop can do and a move cannot.
 fn fitting(out: [u8], piece: text) -> bool no.alloc no.host deterministic {
     return fit(out, piece)
 }
@@ -541,7 +541,7 @@ fn fittingNumber(out: [u8], value: i32) -> bool no.alloc no.host deterministic {
 // The pieces with the separator between them, which is what `split` undoes.
 // Measured first and given its room once, so the bytes are moved once rather
 // than again every time the run doubles, and each piece is pushed where it is
-// rather than through a call. See D1277.
+// rather than through a call.
 fn join(pieces: [text], separator: text) -> text no.host deterministic {
     let out: [u8] = array()
     if len(pieces) == 0 {

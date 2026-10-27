@@ -1,5 +1,5 @@
 -- `sim.kest` in the Lua that Lua 5.4, LuaJIT and Luau all read: the same
--- steps through the platform's own `math`. See D1274.
+-- steps through the platform's own `math`.
 local x, y, z = 0.5, 1.25, 0.0
 local sin, cos, atan2, sqrt, abs = math.sin, math.cos, math.atan2 or math.atan,
     math.sqrt, math.abs

@@ -58,7 +58,7 @@ typedef struct {
 // character itself: a mark with no width is refused by `K0108` where it is
 // written, and text that has to carry one -- a zero-width non-joiner between
 // the parts of a Persian word, a non-breaking space in front of a French
-// question mark -- has nowhere else to be written. See D1056.
+// question mark -- has nowhere else to be written.
 static const Escape ESCAPES[] = {
     {'n', '\n', false},  {'t', '\t', false}, {'r', '\r', false},
     {'\\', '\\', false}, {'"', '"', false},  {'{', '{', false},
@@ -178,7 +178,7 @@ static NumberRead character_number(const char *text, uint32_t length,
 
 // The character written out as the bytes it is, and how many there are. The
 // one encoder there is, the way `decoded` below is the one decoder: a
-// character this writes is a character that reads back. See D971.
+// character this writes is a character that reads back.
 static uint32_t utf8_written(uint32_t code, char *out) {
     if (code < 0x80) {
         out[0] = (char)code;
@@ -204,7 +204,7 @@ static uint32_t utf8_written(uint32_t code, char *out) {
 
 // The bytes a written piece of text stands for, and how many there are. The
 // count is handed back rather than measured afterwards, because a nought is a
-// byte text may hold since D971 and measuring would stop at the first one.
+// byte text may hold and measuring would stop at the first one.
 const char *kest_literal_text(KestArena *arena, const KestSource *source,
                               KestSpan span, size_t *length_out) {
     const char *raw = kest_span_text(source, span);
@@ -249,7 +249,7 @@ const char *kest_literal_text(KestArena *arena, const KestSource *source,
     }
     // Still ended with a nought, for a host that reads the bytes as a C
     // string where it knows there is none inside. What says how long it is is
-    // the count beside it. See D964 and D971.
+    // the count beside it.
     text[used] = '\0';
     if (length_out != NULL) {
         *length_out = used;
@@ -314,7 +314,7 @@ const char *kest_nearest_keyword(const char *name, size_t length) {
 
 // A comment runs to the end of its line, and a string may hold two slashes
 // that begin nothing, which is the only reason this is not a search. The
-// lexer throws them away — they are not tokens — and this is where anything
+// lexer throws them away -- they are not tokens -- and this is where anything
 // that wants them asks, so that the formatter and a tool reading a file are
 // not two answers to one question.
 uint32_t kest_comments(const KestSource *source, KestSpan *into,
@@ -388,8 +388,8 @@ static void kest_lexer_init(KestLexer *lexer, const KestSource *source,
     lexer->bracket_depth = 0;
     lexer->previous = KEST_TOK_NEWLINE;
     // Which nothing set, so it was whatever the stack held. The one thing
-    // that read it was a suggestion — a file-level escape mistake could be
-    // told that a hole holds code — so the mistake it made was to say
+    // that read it was a suggestion -- a file-level escape mistake could be
+    // told that a hole holds code -- so the mistake it made was to say
     // something wrong to somebody now and then, and a wrong suggestion costs
     // more than none. Nothing here catches an unset field: the sanitisers
     // this project builds under do not read memory that was never written.
@@ -586,7 +586,7 @@ static KestToken scan_ident(KestLexer *lexer, uint32_t start) {
     // be are the run under its first letter, found by halving rather than by
     // walking up to it: nearly every name is not a keyword, and a walk from
     // the top was a third of lexing. A keyword out of order would be read as
-    // a name, which the gate's `keywords` row refuses. See D1276 and D1284.
+    // a name, which the gate's `keywords` row refuses.
     size_t low = 0;
     size_t high = sizeof(KEYWORDS) / sizeof(KEYWORDS[0]);
     while (low < high) {
@@ -728,7 +728,6 @@ static void skip_blanks(KestLexer *lexer) {
             // can read it either: at the level of the file the whole string
             // is one token, so no tool is told there is a comment there. A
             // comment nobody can read and nothing can keep is not a comment.
-            // See D392.
             uint32_t said = lexer->offset;
             while (at(lexer, 0) != '\n' && at(lexer, 0) != '\r' &&
                    at(lexer, 0) != '\0' &&
@@ -781,7 +780,7 @@ static KestToken kest_lexer_next(KestLexer *lexer) {
         }
 
         // `'a'` is one byte written the way it reads. Text is its bytes
-        // (D021), so this is not a character type: it is a `u8` and anything
+        //, so this is not a character type: it is a `u8` and anything
         // that is not exactly one byte is refused.
         if (c == '\'') {
             lexer->offset++;
@@ -1116,12 +1115,12 @@ static void check_text(const KestSource *source, KestDiags *diags) {
 // language is UTF-8 -- a file is held to it by `K0107` and this is the same
 // question asked of bytes that arrive at runtime, from an array or from a
 // host. It is the one decoder there is, so a byte the compiler refuses and a
-// byte the machine refuses are the same byte. See D971.
+// byte the machine refuses are the same byte.
 bool kest_utf8_whole(const char *bytes, uint32_t length, uint32_t *bad) {
     uint32_t at = 0;
     while (at < length) {
         // Eight bytes of which none has its top bit set are eight characters,
-        // which is most of any text a program makes. See D1169.
+        // which is most of any text a program makes.
         if (length - at >= 8) {
             uint64_t eight;
             memcpy(&eight, bytes + at, 8);
@@ -1197,14 +1196,14 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
         if (used == capacity) {
             // A quarter more, not twice as much. Doubling is what an array
             // that copies itself grows by, because the copy has to be paid
-            // for less often than it happens; this one does not copy — D746
-            // made it the last thing in its arena so it grows where it
-            // stands — so the factor is free to be chosen for the room it
+            // for less often than it happens; this one does not copy (it is
+            // the last thing in its arena, so it grows where it stands), so
+            // the factor is free to be chosen for the room it
             // leaves rather than for the copy it is not making. Twice as much
             // left a third of every token array never written to, which is
             // 15094 slots of the 46592 this tree asks for. A quarter more is
             // an eighth, and the number of extensions stays a logarithm
-            // rather than becoming a count of the file. See D783.
+            // rather than becoming a count of the file.
             uint32_t grown =
                 capacity == 0 ? 256 : capacity + capacity / 4;
             // And never room for more tokens than there are bytes left to
@@ -1223,7 +1222,7 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
             // where it stands. What that saves is every size it passed
             // through: a file of two thousand tokens grew through two hundred
             // and fifty-six, five hundred and twelve, a thousand and two
-            // thousand, and kept all four. See D746.
+            // thousand, and kept all four.
             KestToken *moved =
                 capacity == 0
                     ? NULL
@@ -1259,7 +1258,7 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
         // that count aside until the brace that closes it. The field beside
         // the count has said so since it was written and nothing did it, so
         // `f(match d {` ran the arms together and the parser refused the
-        // second one. See D1085.
+        // second one.
         //
         // A brace inside brackets is a brace inside an expression, and 128
         // expressions one inside another is the most this language parses, so

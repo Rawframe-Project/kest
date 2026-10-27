@@ -8,7 +8,7 @@
 //
 // `examples/embed.c` is the other kind of host: it crosses every part of this
 // boundary and counts the bytes both sides spend, because this project holds
-// itself to what it says about them. Nothing here counts anything. See D624.
+// itself to what it says about them. Nothing here counts anything.
 #include <stdio.h>
 #include <string.h>
 
@@ -21,15 +21,14 @@
 // `kest_report` writes to a `FILE *`, so a host that wants the words renders
 // into a file of its own and reads them back; `tmpfile` is what C gives every
 // host, and a host with somewhere better puts them there. What it costs is one
-// file — this one, for the life of the host — and a copy through the C library.
-// A host that only wants to know whether something went wrong needs none of it:
-// every call answers false when it was refused. See D632.
+// file -- this one, for the life of the host -- and a copy through the C
+// library. A host that only wants to know whether something went wrong needs
+// none of it: every call answers false when it was refused.
 static void say_what_happened(KestRuntime *runtime, KestBuild *build,
                               const char *about) {
     // One file, wound back and written over. A host that made a new one every
     // time it asked would make one a frame, and what is after this report is
-    // the last one — so it is read to where this one ended and no further.
-    // See D633.
+    // the last one -- so it is read to where this one ended and no further.
     static FILE *words = NULL;
     if (words == NULL) {
         words = tmpfile();
@@ -47,7 +46,7 @@ static void say_what_happened(KestRuntime *runtime, KestBuild *build,
     rewind(words);
     // A line at a time, which is how a host reads a report longer than
     // anything it wants to hold: the file has the whole of it and this holds
-    // one line of it. See D635.
+    // one line of it.
     char line[256];
     while (end > 0 && fgets(line, sizeof(line), words) != NULL) {
         printf("[%s] %s", about, line);
@@ -95,7 +94,7 @@ static const Provided provided[] = {
 // Whether what the program says crosses at this name is what the host wrote
 // down: as many arguments, as many slots in them, each slot the kind the row
 // says, and an answer where the row expects one. Asked of the build, because a
-// host binds before there is a machine. See D626.
+// host binds before there is a machine.
 static bool crosses_as_written(const KestBuild *build, uint32_t at,
                                const Provided *ours) {
     if ((kest_extern_gives(build, at) != NULL) != ours->gives) {
@@ -131,7 +130,7 @@ int main(int argc, char **argv) {
     // And what compiling had to say about a program it compiled: a shape
     // nothing names, a declaration nothing calls. `kest_build` writes what
     // stopped it and keeps the rest, so a host that never asks is a host that
-    // drops every warning its programs have. See D631.
+    // drops every warning its programs have.
     say_what_happened(NULL, build, path);
 
     // What the program asks this host for, by name, before there is a machine
@@ -141,7 +140,7 @@ int main(int argc, char **argv) {
     // A program that asks for nothing needs none of this: `kest_start` takes
     // NULL where there is no host, and everything below the loop is then a
     // host this program would never have called. That is the smallest a host
-    // gets — a build, a call and what came back. See D627.
+    // gets -- a build, a call and what came back.
     KestHost *host = kest_build_extern(build, 0) == NULL ? NULL
                                                          : kest_host_new();
     if (host == NULL && kest_build_extern(build, 0) != NULL) {
@@ -183,7 +182,7 @@ int main(int argc, char **argv) {
 
     // What the program needs, rather than a number this host guessed. A
     // program that can reach itself has no answer and says so, and then the
-    // machine picks for itself — which is what passing nothing gets.
+    // machine picks for itself -- which is what passing nothing gets.
     // The name this host is about to call, read before the machine is made
     // because what it is about to call is what the machine is sized for.
     const char *called = argc > 2 ? argv[2] : "main";
@@ -194,10 +193,10 @@ int main(int argc, char **argv) {
 
     // And what a program with no answer costs a host that names a depth. There
     // is no worst chain to add up, but a frame is at most the widest body the
-    // program has and a host says how many frames there are — so the slots are
+    // program has and a host says how many frames there are -- so the slots are
     // that many a frame, and twice the frames is twice the slots. Asked here
     // because this is the host with nothing else in it: two machines, no
-    // program run in them, and the numbers read back out. See D815.
+    // program run in them, and the numbers read back out.
     if (!measured) {
         KestLimits few = {0, 16, 0, 0};
         KestLimits many = {0, 64, 0, 0};
@@ -211,7 +210,7 @@ int main(int argc, char **argv) {
         // the frames between them and what is left over is the same in each:
         // that fixed part is the bodies the loop does not go round, which
         // stand in a chain once and do not repeat. Held as the relationship
-        // and not as either number. See D816.
+        // and not as either number.
         uint32_t more = had_many.stack_slots - had_few.stack_slots;
         uint32_t a_turn = more / (64 - 16);
         if (shallow == NULL || deeper == NULL || had_few.stack_slots == 0 ||
@@ -232,14 +231,13 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("`%s` has no least, and is %u slots for 16 frames and %u for "
-               "64 — %u a frame and %u whatever the frames\n",
+               "64 -- %u a frame and %u whatever the frames\n",
                path, had_few.stack_slots, had_many.stack_slots, a_turn,
                had_few.stack_slots - a_turn * 16);
         // The number a host can read before it makes anything, held against
         // the machine it would get: `kest_bound` is what a machine given
         // nothing is sized by, said early. A number a host reads that is not
-        // the machine it is handed is a number it cannot budget with. See
-        // D823.
+        // the machine it is handed is a number it cannot budget with.
         KestLimits told_first = {0, 0, 0, 0};
         KestReason told_why = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound(build, 16, &told_first, &told_why) ||
@@ -262,9 +260,9 @@ int main(int argc, char **argv) {
         // A host that calls one function is not calling the whole of what the
         // file defines, and what that one reaches is what it can want. This
         // program has two functions `main` never calls, so its own bound is
-        // under the one the whole file gets — held as less and not as no
+        // under the one the whole file gets -- held as less and not as no
         // more, because a bound that counted everything would be equal and
-        // read as right. See D817.
+        // read as right.
         KestLimits about_main = {0, 0, 0, 0};
         KestReason bounded = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound_of(build, "main", 16, &about_main, &bounded) ||
@@ -287,7 +285,7 @@ int main(int argc, char **argv) {
         // third of the three doors and the one a re-entrant host reads. Only
         // the bodies that reach a host function count towards it, and this
         // program has bodies that do not, so it is under what `main` wants
-        // altogether. See D818.
+        // altogether.
         KestLimits back_in = {0, 0, 0, 0};
         KestReason from_where = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound_from(build, "main", 16, &back_in, &from_where) ||
@@ -315,14 +313,14 @@ int main(int argc, char **argv) {
     // And a machine made from the bound rather than from the usual numbers. A
     // bound is a number a host can read; this is a host reading one, writing
     // it down and running the program in what it asked for. Sixteen frames is
-    // this host's own choice and the slots follow from it — a program that
+    // this host's own choice and the slots follow from it -- a program that
     // goes deeper than that is refused at the call that would, and told what
-    // it wanted, which is the whole of what a bound promises. See D819.
+    // it wanted, which is the whole of what a bound promises.
     KestLimits asked_for = {0, 0, 0, 0};
     if (!measured && kest_bound_of(build, called, 16, &asked_for, NULL)) {
         asked_for.heap_bytes = 1024 * 1024;
         // What came back may be the least for that one name rather than a
-        // bound — `motto` reaches nothing that comes back round — and then
+        // bound -- `motto` reaches nothing that comes back round -- and then
         // the frames are its own and not the sixteen this host allowed.
         printf("and this host allows 16 frames, so it takes %u slots and %u "
                "frames\n",
@@ -351,14 +349,14 @@ int main(int argc, char **argv) {
     // And that the machine is the one that was asked for. A bound a host reads
     // and writes down is only worth reading if the machine it makes is the
     // one it wrote: this is the same two numbers, read back off the machine
-    // the program is about to run in. See D819.
+    // the program is about to run in.
     if (asked_for.stack_slots > 0) {
         KestLimits was_given = {0, 0, 0, 0};
         kest_allowed(runtime, &was_given);
         // The heap beside them, which is the one of the three a machine has
         // no number of its own for: what comes back is the ceiling this host
         // wrote or nought where it wrote none, and nought is what no ceiling
-        // is. Read here because this host wrote one. See D830.
+        // is. Read here because this host wrote one.
         if (was_given.stack_slots != asked_for.stack_slots ||
             was_given.call_depth != asked_for.call_depth ||
             was_given.heap_bytes != asked_for.heap_bytes ||
@@ -382,7 +380,7 @@ int main(int argc, char **argv) {
     // the machine lays each one out as the type the declaration says, so there
     // are no slots to be wrong about. A host holding values of its own writes
     // them into the frame itself and says what it wrote with
-    // `kest_frame_fills`, which is `examples/embed.c`. See D629.
+    // `kest_frame_fills`, which is `examples/embed.c`.
     uint32_t given = argc > 3 ? (uint32_t)(argc - 3) : 0;
     if (given > 0 &&
         !kest_takes_text(runtime, entry, frame,
@@ -409,7 +407,7 @@ int main(int argc, char **argv) {
     //
     // Nought less than nothing is a struct, a run, a store or a reference:
     // what a program means by one of those is the host's to decide, and
-    // `examples/embed.c` is the host that decides it. See D628.
+    // `examples/embed.c` is the host that decides it.
     char said[128];
     int64_t room = kest_gave_text(runtime, entry, frame, said, sizeof(said));
     if (room < 0) {

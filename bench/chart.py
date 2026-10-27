@@ -5,7 +5,7 @@ time as a share of Luau's, and every engine in every mode it ships, one panel a
 workload in milliseconds. Written as SVG by hand, because a chart library is a
 dependency and this is a hundred lines of rectangles. Every chart says when,
 at which commit and on what it was taken, because a number without that is not
-one anybody can compare. See D1180.
+one anybody can compare.
 """
 
 import sys

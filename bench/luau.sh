@@ -9,9 +9,9 @@
 # language's machine, and its release engine. Each Kest one says a duration only
 # when it is handed `time`; without it it does the work once and says whether it
 # came out right, which is all the gate asks of it. Not part of the gate: a
-# duration is not a pass or a fail. See D1267. The same table is written to
+# duration is not a pass or a fail. The same table is written to
 # `bench/luau.tsv` with when, where and how busy, for `bench/chart.py` to draw
-# as `bench/chart-luau.svg` (D1274).
+# as `bench/chart-luau.svg`.
 #
 #   KEST_LUAU=path/to/luau LUAU_BENCH=path/to/luau/bench sh bench/luau.sh
 set -u

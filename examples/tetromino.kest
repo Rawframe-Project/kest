@@ -9,8 +9,7 @@ import std.random
 // `love.update` and `love.draw` are the four functions below that take a
 // `Game`, and what LÖVE's clock and random numbers were is the game's own: a
 // time it is handed a frame at a time and a seeded source. What it draws is
-// the board as text. What was hard to bring over is written where it was, and
-// in D1268. See D1268.
+// the board as text. What was hard to bring over is written where it was.
 
 const BOARD_WIDTH: i32 = 10
 const BOARD_HEIGHT: i32 = 20

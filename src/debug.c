@@ -12,7 +12,7 @@ typedef KestDebugger Debugger;
 // The program as it was written, for as long as it takes to ask it something.
 // Everything that reads the code walks it an instruction at a time, and a walk
 // that met a breakpoint would read a one-byte instruction where a three-byte
-// one is and step into the middle of the next. See D991.
+// one is and step into the middle of the next.
 static void as_it_was(Debugger *held);
 static void as_it_is(Debugger *held);
 
@@ -409,7 +409,7 @@ static void value_of(char *into, size_t room, KestValue value, uint8_t kind) {
 // local the body has not reached holds what the frame before it left: read as
 // text, that is the machine's memory wherever it points, and `locals` before
 // a text was written ended the debugger on a fault. The proof is of the body
-// as it was compiled, so it is asked with the breakpoints out. See D1291.
+// as it was compiled, so it is asked with the breakpoints out.
 static void local_said(Debugger *held, uint32_t deep, uint16_t slot,
                        uint8_t kind, KestValue value, char *into,
                        size_t room) {
@@ -424,9 +424,9 @@ static void local_said(Debugger *held, uint32_t deep, uint16_t slot,
         snprintf(into, room, "not written yet");
     } else if (kest_frame_at_address(held->runtime, deep, slot)) {
         // A slot that holds where the value is rather than the value, which
-        // a `for` does for an element the body never writes (D866). Saying
+        // a `for` does for an element the body never writes. Saying
         // the number as though it were the value is saying an address is a
-        // `Body`. See D1081.
+        // `Body`.
         snprintf(into, room, "at %p", value.object);
     } else if (kind == KEST_L_TEXT) {
         if (text == NULL) {

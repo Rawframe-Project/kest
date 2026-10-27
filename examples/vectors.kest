@@ -9,7 +9,7 @@ import std.vec
 // and `/` a component at a time and `*` and `/` by one `f32`. Every answer
 // here is folded into one number by its bits, so a machine that rounds one
 // component differently -- the machine against a release, one platform
-// against another -- answers another number and says which part. See D1250.
+// against another -- answers another number and says which part.
 
 const ANSWER: u64 = 12749663293315105001
 

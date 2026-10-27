@@ -6,7 +6,7 @@ module bench.hosts.churn
 // made and let go piles up. What `bench/hosts` times with it is every frame
 // rather than a sum of them -- the middle, the ninety-ninth and the worst --
 // which is where a collector shows. `churn.lua` and `churn.js` are the same
-// world. See D1273.
+// world.
 
 struct Thing {
     id: i64

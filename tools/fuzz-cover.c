@@ -4,7 +4,7 @@
 // examples get past the lexer and not much further; a fuzzer that learns what
 // the parser wants gets to the checker, the compiler, the verifier and the
 // machine, which is where source nobody trusts goes on somebody else's
-// machine. See D1253.
+// machine.
 //
 // Built with clang's libFuzzer and the sanitisers (the `fuzz-cover` target of
 // the `linux-clang` preset), and run as `out/linux-clang/tools/fuzz-cover

@@ -220,9 +220,9 @@ fn tabling() -> i32 {
 
 // And what a number written into text and read back has to be: the number
 // that went in. A hole in a string writes the shortest spelling that reads
-// back as the same number, and what reads it back is `text.real` -- which
-// could not read a spelling with an exponent in it until D1084, so a program
-// that saved a small number and read its own file got nothing.
+// back as the same number, and what reads it back is `text.real`, which has to
+// read a spelling with an exponent in it, or a program that saved a small
+// number and read its own file would get nothing.
 fn numbering() -> i32 {
     let source = random.from(31337)
     for round in 0..2000 {
@@ -318,7 +318,7 @@ enum Door {
 // program means: without them `(if c -> a else -> b) - 2` is an `else` arm of
 // `b - 2`. And a block inside brackets is still a block, so the arms of that
 // `match` are lines. Both of those were wrong at once -- a formatter that
-// dropped the brackets and a lexer that ran the arms together. See D1085.
+// dropped the brackets and a lexer that ran the arms together.
 fn chosen(d: Door, c: bool) -> i32 {
     let xs: [i32] = array()
     push(xs, 7)

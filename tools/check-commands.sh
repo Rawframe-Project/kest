@@ -64,7 +64,7 @@ expect() {
     # here and not held: what a command says there is what is wrong, so a
     # command that worked says nothing there. A reader who has to tell the
     # answer from the complaints by reading them is a reader a pipe cannot
-    # be. See D585.
+    # be.
     if [ -s "$said_in".err ]; then
         said_anyway=$(head -1 "$said_in".err)
         complain "$command $file: worked and said $said_anyway"
@@ -96,7 +96,7 @@ if [ -n "$($kest fmt "$nothing" 2>&1)" ]; then
     complain "fmt $nothing: a file that holds nothing formatted to something"
 fi
 # And a file that holds one comment and nothing else, which is a file that says
-# something and declares nothing — a shape every command has its own sentence
+# something and declares nothing -- a shape every command has its own sentence
 # for, and none of them had ever been asked to say it. What is held is that all
 # of them answer and that each says the thing it is for: `fmt` keeps what was
 # written, and the rest say there is nothing to do with it.
@@ -125,9 +125,9 @@ done
 rm -rf "$(dirname "$saying")"
 
 # A program that asks the host for something this host does not have. No file
-# in the tree is one — every extern here is a name the command line binds — and
-# what it stands for is any refusal that happens between compiling and running,
-# which is where a message has no machine to be read from.
+# in the tree is one -- every extern here is a name the command line binds --
+# and what it stands for is any refusal that happens between compiling and
+# running, which is where a message has no machine to be read from.
 mkdir "$scratch"/asking
 asking="$scratch"/asking/asking.kest
 cat > "$asking" <<'ASKING'
@@ -203,7 +203,6 @@ rm -rf "$(dirname "$nothing")"
 # declaration is about it; a blank line between them says it is not, and one
 # at the end of a line is about that line; what comes before the first
 # declaration and is about none of them is what the file says about itself.
-# See D1258.
 mkdir -p "$scratch"/doc
 cat >"$scratch"/doc/shelf.kest <<'EOF_DOC'
 // A shop's shelves.
@@ -270,7 +269,7 @@ fi
 rm -rf "$scratch"/doc
 
 # One file, asked everything. What it says is what is wrong with it, so a
-# file that is right says nothing at all — which is what lets these run at
+# file that is right says nothing at all -- which is what lets these run at
 # once and be read in order afterwards.
 sweep_one() {
     file=$1
@@ -284,7 +283,7 @@ sweep_one() {
         expect "$file" emit '^fn |^nothing to run'
         # And what it offers a caller, said the same both ways: a heading for
         # every declaration the JSON names, in the same order, with the same
-        # words under it. See D1258.
+        # words under it.
         expect "$file" doc '^# `'
         if "$kest" doc "$file" >"$scratch"/doc${mine:+-${mine##*/}}.md \
                 2>/dev/null </dev/null &&
@@ -365,7 +364,7 @@ for one in held.get("functions", []):
         # And a run that worked, which says nothing: what the program writes
         # goes where a reader looks for an answer and what the run has to say
         # about itself goes where the complaints are, so a run with nothing
-        # wrong leaves that stream empty. See D585.
+        # wrong leaves that stream empty.
         if [ $status -eq 0 ] && [ -s "$mine.err" ]; then
             said_anyway=$(head -1 "$mine.err")
             complain "run $file: worked and said $said_anyway"
@@ -402,7 +401,7 @@ for line in text.splitlines():
         # And what it is laid out as, which is the rest of that line, with
         # the lines under it kept in order beneath it: a field is a slot
         # and a byte and a name and a type, and a case is a tag and a name
-        # and what it carries. See D592.
+        # and what it carries.
         laid_out = what.group(2)
         laid.setdefault(laid_out, []).append(what.group(3).rstrip())
     under = re.match(r"  (slot |bit |\d+ )(.*)$", line)
@@ -415,7 +414,7 @@ for line in text.splitlines():
         # The names a generic takes are part of the signature and are not part
         # of the name: `set<K: compares, V>` is `set`, and the JSON says what
         # it takes under `typeParameters` rather than inside the name. A tool
-        # looking a name up has to find it. See D1043.
+        # looking a name up has to find it.
         printed.add(re.sub(r"<.*>$", "", called.group(1)))
         # And what it takes and gives back, kept whole rather than split
         # on the commas: a copy of a shape over two types is written
@@ -423,7 +422,6 @@ for line in text.splitlines():
         # comes apart on the first of those. A list per name, because a
         # module written in two widths declares one name twice and a
         # reading that keeps the last of them reads half a module.
-        # See D591.
         shapes.setdefault(called.group(1), []).append(called.group(2))
     held = re.match(r"const (\S+):", line)
     if held:
@@ -432,7 +430,7 @@ for line in text.splitlines():
     # of what the object writes out one at a time. It is the third thing
     # this command prints and the only one that is a summary: what a
     # reader is shown instead of two hundred lines of a library they did
-    # not write. See D593.
+    # not write.
     counted = re.match(r"([^ ]+)  (\d.*)$", line)
     if counted and not line.startswith(("struct ", "enum ", "flags ",
                                         "fn ", "extern fn ", "const ")):
@@ -474,7 +472,7 @@ for one in json.loads(written or "{}").get("functions", []):
 # The words say it in a line and a run of lines beneath, and the object
 # says it in numbers and a list; a reader of one has never been held to
 # what the other says, and a layout is the half of a program a host is
-# written against. See D592.
+# written against.
 def how_it_lies(one):
     many = "" if one["bytes"] == 1 else "s"
     if one["kind"] == "flags":
@@ -510,7 +508,7 @@ for one in json.loads(written or "{}").get("types", []):
 # thing a reader of the object needs to go from a name in the file to a
 # name in here: `factorial` in a file that says `module examples.math` is
 # `math.factorial`, and neither the line the file wrote nor the path it is
-# at says that. Held against the names themselves. See D598.
+# at says that. Held against the names themselves.
 own = set()
 for what in ("types", "functions", "constants"):
     for one in everything.get(what, []):
@@ -527,7 +525,7 @@ if own and own != {everything.get("module")}:
 # the one nothing could check.
 # Which module each is in is written beside it, because a name lives under the
 # whole of its module and what comes after may hold dots of its own: splitting
-# at a dot would invent `std.io.Io`. See D1039.
+# at a dot would invent `std.io.Io`.
 root = everything.get("module") or ""
 holds = {}
 for what in ("types", "functions", "constants"):
@@ -589,7 +587,7 @@ for line in text.splitlines():
         where = (int(step.group(1)), int(step.group(2)), step.group(4))
         # A comment is not a token, and the two forms say the same list of
         # them: it is printed where it was written and the object writes
-        # them out on their own. See D595.
+        # them out on their own.
         if step.group(3) == "comment":
             remarks.append(where)
         else:
@@ -606,7 +604,7 @@ if remarks != aside:
           % (remarks[:2], aside[:2]))
 
 # What a token says is compared where the printed form shows it whole. A
-# token that is a line break prints as one — the reader sees the line end —
+# token that is a line break prints as one -- the reader sees the line end --
 # and the JSON writes the two characters that stand for it, which is the same
 # byte said two ways rather than two answers.
 if len(printed) != len(machine):
@@ -624,9 +622,9 @@ else:
 
         # And the two forms of `emit`, which is where a wrong answer is hardest to
         # see: a walk over the code printed for a person and the same walk written
-        # for a tool. What is compared is what both say — the functions, how wide
-        # and how deep each is, and every instruction in it by where it sits and
-        # what it is called.
+        # for a tool. What is compared is what both say -- the functions, how
+        # wide and how deep each is, and every instruction in it by where it
+        # sits and what it is called.
         walked=$( { "$kest" emit "$file" 2>/dev/null </dev/null;
                     echo "----";
                     "$kest" emit "$file" --json 2>/dev/null </dev/null; } |
@@ -650,7 +648,7 @@ for line in text.splitlines():
         # The whole of the line rather than the count of them: a layout is
         # what a host lays memory out against, and counting them holds
         # that there are as many as there are. What each one is was in
-        # both forms and read in neither. See D594.
+        # both forms and read in neither.
         layouts.append(lays.group(1).rstrip())
         continue
     if line.startswith("host "):
@@ -669,8 +667,8 @@ for line in text.splitlines():
         on_its_own[alone.group(3)] = (int(alone.group(1)),
                                       int(alone.group(2)))
         continue
-    # A name may have spaces in it — a copy of a generic is named for the
-    # types it was given, and one of those is a function type — so what ends
+    # A name may have spaces in it -- a copy of a generic is named for the
+    # types it was given, and one of those is a function type -- so what ends
     # the name is the two spaces before what it is wide, not the first space.
     written_fn = re.match(r"fn (.+?)  (\d+) parameter slots?, (\d+) slots?, "
                           r"(\d+) deep(, promises `no.alloc`)?"
@@ -685,10 +683,10 @@ for line in text.splitlines():
                          "promises": written_fn.group(5) is not None,
                          # Which function the walk for what a program needs
                          # stopped at, said beside that function in both
-                         # forms. See D600.
+                         # forms.
                          "why": written_fn.group(6),
                          # And where that came from, on the line under it
-                         # when it is somebody else. See D602.
+                         # when it is somebody else.
                          "where": None,
                          "least": None,
                          "code": []}
@@ -699,7 +697,7 @@ for line in text.splitlines():
         continue
     # And what a machine to call this one takes, which is not the numbers
     # on the line above it: those are the frame this function has of its
-    # own. See D603.
+    # own.
     to_call_it = re.match(r"\s+(\d+) slots? and (\d+) frames? to call it$",
                           line)
     if to_call_it and name is not None:
@@ -709,13 +707,13 @@ for line in text.splitlines():
     step = re.match(r"\s+(\d+)\s+(\S+)\s*(.*)$", line)
     if step and name is not None:
         # And what the instruction carries. A number a jump is written
-        # with is shown twice — the step it takes and the place that
-        # reaches — so what is read here is what stands before the arrow,
+        # with is shown twice -- the step it takes and the place that
+        # reaches -- so what is read here is what stands before the arrow,
         # and the numbers a slot or a count is written with carry a `+`
-        # or sit beside a `<` or an `of`. See D451.
+        # or sit beside a `<` or an `of`.
         # And what a call says it reaches, which is the name after the
         # semicolon: the number is an index into a list a reader would
-        # otherwise count, and the object says the same list. See D599.
+        # otherwise count, and the object says the same list.
         # Everything after the semicolon, because a copy of a generic is
         # named for the types it was given and one of those can be a
         # function type with spaces in it.
@@ -784,7 +782,7 @@ if needs is not None and asked is not None and \
 # them wrote down for it. `needs.entries` is one walk an entry, and the
 # `why` beside each function is one walk over everything: a function with
 # no answer has none whichever way it was asked, and a caller of one has
-# none either. See D601.
+# none either.
 for one in (asked or {}).get("entries", []):
     for said_one in said.get("functions", []):
         plain = said_one["name"].split("#")[0].split(".")[-1]
@@ -886,7 +884,7 @@ for one in json.loads(declared.strip() or "{}").get("functions", []):
 # none of them is a listing nobody can join to the program it is of. Two
 # chunks written the same and declared in one place are one generic
 # compiled twice; in two places they are two functions of a name, and that
-# is the only thing that tells them apart. See D612.
+# is the only thing that tells them apart.
 where = set()
 for one in json.loads(declared.strip() or "{}").get("functions", []):
     where.add((one.get("file"), one.get("line"), one.get("column")))
@@ -900,8 +898,8 @@ for one in json.loads(emitted.strip() or "{}").get("functions", []):
     # A chunk is named for the types it was made with, and a declaration is
     # not. What it was written as is what a chunk carries, so the two are
     # joined on that rather than on this reader cutting the name at the
-    # `#` — which would be one rule of this compiler kept in a second
-    # place, true until one of the two changed. See D611.
+    # `#` -- which would be one rule of this compiler kept in a second
+    # place, true until one of the two changed.
     if one["wrote"] != one["name"].split("#")[0]:
         print("%s is written %s" % (one["name"], one["wrote"]))
         continue
@@ -934,7 +932,6 @@ import sys
 # knows what the others mean. Every object a command writes carries it, and
 # the number is the header'"'"'s rather than one written here: two places
 # saying which shape this is is one of them wrong the day it changes.
-# See D947.
 schema = int(re.search(r"#define KEST_JSON_SCHEMA (\d+)",
                        open("include/kest.h").read()).group(1))
 lines = [line for line in sys.stdin.read().splitlines() if line.strip()]
@@ -965,7 +962,7 @@ for file in "$@"; do
     sweep_one "$file" "$sweeps/$(printf %04d $at)" \
         > "$sweeps/$(printf %04d $at)" 2>&1 &
     if [ $((at % 8)) -eq 0 ]; then
-        # `jobs` says nothing in a script — job control is off — so what
+        # `jobs` says nothing in a script -- job control is off -- so what
         # holds the number down is counting them: eight are started and
         # waited for, and then eight more.
         wait
@@ -1122,7 +1119,7 @@ esac
 # not imported. Neither is a spelling to guess at: they are what the reader has
 # already written, in the file beside this one, and what says so is the import
 # that is missing rather than the nearest word. Two files, because one file
-# cannot reach a module it has not asked for. See D732 and D733.
+# cannot reach a module it has not asked for.
 mkdir -p "$crossing/away"
 cat > "$crossing/away/near.kest" <<'EOF'
 module away.near
@@ -1171,7 +1168,7 @@ esac
 # A file whose one use of an import is the name it got wrong. What was said
 # before was both that the module has nothing called that and that nothing in
 # this file writes the module -- take the import out, which would make the
-# mistake worse. Two shapes, because a name and a type are two walks. See D735.
+# mistake worse. Two shapes, because a name and a type are two walks.
 cat > "$crossing/misspelt.kest" <<'EOF'
 module misspelt
 
@@ -1189,7 +1186,7 @@ fn main() -> i32 {
 EOF
 # A value whose type came from a module this file did not ask for, calling a
 # function of that module as `x.f()`: the module is reached, and reaching one
-# is importing it. See D1256.
+# is importing it.
 mkdir -p "$crossing/shop"
 printf 'module shop.stock\n\nstruct Crate {\n    count: i32\n}\n\nfn more(c: Crate, by: i32) -> Crate {\n    return Crate(c.count + by)\n}\n' \
     > "$crossing/shop/stock.kest"
@@ -1213,7 +1210,7 @@ esac
 # A file that is itself the module it writes in front of a name, named like one
 # the library has. Its own alias is a name it may write, so what is unknown is
 # the name under it: not the import, which it would be told to write against
-# itself (D736), and not the module, which is refused for what it is (D738).
+# itself, and not the module, which is refused for what it is.
 cat > "$crossing/own.kest" <<'EOF'
 module vec
 
@@ -1247,7 +1244,7 @@ esac
 # A name the spelling machine can reach at no distance from what was written.
 # A builtin is a name a file may write and is not a value, so naming one where
 # a value goes is unknown -- and `did you mean `len`?` is a sentence arguing
-# with itself. See D737.
+# with itself.
 cat > "$crossing/itself.kest" <<'EOF'
 module itself
 
@@ -1257,7 +1254,7 @@ fn main() -> i32 {
 EOF
 # And a file whose one use of an import is the module name on its own, written
 # where a type goes. Nothing under it was reached, so nothing had marked the
-# import, and the file was told to take out the line it wrote. See D739.
+# import, and the file was told to take out the line it wrote.
 cat > "$crossing/bare.kest" <<'EOF'
 module bare
 
@@ -1279,7 +1276,6 @@ esac
 # A constant written where a type goes. Writing it down is naming it, whatever
 # it was named for, so the file is not also told to take out the line it has
 # just written -- which would leave the mistake with nothing to point at.
-# See D740.
 cat > "$crossing/counted.kest" <<'EOF'
 module counted
 
@@ -1312,7 +1308,6 @@ esac
 # More than one takes what was passed, and the places shown are the ones that
 # do. Seven widths of whole number take `1` and a `text` and a `bool` do not,
 # and a list holding those two is a list answering a different sentence.
-# See D765.
 cat > "$crossing/several.kest" <<'EOF'
 module several
 
@@ -1373,7 +1368,7 @@ esac
 
 # And a tie the exact types settle. Two `pick`s taking `u8` and `i32`, called
 # with `1`: both take a whole number and one of them is what a whole number is,
-# which is the whole of what the second pass is for. See D765.
+# which is the whole of what the second pass is for.
 cat > "$crossing/tie.kest" <<'EOF'
 module tie
 
@@ -1401,7 +1396,7 @@ esac
 # gives a bare one its type, and the pass that settles a call between widths.
 # One rule, so the two answers are the same answer -- and both are read off
 # runs rather than written here, because a number written here is a third
-# answer. See D766.
+# answer.
 widths="i8 i16 i32 i64 u8 u16 u32 u64"
 fractions="f32 f64"
 for kind in whole fraction; do
@@ -1501,13 +1496,13 @@ done
 
 # A constant worked out where it is written and a value compiled where it
 # stands round the same way, because rounding to the narrower float is part of
-# what `f32` means and both of them ask one question about it. See D768.
+# what `f32` means and both of them ask one question about it.
 cat > "$crossing/rounds.kest" <<'EOF'
 module rounds
 
 const X: f32 = 0.1
 
-// Through a call, because since D887 a name nothing writes holding something
+// Through a call, because a name nothing writes holding something
 // the compiler can work out is worked out where it stands -- and then both
 // halves of this are the folder, which is one question asked twice.
 fn given(x: f32) -> f32 {
@@ -1559,8 +1554,8 @@ if ! rooted=$("$kest" run "$deep/c.kest" 2>&1 </dev/null); then
 fi
 
 # Where the library is, which is not where the program is. `std` resolves from
-# a path built out of the name the command line was run under — beside the
-# binary in a tree, beside its directory once installed — and every check here
+# a path built out of the name the command line was run under -- beside the
+# binary in a tree, beside its directory once installed -- and every check here
 # runs the build's `kest` from the root of the tree, where the `lib` beside the
 # binary and the one in the working directory are the same thing. This runs it from somewhere else by its whole
 # name, which is how anybody who has installed it runs it.
@@ -1615,7 +1610,7 @@ elif ! ran=$(cd "$elsewhere" &&
 else
     # And a release made by what was installed, which is a binary carrying
     # its program: moved to a room with nothing else in it and run there, it
-    # answers what the program answers read from its file. See D1172.
+    # answers what the program answers read from its file.
     release_room="$scratch"/check-release
     mkdir -p "$release_room"
     release_wanted=$(cd "$elsewhere" &&
@@ -1707,9 +1702,9 @@ fi
 rm -rf "$put"
 
 # And which library a program gets when there is more than one. A tree being
-# installed has both — the one beside the binary and the one under the prefix —
-# and what a program reads is whichever the search reaches first. The order is
-# the whole of the answer, so it is run: three libraries that differ by one
+# installed has both -- the one beside the binary and the one under the prefix
+# -- and what a program reads is whichever the search reaches first. The order
+# is the whole of the answer, so it is run: three libraries that differ by one
 # function, and the one that answers says which was read.
 places="$scratch"/check-places
 mkdir -p "$places/bin" "$places/lib/kest" "$places/other"
@@ -1782,8 +1777,8 @@ else
 fi
 
 # A module written nearly right. What a file writes as often as anything else
-# is the name in front of the dot, and a name nothing declares — a module is a
-# file, not a declaration — was the one kind of name nothing was ever suggested
+# is the name in front of the dot, and a name nothing declares -- a module is a
+# file, not a declaration -- was the one kind of name nothing was ever suggested
 # for.
 spelt="$scratch"/check-spelt.kest
 cat > "$spelt" <<'KEST'
@@ -1806,7 +1801,7 @@ case "$meant" in
 esac
 
 # Two names equally near the one that was written. What a suggestion says is
-# what this knows, and knowing two and saying one is choosing for a reader —
+# what this knows, and knowing two and saying one is choosing for a reader --
 # so it says both, and says nothing at all when more than two are level,
 # because a list of names is not a suggestion.
 level="$scratch"/check-level.kest
@@ -1835,7 +1830,7 @@ case "$both" in
 esac
 
 # A short name written wrong. Nothing under three letters was ever answered for
-# — every short name is one edit from every other — and what made that rule
+# -- every short name is one edit from every other -- and what made that rule
 # necessary is gone: two names equally near are both said and three are said as
 # nothing. A module named `io` is two letters and a file writes it everywhere.
 short="$scratch"/check-short.kest
@@ -2007,7 +2002,7 @@ rm -rf "$both_at"
 # A program that prints and then goes wrong. The two streams are kept apart, so
 # a shell that puts both in one pipe is where their order shows: what a program
 # printed is buffered until the run ends and what went wrong is not, so the
-# failure would arrive before the lines that led to it — a lie about the order
+# failure would arrive before the lines that led to it -- a lie about the order
 # things happened in, told by the machine that watched them happen.
 saidfirst="$scratch"/check-saidfirst.kest
 cat > "$saidfirst" <<'KEST'
@@ -2039,7 +2034,7 @@ fi
 # And a run that ends well, which is where nothing is written on purpose: what
 # a program printed is all that comes out, and the whole of it. Ten thousand
 # lines is more than a stream holds at once, so what this asks is whether the
-# last of them arrives — a command line that ends without emptying what it
+# last of them arrives -- a command line that ends without emptying what it
 # holds loses whatever was still in hand, and a program that printed a
 # thousand lines and answered nought looks like one that printed nine hundred.
 plenty="$scratch"/check-plenty.kest
@@ -2070,8 +2065,8 @@ if [ "$plenty_gave" -ne 7 ]; then
 fi
 rm -f "$scratch"/check-plenty-out
 
-# A reference from one store handed to another. A reference is a number — a
-# place and the stamp that place was handed out with — and a stamp comes from
+# A reference from one store handed to another. A reference is a number -- a
+# place and the stamp that place was handed out with -- and a stamp comes from
 # the machine rather than from the store, so no two places anywhere carry the
 # same one. Before that, a reference into a store of the same shape named
 # whoever was standing in that place: somebody else's value, given back with
@@ -2169,7 +2164,7 @@ for one in whole wide small near far truth words shut open state maybe never; do
 done
 
 # What `run` says when it works, which is nothing: the status is the answer.
-# That is the whole of the promise and nothing had ever held it — every example
+# That is the whole of the promise and nothing had ever held it -- every example
 # answers nought, so a command line that always exited nought would have passed
 # every check here. A program that answers seven has to make a run answer
 # seven, in both forms, because a status is not a thing a form changes.
@@ -2197,8 +2192,7 @@ fi
 # reader learns to read past. Counting with a constant is reading it; a shape
 # whose field is one of its own is named by that; a file with no `main` is a
 # library and not a program; and what a program imported is named by whoever
-# imported it. Each is written down in `Diagnostics` and none was held. See
-# D537.
+# imported it. Each is written down in `Diagnostics` and none was held.
 mkdir "$scratch"/quiet
 cat > "$scratch"/quiet/counted.kest <<'KEST'
 const CELLS: i32 = 4
@@ -2264,10 +2258,10 @@ done
 
 # How a failure while running says it got there. A note per call under the one
 # that failed, outermost first, so the notes read as the way in rather than as
-# the way back out — and a run deeper than a diagnostic holds says how many
+# the way back out -- and a run deeper than a diagnostic holds says how many
 # were left out, because a number is what a reader of a deep one wants. Both
 # are written down in `Running` and neither was held by anything. The number
-# comes out of the header rather than out of this line. See D533.
+# comes out of the header rather than out of this line.
 most_notes=$(sed -n 's/^#define KEST_MOST_PLACES \([0-9][0-9]*\)$/\1/p' \
              include/kest.h)
 if [ -z "$most_notes" ]; then
@@ -2329,7 +2323,7 @@ esac
 # settles where imports resolve from and is the one `run` and `tick` call, and
 # what held that was the half about `check` writing the first file out in full.
 # Two files with a `main` each, named both ways round: the answer says which
-# one ran. See D532.
+# one ran.
 whose="$scratch"/check-whose
 mkdir -p "$whose"
 cat > "$whose/eleven.kest" <<'KEST'
@@ -2357,7 +2351,7 @@ fi
 
 # And the three that read each file on its own. `help` says they follow no
 # imports, so a file naming a module nothing can read is a file they are still
-# able to answer about — and nothing had ever handed them one. See D532.
+# able to answer about -- and nothing had ever handed them one.
 on_its_own_at="$scratch"/check-alone.kest
 cat > "$on_its_own_at" <<'KEST'
 import no.such.thing
@@ -2382,7 +2376,7 @@ done
 # And a program with something to warn about, which is a thing said and a run
 # that goes on. A warning is not a refusal: what the run answers is what the
 # program answered, and the help says so. Three at once, because a program with
-# one of each is what says they do not stand in each other's way. See D531.
+# one of each is what says they do not stand in each other's way.
 warned="$scratch"/check-warned.kest
 cat > "$warned" <<'KEST'
 module warned
@@ -2698,7 +2692,7 @@ if said["events"]["count"] != said["onEvent"]["crossings"]:
 # And what the machine cost, which is a number a host pays once against a
 # number it pays every frame. The command line asks the program what it
 # needs and hands that over, so a machine here is smaller than one nobody
-# asked about. See D576.
+# asked about.
 if said["machine"]["slots"] >= 65536 or said["machine"]["frames"] >= 1024:
     print("a machine the program was asked about took %d slots and %d "
           "frames" % (said["machine"]["slots"], said["machine"]["frames"]))
@@ -2713,12 +2707,12 @@ fi
 # the frames and moves with every one of them. A run of three events and a run
 # of nine say so together: the same machine, more taken. A machine that answers
 # with the program's heap says the first number twice and neither of them is
-# what a host would put in its budget. See D576.
+# what a host would put in its budget.
 #
 # Read as what was taken rather than as what is held: what is held settles,
 # because a program that makes a name a frame and lets it go holds what the
-# world holds however many frames it is driven. That is the whole of D996 and
-# it is what makes the held number the wrong one to ask this question with.
+# world holds however many frames it is driven. That is what makes the held
+# number the wrong one to ask this question with.
 of_three=$("$kest" tick "$ticking" 3 --json 2>&1 </dev/null |
            sed -n 's/.*"machine":{"bytes":\([0-9]*\).*"taken":\([0-9]*\).*/\1 \2/p')
 of_nine=$("$kest" tick "$ticking" 9 --json 2>&1 </dev/null |
@@ -2733,8 +2727,8 @@ fi
 # object is the answer and what the program wrote is beside it: a tool reads
 # one and a person reads the other, and a refusal goes in the object rather
 # than into the middle of what the program was saying. In words they are one
-# stream on purpose — there the measurement is the answer, and what a program
-# prints goes where it cannot be mistaken for a number. See D586.
+# stream on purpose -- there the measurement is the answer, and what a program
+# prints goes where it cannot be mistaken for a number.
 cat > "$scratch"/talking.kest <<'KEST'
 module talking
 
@@ -2791,11 +2785,11 @@ if [ -n "$apart" ]; then
 fi
 
 # And the same two streams under `call`, where the answer is a value rather than
-# a measurement — so the value goes where a shell reads it in both forms, and
+# a measurement -- so the value goes where a shell reads it in both forms, and
 # everything else goes beside it. A function that prints while it works out what
 # to answer is the one that says both, and this tree had none: what a shell
 # reading `kest call` gets has to be the value and nothing else, in words as
-# well as in an object. See D587.
+# well as in an object.
 cat > "$scratch"/answering.kest <<'KEST'
 module answering
 
@@ -2845,7 +2839,7 @@ fi
 # status, which is eight bits and is the same nought for a program that answered
 # nought and one that answers nothing at all. The object says which. Held
 # against the status, because two readings of one answer are what keeps either
-# of them honest. See D588.
+# of them honest.
 cat > "$scratch"/answering-run.kest <<'KEST'
 module answers
 
@@ -2898,7 +2892,7 @@ def gives_back(said):
 # checker says `main` gives back, what a run answered, and what it exited
 # with. The checker knew before there was a machine, the run found out
 # after the call, and a status says the same nought for a program that
-# answered nought and one that answers nothing at all. See D589.
+# answered nought and one that answers nothing at all.
 gave, status = object_and_status(answering)
 nothing, quiet_status = object_and_status(quiet)
 if (gave is None or nothing is None or gave.get("answered") != 7
@@ -2922,7 +2916,7 @@ fi
 # file in this tree can show: every one of them is already formatted, so the
 # text an object carries and the file it was made from are the same bytes and
 # a formatter that answered with what it was given would look right. Written
-# badly on purpose here, the way `check-fmt.sh` writes one. See D596.
+# badly on purpose here, the way `check-fmt.sh` writes one.
 cat > "$scratch"/untidy.kest <<'KEST'
 module untidy
 
@@ -2962,7 +2956,7 @@ was = open(sys.argv[1]).read()
 # replace, replaced in the file it was read from, is the file the object
 # carries. A tool that formats on save applies that and nothing else, so
 # the two have to be one answer at two grains. A file already in the one
-# form has no edit at all. See D597.
+# form has no edit at all.
 edit = None if said is None else said.get("edit")
 rebuilt = was if edit is None else (was[:edit["offset"]] + edit["text"]
                                     + was[edit["offset"] + edit["length"]:])
@@ -3000,7 +2994,7 @@ two_ways "check" check "$telling"
 # Which of the two streams each half goes to. What is wrong with a program goes
 # where a shell keeps errors and what a program holds goes where a shell keeps
 # answers, so `kest check x.kest > held` writes the answer and shows the errors
-# — and in JSON everything is on one stream, because a tool reads one thing and
+# -- and in JSON everything is on one stream, because a tool reads one thing and
 # an object split over two is neither.
 alone=$("$kest" check "$telling" 2>/dev/null </dev/null)
 if [ -n "$alone" ]; then
@@ -3042,7 +3036,7 @@ esac
 # wrong and nothing else: a listing of what a half-worked-out program holds is
 # a reader being shown a program that does not exist. The JSON says both,
 # because a tool reading a file somebody is still writing wants what has been
-# worked out so far — an editor greys out what it cannot see yet rather than
+# worked out so far -- an editor greys out what it cannot see yet rather than
 # forgetting it.
 unfinished=$("$kest" check "$telling" 2>&1 </dev/null)
 case "$unfinished" in
@@ -3074,8 +3068,8 @@ two_ways "call" call "$broke" nope
 # are held to each other elsewhere in this file, and two forms that agree are
 # two forms that lost the same thing: a suggestion that stopped being printed
 # and stopped being written is the same diagnostic in both. So this asks for
-# the four the reference says there are — the code, the place, the fix, and the
-# notes around it, each with a place of its own — of a program written to have
+# the four the reference says there are -- the code, the place, the fix, and the
+# notes around it, each with a place of its own -- of a program written to have
 # every one of them.
 mkdir "$scratch"/carried
 cat > "$scratch"/carried/carried.kest <<'KEST'
@@ -3106,11 +3100,11 @@ for want in "error[K0401]" "carried.kest:2:17" \
         ;;
     esac
 done
-# The two shapes of a crossing, over the same events. D007 makes the batch the
-# default and D016 quotes W11 on why — one crossing per event was the widest
-# figure in that workload — and what makes it a default rather than a second
+# The two shapes of a crossing, over the same events. The batch is the default
+# because one crossing per event is the widest figure in an event workload, and
+# what makes it a default rather than a second
 # feature is that it answers what one at a time answers. `kest tick` drives both
-# and prints what each gave; nothing compared them. See D556.
+# and prints what each gave; nothing compared them.
 both_ways=$("$kest" tick examples/events.kest 7 --json 2>/dev/null </dev/null)
 in_one=$(printf '%s' "$both_ways" |
          sed -n 's/.*"onEvents":{"crossings":\([0-9]*\),"gave":\([0-9]*\)}.*/\1 \2/p')
@@ -3128,13 +3122,12 @@ elif [ "${in_one%% *}" -ne 1 ] || [ "${one_at_a_time%% *}" -ne 7 ]; then
 and ${one_at_a_time%% *} one at a time"
 fi
 
-# A slot holds one value, which is what D554 decided to keep and what nothing
-# was holding. The type says a `Vec3` is three slots; the compiler lays a
-# parameter out with `type_slots`, which is a different reader of the same
-# thing, and a function taking a `Vec3` and an `f32` takes one more than the
-# `Vec3` does. Packed — a slot holding whatever fitted — it would take one
+# A slot holds one value, which is the rule this holds. The type says a `Vec3`
+# is three slots; the compiler lays a parameter out with `type_slots`, which is
+# a different reader of the same thing, and a function taking a `Vec3` and an
+# `f32` takes one more than the
+# `Vec3` does. Packed -- a slot holding whatever fitted -- it would take one
 # fewer, and the answers would be wrong rather than the count being small.
-# See D555.
 mkdir "$scratch"/oneslot
 cat > "$scratch"/oneslot/vec.kest <<'KEST'
 struct Vec3 {
@@ -3170,7 +3163,7 @@ fi
 # does, and a generic over one used to be a function nothing could call. Asked
 # for here as well as in `examples/boxes.kest`, because what it answered before
 # was a refusal rather than a wrong answer, and a refusal is a thing to ask
-# about by name. See D546.
+# about by name.
 mkdir "$scratch"/written
 cat > "$scratch"/written/run.kest <<'KEST'
 struct Box<T> {
@@ -3242,7 +3235,7 @@ fi
 # do not, and which is which was in `kest_type_has_text` and in no document
 # until now: a reader met the rule one refusal at a time. Both halves are asked
 # for here, because a kind that quietly gained text would be as wrong as one
-# that lost it. See D540.
+# that lost it.
 mkdir "$scratch"/holes
 cat > "$scratch"/holes/writes.kest <<'KEST'
 flags S: u8 {
@@ -3297,7 +3290,7 @@ done
 # A caret under a span that runs onto the next line. It used to be drawn to
 # where the span ended, which is forty characters of `^` under a line fourteen
 # long: what is on the next line is on the next line, and a caret there points
-# at nothing. See D539.
+# at nothing.
 mkdir "$scratch"/wide
 cat > "$scratch"/wide/wide.kest <<'KEST'
 fn main() -> i32 {
@@ -3340,11 +3333,11 @@ done
 
 # Where a message points in a body that has a comparison a jump reads. The
 # compiler writes the comparison, sees the jump after it and takes the
-# comparison back, and until D804 it took back the byte and left behind the
-# origin written beside it — so every instruction after a fused jump carried
-# the origin of the one after it, and a failure while running pointed at the
-# next line. Every fused pair is tried, because there is one of these for each
-# comparison and they are taken back by the same two rounds.
+# comparison back, and has to take back the origin written beside it with the
+# byte: otherwise every instruction after a fused jump carries the origin of
+# the one after it, and a failure while running points at the next line. Every
+# fused pair is tried, because there is one of these for each comparison and
+# they are taken back by the same two rounds.
 mkdir "$scratch"/fused
 for fusing in "==|5" "!=|10" "<|1" "<=|1" ">|10" ">=|10"; do
     comparison=${fusing%|*}
@@ -3379,19 +3372,19 @@ done
 # where that something is: `\`stepFrame\` promises it here` under a line that is
 # not the declaration is worse than no note, and reads exactly like a right
 # one. What each note says it is about is in the message, in backticks, and
-# where it says it is is a line of a file this check wrote — so the two are put
+# where it says it is is a line of a file this check wrote -- so the two are put
 # together and the file is read.
 # And which of them a program may promise `no.alloc` for. That is not a fact
 # about the names: it is what crossing back costs, so the ones that hand over
 # text or an array make it on the machine's heap and the ones that answer a
 # number do not. A program says `no.alloc` on an `extern` and the machine holds
-# the host to it — this host included, which is the one place where what
+# the host to it -- this host included, which is the one place where what
 # somebody typed at a shell is checked against what the compiler's own C does.
 mkdir "$scratch"/promises
 # What each of them is called with is the call and nothing else. It used to be
-# `let n = Engine.decide(1)`, which is a local nothing reads — the thing K0512
-# says something about — so a check about promises was writing a program with a
-# second thing wrong with it. See D726.
+# `let n = Engine.decide(1)`, which is a local nothing reads -- the thing K0512
+# says something about -- so a check about promises was writing a program with a
+# second thing wrong with it.
 for promising in "Io.read() -> text|Io.read()|takes" \
                  "Engine.name() -> text|Engine.name()|takes" \
                  "Host.samples() -> [f32]|Host.samples()|takes" \
@@ -3433,7 +3426,7 @@ done
 
 # What a cut costs, which is nothing when it ends where the text already ends.
 # The nought after such a piece is the one that was already there, so there is
-# nothing to copy — the same thing `rest` is, asked with a length. A cut that
+# nothing to copy -- the same thing `rest` is, asked with a length. A cut that
 # stops sooner needs a nought of its own and pays for the piece.
 mkdir "$scratch"/cutting
 cat > "$scratch"/cutting/cutting.kest <<'KEST'
@@ -3489,7 +3482,7 @@ KEST
 cutting="$scratch"/cutting/cutting.kest
 # And what a cut, or a read, says when it is asked for what is not there. The
 # length is in the message, which is the one thing either of them measures the
-# whole of the text for — so it is measured there and nowhere else: what
+# whole of the text for -- so it is measured there and nowhere else: what
 # reaching a place costs is the part walked to it, and a run that is stopping
 # can pay for the rest.
 for asking in "past abcdefghij|9 bytes from 8 is outside text of 10 bytes" \
@@ -3518,7 +3511,7 @@ middle_cut=$(cut_heap middle)
 # And what a cut is, which is the length that was asked for. A piece of text is
 # a place and how many bytes of it, so a cut that kept the length it was cut
 # from would be a piece of text reading past where it stops and nothing costing
-# anything to say so. See D964.
+# anything to say so.
 cut_says() {
     "$kest" call --json "$cutting" "$1" abcdefghij 2>/dev/null </dev/null |
         sed -n 's/.*"result":"\([0-9-]*\)".*/\1/p'
@@ -3536,7 +3529,7 @@ done
 # Every cut costs what measuring costs, which is nothing: a piece of a piece of
 # text is a place inside it and how many bytes of it. A cut out of the middle
 # used to copy, because text was a pointer that had to end in a nought and a
-# piece out of the middle of one does not. See D964.
+# piece out of the middle of one does not.
 if [ -z "$just_measured" ] || [ -z "$middle_cut" ]; then
     complain "call --json: a cut said nothing about what it cost"
 elif [ "$whole_cut" != "$just_measured" ] || [ "$tail_cut" != "$just_measured" ] ||
@@ -3553,7 +3546,7 @@ fi
 # which is what ten of the library's `no.alloc` functions are built on. The
 # proof that holds them says so out of a table in `contract.c`; this says the
 # machine agrees, because a table saying a builtin reaches nothing and a
-# machine reaching for something is a promise kept on paper. See D796.
+# machine reaching for something is a promise kept on paper.
 stepped_cost=$(cut_heap stepped)
 walked_cost=$(cut_heap walked)
 looked_cost=$(cut_heap looked)
@@ -3575,7 +3568,7 @@ fi
 # three numbers: making the containers, using them without growing them, and
 # growing one past the block it started in. The first two are the same number
 # or something in the second list is reaching; the third is bigger or something
-# in the first is not. See D797.
+# in the first is not.
 mkdir "$scratch"/reaching
 cat > "$scratch"/reaching/reaching.kest <<'KEST'
 struct Thing {
@@ -3668,7 +3661,7 @@ fi
 # name taken from the wrong function reads the same in both. A host reads it to
 # know what to shorten, so it is held here to being the function the cycle is
 # in rather than the one the walk started from or the one that happens to be
-# first. See D800.
+# first.
 mkdir "$scratch"/closing
 cat > "$scratch"/closing/closing.kest <<'KEST'
 fn plain(n: i32) -> i32 {
@@ -3711,8 +3704,7 @@ esac
 # nought after them, which is a number rather than a direction: ten bytes
 # gathered and then made into text is one place of sixteen more than gathering
 # them. Sixteen rather than eleven because a place is as wide as the step above
-# what was asked for, which is what D996 traded for being able to give one
-# back.
+# what was asked for, which is the price of being able to give one back.
 reach_gathered=$(reach_heap gathered)
 reach_converted=$(reach_heap converted)
 if [ "$((reach_converted - reach_gathered))" != "16" ]; then
@@ -3728,7 +3720,7 @@ fi
 # there is what comes back.
 #
 # Made with a cut rather than out of bytes, because bytes that are not UTF-8
-# are not text since D971 and `text(a)` refuses them. A cut is by byte and may
+# are not text and `text(a)` refuses them. A cut is by byte and may
 # land anywhere, so it is where a half-read character still comes from.
 mkdir "$scratch"/cut
 cat > "$scratch"/cut/cut.kest <<'KEST'
@@ -3799,10 +3791,10 @@ fi
 # What a shape is, asked of each of the three things it holds. A function value
 # is what it takes, what it gives back and what it promises, and every one of
 # those has to match where the value is handed over. Nothing in this tree ever
-# hands one of the wrong shape — a program that did would not compile, and
-# every program here compiles — so loosening any of the three refused nothing
+# hands one of the wrong shape -- a program that did would not compile, and
+# every program here compiles -- so loosening any of the three refused nothing
 # and the gate stayed green. These are written here because the tree cannot
-# hold them. See D412.
+# hold them.
 mkdir "$scratch"/shapes
 for shape in "fn other(word: text, also: text) -> bool no.alloc|takes two" \
              "fn other(word: text) -> i32 no.alloc|gives a number back" \
@@ -3843,8 +3835,8 @@ done
 # And the shapes that are not functions. What is inside an array, a store, a
 # reference or an optional is one line of the same reading, and how many a
 # fixed one holds is the next: loosening either refused nothing in this tree.
-# The same reason again — every program here compiles, so a refusal is held by
-# a program written where it can be refused. See D413.
+# The same reason again -- every program here compiles, so a refusal is held by
+# a program written where it can be refused.
 for shape in "fn howMany(items: [text]) -> i32 no.alloc|of one thing for one of another|expects \`[text]\`, found \`[i32]\`" \
              "fn howMany(items: [i32; 8]) -> i32 no.alloc|of eight for one of four|expects \`[i32; 8]\`, found \`[i32; 4]\`"; do
     body=${shape%%|*}
@@ -3880,7 +3872,7 @@ done
 # what the optional holds. Loosening that let a piece of text stand where an
 # `i32?` was wanted: the program compiled, and `main` answered
 # 105265126565552, which is where the text was. Nothing in this tree noticed,
-# because every program here compiles. See D414.
+# because every program here compiles.
 cat > "$scratch"/shapes/maybe.kest <<'KEST'
 fn maybe() -> i32? {
     return "text"
@@ -3906,9 +3898,9 @@ esac
 # checker has for a program that parses and does not mean anything: the
 # lexer's, the parser's and the checker's. A hundred and thirty-nine codes this
 # compiler can say, and thirty-three were named in no document and in no check
-# — a message nobody has seen is a message nobody knows is there. These are the
+# -- a message nobody has seen is a message nobody knows is there. These are the
 # ones a reader meets first, where a file is refused for what it is rather than
-# for what it says, so they are the ones to hold first. See D415.
+# for what it says, so they are the ones to hold first.
 #
 # One line each, written into a whole file, because what refuses them is
 # reading rather than meaning. `%b` turns the `\n` in the table into lines.
@@ -3918,7 +3910,7 @@ mkdir "$scratch"/refused
 # door those words come out of, and what is behind it is a stage disagreeing
 # with the stage before it -- so a refused program carried on to the compiler
 # and left a hole where a value belongs said it about the reader's mistake. A
-# constant that could not be worked out did exactly that. See D888.
+# constant that could not be worked out did exactly that.
 while IFS='|' read -r code body words; do
     printf '%b\n' "$body" > "$scratch"/refused/one.kest
     refused=$("$kest" check "$scratch"/refused/one.kest 2>&1 </dev/null)
@@ -4212,9 +4204,9 @@ esac
 # mistake in the words themselves. These were bare sentences with no code and
 # no JSON, so a run asked for JSON answered with a status and an empty stream.
 # Each is asked in both forms, because the whole of what was wrong with them
-# was that one of the two said nothing. See D437.
+# was that one of the two said nothing.
 # And no words at all, which is the one of the seven with no `--json` to it:
-# `--json` is a word, and there are none. See D445.
+# `--json` is a word, and there are none.
 nothing_typed=$("$kest" 2>&1 </dev/null)
 case "$nothing_typed" in
 *"K0649"*"there is no command in what was typed"*) ;;
@@ -4226,13 +4218,11 @@ esac
 
 # The words each of them is refused with as well as the code, because `K0649`
 # says seven things and a check that reads only the code reads none of them.
-# See D445.
 #
 # How many events this command will lend is read out of the source rather than
 # written here, and the whole sentence is asked for rather than the front of it.
-# This stopped at `between 0 and`, so a refusal that stopped saying how many
-# would have gone on passing — which is what D521 and D522 found one table over,
-# in the check that holds the language's own ceilings. See D524.
+# Stopping at `between 0 and` would let a refusal that stopped saying how many
+# go on passing, as the check that holds the language's own ceilings knows.
 most_events=$(sed -n 's/^#define MAX_EVENTS \([0-9][0-9]*\)$/\1/p' src/main.c)
 if [ -z "$most_events" ]; then
     complain "check: \`MAX_EVENTS\` is not a number in src/main.c, so how many \
@@ -4285,8 +4275,7 @@ KEST
 # What is after `--` is the program's rather than this command's, which is the
 # one option here that changes what a program sees rather than what this command
 # does. `std.os` is what a program asks for it through, and a host that binds
-# none of those doors is a host a program that wants them is refused by. See
-# D925.
+# none of those doors is a host a program that wants them is refused by.
 #
 # One line holding both halves of the answer -- how many there are and what they
 # are -- because a program handed the right count and the wrong words is a
@@ -4326,7 +4315,7 @@ done
 # a broken compiler and the machine it is running on. Two ways to cross it and
 # a different sentence for each: one where there was not enough to begin with,
 # where the arena that would have said so was never made, and one where a build
-# was under way and the allocation that crossed it is worth a number. See D843.
+# was under way and the allocation that crossed it is worth a number.
 cramped=$("$kest" check --room 1 "$scratch"/room/hungry.kest 2>&1 </dev/null)
 case "$cramped" in
 *"K0658"*"is not enough to begin reading a program"*) ;;
@@ -4352,7 +4341,7 @@ printf '%s\n' "$cramped" >> "$scratch"/said
 # for nearly two thousand. So the ceiling goes up a quarter of a kilobyte at a
 # time from nothing to where the file fits, and lands in every place wherever
 # the path has pushed it. A megabyte still refused is a walk with no end,
-# and is said as what the last rung said. See D1144.
+# and is said as what the last rung said.
 how_much=0
 while :; do
     how_much=$((how_much + 256))
@@ -4457,7 +4446,7 @@ esac
 
 # And the refusals a program meets while it runs, or when a command asks it for
 # something it has not got. These need a program that runs rather than one that
-# is refused, so each says which command reaches it. See D418.
+# is refused, so each says which command reaches it.
 #
 # The last nine are one sentence each that the machine can say and nothing had
 # ever made it say. A code is asked for by something; a code the machine says
@@ -4465,7 +4454,6 @@ esac
 # reached by nothing -- an unsigned divide by nought, a shift by a negative
 # count in each of its three widths, three walks over text that begin past the
 # end of it, and a count of less than nothing for an array and for a store.
-# See D440.
 while IFS='|' read -r code command body words; do
     printf '%b\n' "$body" > "$scratch"/refused/running.kest
     # The file comes between the command and whatever the command is given, so
@@ -4485,7 +4473,7 @@ while IFS='|' read -r code command body words; do
     # And the same thing asked here, because the one program in this tree that
     # reached it is on this table: a constant that cannot be worked out is
     # refused where it is declared, and every use of it used to leave a hole
-    # where a value belongs. See D888.
+    # where a value belongs.
     emitted=$("$kest" emit "$scratch"/refused/running.kest 2>&1 </dev/null)
     case "$emitted" in
     *"which is a fault in the compiler"*)
@@ -4550,7 +4538,6 @@ RUNNING
 # And one that takes two files, which the tables above cannot write: a count
 # naming a constant in a module that has no such constant. The refusal is about
 # two files at once, so it is asked here and what it said goes in with the rest.
-# See D683.
 mkdir -p "$scratch"/counting
 cat > "$scratch"/counting/held.kest <<'KEST'
 module counting.held
@@ -4576,8 +4563,8 @@ printf '%s\n' "$counted" >> "$scratch"/said
 # `K0310` says fourteen different things and a check that asks for one of them
 # leaves the other thirteen said by nothing. So the sentences are read out of
 # the source and each is held against what these runs actually printed, which
-# is the one comparison with nothing to guess about — a rendered message either
-# reads as a wording or it does not. See D444.
+# is the one comparison with nothing to guess about -- a rendered message either
+# reads as a wording or it does not.
 #
 # Only the codes these tables ask for. What a host is refused and what a
 # ceiling says are somebody else's to hold, and they are held where they
@@ -4616,7 +4603,7 @@ def sentences():
                 j += 1
             out.setdefault(one.group(1), set()).add(plain(words))
             # And a colon between two of them is a message written as a choice,
-            # which is two things one code can say. See D443.
+            # which is two things one code can say.
             if (j + 1 < len(found)
                     and text[found[j].end():found[j + 1].start()].strip() == ':'):
                 out[one.group(1)].add(plain(found[j + 1].group(1)))
@@ -4680,11 +4667,10 @@ SEEING
 # a `named` beside every function, shape, constant, case and bit, and what
 # reads it is `check-dead.sh`, which holds a library to naming everything it
 # declares. A compiler that said everything was named would make that rule
-# pass over a library with a hole in it, and nothing said the flag was right —
+# pass over a library with a hole in it, and nothing said the flag was right --
 # nor what a function takes, nor whether it is the host's. Each of them is
 # written here with both answers in one file, because a flag that is always
 # true and a flag that is right read the same until something is false.
-# See D450.
 mkdir -p "$scratch"/named
 cat > "$scratch"/named/named.kest <<'KEST'
 module named
@@ -4810,8 +4796,8 @@ case "$nameless" in
 esac
 
 # And two modules that put their names in the same place. Where a module's
-# names go is the program's rather than the file's — `text.own` is one entry
-# however many modules end in `text` — so a file importing one of them would
+# names go is the program's rather than the file's -- `text.own` is one entry
+# however many modules end in `text` -- so a file importing one of them would
 # find the other's names without asking for them. It takes two files and one of
 # them is the library's, which is why it is asked here rather than in the table
 # above.
@@ -4846,7 +4832,7 @@ esac
 # Both halves of the refusal are here because they are one rule seen from two
 # sides: naming the field, and building the shape that holds it, which is
 # naming every field it has. It takes two files, which is why it is asked here
-# rather than in the table above. See D1041.
+# rather than in the table above.
 mkdir "$scratch"/refused/kept
 cat > "$scratch"/refused/kept/hold.kest <<'KEST'
 module hold
@@ -4888,7 +4874,7 @@ esac
 # which one an import means cannot be worked out from the line -- so it is
 # refused rather than taken from whichever was looked in first. It takes a
 # manifest and three files, which is why it is here rather than in the table
-# above. See D1049.
+# above.
 mkdir -p "$scratch"/refused/roots/one/pack "$scratch"/refused/roots/two/pack
 cat > "$scratch"/refused/roots/kest.project <<'KEST'
 project roots
@@ -4964,7 +4950,7 @@ esac
 
 # And a copy of a generic struct, which exists because something asked for it:
 # asking for it is naming it. Without that a program that declares one of its
-# own and uses it is warned that nothing names the copy it has just made — and
+# own and uses it is warned that nothing names the copy it has just made -- and
 # no file in this tree can show it, because the one generic struct here is the
 # library's and that warning is about the file that was named.
 mkdir "$scratch"/refused/copy
@@ -4988,7 +4974,7 @@ esac
 
 # A comment written inside a hole in a string. A hole is code, and the
 # formatter writes it back from what it means rather than copying it, so a
-# comment in one is a comment nothing can put back — and at the level of the
+# comment in one is a comment nothing can put back -- and at the level of the
 # file the whole string is one token, so no tool is told there is a comment
 # there at all. It was accepted, and formatting the file quietly took it away.
 mkdir "$scratch"/hole
@@ -5026,7 +5012,7 @@ fi
 # What this host calls itself and what it decides, which is the rest of what
 # the command line provides that no module declares. Every host binds what it
 # likes beyond the library, so what this one binds is a thing a program can
-# only find out by asking — the reference says `kest` and 1, and nothing had
+# only find out by asking -- the reference says `kest` and 1, and nothing had
 # ever asked.
 mkdir "$scratch"/hosted
 cat > "$scratch"/hosted/hosted.kest <<'KEST'
@@ -5130,8 +5116,8 @@ if [ -w /dev/full ]; then
 fi
 
 # Which line of what a command printed is its answer. A program says things
-# while it runs, and a command that answers with something of its own — the
-# value a call gave, the numbers a frame cost — used to say both on the same
+# while it runs, and a command that answers with something of its own -- the
+# value a call gave, the numbers a frame cost -- used to say both on the same
 # stream with nothing between them: a shell reading `kest call` got the
 # program's writing above the value and no way to tell them apart. What
 # answers is on standard output and the program's writing is beside it now,
@@ -5188,8 +5174,8 @@ esac
 # program is the file named and everything it imports, so every function of the
 # library is one `call` reaches, and what it can hand one is what a shell can
 # type. The reference says `min 3 7` is the `i32` one and `min 3.5 7.5` is the
-# `f32` one — the overload settled by how the number is written rather than by
-# what it could fit — and that sentence had nothing behind it.
+# `f32` one -- the overload settled by how the number is written rather than by
+# what it could fit -- and that sentence had nothing behind it.
 mkdir "$scratch"/library
 cat > "$scratch"/library/using.kest <<'KEST'
 module using
@@ -5246,7 +5232,7 @@ esac
 # never written: everything here is a program written to be refused, and what a
 # module boundary does when nothing is wrong was left to the examples. A struct
 # made in one file and read in the other, an array grown there and counted
-# here, a piece of text built there and compared here — and a call from a
+# here, a piece of text built there and compared here -- and a call from a
 # command line into the imported module by the name somebody would type, which
 # used to be a name this command line put its own module in front of and then
 # said back.
@@ -5389,7 +5375,7 @@ for where in sys.argv[2:]:
                 continue
             looked += 1
             # The last part of it, because a note says what the checker calls
-            # a function — module and all — and the line says what somebody
+            # a function -- module and all -- and the line says what somebody
             # wrote.
             want = named[0].split(".")[-1]
             line = held(note["file"])[note["line"] - 1]
@@ -5467,9 +5453,9 @@ esac
 # What says a file is the same file. A build says how many bytes each file it
 # read is, and a size is not an answer to whether anything changed: two edits
 # that keep the length are the same size and a different program. So it says a
-# mark as well, and what holds it is a file edited without changing its length —
-# a mark that did not move there is a mark that moves with nothing a host could
-# not already see. See D658.
+# mark as well, and what holds it is a file edited without changing its length
+# -- a mark that did not move there is a mark that moves with nothing a host
+# could not already see.
 mkdir "$scratch"/marking
 cat > "$scratch"/marking/marking.kest <<'KEST'
 fn main() -> i32 {
@@ -5497,7 +5483,7 @@ fi
 # question. A comment added moves every byte after it and moves the mark over
 # the file; what the machine will run is what it was. A host caching what it
 # compiled asks the second question, and a mark that could not tell the two
-# apart would have it throw the cache away for a reformat. See D659.
+# apart would have it throw the cache away for a reformat.
 cat > "$scratch"/marking/running.kest <<'KEST'
 fn main() -> i32 {
     let n = 12
@@ -5511,8 +5497,8 @@ marks_of() {
 runs=$(marks_of "$scratch"/marking/running.kest)
 # Neither mark is about where the file is. A host that copied a program
 # somewhere else, or built it from a directory of its own, is running the same
-# program — and a mark that said otherwise would have every host that moves its
-# files rebuild everything once and never learn why. See D660.
+# program -- and a mark that said otherwise would have every host that moves its
+# files rebuild everything once and never learn why.
 mkdir "$scratch"/marking/deeper
 cp "$scratch"/marking/running.kest "$scratch"/marking/deeper/moved.kest
 moved=$(marks_of "$scratch"/marking/deeper/moved.kest)
@@ -5545,16 +5531,16 @@ fi
 # And the one arithmetic all of this is made of, held where it is written twice.
 # A mark over a file is FNV-1a over its bytes and `hash` over text in the
 # language is FNV-1a over its bytes, and the second is written out in the
-# machine's own loop because it walks to a nought rather than to a length —
+# machine's own loop because it walks to a nought rather than to a length --
 # so the two are one number written in two places, and this is what says they
-# still agree. See D663.
+# still agree.
 printf 'abc' >"$scratch"/marking/bytes.kest
 marked_bytes=$("$kest" check --json "$scratch"/marking/bytes.kest 2>&1 \
                </dev/null | sed -n 's/.*"bytes":3,"mark":"\([0-9a-f]*\)".*/\1/p')
 cat > "$scratch"/marking/hashing.kest <<'KEST'
 import std.io
 
-// Handed through a call, because since D886 a hash of a piece of text written
+// Handed through a call, because a hash of a piece of text written
 // down is a number the compiler works out where it stands -- and a number in
 // the chunk is the folder's arithmetic, which is the half this already has.
 // What is wanted here is the machine's.
@@ -5576,10 +5562,10 @@ if [ -z "$marked_bytes" ] || [ "$marked_bytes" != "$hashed_as_hex" ]; then
 fi
 
 # Where the folder stops on purpose. A constant is worked out where it is
-# written — arithmetic, conversions, a case of an enum, `len`, `hash` — and a
+# written -- arithmetic, conversions, a case of an enum, `len`, `hash` -- and a
 # choice is not one of those: it is made while running. What a reader is told
 # has to say which of the two it met, because "not worked out where it is
-# written" about a `match` reads like a thing that was nearly folded. See D672.
+# written" about a `match` reads like a thing that was nearly folded.
 cat > "$scratch"/marking/choosing.kest <<'KEST'
 const WIDE: i32 = 12
 const PICKED: i32 = if WIDE > 10 -> 1 else -> 2
@@ -5603,7 +5589,7 @@ esac
 # is the whole of how somebody does not lose a project.
 #
 # One sentence for all of it, because what went wrong is written into it and a
-# sentence per case is a sentence per case to be seen said. See D982.
+# sentence per case is a sentence per case to be seen said.
 mkdir -p "$scratch"/projects
 here=$(pwd)
 wrong=""
@@ -5640,8 +5626,8 @@ if [ -z "$wrong" ]; then
 fi
 if [ -z "$wrong" ]; then
     # And without naming one, which is what the manifest's `tests` line says:
-    # a project is a thing to be inside. The line was read and nothing asked
-    # for it until D1082, so this ran nothing and said so as a pass.
+    # a project is a thing to be inside. A line that is read and never asked
+    # for runs nothing and says so as a pass.
     case "$(cd "$scratch"/projects/demo && "$kest" test 2>&1)" in
     *"tests/adding.kest"*"1 of 1 passed"*) ;;
     *) wrong="a project's own tests do not run when none is named" ;;
@@ -5683,7 +5669,7 @@ if [ -z "$wrong" ]; then
     *) wrong="a project with a line nothing knows is read anyway" ;;
     esac
     # And the same asked for as JSON, which looked for a project in a
-    # directory called `--json` and said nothing was wrong. See D1252.
+    # directory called `--json` and said nothing was wrong.
     case "$(cd "$scratch"/projects && "$kest" doctor --json 2>&1)" in
     *'"projectSaid":"a project says something this does not know","wrong":true'*) ;;
     *) wrong="\`kest doctor --json\` read past a project it could not read" ;;
@@ -5694,7 +5680,7 @@ if [ -z "$wrong" ]; then
     # An edition this compiler has not got is refused rather than read as
     # the nearest one, and a manifest that names none was written against
     # the first: what it meant the day it was written is what it means. And
-    # `kest new` writes the line. See D1252.
+    # `kest new` writes the line.
     printf 'project one\nentry src/main.kest\nedition 2099\n' \
         > "$scratch"/projects/kest.project
     case "$(cd "$scratch"/projects && "$kest" doctor 2>&1)" in
@@ -5721,7 +5707,7 @@ if [ -z "$wrong" ]; then
     # beside "the program" probes beside whatever directory the caller is
     # standing in -- and the library sitting next to the binary is not found.
     # Standing somewhere else on purpose, because standing in the archive
-    # would pass either way. See D1128.
+    # would pass either way.
     unpacked="$scratch"/unpacked
     rm -rf "$unpacked"
     mkdir -p "$unpacked"/bin "$unpacked"/lib/kest
@@ -5752,7 +5738,7 @@ fi
 # no durations. A program that calls a body four times is said to have called
 # it four times, and a run says the same numbers in both forms -- the object a
 # run writes carries the profile rather than a second object on another
-# stream. See D979.
+# stream.
 mkdir -p "$scratch"/counting
 cat > "$scratch"/counting/counting.kest <<'KEST'
 fn twice(n: i32) -> i32 {
@@ -5815,7 +5801,7 @@ fi
 # from one goes somewhere else -- which is the whole of what a breakpoint in a
 # loop needs and the thing that is easy to get wrong.
 #
-# One sentence, because what went wrong is written into it. See D991.
+# One sentence, because what went wrong is written into it.
 mkdir -p "$scratch"/stopping
 cat > "$scratch"/stopping/stopping.kest <<'KEST'
 fn counted(upto: i32) -> i32 {
@@ -5895,7 +5881,7 @@ fi
 # before it left: `other` leaves numbers where `later` keeps `s`, so `locals`
 # at line 11 read a number as where a piece of text is and the debugger died
 # on it. A slot is said only where the proof says the body wrote it, and text
-# only where it says the two slots are one piece. See D1291.
+# only where it says the two slots are one piece.
 cat > "$scratch"/stopping/early.kest <<'KEST'
 import std.io
 
@@ -5949,8 +5935,7 @@ fi
 # And a slot that holds where the value is rather than the value, which a `for`
 # binds its element as where the body never writes it: a copy a turn saved and
 # nothing a program can tell. What a debugger printed for one was the address
-# as a decimal number, which reads as a `Body` with 94381350649872 in it. See
-# D1081.
+# as a decimal number, which reads as a `Body` with 94381350649872 in it.
 cat > "$scratch"/stopping/walking.kest <<'KEST'
 struct Body {
     x: i32
@@ -5999,8 +5984,7 @@ esac
 # loop, the frames and a frame's variables asked for, stepped, carried on to the
 # end, and a file that does not compile launched too. What it holds is what an
 # editor shows: where it stopped, what a body called its slots, what the program
-# wrote, what `main` answered, and a launch that cannot run saying so. See
-# D1182.
+# wrote, what `main` answered, and a launch that cannot run saying so.
 mkdir -p "$scratch"/adapting
 cat > "$scratch"/adapting/walk.kest <<'KEST'
 import std.io
@@ -6168,7 +6152,6 @@ esac
 # file declares, asked for the one form, and then handed a buffer with a mistake
 # in it that is not on the disk. The last is the one that says the overlay
 # works: a server answering about the saved copy would say the file is fine.
-# See D977.
 mkdir -p "$scratch"/serving
 cat > "$scratch"/serving/serving.kest <<'KEST'
 fn doubled(n: i32) -> i32 {
@@ -6261,7 +6244,7 @@ fi
 # cannot differ. Held over a file with four mistakes of four kinds, code by
 # code, line by line, column by column and word by word -- an editor that
 # agreed about how many there were and not about where they are would pass
-# everything above. See D1129.
+# everything above.
 mkdir -p "$scratch"/agreeing
 # And a file that imports another, whose dependency changes on disk under the
 # buffer the editor is holding. An editor that kept what it read the first time
@@ -6272,7 +6255,7 @@ mkdir -p "$scratch"/agreeing
 # editor has: a server that held one file wrote a change to this one into
 # whichever was opened last, so the mistakes in it were published against the
 # other file's name and this one was left looking clean. The same sentence
-# failing for a third reason. See D1143.
+# failing for a third reason.
 cat > "$scratch"/agreeing/kit.kest <<'KEST'
 module kit
 
@@ -6443,7 +6426,7 @@ fi
 # are the same ones `--json` carries, read here both ways, because two readers
 # of one walk that disagree are one of them wrong. One sentence for all of it,
 # because what went wrong is written into it and a sentence per case is a
-# sentence per case to be seen said. See D976.
+# sentence per case to be seen said.
 mkdir -p "$scratch"/costing
 cat > "$scratch"/costing/costing.kest <<'KEST'
 import std.io
@@ -6509,10 +6492,10 @@ fi
 # ways out of one: given back, put in something older, kept in a name the block
 # does not own. And the fourth, which is not a thing getting out but a thing
 # outside getting bigger: the heap goes back where it was, so a world grown
-# inside a block was emptied by the end of it and nothing said so. See D966
-# and D972. The last is a walk of two turns written out once a turn, where the
+# inside a block was emptied by the end of it and nothing said so.
+#  The last is a walk of two turns written out once a turn, where the
 # turn that keeps it is one neither turn takes: the walk is what is written,
-# and it is refused as written. See D1231.
+# and it is refused as written.
 mkdir "$scratch"/keeping
 for leaving in \
     "gives back what the block made|fn made() -> text {\n    scratch {\n        return \"{1 + 1}\"\n    }\n}\n" \
@@ -6542,7 +6525,7 @@ saying \`$wanted_out\`"
 done
 # And the other kind, which is a mistake in what was written rather than a rule
 # of the language: the two are under two codes so that a tool reading them can
-# tell one from the other. See D673.
+# tell one from the other.
 cat > "$scratch"/marking/nought.kest <<'KEST'
 const SHARE: i32 = 10 / 0
 
@@ -6562,7 +6545,7 @@ esac
 # a float divided by nought and does not stop, so the arithmetic that works a
 # constant out answers it as well. A language that says a float divide has an
 # answer and refuses the one written down says it in two voices, and this is
-# the voice nothing was listening to. See D805.
+# the voice nothing was listening to.
 cat > "$scratch"/marking/real.kest <<'KEST'
 const SHARE: f64 = 10.0 / 0.0
 const LEFT: f64 = 10.0 % 0.0
@@ -6578,14 +6561,13 @@ case "$real" in
     printf '%s\n' "$real" | sed 's/^/    /' | head -4
     ;;
 esac
-# What the build that checks itself counts, counted only by it. D812 and D813
-# put a reading of the stack and the heap in the machine behind `KEST_CHECKED`,
-# which `src/mem.h` has answered since D330 by asking the compiler whether the
-# sanitiser is on — and D811 added a second way of turning it on, a `-D` on the
-# debug line, which the `#define` beside it made true in every build. So the
-# readings were in the release compiler as well, a comparison an instruction,
-# and nothing said so because what they print is behind an environment
-# variable nobody sets. One question, asked one way. See D827.
+# What the build that checks itself counts, counted only by it. The machine
+# reads the stack and the heap behind `KEST_CHECKED`, which `src/mem.h` answers
+# by asking the compiler whether the sanitiser is on, and a `-D` on the debug
+# line is a second way of turning it on. A `#define` beside it that made it true
+# in every build would put the readings in the release compiler as well, a
+# comparison an instruction, and nothing would say so because what they print is
+# behind an environment variable nobody sets. One question, asked one way.
 plain_counted=$(KEST_DEEP=1 "$kest" run "$scratch"/marking/real.kest 2>&1 \
                 </dev/null | grep -c '^deep \|^run ' || true)
 checked_counted=$(KEST_DEEP=1 $build_dir/kest-debug run "$scratch"/marking/real.kest \
@@ -6594,10 +6576,10 @@ checked_counted=$(KEST_DEEP=1 $build_dir/kest-debug run "$scratch"/marking/real.
 # a reading in no build are the same thing to be told: the two builds are not
 # doing what says which is which.
 # And that the build which counts is the build which says it does. What says so
-# is `kest_checked`, which a host asks instead of asking its own compiler — the
+# is `kest_checked`, which a host asks instead of asking its own compiler -- the
 # two are not the same question, and the compilers do not spell it the same. A
 # library that says one thing and does the other is a host told to run what only
-# a checked build catches by a build that catches nothing. See D828.
+# a checked build catches by a build that catches nothing.
 plain_says=$("$kest" --version 2>&1 </dev/null | grep -c checked || true)
 checked_says=$($build_dir/kest-debug --version 2>&1 </dev/null | grep -c checked || true)
 if [ "$plain_counted" != 0 ] || [ "$checked_counted" = 0 ] ||
@@ -6610,9 +6592,9 @@ fi
 # And the machine the command line makes for the names it drives, which is
 # sized from those names and not from the file they are in. One entry with no
 # least used to throw away the answers for the ones beside it, and the machine
-# fell back to bounding everything the file defines — so a body nothing either
+# fell back to bounding everything the file defines -- so a body nothing either
 # entry reaches was in the number. The two programs below differ by one of
-# those, so the machine has to come out the same size. See D822.
+# those, so the machine has to come out the same size.
 mkdir "$scratch"/driven
 for spare in "" "
 fn spare() -> i64 no.alloc {
@@ -6656,7 +6638,7 @@ done
 # frames is told so much a frame and so much whatever the frames; the second of
 # those is the bodies that do not go round, and a body nothing the host calls
 # can reach is not one of them. The two programs below differ by a body nothing
-# reaches, so they have to be told the same thing. See D821.
+# reaches, so they have to be told the same thing.
 mkdir "$scratch"/apart
 for aside in "" "
 fn apart() -> i32 {
@@ -6699,8 +6681,8 @@ done
 # least number over minus one is one past the top of its width, so it wraps to
 # itself with nought left over; a shift of a count past the width leaves
 # nothing but the sign a signed shift keeps. Both are answers the reference
-# states, and until D806 the first took the compiler down with a trap C is
-# entitled to and the second was refused where it is written. Each program
+# states, where the first could take the compiler down with a trap C is
+# entitled to and the second could be refused where it is written. Each program
 # comes back nought only if the folder worked the answer out and the machine
 # agreed with it.
 cat > "$scratch"/marking/flipped.kest <<'KEST'
@@ -6750,7 +6732,7 @@ esac
 # Counted again rather than counted on: `at` is set two thousand lines above
 # this and anything between here and there that walks something is holding one
 # of them. That is what a sweep read from the wrong place looks like, and it
-# looks like nothing. See D533.
+# looks like nothing.
 read_back=0
 for file in "$@"; do
     read_back=$((read_back + 1))
@@ -6767,8 +6749,8 @@ is not reading"
 done
 # And that every one of them was read. What went wrong here once was a reading
 # that started from the wrong number and found nothing, which is a check saying
-# less rather than a check failing — the worse of the two, because what it
-# looks like is everything being fine. See D534.
+# less rather than a check failing -- the worse of the two, because what it
+# looks like is everything being fine.
 # The four digits and not what a sweep wrote beside them: `sweep_one` keeps
 # what a run said on its error stream in `$mine.err`, which is a file in the
 # same place and not a sweep.

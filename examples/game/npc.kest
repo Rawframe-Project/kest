@@ -1,14 +1,13 @@
 module examples.game.npc
 
 // A `const` crosses out of the file it is in, so this is what `game.kest`
-// counts a full guard's health with rather than writing 30 of its own. See
-// D665.
+// counts a full guard's health with rather than writing 30 of its own.
 const FULL: i32 = 30
 
 // And one a count reads. A `[T; N]` is resolved before the constants are
 // symbols, so a count naming one from another module is answered by finding
-// the file this module is — which is what makes `[Npc; npc.PARTY]` in the file
-// beside this one a thing a program may write. See D681.
+// the file this module is -- which is what makes `[Npc; npc.PARTY]` in the file
+// beside this one a thing a program may write.
 const PARTY: i32 = 3
 
 struct Npc {
@@ -29,7 +28,7 @@ fn alive(npc: Npc) -> bool no.alloc {
 // one: the name in front of the case was read as a value where it stands for a
 // type, so `npc.Mood.Calm` was `npc` having nothing called `Mood`. A world
 // written in more than one file puts its states in the module the thing is in,
-// so this was every such program. See D1062.
+// so this was every such program.
 enum Mood {
     Calm
     Wary

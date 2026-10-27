@@ -44,7 +44,7 @@ typedef struct {
 // Where a value lives, as what reaches it. Nothing here is an address worked
 // out early: an element of an array is the array and the index until the
 // moment it is read or written, so growing the array in between cannot leave
-// a place pointing at a block nothing will read again. See D931.
+// a place pointing at a block nothing will read again.
 typedef enum {
     // A run of slots in the frame: a name, or a field of one, or one of a
     // fixed run at an index written down.
@@ -56,7 +56,7 @@ typedef enum {
     // Inside memory the host laid out, as an address and a byte offset.
     KEST_IR_PLACE_AT,
     // A value the chunk holds. A `let` the body never assigns to, worked out
-    // where it was written: it takes no slot and nothing builds it. See D887.
+    // where it was written: it takes no slot and nothing builds it.
     KEST_IR_PLACE_HELD,
 } KestIrPlaceKind;
 
@@ -82,27 +82,26 @@ typedef struct {
     // ELEM: proved to be inside the array, so neither what the handle is nor
     // the bounds need asking where it is read or written. Set only for the
     // element a walk counts through, where nothing in the walk can make the
-    // array shorter or name another. See D1187.
+    // array shorter or name another.
     bool in_bounds;
     // ELEM: inside the array whenever the array held in slot `guard_held` is
     // at least as long as slot `guard_limit` says, in a walk counting in slot
     // `guard_counter` from nought or more to that limit -- which is asked
-    // once where the walk begins rather than at every element. See D1189.
+    // once where the walk begins rather than at every element.
     bool guarded;
     uint16_t guard_held;
     uint16_t guard_counter;
     uint16_t guard_limit;
     // ELEM, guarded: the index is the count times `guard_scale` and plus
     // `guard_plus`, so the guard asks for one more than the last of those
-    // rather than for the limit. One and nought for the count itself. See
-    // D1288.
+    // rather than for the limit. One and nought for the count itself.
     uint16_t guard_scale;
     uint16_t guard_plus;
     // ELEM, in bounds or guarded: nothing in the walk calls, allocates or
     // moves what a handle points at, so where the array's elements are and
     // how far apart they sit are read once where the walk begins. An element
     // proved in bounds says its count in `guard_counter` for this, and the
-    // operation the walk goes back to in `guard_from`. See D1288.
+    // operation the walk goes back to in `guard_from`.
     bool still;
     uint32_t guard_from;
     KestSpan span;
@@ -110,7 +109,8 @@ typedef struct {
 
 // What an operation does that a promise is about. The contract proof reads
 // these rather than asking the tree a second question; a backend reads them to
-// know what it may move. See D950 for what "work" means here.
+// know what it may move. "Work" here is what a budget is charged for besides
+// going round.
 typedef enum {
     KEST_IR_EFFECT_NONE = 0,
     // Reaches the heap.
@@ -171,8 +171,7 @@ typedef enum {
     KEST_IR_TO_WHOLE,
     KEST_IR_TO_F32,
     // A float as the bits it is made of, or the other way: `imm[0]` is
-    // nought for the bits and one for the float. Typed by the float. See
-    // D1171.
+    // nought for the bits and one for the float. Typed by the float.
     KEST_IR_BITS,
 
     // Answers. Typed by what was compared rather than by what comes back,
@@ -239,7 +238,7 @@ typedef enum {
     // the program made inside it is gone at the close, so nothing made inside
     // it may be kept: `kest_ir_escapes` is what holds that, and it is here
     // rather than in the walk that wrote the body because it is a question
-    // about the whole of one. See D966.
+    // about the whole of one.
     KEST_IR_REGION_OPEN,
     KEST_IR_REGION_CLOSE,
 
@@ -257,7 +256,7 @@ typedef enum {
     // a flat list and a branch names what it lands on, so shifting everything
     // down would renumber every target, every value and every argument for
     // the sake of two operations. Nothing is emitted for it, and what it was
-    // is left beside it for whoever reads a body back. See D1025.
+    // is left beside it for whoever reads a body back.
     KEST_IR_NOTHING,
 
     KEST_IR_OP_COUNT
@@ -346,7 +345,7 @@ typedef struct {
 
     // How much of this body was worked out where it was written rather than
     // built while running, which is a thing a reader asks of a body and not of
-    // a machine. See D887.
+    // a machine.
     uint32_t folded;
     uint32_t folded_slots;
 
@@ -365,8 +364,9 @@ typedef struct {
     // The widest run of slots the optimizer took a copy of. The compiler works
     // out how deep the stack goes from what the body means, and a copy taken
     // away is a push and a pop the reckoning still counts; the lowering carries
-    // this into the chunk beside what its own fusions saved, for the reason
-    // D1012 put that there. Nought for a body nothing was taken out of.
+    // this into the chunk beside what its own fusions saved, because the
+    // deepest moment may be somewhere else. Nought for a body nothing was taken
+    // out of.
     uint16_t took_slots;
 } KestIrBody;
 
@@ -381,7 +381,7 @@ typedef bool (*KestIrWritten)(void *backend, const KestIrBody *body);
 //
 // Static counts, because the IR carries no profile. What a count is worth
 // depends on where it is, so these are printed per body and the hot ones are
-// read by name. See D1024.
+// read by name.
 typedef struct {
     uint32_t bodies;
     uint32_t ops;
@@ -415,7 +415,7 @@ typedef struct {
     KestArena *arena;
     // Where the arena was before this body. One body is alive at a time: it is
     // written, handed to the backend, and let go. What that saves is the peak,
-    // and the peak is what a program compiled under a ceiling meets — holding
+    // and the peak is what a program compiled under a ceiling meets -- holding
     // every body of a program at once put five of the ladder's programs over
     // the reading ceiling that used to reach the one after it.
     KestMark before;
@@ -432,7 +432,7 @@ typedef struct {
     // inside one body come to by it. They are added up here because this is
     // where they happen, and read by whoever owns the build. `copies` is
     // written by the compiler rather than here: it is the share of all four
-    // that went on copies of generic functions. See D1026.
+    // that went on copies of generic functions.
     uint64_t (*now)(void *);
     void *now_context;
     uint64_t verifying;
@@ -449,7 +449,7 @@ typedef struct {
 // one per module, and this is the module every stage below the build can see.
 // The clock itself belongs to whoever called, the same rule `kest_clock` keeps
 // and for the same reason -- this library is ISO C and ISO C has no monotonic
-// clock. See D1026.
+// clock.
 uint64_t kest_ir_ticked(uint64_t (*now)(void *), void *context);
 
 // Whether a switch that turns a transformation off is set. `decided` is where
@@ -460,7 +460,8 @@ uint64_t kest_ir_ticked(uint64_t (*now)(void *), void *context);
 // There is one of these rather than one per transformation because two would
 // be one walk written twice. It is here because this is the module that says
 // what a transformation is; `KEST_PLAIN` holds the lowering's fusions and
-// `KEST_NOOPT` holds this module's own pass, and D1009 is why either exists.
+// `KEST_NOOPT` holds this module's own pass, so a program compiled with
+// either off can be held to the same answer.
 bool kest_ir_asked_off(const char *name, int *decided);
 
 // Making one, and the one body at a time that goes through it. Every part of a
@@ -503,7 +504,7 @@ const char *kest_ir_word(KestIrKind kind);
 // What a body does that a region cannot allow: something made inside one and
 // kept past it. Answers what is wrong and where, or NULL. The rule is that
 // shorter-lived memory does not reach longer-lived state, followed through
-// every value a body makes. See D966.
+// every value a body makes.
 const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
                             KestSpan *where);
 

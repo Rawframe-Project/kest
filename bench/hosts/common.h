@@ -3,7 +3,7 @@
 // it measured -- a line of `engine`, `measure`, nanoseconds and the answer,
 // split by tabs, which `bench/hosts.sh` gathers and `bench/chart.py` draws.
 // Each host is one engine's embedding API driven over the same work, so what
-// differs between two lines is the engine and the way into it. See D1272.
+// differs between two lines is the engine and the way into it.
 #ifndef KEST_BENCH_HOSTS_COMMON_H
 #define KEST_BENCH_HOSTS_COMMON_H
 

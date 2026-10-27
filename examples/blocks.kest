@@ -7,7 +7,7 @@ import std.io
 // writes `total` here. The function that takes one says so -- `block(T) ->
 // bool` -- and is written into every place it is called, so a block is code
 // in the frame it was written in: nothing is captured, nothing is kept, and
-// nothing reaches the heap. It is handed over and nothing else; see D1257.
+// nothing reaches the heap. It is handed over and nothing else.
 
 struct Npc {
     name: text

@@ -13,19 +13,19 @@
 
 // The same shape `embed.kest` declares as an enum. A four byte tag at nought
 // and the payload after it at its own alignment is what a C tagged union is
-// and what D026 says an enum is, so this array is the array Kest walks: the
+// and what an enum is, so this array is the array Kest walks: the
 // host lends it and nothing is copied at the boundary.
 enum { EVENT_IDLE, EVENT_MOVED, EVENT_HIT, EVENT_NAMED };
 
 // And what the program calls them, in the order it declares them, because that
 // order is what the numbers above are. A host writing them down is a host
 // holding a copy of somebody else's list, and `reads_the_cases` is where the
-// copy is held against the list. See D702.
+// copy is held against the list.
 static const char *const event_names[] = {"Idle", "Moved", "Hit", "Named"};
 
 // The host's own type with an array in it. `float at[3]` is twelve bytes
 // where it stands, and `struct Point { at: [f32; 3] }` beside it is the same
-// twelve: that is what D064 is for.
+// twelve, because an array is that many where it stands.
 typedef struct {
     float at[3];
 } Point;
@@ -55,10 +55,10 @@ typedef struct {
     int8_t wear;
 } Tile;
 
-// A `u16` and a `bool`, which is the shape D016 works out by hand: four bytes
+// A `u16` and a `bool`, a shape worth working out by hand: four bytes
 // aligned to two. `struct Flagged` beside it in `embed.kest` is the same four,
-// and neither side was told — this one has `_Bool` where the program has
-// `bool`, and both put one byte of nothing at the end. See D552.
+// and neither side was told -- this one has `_Bool` where the program has
+// `bool`, and both put one byte of nothing at the end.
 typedef struct {
     uint16_t kind;
     _Bool on;
@@ -67,8 +67,8 @@ typedef struct {
 // The other thing with a flag in it, which is not a tag: an optional is a value
 // and a byte after it saying whether the value is there. A host lays one out as
 // the value, the byte, and whatever padding the next field's alignment asks for
-// — the same arithmetic a struct gets, over a field the program spells with a
-// `?`. What an empty one holds where the value would be is what D712 is about.
+// -- the same arithmetic a struct gets, over a field the program spells with a
+// `?`. An empty one holds nought where the value would be.
 typedef struct {
     int32_t at;
     _Bool held;
@@ -78,7 +78,7 @@ typedef struct {
 // The shape the program keeps in a store, declared here only to be refused: a
 // host cannot lend one, because the name in it is the machine's. Laid out the
 // way the program lays it out, so that the size is not what refuses it: a
-// piece of text is what it is made of and how many bytes that is. See D964.
+// piece of text is what it is made of and how many bytes that is.
 typedef struct {
     const char *name;
     uint64_t said;
@@ -114,11 +114,11 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
        HEAVIEST_CELL, AS_WRITTEN, RANKED, APPLY, DOUBLED, GROWS, WEIGHED,
        // Added at the end on purpose: every name before this one keeps the
        // place it had, and a hole that breaks a machine's hold on the list it
-       // was started from lands on the same entry it always did. See D1135.
+       // was started from lands on the same entry it always did.
        HALF_WRITTEN, HEAL, HURT_AT,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
-       // so a name added after that one was a write past the end of it — this
+       // so a name added after that one was a write past the end of it -- this
        // host getting wrong the one thing it is here to show being got right.
        ENTRIES };
 
@@ -142,7 +142,7 @@ static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
     uint32_t length = 0;
     const char *bytes = kest_text_bytes(frame, &length);
     // Written by its length rather than to a nought: text cut out of the
-    // middle of some does not end in one. See D964.
+    // middle of some does not end in one.
     if (bytes != NULL && length > 0) {
         fwrite(bytes, 1, length, (FILE *)context);
     }
@@ -189,7 +189,7 @@ typedef struct {
     // host's own bytes are not the machine's to keep. Written this way round
     // because a host that has lost track of what it handed over has a value
     // here that is neither of the two, and the one to fall into is the one
-    // every host means. See D717.
+    // every host means.
     bool answers_as_the_machine;
     // Whether this host asks, from inside this call, for the two things it may
     // not have while a program is running. Asked for here because here is
@@ -200,7 +200,7 @@ typedef struct {
     // And whether it answers a number too wide for the width the program keeps
     // it at. A slot is sixty-four bits and an `i32` is thirty-two, so this is
     // the one thing a host can put in an answer that the program's own
-    // arithmetic cannot make. See D837.
+    // arithmetic cannot make.
     bool answers_too_wide;
     // What says this is one of this host's deciders. A machine hands a bound
     // function the context it was bound with, and one that handed over
@@ -232,13 +232,13 @@ static const Decider *decided(void *context) {
 // frame a piece per slot, in the order the layout says, so this reads three
 // `f32` out of three slots and writes its answer over the first of them. What
 // says those are the three it thinks they are is the layout, held against this
-// host's own `Point` piece by piece before anything is bound. See D699.
+// host's own `Point` piece by piece before anything is bound.
 //
 // A point from a program nobody trusts may be anywhere, infinity and what is
 // not a number included, and turning a sum an `i32` does not hold into one is
 // something C does not define: this answered the least `int64_t` there is,
 // which the machine refused as a number the program could not have made.
-// Refused here instead, in words. Found by `kest hostile`. See D1254.
+// Refused here instead, in words. Found by `kest hostile`.
 static void engine_rank(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)context;
     double sum = frame[0].real + frame[1].real + frame[2].real;
@@ -251,13 +251,12 @@ static void engine_rank(KestValue *frame, KestRuntime *runtime, void *context) {
 
 // And a crossing handed a value with a tag in it. What is in the slots after
 // the tag depends on which case it is, so this host reads the tag first and
-// then reads its own union's worth out of the slots — which is what a `match`
+// then reads its own union's worth out of the slots -- which is what a `match`
 // does on the other side of the same call. That the tags are the numbers this
 // host thinks they are, and that each case carries what this host reads out of
 // it, is held at binding rather than here: a frame is no place to find out.
-// See D704.
-// Whether the door below says it could not do what it was asked, which is the
-// one thing a bound function could not say until D937.
+// Whether the door below says it could not do what it was asked, which is how
+// a bound function says it failed.
 static bool engine_hurt_refuses = false;
 
 static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
@@ -273,7 +272,7 @@ static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
         // A move from a program nobody trusts may be any distance, infinity
         // and what is not a number included, and a sum an `i32` does not hold
         // is refused rather than turned into one, which C does not define.
-        // Found by `kest hostile`. See D1254.
+        // Found by `kest hostile`.
         double moved = frame[1].real + frame[2].real;
         if (!(moved >= -2147483648.0 && moved < 2147483648.0)) {
             kest_native_failed(runtime, "a move too far to cost anything");
@@ -300,14 +299,14 @@ static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
 // And one that answers a value with a tag in it, which is the same reading
 // written backwards: the host decides which case it means, writes that tag into
 // the first slot and what the case carries into the ones after it. Which member
-// of a slot each of those is, is this host's own to know — held at binding by
+// of a slot each of those is, is this host's own to know -- held at binding by
 // `reads_the_cases` over what the crossing says it gives back, the same as what
-// it says it takes. See D706.
+// it says it takes.
 //
 // The context is whether to answer with a tag the program has no case for. One
 // machine here asks for that on purpose, because it is the one mistake at this
-// crossing nothing can be asked about beforehand — the tag is decided inside the
-// call — and the rest bind nothing and are answered honestly.
+// crossing nothing can be asked about beforehand -- the tag is decided inside
+// the call -- and the rest bind nothing and are answered honestly.
 static void engine_blame(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
     const bool *wrongly = context;
@@ -336,8 +335,8 @@ static void engine_blame(KestValue *frame, KestRuntime *runtime, void *context) 
 // And a crossing that answers with a shape rather than with one value: a name
 // and a number, where the name is a word the machine has to own. What a host
 // writes into the first slot of that is read the way it is read at the other
-// end of the call, one field in — and the context says whether to write the
-// machine's text there or this host's own bytes. See D719.
+// end of the call, one field in -- and the context says whether to write the
+// machine's text there or this host's own bytes.
 static void engine_who(KestValue *frame, KestRuntime *runtime, void *context) {
     const Decider *decider = decided(context);
     const char *said = "one of the host's";
@@ -354,7 +353,7 @@ static void engine_who(KestValue *frame, KestRuntime *runtime, void *context) {
 
 // What this host weighs something at, which is a number kept narrower than the
 // slot it comes back in. A host writing a `double` here is writing a number no
-// `f32` holds, and the walk over what came back is what says so. See D838.
+// `f32` holds, and the walk over what came back is what says so.
 static void engine_weigh(KestValue *frame, KestRuntime *runtime,
                          void *context) {
     const Decider *decider = decided(context);
@@ -369,7 +368,7 @@ static void engine_weigh(KestValue *frame, KestRuntime *runtime,
 // it ends like a run: the frames it made go when it does, whether it returned
 // or was refused, and the call it was made from carries on and answers what it
 // would have answered. A run that ended in a refusal used to leave its frames
-// behind, and the call underneath returned through them. See D1079 and D1032.
+// behind, and the call underneath returned through them.
 static int weighing_how;
 static int weighing_went;
 static int weighing_stopped;
@@ -432,7 +431,7 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
         // And the other half of the same rule: how much heap this machine may
         // have is a promise, and a promise changed while the program is
         // standing on what it promised is not one. A host divides what it has
-        // between calls, which is where it knows what it has. See D850.
+        // between calls, which is where it knows what it has.
         if (kest_heap_allow(runtime, 4096)) {
             fprintf(stderr, "how much heap the machine may have was said "
                             "while the program was running\n");
@@ -466,7 +465,7 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
         // by what two hundred unread refusals cost and by a refusal naming
         // `more since`. `notKept` is the same number in the other form, and
         // no command writes it: a command that refuses stops, and what stops
-        // says one thing. So a host is the only reader it has. See D786.
+        // says one thing. So a host is the only reader it has.
         FILE *again = tmpfile();
         if (again == NULL) {
             fprintf(stderr, "this host has nowhere to read a report back\n");
@@ -530,7 +529,7 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
         // This host's own bytes, handed over as though they were the
         // machine's. They are here for the life of the program and a stack
         // buffer would not be, which is the difference nothing at this
-        // crossing could see. See D717.
+        // crossing could see.
         frame[0].text = said;
         frame[1].integer = (int64_t)strlen(said);
         return;
@@ -547,28 +546,28 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
 // disagree about and this host still says where it has them.
 // What the machine said about the last thing it refused, read back by the
 // host that asked for the refusal. A host in a frame loop reads the answer
-// rather than the words, and that is what most of the asking here does — but a
+// rather than the words, and that is what most of the asking here does -- but a
 // refusal is a code and a sentence as well as a `false`, and a code nothing
-// ever asks for is a message nobody has seen. See D419.
+// ever asks for is a message nobody has seen.
 // The same question of a build rather than of a machine. What a build has said
 // and nobody has been told yet is read the same way, out of a file nobody
 // keeps: a host that made a refusal happen on purpose reads the code back and
 // leaves nothing behind for the next thing that reports.
 // The one file this host reads what it was told in, and the one place that
 // reading is written. A report goes to a `FILE *`, so reading one means having
-// somewhere to put it — and a host that made a file every time it asked would
+// somewhere to put it -- and a host that made a file every time it asked would
 // make one a frame. This host makes one, winds it back and writes over what was
-// there, which is what a host reading every frame wants. See D633.
+// there, which is what a host reading every frame wants.
 static FILE *heard = NULL;
 
-// What was said, into the caller's own bytes, and how many bytes there were —
+// What was said, into the caller's own bytes, and how many bytes there were --
 // which is what it needed and not what fitted, the way `snprintf` answers and
 // the way this boundary answers everywhere else. A reading that took the
 // number of bytes it got could not tell a report that was cut from one that was
 // short, and would go looking for words that had been left behind.
 //
 // Nought is a report with nothing in it, which is a thing to hold rather than a
-// failure: what ends a walk is a door that stayed quiet. See D634.
+// failure: what ends a walk is a door that stayed quiet.
 static size_t what_was_said(KestRuntime *runtime, KestBuild *build,
                             KestForm form, char *out, size_t room) {
     out[0] = '\0';
@@ -642,7 +641,7 @@ static bool build_said_that(KestBuild *build, const char *code,
 // what the program asks a host for is a name that is not there, and the thing
 // that makes it the end rather than a mistake is that nothing was said about
 // it. A check that only ever asks what was said cannot tell a door that stayed
-// quiet from one that never spoke. See D582.
+// quiet from one that never spoke.
 static bool build_said_nothing(KestBuild *build, const char *after) {
     char said[8192];
     bool quiet = what_was_said(NULL, build, KEST_FORM_TEXT, said, sizeof(said)) == 0;
@@ -675,8 +674,8 @@ static bool said_that(KestRuntime *runtime, const char *code,
 // And the same reading over what a diagnostic carries under it. A suggestion is
 // written on its own line beneath the message, so a code and a suggestion are
 // never on one line and a host looking for the two together reads the report
-// rather than a line of it — once, because a report is what was said since it
-// was last asked and asking twice finds the second half of it empty. See D571.
+// rather than a line of it -- once, because a report is what was said since it
+// was last asked and asking twice finds the second half of it empty.
 static bool said_under(KestRuntime *runtime, const char *code,
                        const char *words) {
     char said[8192];
@@ -702,9 +701,9 @@ static bool said_under(KestRuntime *runtime, const char *code,
 // And a machine with nothing to say, which is the answer more often than any
 // refusal is: a frame that worked says nothing, and a host that reports after
 // every one of them prints nothing. What makes that worth holding is what a
-// report is — what was said since it was last asked — so a machine that said
+// report is -- what was said since it was last asked -- so a machine that said
 // something on a path that worked hands it to whoever asks next, and the frame
-// it lands on is not the frame it came from. See D583.
+// it lands on is not the frame it came from.
 static bool said_nothing(KestRuntime *runtime, const char *after) {
     char said[8192];
     bool quiet = what_was_said(runtime, NULL, KEST_FORM_TEXT, said, sizeof(said)) == 0;
@@ -719,7 +718,7 @@ static bool said_nothing(KestRuntime *runtime, const char *after) {
 // How many places what a machine last said points at: the one it is about and
 // the ones under it. A diagnostic holds `KEST_MOST_PLACES` of them and says how
 // many more there were, and nothing but a run of calls deeper than that can
-// show it. See D620.
+// show it.
 static uint32_t places_said(KestRuntime *runtime, const char *words) {
     char said[8192];
     what_was_said(runtime, NULL, KEST_FORM_TEXT, said, sizeof(said));
@@ -740,13 +739,13 @@ static uint32_t places_said(KestRuntime *runtime, const char *words) {
 // What a machine has to be given to call these functions and be called back
 // into from inside one of them. It is two questions and not one, because they
 // are two things: what each function a host names needs on its own, and where
-// the program already is when it reaches a host function (D604). A call taking
+// the program already is when it reaches a host function. A call taking
 // one list would answer the first and look like the whole.
 //
 // The arithmetic is the host's, and this is all of it: the worst of what the
 // names need, against where a call back in starts plus what the function this
 // host calls from in there needs. `into` is NULL for a host that is never
-// called back into, and then the second half is nothing. See D623.
+// called back into, and then the second half is nothing.
 static bool room_for_calling(KestBuild *build, const char *const *names,
                              const char *into, KestLimits *limits) {
     KestLimits back_in = {0, 0, 0, 0};
@@ -777,7 +776,7 @@ static bool room_for_calling(KestBuild *build, const char *const *names,
 
 // The numbers a refusal says a call needs, read back out of what it said. A
 // host sized for the functions it calls and refused at one of them is told what
-// that one wants, and this is a host doing what the words say. See D622.
+// that one wants, and this is a host doing what the words say.
 static bool needed_for(KestRuntime *runtime, KestLimits *asking) {
     char said[8192];
     what_was_said(runtime, NULL, KEST_FORM_TEXT, said, sizeof(said));
@@ -800,7 +799,7 @@ static bool needed_for(KestRuntime *runtime, KestLimits *asking) {
 
 // Whether a machine named both of two things in what it said. `said_that` is
 // one line of a report; where a refusal points is a line of its own, and a
-// refusal that names two places has three. See D613.
+// refusal that names two places has three.
 static bool said_in_both(KestRuntime *runtime, const char *one,
                          const char *other) {
     char said[8192];
@@ -834,8 +833,8 @@ static bool same_pieces(const KestLayout *layout, const KestPiece *mine,
 }
 
 // Where this host's own three floats are, written out from its own type with
-// `offsetof`. Two places want the answer — what is lent and what a frame
-// takes — and one of them asking the other would be checking a belief against
+// `offsetof`. Two places want the answer -- what is lent and what a frame
+// takes -- and one of them asking the other would be checking a belief against
 // itself.
 static void point_pieces(KestPiece point[3]) {
     for (size_t k = 0; k < 3; k++) {
@@ -847,13 +846,12 @@ static void point_pieces(KestPiece point[3]) {
 // What this host believes about the cases of the one tagged shape it reads: the
 // name of each tag, how many slots the case carries, and what is in them. This
 // host reads slot one as a `double` for `Moved` and as a whole number for `Hit`,
-// on the strength of four numbers written in this file — and a case added to
+// on the strength of four numbers written in this file -- and a case added to
 // that enum moves the numbers and changes what is in the slots, with nothing in
 // a frame to say either. The kinds are the type's own widths, the same as
 // everywhere else this host says what it believes; which member of a slot each
 // of them is read through follows from the kind, and `kest_slot_of` is where
 // that is asked. Every case here carries one kind, so one is written a case.
-// See D704.
 static bool reads_the_cases(const KestLayout *layout, uint16_t piece) {
     static const struct {
         uint16_t carries;
@@ -902,9 +900,8 @@ static bool reads_the_cases(const KestLayout *layout, uint16_t piece) {
 // Reading a value with a tag in it back out of a frame, which is `engine_hurt`
 // in reverse: the same value, read at the end of a call rather than at the
 // start of one. The tag comes first because which member of a slot the rest are
-// is the tag's to say, and `kest_case_of` says which — this host reads the
+// is the tag's to say, and `kest_case_of` says which -- this host reads the
 // slots the way the case says and puts them where its own union keeps them.
-// See D705.
 static bool read_event(const KestLayout *gives, const KestValue *frame,
                        Event *into) {
     const KestPiece *carries = NULL;
@@ -955,8 +952,8 @@ static bool read_event(const KestLayout *gives, const KestValue *frame,
 
 // And the same for the shape with a tag in it: the tag at nought, and a piece
 // for each slot the widest case carries, where that case carries it. What is
-// really in one of those is the tag's to say — `KEST_L_PAYLOAD` is a layout
-// saying so — and `kest_case_of` is where a host asks which. Written once, for
+// really in one of those is the tag's to say -- `KEST_L_PAYLOAD` is a layout
+// saying so -- and `kest_case_of` is where a host asks which. Written once, for
 // the lend and for the crossing, because it is one opinion about one shape.
 static void event_pieces(KestPiece event[3]) {
     event[0].offset = (uint16_t)offsetof(Event, tag);
@@ -970,7 +967,7 @@ static void event_pieces(KestPiece event[3]) {
 // What a frame is, held to itself, for every name this host looked up. A host
 // makes a frame `kest_frame_slots` wide and fills it a piece at a time out of
 // what `kest_frame_layout` says each argument is made of, so those are one
-// number counted two ways — and they are kept apart in the program, a width
+// number counted two ways -- and they are kept apart in the program, a width
 // worked out when the function was compiled and a run of layouts registered
 // beside it. Nothing had ever put them next to each other. Two of the names
 // this host asks for had their arguments looked at at all, and neither was
@@ -1007,7 +1004,7 @@ static bool frame_adds_up(KestRuntime *runtime, int32_t entry,
             }
         }
         // How wide it is rather than how many pieces it has: a piece of text
-        // is one piece and two slots. See D964.
+        // is one piece and two slots.
         at += layout->slots;
     }
     // Past the last one there is nothing, and where a result written over the
@@ -1064,7 +1061,7 @@ static bool lays_them_out_the_same(KestBuild *build) {
     // The tag, and then a slot per thing the widest case carries, which is
     // the case that decided how big this is. Which type each of those holds
     // depends on the tag, so this host says `payload` for them as the program
-    // does — but where they sit is not a matter of opinion, and `Moved` two
+    // does -- but where they sit is not a matter of opinion, and `Moved` two
     // floats into the union is where the program has to have put them.
     // Four widths in one shape, which is where padding is decided rather than
     // read off. Nothing here says 2, 4 or 8: `offsetof` does, on this side,
@@ -1080,7 +1077,7 @@ static bool lays_them_out_the_same(KestBuild *build) {
     tile[3].kind = KEST_L_I8;
 
     // A `bool` is one byte and the machine reads it as one, and says which of
-    // the two truths it is: `KEST_L_BOOL` until D839 was `KEST_L_U8`, which is
+    // the two truths it is: `KEST_L_BOOL` rather than `KEST_L_U8`, which is
     // what it is and not what it means, and a host that knows which it is
     // writing writes 0 or 1.
     // A value, the byte that says whether it is there, and the number after
@@ -1108,7 +1105,7 @@ static bool lays_them_out_the_same(KestBuild *build) {
     // door: a save format matching bytes it already has against a program it
     // has just read wants the name and the byte together. `Row` is three
     // `Cell`s laid out where they stand and a tag, so a name here is a path
-    // and not a word. See D946.
+    // and not a word.
     {
         const char *called[] = {"cells[0].at", "cells[0].weight",
                                 "cells[1].at", "cells[1].weight",
@@ -1186,15 +1183,14 @@ static bool lays_them_out_the_same(KestBuild *build) {
 
 // A run of the host's own bytes, which is the smallest thing there is to
 // lend: one byte a slot. What a program may do with one is read it, write
-// it, and make text of it — and what it may not do is change how many
+// it, and make text of it -- and what it may not do is change how many
 // there are, because the length is the host's.
 
 // A whole number written into shared memory at the width a piece says it is,
 // which is the other half of `kest_slot_of`: that one says which member of a
 // slot a kind is read through, and this says how many bytes of a block it is.
 // A host that lays its own struct over lent memory is remembering; a host that
-// writes where the layout says and as wide as the layout says is asking. See
-// D899.
+// writes where the layout says and as wide as the layout says is asking.
 static bool wrote_where(unsigned char *at, uint8_t kind, int64_t number) {
     switch (kind) {
     case KEST_L_I8:
@@ -1252,7 +1248,6 @@ static bool wrote_where(unsigned char *at, uint8_t kind, int64_t number) {
 // kinds: the kinds are the type's own widths, where memory is shared, and a
 // slot is eight bytes whatever the width is. A host that reads `KEST_L_U8` and
 // writes a byte writes one of the eight and the machine reads all of them.
-// See D559.
 static bool put_number(KestValue *slot, uint8_t kind, double number) {
     switch (kest_slot_of(kind)) {
     case KEST_S_REAL:
@@ -1277,8 +1272,8 @@ static bool put_number(KestValue *slot, uint8_t kind, double number) {
 // And the same question at the other end of the frame: which member a slot
 // that came back is read through. A host that writes `frame[0].real` because
 // the last result it read was a float is remembering rather than asking, and a
-// result of more than one slot is where remembering stops working — the slots
-// of a `Cell` are not the same member as each other. See D560.
+// result of more than one slot is where remembering stops working -- the slots
+// of a `Cell` are not the same member as each other.
 static bool got_number(const KestValue *slot, uint8_t kind, double *number) {
     switch (kest_slot_of(kind)) {
     case KEST_S_REAL:
@@ -1299,11 +1294,11 @@ static bool got_number(const KestValue *slot, uint8_t kind, double *number) {
 // Eight blocks lent and given back a frame, for as many frames as asked, and
 // what the first of them cost. A lend costs a header and a place in the
 // machine's list of what is lent, and only the header comes back to a spare
-// list — so what a host pays for is its widest frame, once, and every frame
+// list -- so what a host pays for is its widest frame, once, and every frame
 // after it is free however many blocks it lends. One element each, so these
 // are eight runs of memory rather than eight handles over one: ending a lend
 // ends every handle over the block it names, and eight of one block would be
-// one lend taken back eight times. See D561.
+// one lend taken back eight times.
 static bool frames_of_lending(Engine *engine, Row *batch, int frames,
                               size_t *first) {
     // Read here rather than at the top of this host, because everything
@@ -1348,7 +1343,7 @@ static bool frames_of_lending(Engine *engine, Row *batch, int frames,
 // its own lists, and it is the whole of what a host has to write to be given
 // the same one: a fifth answer stops this host compiling rather than falling
 // through to whatever the last reader assumed. The two hosts here read every
-// answer this header gives that way. See D565.
+// answer this header gives that way.
 static const char *keeping(KestKept where) {
     switch (where) {
     case KEST_KEPT_NOWHERE:
@@ -1397,7 +1392,7 @@ static bool asks(Engine *engine, int32_t which) {
 // The same rule `silence` is held to, for the narrowest shape a case has,
 // which the machine moves by a path of its own: a tag and one number. Asked
 // last, because ending a lend leaves a header spare and what a lend costs is
-// weighed before this. See D711 and D1197.
+// weighed before this.
 static bool heals(Engine *engine) {
     struct {
         int32_t tag;
@@ -1439,7 +1434,7 @@ static bool heals(Engine *engine) {
 
 static bool lends_bytes(Engine *engine) {
     // The host's own bytes, lent as bytes rather than as text. A lend says a
-    // name, a size, an address and a count, and never what is in the memory —
+    // name, a size, an address and a count, and never what is in the memory --
     // which is right, because a run of bytes may hold anything. Where that
     // stops being true is `text`, which the program asks for here: text ends
     // at its first nought and these do not have one.
@@ -1447,7 +1442,7 @@ static bool lends_bytes(Engine *engine) {
     // What a lend costs is a header, and a header is one size whatever it
     // stands in front of: four bytes and forty thousand cost the same, which
     // is the whole reason a host lends rather than hands over a copy. It is
-    // also why a function that hands one back cannot promise `no.alloc` — the
+    // also why a function that hands one back cannot promise `no.alloc` -- the
     // header is an allocation, even though the block is the host's own.
     {
         static unsigned char plenty[40000];
@@ -1500,7 +1495,7 @@ static bool lends_bytes(Engine *engine) {
     // And the address a host has when it has nothing: a lend is an address
     // and a count, and the one address the machine can tell is bad is no
     // address at all. A count of nought is how a host says it has nothing to
-    // lend — that is a lend, and the program reads an empty run — and nought
+    // lend -- that is a lend, and the program reads an empty run -- and nought
     // of them at no address is the same thing said twice.
     if (kest_borrow(engine->runtime, NULL, 4, "u8", 1).object != NULL) {
         fprintf(stderr, "a lend of four bytes at no address was given\n");
@@ -1620,7 +1615,7 @@ static bool lends_bytes(Engine *engine) {
 
     // And the same bytes with a nought among them, which is a character like
     // any other and so text a program may make: four bytes in and four bytes
-    // of text out, with the nought still in the middle of it. See D971.
+    // of text out, with the nought still in the middle of it.
     letters[2] = 0;
     engine->frame[0] = kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
     if (engine->frame[0].object == NULL) {
@@ -1737,8 +1732,8 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
     }
 
     // And what it was doing, read back rather than printed. What a host raises
-    // a ceiling by is not what the last allocation asked for — a thing that
-    // doubles asks for the double again — so the line that says what was
+    // a ceiling by is not what the last allocation asked for -- a thing that
+    // doubles asks for the double again -- so the line that says what was
     // growing and how far along it was is the one an engine logs.
     FILE *said = tmpfile();
     if (said == NULL) {
@@ -1763,7 +1758,7 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
 
     // And the other way to want more than there is: a million of something in
     // one go. Nothing is growing there, so what the message has to say is what
-    // was being made — a number in the program rather than a ceiling that was
+    // was being made -- a number in the program rather than a ceiling that was
     // nearly enough, and not the same thing for a host to do something about.
     engine->frame[0].integer = 1000000;
     if (kest_call(engine->runtime, engine->entry[AT_ONCE], engine->frame,
@@ -1801,10 +1796,9 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
     }
     // And nothing on it, which is the one thing that moves this number the
     // other way. `kest_heap_used` is what a program is holding, so a host
-    // watching a frame budget reads the difference between two of them — and
+    // watching a frame budget reads the difference between two of them -- and
     // a reset that left anything behind would make the first difference after
-    // it the leftovers plus the frame. Printed here since D630 and never held
-    // until D825. See D825.
+    // it the leftovers plus the frame. So it is held here, not only printed.
     if (kest_heap_used(engine->runtime) != 0) {
         fprintf(stderr, "the heap was thrown away and holds %zu bytes\n",
                 kest_heap_used(engine->runtime));
@@ -1814,7 +1808,7 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
     // the old heap's, and a host that raises a ceiling by what the last one
     // asked for would raise this one by a number about a heap that is gone.
     // The two numbers go together: what was refused, and which of the two
-    // refused it. See D826.
+    // refused it.
     if (kest_heap_wanted(engine->runtime) != 0 ||
         kest_heap_refused_by(engine->runtime) != KEST_REFUSED_NOTHING) {
         fprintf(stderr,
@@ -1828,7 +1822,7 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
     // machine's rather than the allocator's: the first thing the machine makes
     // goes where something was, and a pointer carries no stamp -- so a host
     // that asks after making anything is asking whether that address is in use
-    // now. See D353 and D996.
+    // now.
     if (kest_still_holds(engine->runtime, kept)) {
         fprintf(stderr, "the machine still had text it had thrown away\n");
         return false;
@@ -1840,7 +1834,7 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
     // A handle over a lend that ended, and a new lend that got its header.
     // The block is the host's and the machine's record of it is a pointer and
     // a count, so a header handed out again is the same bytes at the same
-    // address saying it is alive — and the old handle over it says so too.
+    // address saying it is alive -- and the old handle over it says so too.
     // This is what a store solved with a stamp; a lend has nowhere to put one
     // yet, so what a host has instead is this: end it, and the machine says
     // the old one is gone.
@@ -1869,8 +1863,8 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
         }
         // The header the first lend had is the header the second one got,
         // and nothing about the old handle says which lend it is a handle to.
-        // A store solved this with a stamp — a reference is a number that
-        // carries one — and a lend handle is a pointer with nowhere to put
+        // A store solved this with a stamp -- a reference is a number that
+        // carries one -- and a lend handle is a pointer with nowhere to put
         // one, so this is the machine saying what it can: the old handle
         // names the new block, and a host that kept it is reading somebody
         // else's memory through a name it believes.
@@ -1958,7 +1952,7 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
     // thrown away. The header of a lend is on the machine's heap even though
     // the block is the host's, so a reset takes it with everything else. The
     // memory has not been handed out again yet, so what is at that address
-    // still reads as the array it was — which is exactly the case nothing but
+    // still reads as the array it was -- which is exactly the case nothing but
     // the age it carries can tell apart. `heaviest` promises `no.alloc`, so
     // nothing has been put on the new heap by the time it is asked.
     //
@@ -1966,7 +1960,7 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
     // reading the header at all is caught there, harder and one step earlier
     // than the machine can catch it. Asked of the library rather than of this
     // host's own compiler, because the two are not the same question and the
-    // compilers do not spell it the same. See D828.
+    // compilers do not spell it the same.
     if (!kest_checked()) {
     Row rows[2];
     memset(rows, 0, sizeof(rows));
@@ -2065,7 +2059,7 @@ static bool weighs_what_it_costs(Engine *engine) {
 
     // The library, held to being written the way the reference says to write
     // it. A host cannot read `std.text` and would not be told if somebody
-    // rewrote `join` out of `slice` tomorrow — but it can ask what two sizes
+    // rewrote `join` out of `slice` tomorrow -- but it can ask what two sizes
     // cost. Twice the work costs about twice as much when the bytes are
     // gathered, and about four times as much when everything is copied every
     // time round, so anything under three says which of the two it is.
@@ -2099,12 +2093,12 @@ static bool weighs_what_it_costs(Engine *engine) {
 // keeping a world used to write. What is held to here is what a game leans on:
 // the world is the program's own after every step, a run of it is read where
 // it lies, a reload carries the world over and a refused one leaves it exactly
-// where it was, and a file edited under a build is noticed. See D1151.
+// where it was, and a file edited under a build is noticed.
 // A program built from files handed over rather than read, which is what a
 // release binary carries: the program, the modules it imports and the
 // library's, each where a build would have found it. What is handed is all
 // there is -- a file left out is refused even where it is on the disk beside
-// the program, and a file handed in place of one is what is read. See D1172.
+// the program, and a file handed in place of one is what is read.
 static bool built_from_files_handed_over(void) {
     static const char program[] =
         "module handed\n"
@@ -2277,7 +2271,7 @@ int main(int argc, char **argv) {
     // own compiler read out of the header. They differ when the header and the
     // library are two versions of this project, and everything below is then a
     // promise the library did not make. It costs one comparison at startup and
-    // it is the only thing that catches it. See D974.
+    // it is the only thing that catches it.
     if (kest_abi_version() != KEST_ABI_VERSION) {
         fprintf(stderr,
                 "this host was built against abi %u and the library it is "
@@ -2305,8 +2299,8 @@ int main(int argc, char **argv) {
     // A host that compiles at startup pays this once; one that reloads a file
     // whenever it changes pays it every frame it changes, which is a number to
     // know before writing the loop that does it. Nothing is carried from one
-    // build to the next — a build is its own arena and its own everything — so
-    // the second is the first, to the byte. See D573.
+    // build to the next -- a build is its own arena and its own everything --
+    // so the second is the first, to the byte.
     size_t first_build = kest_build_cost(build);
     KestBuild *read_again = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
     if (read_again == NULL) {
@@ -2323,8 +2317,7 @@ int main(int argc, char **argv) {
     // second build took the same: a host compiling what it was sent gives a
     // ceiling on this as well as on the bytes, and a build given exactly what
     // it took is let through while one given a unit less is not. Refused
-    // quietly here, because what it says is the command line's to hold. See
-    // D1248.
+    // quietly here, because what it says is the command line's to hold.
     {
         uint64_t took = kest_build_work(build);
         if (took == 0 || kest_build_work(read_again) != took) {
@@ -2356,7 +2349,7 @@ int main(int argc, char **argv) {
     // with its own layout names it: a directory, with nothing after it.
     // `KEST_LIB` has always been read that way, and the same words handed
     // here were looked for as `libstd`. Every host in this tree wrote the
-    // slash, so nothing had asked. See D1145.
+    // slash, so nothing had asked.
     {
         KestBuild *named = kest_build(path, "lib", stderr, KEST_FORM_TEXT, 0);
         if (named == NULL) {
@@ -2368,12 +2361,12 @@ int main(int argc, char **argv) {
     }
     // And what that cost was paid for: every file the build read, which is the
     // one named and everything it imports. A host that reloads when something
-    // changes watches these rather than the file it named — an import is a
+    // changes watches these rather than the file it named -- an import is a
     // path relative to the file that wrote it, so which files a program is
     // made of is the loader's answer and not a host's. What is read back here
     // is that the list ends, that every file in it is a file this host can
     // open at the size the build says it is, and that the total is the sum of
-    // them. See D657.
+    // them.
     size_t added_up = 0;
     uint32_t files = 0;
     for (uint32_t at = 0;; at++) {
@@ -2402,8 +2395,8 @@ int main(int argc, char **argv) {
     // move. A host that reloads compares this rather than the size, because two
     // edits that keep the length are the same size and not the same file. The
     // whole program has one too, folded from the files' own, and two builds of
-    // the same program answer alike — which is what a host looking for what it
-    // compiled last time is asking. See D658.
+    // the same program answer alike -- which is what a host looking for what it
+    // compiled last time is asking.
     if (kest_build_mark(build) == 0 ||
         kest_build_mark(build) != kest_build_mark(read_again) ||
         kest_build_read_mark(build, files) != 0) {
@@ -2415,10 +2408,9 @@ int main(int argc, char **argv) {
     }
     // And the other question a mark answers: what the machine will run, which
     // is not what was read to get there. A host caching what it compiled keys
-    // on this one — a comment added moves every byte after it and moves the
+    // on this one -- a comment added moves every byte after it and moves the
     // mark over the file, and the program it runs is the one it ran. Two builds
-    // of one program answer alike here for the same reason they do above. See
-    // D659.
+    // of one program answer alike here for the same reason they do above.
     if (kest_build_code_mark(build) == 0 ||
         kest_build_code_mark(build) != kest_build_code_mark(read_again)) {
         fprintf(stderr, "what this program runs marks %016llx and the same "
@@ -2449,7 +2441,7 @@ int main(int argc, char **argv) {
     // is compiled, and it is worked out once: asking again costs nothing, and
     // so does every machine started from it, which used to do the same walk in
     // its own room. Measured on the second build, which nobody has asked
-    // anything yet — the first has been asked several times by here. See D607.
+    // anything yet -- the first has been asked several times by here.
     KestLimits asked = {0, 0, 0, 0};
     size_t before_asking = kest_build_cost(read_again);
     if (!kest_needs(read_again, &asked, NULL)) {
@@ -2479,7 +2471,7 @@ int main(int argc, char **argv) {
     // Before there is a host at all, which is what a host writer hands over
     // the first time: nothing. Every extern the program declares is unbound
     // then, and what comes back says which of them rather than nothing. A
-    // machine that never started is not one standing on this build either —
+    // machine that never started is not one standing on this build either --
     // freeing it at the end says so, because a failed start that counted
     // itself would be a build nobody could ever free.
     FILE *without = tmpfile();
@@ -2526,7 +2518,7 @@ int main(int argc, char **argv) {
 
     // A name is bound once, which is a thing a host writer finds out the
     // first time they bind one twice. Asking for it here means somebody has:
-    // what comes back is false, and what stays bound is the first — the
+    // what comes back is false, and what stays bound is the first -- the
     // program's writing goes to this host's output below, not to its errors.
     // Binding into nothing, which is what a host that did not look at what
     // `kest_host_new` answered would be doing. There is one reason it answers
@@ -2562,22 +2554,21 @@ int main(int argc, char **argv) {
         // And where its pieces are, for a crossing handed a shape: this
         // host's own `offsetof`, written out once and compared with what the
         // program says the argument is laid out as. NULL where the argument
-        // is not a shape this host takes apart. See D699.
+        // is not a shape this host takes apart.
         const KestPiece *pieces;
         uint16_t count;
         // And whether those pieces are a value with a tag in it, which is the
         // one thing about a layout that changes what the pieces mean: a
         // payload slot holds what the tag says and nothing else does. A host
         // that read a tagged shape as an untagged one of the same width would
-        // read the widest case's slots whatever the tag said. See D704.
+        // read the widest case's slots whatever the tag said.
         bool tagged;
         // And what this host writes back over the frame, which the program
         // reads as whatever it declared: a number written where a piece of
         // text is wanted is a pointer made out of an integer, and the program
         // reads it before anything can say so. One kind a slot, because an
         // answer is a value like any other and a shape answered with is more
-        // than one of them; nought slots where nothing comes back. See D700
-        // and D719.
+        // than one of them; nought slots where nothing comes back.
         uint8_t writes[4];
         uint16_t back;
     } bound[] = {
@@ -2604,7 +2595,7 @@ int main(int argc, char **argv) {
     // answers what to bind: a capability is the receiver of an extern, so
     // walking these is walking what the program will ask for in groups rather
     // than one function at a time. A host that will not give a program the
-    // filesystem reads this and binds nothing under that name. See D981.
+    // filesystem reads this and binds nothing under that name.
     {
         uint32_t how_many = 0;
         for (uint32_t i = 0; kest_build_capability(build, i) != NULL; i++) {
@@ -2661,7 +2652,7 @@ int main(int argc, char **argv) {
             // the program will make of the slot this host writes, and a host
             // that wrote a number where text is wanted has made a pointer out
             // of an integer. The same question as the one above, about the
-            // other end of the same crossing. See D700.
+            // other end of the same crossing.
             const KestLayout *answer = kest_extern_gives(build, i);
             if (bound[b].gives) {
                 bool agrees = answer != NULL && answer->count == bound[b].back;
@@ -2678,7 +2669,7 @@ int main(int argc, char **argv) {
                 // value with a tag in it. The kinds above are the widest
                 // case's and say `KEST_L_PAYLOAD` where the tag decides, so a
                 // host that stopped there has held the shape and not what it
-                // will write into one. See D706.
+                // will write into one.
                 for (uint16_t p = 0; agrees && p < answer->count; p++) {
                     if (answer->pieces[p].kind == KEST_L_TAG &&
                         !reads_the_cases(answer, p)) {
@@ -2691,7 +2682,7 @@ int main(int argc, char **argv) {
             // one width, so a host that compared only the bytes would bind a
             // function that reads the second field as the first and find out
             // at the first call. The same reading a lend gets, because it is
-            // the same question about the same layout. See D699.
+            // the same question about the same layout.
             if (bound[b].pieces != NULL && first != NULL &&
                 !same_pieces(first, bound[b].pieces, bound[b].count,
                              bound[b].tagged)) {
@@ -2703,7 +2694,6 @@ int main(int argc, char **argv) {
             // with a tag in it. The pieces above are the widest case's and say
             // `KEST_L_PAYLOAD` where the tag decides, so a host that stopped
             // there has held the shape and not what it will read out of one.
-            // See D704.
             if (bound[b].tagged && first != NULL && !reads_the_cases(first, 0)) {
                 missing = true;
             }
@@ -2719,7 +2709,6 @@ int main(int argc, char **argv) {
     // pointer, and every one of those answers is one a real extern can give:
     // nought arguments, nothing given back. So the end of the walk and a
     // question past it read alike, and only the report tells them apart.
-    // See D436.
     {
         uint32_t past = 0;
         while (kest_build_extern(build, past) != NULL) {
@@ -2735,8 +2724,8 @@ int main(int argc, char **argv) {
         // And the three that are not the end, each asked on its own and read
         // back on its own. Asked together they are one complaint in the report
         // and three doors behind it, and a check that reads the report once
-        // cannot tell which of them spoke — two could go quiet and this would
-        // go on passing. See D582.
+        // cannot tell which of them spoke -- two could go quiet and this would
+        // go on passing.
         if (kest_extern_takes(build, past) != 0 ||
             !build_said_that(build, "K0648", "there is nothing at")) {
             fprintf(stderr, "asking how many a %uth function takes\n", past);
@@ -2755,7 +2744,7 @@ int main(int argc, char **argv) {
         // And the walk inside one of them, which ends the same way: what a
         // function takes is asked for one argument at a time until there is no
         // layout, and the end of that walk is a host that has read all of them
-        // rather than one that asked wrongly. See D584.
+        // rather than one that asked wrongly.
         uint32_t arguments = kest_extern_takes(build, 0);
         if (kest_extern_layout(build, 0, arguments) != NULL ||
             !build_said_nothing(build, "a walk of what one takes ended")) {
@@ -2773,7 +2762,7 @@ int main(int argc, char **argv) {
     // one of these has. What comes back is nought there: the heap is not a
     // number a program has, and all three of these doors say that the same way
     // rather than one of them leaving the field as it found it. A host's own
-    // cap goes on after asking, which is what this one does below. See D724.
+    // cap goes on after asking, which is what this one does below.
     KestLimits limits = {0, 0, 64, 0};
     KestReason why = {KEST_REACH_UNASKED, NULL};
     if (kest_needs(build, &limits, &why)) {
@@ -2815,7 +2804,7 @@ int main(int argc, char **argv) {
         // there is no least. This one has a least, so the bound is the least
         // and the frames are not looked at: a host that asks the second
         // question of a program that can answer the first gets the first,
-        // which is what makes it safe to ask always. See D817.
+        // which is what makes it safe to ask always.
         KestLimits bounded = {0, 0, 0, 0};
         KestReason which_one = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound_of(build, "step", 4, &bounded, &which_one) ||
@@ -2870,7 +2859,7 @@ int main(int argc, char **argv) {
     // where a call back in starts from. The first is what a host that says
     // nothing gets; the second is what naming them would get; the third is the
     // floor under both for a host that is called from inside a frame, which
-    // this one is. See D604.
+    // this one is.
     {
         KestLimits everything = {0, 0, 0, 0};
         KestLimits named = {0, 0, 0, 0};
@@ -2882,8 +2871,8 @@ int main(int argc, char **argv) {
         }
         // And the same asked of the door that bounds where there is nothing to
         // answer. This program has a least, so that is what comes back and the
-        // frames are not looked at — the first of the three doors holding the
-        // same promise as the other two. See D823.
+        // frames are not looked at -- the first of the three doors holding the
+        // same promise as the other two.
         KestLimits at_most = {0, 0, 0, 0};
         KestReason most_why = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound(build, 4, &at_most, &most_why) ||
@@ -2931,7 +2920,7 @@ int main(int argc, char **argv) {
         // less far in than the program does, because it is the function the
         // call is in rather than the one at the top of the chain that gets
         // there. A name that came back as the function asked about would
-        // answer the whole program's own number. See D605.
+        // answer the whole program's own number.
         KestLimits there = {0, 0, 0, 0};
         if (where.where == NULL ||
             !kest_needs_from(build, where.where, &there, NULL) ||
@@ -2950,7 +2939,7 @@ int main(int argc, char **argv) {
         // needs altogether is its widest plus the worst reach of any kind --
         // the host reaches being some of those, never more. A number the
         // other way round would be a host told to make room for a place the
-        // program cannot get to. See D801.
+        // program cannot get to.
         KestLimits everywhere = {0, 0, 0, 0};
         if (!kest_needs_of(build, where.where, &everywhere, NULL) ||
             there.stack_slots > everywhere.stack_slots) {
@@ -2964,8 +2953,7 @@ int main(int argc, char **argv) {
                "in on its own\n",
                where.where, there.stack_slots);
         // And the third door asked of a program that can answer it without a
-        // bound, which has to be the answer and not a bound above it. See
-        // D818.
+        // bound, which has to be the answer and not a bound above it.
         KestLimits bounded_from = {0, 0, 0, 0};
         KestReason which_from = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound_from(build, NULL, 4, &bounded_from, &which_from) ||
@@ -2983,9 +2971,9 @@ int main(int argc, char **argv) {
 
     // And what a hundred refused calls cost a host that reads what it was
     // told. A program refused every frame says the same sentence every frame
-    // — the numbers in it are the call's, so it cannot be said once (D616) —
+    // -- the numbers in it are the call's, so it cannot be said once --
     // and the room the words were written in is this machine's. Read, and it
-    // goes back: what a host has been told is the host's. See D617.
+    // goes back: what a host has been told is the host's.
     {
         KestLimits tight = {0, 0, 64, 0};
         KestRuntime *filling = kest_start(build, host, &tight);
@@ -3030,7 +3018,7 @@ int main(int argc, char **argv) {
         // has asked for is held to the size the list is made at and the rest
         // is counted: a hundred more refused calls hold what sixteen of them
         // said, and the report says how many there were rather than stopping
-        // where a reader would take it for the end. See D618.
+        // where a reader would take it for the end.
         size_t holding = kest_runtime_cost(filling);
         for (uint32_t quiet = 0; quiet < 100; quiet++) {
             asking[0].integer = 40;
@@ -3068,10 +3056,10 @@ int main(int argc, char **argv) {
 
         // And what a reader is told when the words do not fit. The number is
         // what the report needed and not what was read, so a reading that
-        // takes it can tell a report that was cut from one that was short —
+        // takes it can tell a report that was cut from one that was short --
         // and this host says so rather than going looking for words it left
         // behind. The biggest report this host reads is 3925 bytes, which is
-        // why what it reads into is more than that. See D634.
+        // why what it reads into is more than that.
         for (uint32_t again = 0; again < KEST_MOST_UNREAD; again++) {
             asking[0].integer = 40;
             if (kest_call(filling, fills, asking, 4)) {
@@ -3095,9 +3083,8 @@ int main(int argc, char **argv) {
         // under it: the drawing is most of what a report is in bytes, and it
         // costs no memory at all, because where a byte is in a file was worked
         // out when the file was read. The form written for a tool is bigger
-        // than the one written for a person — names cost more than art — so a
-        // host reporting every frame and counting bytes wants the words. See
-        // D636.
+        // than the one written for a person -- names cost more than art -- so a
+        // host reporting every frame and counting bytes wants the words.
         char shown[8192];
         char sent[8192];
         asking[0].integer = 40;
@@ -3141,7 +3128,6 @@ int main(int argc, char **argv) {
     // a program's worth of diagnostics sitting in the report. A host told
     // `nothing was asked` for both has to guess which it is looking at, and
     // guessing is what this boundary is written not to make anybody do.
-    // See D566.
     KestLimits nowhere = {0, 0, 0, 0};
     KestReason no_name = {KEST_REACH_UNASKED, NULL};
     if (kest_needs_of(build, "noSuchFunction", &nowhere, &no_name) ||
@@ -3170,16 +3156,15 @@ int main(int argc, char **argv) {
 
     // What that machine cost the build, which is nothing at all. A machine is
     // the arena it is made of and everything in it, including what it says:
-    // the report was one place on the build's arena until D1071, and one place
+    // the report is not one place on the build's arena, because one place
     // is one bump pointer that every thread starting a machine reads and
     // writes. The reference says a host may start a machine from any thread,
     // so what a start writes on a build is the count of how many are standing
-    // on it and nothing else — and that is an atomic.
+    // on it and nothing else -- and that is an atomic.
     //
-    // Held as nothing rather than as less than a walk, which is what D607
-    // asked for: less than a walk is satisfied by one byte, and one byte is a
-    // race. The walk is still here because a machine has to be cheaper than
-    // one, and now it is cheaper by all of it.
+    // Held as nothing rather than as less than a walk: less than a walk is
+    // satisfied by one byte, and one byte is a race. The walk is worked out
+    // once and handed over, so a machine is cheaper than it by all of it.
     size_t machine_on_build = kest_build_cost(build) - build_before_machine;
     if (one_walk == 0 || machine_on_build != 0 ||
         kest_runtime_cost(engine.runtime) >= one_walk) {
@@ -3200,13 +3185,13 @@ int main(int argc, char **argv) {
     // asks, and it is all this run does: the doors keep state of their own,
     // and what the checks below read is what the program's own calls left in
     // it. A door refusing what it was handed is an answer; what is looked for
-    // is a report from the sanitisers. See D1254.
+    // is a report from the sanitisers.
     int32_t hostile = kest_entry(engine.runtime, "hostile");
     if (hostile >= 0) {
         // The door that asks the program back asks it by the entry this host
         // looks up for the machine it runs, which is set further down for the
         // run below: without it, the first run of this found the door asking
-        // for a function at -1. See D1254.
+        // for a function at -1.
         decider.rule = kest_entry(engine.runtime, "rule");
         KestValue answer[8];
         memset(answer, 0, sizeof answer);
@@ -3245,7 +3230,7 @@ int main(int argc, char **argv) {
 
     // A second machine from the same build, which is what an engine has when
     // it runs two worlds side by side. They share the program they were
-    // compiled from and nothing else — each has its own heap — and what that
+    // compiled from and nothing else -- each has its own heap -- and what that
     // means for a handle is at the end of this file.
     KestRuntime *other = kest_start(build, host, &limits);
     // And a third, as new as the second: what the two of them are for is at
@@ -3306,12 +3291,12 @@ int main(int argc, char **argv) {
     // calls each of them and read back out of it afterwards: one kind a slot,
     // in the order `kest_frame_layout` lays the arguments out. Said here
     // because every call site below fills a frame by hand and a slot holds
-    // whatever was written into it — `kest_call` sees how wide a frame is and
+    // whatever was written into it -- `kest_call` sees how wide a frame is and
     // cannot see what a host meant to put in it, so a host that is wrong about
     // one argument of one name is wrong for the whole run and hears nothing.
     // `frame_adds_up` below holds the widths; this holds what is in them.
     // A struct is a slot a piece, which is why `lengthOf` is three and not
-    // one, and a name that gives nothing back reads nought slots. See D701.
+    // one, and a name that gives nothing back reads nought slots.
     static const struct {
         const char *name;
         uint8_t fills[8];
@@ -3338,7 +3323,7 @@ int main(int argc, char **argv) {
          {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3},
         {"blamed", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
         // The one that takes a tag which is not in the first slot of what
-        // it takes — it is, here, because the `Event` is the first field of
+        // it takes -- it is, here, because the `Event` is the first field of
         // the shape, and what makes it different is that the cases belong to
         // the field rather than to the argument.
         {"blamedBy", {KEST_L_I32, KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD},
@@ -3389,7 +3374,7 @@ int main(int argc, char **argv) {
         {"first", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         // A place in a store, which is a number rather than a handle: what
         // comes back here is the slot and how many times it has been handed
-        // out, packed into one. See D715.
+        // out, packed into one.
         {"born", {KEST_L_WORD}, 1, {KEST_L_REF}, 1},
         {"healthOf", {KEST_L_WORD, KEST_L_REF}, 2, {KEST_L_I32}, 1},
         {"dropped", {KEST_L_WORD, KEST_L_REF}, 2, {KEST_L_I32}, 1},
@@ -3411,8 +3396,8 @@ int main(int argc, char **argv) {
         {"asWritten", {0}, 0, {KEST_L_TEXT}, 1},
         {"ranked", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_I32}, 1},
         // A function value is one slot holding which function it is, which is
-        // a word like any other handle — and a word carries no promise, which
-        // is the whole of why the machine asks the chunk. See D834.
+        // a word like any other handle -- and a word carries no promise, which
+        // is the whole of why the machine asks the chunk.
         {"apply", {KEST_L_FN, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         {"doubled", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
         {"grows", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
@@ -3425,11 +3410,11 @@ int main(int argc, char **argv) {
                    "every name this host asks for has somewhere to be put");
     // And what walking the names costs a host in news, which is nothing. The
     // walk below asks for a second function of every name it looks up, and
-    // most names have one — so a machine that said something at the end of
+    // most names have one -- so a machine that said something at the end of
     // that walk would hand a host one complaint per name it ever looked up,
     // every one of them about a question the host was right to ask. The walk
     // ends in silence; asking for a name that is not there at all does not,
-    // and that half is held further down. See D584.
+    // and that half is held further down.
     decider.rule = kest_entry(engine.runtime, "rule");
 
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
@@ -3465,7 +3450,7 @@ int main(int argc, char **argv) {
         // hand a host one complaint per name at the start of every run, about
         // a question it was right to ask. Read here rather than after the loop
         // because the question below is one that does speak, and two doors
-        // read together cannot say which of them spoke. See D584.
+        // read together cannot say which of them spoke.
         if (!said_nothing(engine.runtime, "a walk of the names ended")) {
             return 1;
         }
@@ -3473,7 +3458,6 @@ int main(int argc, char **argv) {
         // walk exists to avoid: a name that is several functions has no one
         // index, and a host that asks anyway is told so rather than given the
         // first of them. Asked here because this is where a host meets it.
-        // See D421.
         if (kest_entry_of(engine.runtime, wanted[i].name, 1) >= 0) {
             if (kest_entry(engine.runtime, wanted[i].name) >= 0) {
                 fprintf(stderr, "`%s` is several functions and one index came "
@@ -3528,14 +3512,14 @@ int main(int argc, char **argv) {
     // not hand it into every call it makes. The machine gives back what the
     // program can no longer reach, and it cannot read this host's variables:
     // without this the world would be memory nothing names the first time a
-    // call allocates enough to set off a walk. See D996.
+    // call allocates enough to set off a walk.
     if (!kest_keeps(engine.runtime, engine.world)) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
 
     // What a frame costs, which is the heap on either side of it. The running
-    // total is a number without a scale — every host that watches a frame
+    // total is a number without a scale -- every host that watches a frame
     // budget wants the difference, and the difference is a subtraction this
     // host does rather than a thing it is given.
     for (int i = 0; i < 5; i++) {
@@ -3589,8 +3573,8 @@ int main(int argc, char **argv) {
     printf("what `step` gave, in the program's own words: %s\n", said);
 
     // And what the host is, asked for by the program. A host tells a program
-    // about itself the way it tells it anything — an `extern` like any other
-    // — so this asks twice, either side of the swap above, and the answer is
+    // about itself the way it tells it anything -- an `extern` like any other
+    // -- so this asks twice, either side of the swap above, and the answer is
     // the host's own words about what it is doing.
     char about[32];
     if (!asks(&engine, UNDER) ||
@@ -3606,8 +3590,8 @@ int main(int argc, char **argv) {
     // decider was never swapped. What comes back is the other answer: a
     // machine reads its own host's context, and one host writing over what it
     // holds is not something the other's programs can see. Nothing enforces
-    // that — there is nothing to reach through — which is why it is asked here
-    // rather than refused somewhere.
+    // that -- there is nothing to reach through -- which is why it is asked
+    // here rather than refused somewhere.
     char apart_about[32];
     KestValue apart_frame[6] = {{0}};
     int32_t apart_under = kest_entry(apart_at, "under");
@@ -3629,11 +3613,11 @@ int main(int argc, char **argv) {
     // And the same question answered with this host's own bytes rather than
     // with text the machine made. It is the one crossing where nothing said
     // so: the door reads a piece of text a host hands in and reads nothing in
-    // what it hands back — and what a program is given back it may keep, so a
+    // what it hands back -- and what a program is given back it may keep, so a
     // host's string outlives the call it came from only for as long as the
     // host says, which is a thing the program cannot ask about. Asked for on
     // purpose, because a literal would have worked and a stack buffer would
-    // not. See D717.
+    // not.
     decider.answers_as_the_machine = false;
     if (asks(&engine, UNDER)) {
         fprintf(stderr, "this host's own bytes were kept as the machine's\n");
@@ -3662,7 +3646,7 @@ int main(int argc, char **argv) {
     // further than the top of: a crossing that answers with a shape writes a
     // name and a number, and the name is a word the machine has to own. The
     // walk that reads what a host hands in reads what it hands back now, so
-    // the field is read where the whole value would be. See D719.
+    // the field is read where the whole value would be.
     if (!asks(&engine, WHO_IS) || engine.frame[0].integer != 20) {
         fprintf(stderr, "a shape answered with came back as %lld\n",
                 (long long)engine.frame[0].integer);
@@ -3685,8 +3669,8 @@ int main(int argc, char **argv) {
     kest_runtime_free(apart_at);
     // And the same crossing answering a number too wide for the field it goes
     // in. `Npc` is a piece of text and an `i32`, so what comes back is walked
-    // — and until D837 the walk read the text and stepped over the number,
-    // which is the slot the host actually wrote. See D837.
+    // whole: a walk that read the text and stepped over the number would miss
+    // the slot the host actually wrote.
     decider.answers_too_wide = true;
     if (asks(&engine, WHO_IS)) {
         fprintf(stderr, "a number too wide for its field was answered with\n");
@@ -3702,8 +3686,8 @@ int main(int argc, char **argv) {
     // And the same at the width a slot cannot say: a slot holds a double and
     // an `f32` holds less, so a host answering `0.1` answers a number the
     // program's own `f32` literals do not equal. It is the one of these three
-    // that a program can tell without counting — it compares and finds them
-    // apart. See D838.
+    // that a program can tell without counting -- it compares and finds them
+    // apart.
     decider.answers_too_wide = true;
     if (asks(&engine, WEIGHED)) {
         fprintf(stderr, "a number no `f32` holds was answered with\n");
@@ -3723,8 +3707,8 @@ int main(int argc, char **argv) {
 
     // And a store is a thing the language has no text for, which it says
     // rather than inventing one. What the host wants of a store, only the host
-    // knows. Since D876 this is the shape that reads that message — a struct
-    // writes itself now — so the message is read here rather than only the
+    // knows. This is the shape that reads that message, since a struct
+    // writes itself, so the message is read here rather than only the
     // answer: minus one on its own is what a host cannot tell apart from an
     // index that is no function.
     if (kest_gave_text(engine.runtime, engine.entry[CREATE], engine.frame, said, sizeof(said))
@@ -3739,7 +3723,7 @@ int main(int argc, char **argv) {
     // A struct passed by value rather than lent: one slot a scalar, in the
     // order the fields are declared, and a float is a double in a slot even
     // where it is an `f32` in memory. Lending shares the host's bytes; this
-    // copies three numbers into the engine.frame, which is the crossing D007 says to
+    // copies three numbers into the engine.frame, which is the crossing to
     // reach for one item at a time and not for a batch.
     // What this host is about to write, said before it writes it: three
     // slots, each a float read as a `double`. Saying it is the only way a
@@ -3762,9 +3746,8 @@ int main(int argc, char **argv) {
     }
     // And fewer slots than the arguments take, which is a host saying what
     // some of them hold and nothing about the rest. Saying part of it is not
-    // checking it, so it is refused rather than taken for what it covers —
+    // checking it, so it is refused rather than taken for what it covers --
     // the slots nobody spoke for are exactly the ones a host is wrong about.
-    // See D831.
     if (kest_frame_fills(engine.runtime, engine.entry[LENGTH_OF], writing, 2)) {
         fprintf(stderr, "a frame said to be two slots wide where it is three "
                         "was agreed to\n");
@@ -3775,9 +3758,9 @@ int main(int argc, char **argv) {
     }
     // And the sharpest shape of the same mistake: a function that takes
     // nothing and gives one slot. A host that says one is judged against
-    // nought — and until D832 was sent to `kest_frame_slots`, which answers
-    // the wider of the two and so answers the number it just used. What it is
-    // sent to now is the door that gave the number it was judged by.
+    // nought, and the refusal sends it to the door that gave the number it
+    // was judged by rather than to `kest_frame_slots`, which answers the wider
+    // of the two and so answers the number it just used.
     const uint8_t one_slot[1] = {KEST_L_I32};
     if (kest_frame_fills(engine.runtime, engine.entry[HOARD], one_slot, 1)) {
         fprintf(stderr, "a function that takes nothing took a slot\n");
@@ -3794,7 +3777,7 @@ int main(int argc, char **argv) {
     // And a number no `f32` holds, written into a frame rather than answered
     // with. `ranked` takes three of them, and this is the path that does not
     // walk the type: three pieces, all numbers, read where the walk would
-    // have been skipped. See D838.
+    // have been skipped.
     engine.frame[0].real = 0.1;
     engine.frame[1].real = (double)(float)1.0;
     engine.frame[2].real = (double)(float)2.0;
@@ -3811,7 +3794,7 @@ int main(int argc, char **argv) {
     // And a truth that is neither. `reach` takes three floats and a `bool`,
     // and a slot holds sixty-four bits where a truth holds one of two: a host
     // writing 7 wrote a value the program reads as true where it asks `if`
-    // and as neither where it asks `== true`. One slot, two answers. See D839.
+    // and as neither where it asks `== true`. One slot, two answers.
     engine.frame[0].real = (double)(float)1.0;
     engine.frame[1].real = (double)(float)1.0;
     engine.frame[2].real = (double)(float)1.0;
@@ -3831,7 +3814,7 @@ int main(int argc, char **argv) {
     // And a name the program asks the host for, which is not a name the host
     // can ask the program for. `Io.write` is this host's own binding read the
     // other way round, and a host that asks for it has the two directions
-    // confused — which is the mistake this whole boundary is shaped to say.
+    // confused -- which is the mistake this whole boundary is shaped to say.
     if (kest_entry(engine.runtime, "Io.write") >= 0) {
         fprintf(stderr, "a name the program asks the host for came back as "
                         "something to call\n");
@@ -3843,9 +3826,9 @@ int main(int argc, char **argv) {
     // And the same name again. What a host cannot call is a statement about
     // the program rather than something that happened, and the program does
     // not change while a machine runs, so it is said once. Asking a thousand
-    // times cost 633940 bytes before it was — 634 an asking, none of it ever
-    // handed back — which is what a host polling for a name it might have was
-    // paying every frame. See D608.
+    // times cost 633940 bytes before it was -- 634 an asking, none of it ever
+    // handed back -- which is what a host polling for a name it might have was
+    // paying every frame.
     size_t after_saying = kest_build_cost(build);
     if (kest_entry(engine.runtime, "Io.write") >= 0 ||
         kest_build_cost(build) != after_saying ||
@@ -3877,7 +3860,7 @@ int main(int argc, char **argv) {
     }
     // And the other direction: what this host is about to read back out of the
     // frame. `lengthOf` gives one float, and this host reads
-    // `engine.frame[0].real` because of it — a slot read as the wrong thing is
+    // `engine.frame[0].real` because of it -- a slot read as the wrong thing is
     // a number nobody wrote, and nothing but this says so.
     const uint8_t reading[1] = {KEST_L_F32};
     if (!kest_frame_reads(engine.runtime, engine.entry[LENGTH_OF], reading, 1)) {
@@ -3899,7 +3882,7 @@ int main(int argc, char **argv) {
     // And more slots than it gives, which is the other way to be wrong about
     // a width: a host that reads two where one came back reads the slot above
     // the answer, which is the machine's and not the answer's. The width and
-    // what is in it are two questions and this door asks both. See D831.
+    // what is in it are two questions and this door asks both.
     const uint8_t read_wide[2] = {KEST_L_F32, KEST_L_F32};
     if (kest_frame_reads(engine.runtime, engine.entry[LENGTH_OF], read_wide,
                          2)) {
@@ -3914,11 +3897,11 @@ int main(int argc, char **argv) {
 
     // A promise through the one call neither proof can follow. `apply` takes
     // a value that promises `no.alloc`, and the program may only hand it one
-    // that does — the type carries the promise. A host hands it a number, and
+    // that does -- the type carries the promise. A host hands it a number, and
     // a number carries nothing: what this host writes into that slot is an
     // index it read from `kest_entry`, and the machine is the only thing left
     // that can ask the chunk whether it promised. `doubled` did and `grows`
-    // did not. See D834.
+    // did not.
     engine.frame[0].integer = engine.entry[DOUBLED];
     engine.frame[1].integer = 5;
     if (!kest_call(engine.runtime, engine.entry[APPLY], engine.frame, 2) ||
@@ -3943,7 +3926,7 @@ int main(int argc, char **argv) {
     // handle is too. What tells `ranked` from `doubled` is what they take and
     // give, and a host that read the wrong index hands over a number that is
     // in range, promises nothing it should not, and enters a body expecting a
-    // frame three slots wide. Until D835 that walked off the caller's frame.
+    // frame three slots wide, which would walk off the caller's frame.
     engine.frame[0].integer = engine.entry[RANKED];
     engine.frame[1].integer = 5;
     if (kest_call(engine.runtime, engine.entry[APPLY], engine.frame, 2)) {
@@ -3961,9 +3944,9 @@ int main(int argc, char **argv) {
     // thing a frame holds is something this machine made and says what it is;
     // a number is what the host put there, and a slot is sixty-four bits
     // where an `i32` is thirty-two. Writing one that does not fit is the one
-    // way a value this language cannot make gets into a program — it wraps at
-    // its own end everywhere else — and until D836 the program counted with
-    // it. `blamed` takes an `i32`.
+    // way a value this language cannot make gets into a program (it wraps at
+    // its own end everywhere else), so the machine refuses it rather than
+    // letting the program count with it. `blamed` takes an `i32`.
     engine.frame[0].integer = (int64_t)1 << 40;
     if (kest_call(engine.runtime, engine.entry[BLAMED], engine.frame,
                   sizeof(engine.frame) / sizeof(engine.frame[0]))) {
@@ -4014,7 +3997,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     // The words as well as the code, because this code says four things and
-    // which of them it was is what a host reads. See D442.
+    // which of them it was is what a host reads.
     if (!said_that(engine.runtime, "K0635", "is not a number, and")) {
         return 1;
     }
@@ -4061,8 +4044,8 @@ int main(int argc, char **argv) {
     }
 
     // And text handed over with no bytes to copy, which comes back as an
-    // empty piece of text — the same thing a host handing over an empty one
-    // on purpose gets. See D436.
+    // empty piece of text -- the same thing a host handing over an empty one
+    // on purpose gets.
     KestValue no_bytes[2] = {{0}, {0}};
     if (kest_text(engine.runtime, NULL, 4, no_bytes) ||
         no_bytes[0].text == NULL || no_bytes[0].text[0] != '\0' ||
@@ -4080,7 +4063,7 @@ int main(int argc, char **argv) {
     // in, nothing past the last, nothing given back. `kest_frame_slots` says
     // so out loud because nought is also honest for it; these said it in
     // silence, so a host that had `kest_entry` answer -1 and went on asking
-    // was told about a function that takes and gives nothing. See D436.
+    // was told about a function that takes and gives nothing.
     {
         const int32_t nobody = -1;
         if (kest_frame_takes(engine.runtime, nobody) != 0 ||
@@ -4097,8 +4080,8 @@ int main(int argc, char **argv) {
         // program: how many functions there are does not change while a
         // machine runs. A host that asks this instead of `kest_entry_name`
         // was paying 648 bytes an asking for the answer it could have had for
-        // nothing — and the walk of what a program defines is what says so
-        // without a word. See D615.
+        // nothing -- and the walk of what a program defines is what says so
+        // without a word.
         size_t told_once = kest_build_cost(build);
         for (uint32_t again = 0; again < 100; again++) {
             if (kest_frame_takes(engine.runtime, nobody) != 0 ||
@@ -4118,7 +4101,7 @@ int main(int argc, char **argv) {
         // And the other way of asking for nothing: a host that says how many
         // slots it is about to describe and hands nothing to read them from.
         // The index is a function here, so what is wrong is the pair, and
-        // this was answered with a sentence about the index. See D615.
+        // this was answered with a sentence about the index.
         if (kest_frame_fills(engine.runtime, engine.entry[LENGTH_OF], NULL,
                              3) ||
             !said_that(engine.runtime, "K0634", "handed nothing to read them "
@@ -4131,11 +4114,11 @@ int main(int argc, char **argv) {
                "once, and slots said to be somewhere they are not\n");
 
         // And a refusal deeper than a message holds. The places one shows is
-        // the other ceiling a host meets (D619), and nothing a host does can
+        // the other ceiling a host meets, and nothing a host does can
         // make a machine show more of them: this program has a run of calls
         // ten deep that ends in arithmetic, and what comes back is what a
         // diagnostic holds and a count of the rest. Held here because the
-        // command line was the only thing that had ever seen it. See D620.
+        // command line was the only thing that had ever seen it.
         int32_t deepest = kest_entry(engine.runtime, "tickWorld");
         KestValue sharing[2] = {{0}};
         if (deepest < 0 || kest_call(engine.runtime, deepest, sharing, 2)) {
@@ -4157,8 +4140,8 @@ int main(int argc, char **argv) {
     // name a host cannot hand over plainly. There is no `pick` to call: there
     // is a copy of it per set of types anything asked for, each compiled under
     // a name with those types written into it, and a host walks them and asks
-    // each what it takes — the same walk that tells two functions of one name
-    // apart, over two that were written once. See D435.
+    // each what it takes -- the same walk that tells two functions of one name
+    // apart, over two that were written once.
     {
         if (kest_entry(engine.runtime, "pick") >= 0) {
             fprintf(stderr, "a function of two copies had one index\n");
@@ -4173,7 +4156,7 @@ int main(int argc, char **argv) {
         // And asking for it again, which is the same statement about the same
         // program: said once, like the name the program asks the host for.
         // A host that looks for an optional entry every frame is asking a
-        // question, not making something happen. See D608.
+        // question, not making something happen.
         size_t named_once = kest_build_cost(build);
         if (kest_entry(engine.runtime, "pick") >= 0 ||
             kest_build_cost(build) != named_once ||
@@ -4207,11 +4190,11 @@ int main(int argc, char **argv) {
             return 1;
         }
         // And what walking off the end of them said, which is nothing. Asking
-        // for the name itself is refused and names the copies — that is the
-        // door above and it speaks — and the walk that takes them one at a
+        // for the name itself is refused and names the copies -- that is the
+        // door above and it speaks -- and the walk that takes them one at a
         // time ends by being handed nothing. A machine that explained at the
         // end of a walk would answer every host that ever read a list with a
-        // complaint about the reading. See D584.
+        // complaint about the reading.
         if (!said_nothing(engine.runtime, "a walk of the copies ended")) {
             return 1;
         }
@@ -4221,7 +4204,7 @@ int main(int argc, char **argv) {
         // one `kest_entry` answers with when it is handed the name back. The
         // copies of `pick` are in it under the names the refusal above spelled
         // out, which is how a host finds a generic without knowing there is
-        // one. See D609.
+        // one.
         uint32_t defined = 0;
         uint32_t picks = 0;
         for (int32_t at = 0;; at++) {
@@ -4249,18 +4232,18 @@ int main(int argc, char **argv) {
         }
         // And what a host can act on before it calls anything: which of them
         // promised to reach no heap. An engine deciding where a function goes
-        // — a frame step, a loading screen, nowhere at all — asks this and
+        // -- a frame step, a loading screen, nowhere at all -- asks this and
         // nothing else about what a function costs, because this is the one
         // answer it can do something about. The program has both kinds, so a
         // host that read the same answer for all of them would be a host
-        // reading a constant. See D680.
+        // reading a constant.
         uint32_t promised = 0;
         uint32_t said_nothing_about_it = 0;
         // And the other promise beside it, which is the one a host driving a
         // frame from inside its own lock reads: a step that may call back in
         // is one that reaches this host while this host is in the middle of
         // something. Two questions of one door, because a promise is a thing
-        // to name rather than a door to add. See D857.
+        // to name rather than a door to add.
         uint32_t quiet = 0;
         for (int32_t at = 0;; at++) {
             if (kest_entry_name(engine.runtime, at) == NULL) {
@@ -4304,7 +4287,7 @@ int main(int argc, char **argv) {
         // together; both copies of `pick` are written `embed.pick`, which is
         // what says they are one function compiled twice. Walking it twice
         // costs nothing, because the spelling is worked out when the function
-        // is compiled and not when it is asked for. See D610.
+        // is compiled and not when it is asked for.
         size_t before_walking = kest_build_cost(build);
         size_t machine_before_walking = kest_runtime_cost(engine.runtime);
         uint32_t written = 0;
@@ -4336,9 +4319,9 @@ int main(int argc, char **argv) {
         }
         // And the end of the same walk on a machine that has been told
         // nothing. What a machine says about an index that is no function it
-        // says once (D615), so a machine that has already said it is quiet
-        // for a reason of its own — and what holds the walk's silence is a
-        // machine that could have spoken. See D584 and D615.
+        // says once, so a machine that has already said it is quiet
+        // for a reason of its own -- and what holds the walk's silence is a
+        // machine that could have spoken.
         for (int32_t at = 0; kest_entry_name(other, at) != NULL; at++) {
             continue;
         }
@@ -4354,7 +4337,7 @@ int main(int argc, char **argv) {
         // is. What makes the silence at the end of a walk a decision is that
         // the machine could have spoken: this one has said nothing about the
         // name yet, so it is quiet because the walk ends quietly and not
-        // because it has said its piece already. See D584 and D608.
+        // because it has said its piece already.
         for (uint32_t at = 0;; at++) {
             if (kest_entry_of(other, "pick", at) < 0) {
                 break;
@@ -4368,7 +4351,7 @@ int main(int argc, char **argv) {
         // says now. The two copies of `pick` are one declaration compiled
         // twice, so it names one place; `lengthOf` is two functions of a name
         // and it names both. Asked of the machine that has not been told,
-        // because each of these is said once. See D613.
+        // because each of these is said once.
         if (kest_entry(other, "pick") >= 0 ||
             !said_in_both(other, "embed.kest:188", "ask for one of them") ||
             kest_entry(other, "lengthOf") >= 0 ||
@@ -4384,7 +4367,7 @@ int main(int argc, char **argv) {
         // the host for says how many there are when it is read past the end,
         // and this is the same walk of what a program defines. A host that
         // walked one and handed the next index on reads its own mistake
-        // rather than a refusal with nothing in it. See D614.
+        // rather than a refusal with nothing in it.
         char how_many[64];
         snprintf(how_many, sizeof(how_many), "defines %u function", defined);
         if (kest_frame_takes(other, (int32_t)defined) != 0 ||
@@ -4420,10 +4403,10 @@ int main(int argc, char **argv) {
 
     // A result of more than one slot, which is the half of a frame nothing in
     // this tree had ever read. Everything a host here calls gives back a
-    // number, a handle or a piece of text — one slot — so the rule that the
+    // number, a handle or a piece of text -- one slot -- so the rule that the
     // result is written over the arguments had never had anything to write
     // over: `moved` takes a `Point` and an `f32`, four slots, and gives back
-    // a `Point`, three, so the arguments are gone when it answers. See D433.
+    // a `Point`, three, so the arguments are gone when it answers.
     {
         const KestLayout *back =
             kest_frame_gives(engine.runtime, engine.entry[MOVED]);
@@ -4488,12 +4471,10 @@ int main(int argc, char **argv) {
                 return 1;
             }
         }
-        // And the same result asked for as words. A shape had none of its own
-        // until D876 and this host wrote it: asking was minus one and a
-        // message naming the type. It is written now, the way a program writes
-        // one — the name, and the fields in the order they were declared —
-        // and a host that wants its own layout still walks it with
-        // `kest_frame_gives`, which is the paragraph below. What has no text
+        // And the same result asked for as words. A shape is written the way
+        // a program writes one (the name, and the fields in the order they
+        // were declared), and a host that wants its own layout still walks it
+        // with `kest_frame_gives`, which is the paragraph below. What has no text
         // is what holds a handle, and a store above is asked exactly that.
         char said[64];
         int64_t as_words = kest_gave_text(engine.runtime, engine.entry[MOVED],
@@ -4559,7 +4540,7 @@ int main(int argc, char **argv) {
     // And the same shape going the other way: the program hands this host a
     // `Point` and reads back what the host made of it. What says the three
     // slots are the three this host thinks they are is the layout, compared
-    // with this host's own pieces before anything was bound. See D699.
+    // with this host's own pieces before anything was bound.
     for (uint32_t k = 0; k < 3; k++) {
         engine.frame[k].real = (double)(k + 1);
     }
@@ -4598,16 +4579,16 @@ int main(int argc, char **argv) {
     // And the same question asked the other way in: one point at a time, by
     // value, with this host keeping the running answer between crossings.
     // Both inward shapes were here and nothing asked them the same thing, so
-    // neither said anything about the other. D007 measured what they cost —
-    // a batch crosses once and is walked in place, a value crosses per value —
-    // and what a host writer is choosing between is two ways of getting one
-    // number. Eight crossings against one, over the corners lent above.
+    // neither said anything about the other. A batch crosses once and is
+    // walked in place, a value crosses per value, and what a host writer is
+    // choosing between is two ways of getting one number. Eight crossings
+    // against one, over the corners lent above.
     float across = (float)engine.frame[0].real;
     uint32_t whether = kest_frame_at(engine.runtime, engine.entry[REACH], 1);
     // What the program says the arguments are, said before anything is
     // written: three `f32` and a `bool`, which a layout calls a truth in a
-    // byte — the byte is what it is where memory is shared and the truth is
-    // what it means. See D839.
+    // byte -- the byte is what it is where memory is shared and the truth is
+    // what it means.
     const uint8_t reaching[4] = {KEST_L_F32, KEST_L_F32, KEST_L_F32,
                                  KEST_L_BOOL};
     if (!kest_frame_fills(engine.runtime, engine.entry[REACH], reaching, 4)) {
@@ -4616,8 +4597,8 @@ int main(int argc, char **argv) {
     }
     // And the width of the slot said in place of the width of the type, which
     // is what a host reading a layout as though it described a frame would
-    // say. Both readings are true of a `bool` argument — a byte in memory,
-    // eight of them in the frame it is written into — and the kinds are the
+    // say. Both readings are true of a `bool` argument -- a byte in memory,
+    // eight of them in the frame it is written into -- and the kinds are the
     // first of them.
     const uint8_t as_slots[4] = {KEST_L_F32, KEST_L_F32, KEST_L_F32,
                                  KEST_L_I64};
@@ -4666,7 +4647,7 @@ int main(int argc, char **argv) {
             }
             // The whole slot, because a slot is eight bytes and a `bool` is
             // one: a host that writes the byte hands the machine whatever the
-            // other seven were, and `false` arrives as true. See D557.
+            // other seven were, and `false` arrives as true.
             if (!put_number(&engine.frame[whether],
                             takes_which->pieces[0].kind, ask)) {
                 fprintf(stderr, "the word about a point is not a number\n");
@@ -4723,8 +4704,8 @@ int main(int argc, char **argv) {
     // And what the machine has to say about a frame that worked, which is
     // nothing. Every check here reads what was said when something was
     // refused; this is the other reading, and it is the one that holds every
-    // path that works — a lend made, a call in, a lend ended, a heap thrown
-    // away — to leaving nothing behind for the next frame to find. See D583.
+    // path that works -- a lend made, a call in, a lend ended, a heap thrown
+    // away -- to leaving nothing behind for the next frame to find.
     if (!said_nothing(engine.runtime, "a lend was made and read")) {
         return 1;
     }
@@ -4732,7 +4713,7 @@ int main(int argc, char **argv) {
            (long long)engine.frame[0].integer);
 
     // And the end of that lend, which is this host saying the rows are not its
-    // to lend any more — what a host does at the end of a frame with what it
+    // to lend any more -- what a host does at the end of a frame with what it
     // lent for the length of one. The block is this host's throughout and
     // nothing is freed; what changes is that the program can no longer read
     // it, which is the whole of what a lend with no end was missing.
@@ -4764,7 +4745,7 @@ int main(int argc, char **argv) {
     // asked about now; this is the other end of it, where every host in this
     // tree read `frame[0].real` because it remembered what it had asked for.
     // A result of one slot lets a host be right by remembering. This one does
-    // not. See D560.
+    // not.
     {
         KestValue again = kest_borrow(engine.runtime, rows, 2, "Row",
                                       sizeof(Row));
@@ -4836,7 +4817,7 @@ int main(int argc, char **argv) {
         // source: what the program is holding and what it has ever asked for,
         // either side of a refusal raised inside the body that promised.
         // Writing K0604 reads the file again, works out which line asked and
-        // draws a caret under it, and none of that may land here. See D1132.
+        // draws a caret under it, and none of that may land here.
         const size_t held_before = kest_heap_used(engine.runtime);
         const size_t asked_before = kest_heap_taken(engine.runtime);
         engine.frame[0] = again;
@@ -4907,7 +4888,7 @@ int main(int argc, char **argv) {
 
     // And what a frame of lending costs, which is the question a host lending
     // a batch every frame is really asking. The block is the host's, so what a
-    // lend puts on the machine's heap is a header — and a header a frame is a
+    // lend puts on the machine's heap is a header -- and a header a frame is a
     // frame budget that grows for a program doing the same thing every time.
     // Ending one gives its header back to the next lend, so a thousand frames
     // of it cost what one does.
@@ -4931,7 +4912,7 @@ int main(int argc, char **argv) {
     printf("a thousand lends taken back cost the heap nothing\n");
 
     // The same rows lent a second time, which is a host with one block and two
-    // handles — and one block is what it takes back. Ending either ends both,
+    // handles -- and one block is what it takes back. Ending either ends both,
     // because a handle left alive over memory the host has moved on from is
     // the thing ending a lend is for.
     KestValue one = kest_borrow(engine.runtime, rows, 2, "Row", sizeof(Row));
@@ -4985,8 +4966,8 @@ int main(int argc, char **argv) {
     // And more of them than there are, which is the mistake this whole
     // crossing is shaped around: the count is the host's word, and a program
     // given a longer one walks off the end of somebody else's memory. Nothing
-    // in a build that ships can weigh that word — the block is the host's and
-    // its end is written down nowhere the library can read — so it is asked
+    // in a build that ships can weigh that word -- the block is the host's and
+    // its end is written down nowhere the library can read -- so it is asked
     // where it can be asked, and this host asks it there.
     if (kest_checked()) {
         if (kest_borrow(engine.runtime, rows, 4, "Row", sizeof(Row)).object !=
@@ -5001,12 +4982,12 @@ int main(int argc, char **argv) {
 
     // Text is the other thing a host hands over, and the machine copies it:
     // what a program holds it must own. So a host that hands the same name
-    // every frame keeps what it was given rather than saying it again — this
+    // every frame keeps what it was given rather than saying it again -- this
     // one asks for the same bytes twice and gets the same text back, which is
     // what makes a name a host says once cost once.
-    // Bytes or a handle, which a layout could not say until D896: `text`,
-    // `[u8]` and `store<T>` were one kind, and the answer that came with it
-    // sent a host to the declaration for the one thing a layout is for.
+    // Bytes or a handle, which a layout says: `text`, `[u8]` and `store<T>`
+    // are kinds of their own, so a host need not go to the declaration for
+    // the one thing a layout is for.
     // Reading a store's handle through `text` is a walk to a nought byte over
     // the machine's own memory; reading text through `object` and handing it
     // back is the same the other way. They are two kinds now, and the two
@@ -5039,7 +5020,7 @@ int main(int argc, char **argv) {
     // a nought is a character and text carries how long it is, so five bytes
     // in are five bytes out with the nought still the fourth of them. What is
     // refused is a byte that begins no character, because text is UTF-8 and
-    // this is the door it arrives through. See D971.
+    // this is the door it arrives through.
     const char cut[6] = {'h', 'a', 'l', 0, 'f', 0};
     KestValue halved[2] = {{0}, {0}};
     kest_text(engine.runtime, cut, 5, halved);
@@ -5057,7 +5038,7 @@ int main(int argc, char **argv) {
     KestValue refused[2] = {{0}, {0}};
     kest_text(engine.runtime, (const char *)broken, 3, refused);
     // What comes back for a refusal is an empty piece of text, which is what
-    // the door writes before it asks anything. See D436.
+    // the door writes before it asks anything.
     if (refused[0].text == NULL || refused[1].integer != 0) {
         fprintf(stderr, "a byte that begins no character was taken as text\n");
         return 1;
@@ -5102,8 +5083,8 @@ int main(int argc, char **argv) {
     }
     // And no address at all, which is what a host that zeroed a frame and
     // called anyway hands over. Text in this language is never nothing, so a
-    // slot with no address in it is a frame nobody filled — and the program
-    // reads it at the first thing it does with it. See D629.
+    // slot with no address in it is a frame nobody filled -- and the program
+    // reads it at the first thing it does with it.
     engine.frame[0].text = NULL;
     if (kest_call(engine.runtime, engine.entry[NAMED], engine.frame,
                   sizeof(engine.frame) / sizeof(engine.frame[0]))) {
@@ -5115,8 +5096,8 @@ int main(int argc, char **argv) {
     }
     // And the same for a handle. The machine reads the four bytes at the front
     // of one at the instruction that uses it, so a slot of noughts used to be
-    // `K0612` where the program stands — which points at the program for
-    // something this host did. Said at the door it names the slot. See D630.
+    // `K0612` where the program stands -- which points at the program for
+    // something this host did. Said at the door it names the slot.
     engine.frame[0].object = NULL;
     if (kest_call(engine.runtime, engine.entry[HEAVIEST], engine.frame,
                   sizeof(engine.frame) / sizeof(engine.frame[0]))) {
@@ -5130,7 +5111,7 @@ int main(int argc, char **argv) {
            "slots it never filled\n");
 
     // What this host keeps of what it was handed. Text lasts as long as the
-    // heap it is on, which is as long as nothing throws that away — so a host
+    // heap it is on, which is as long as nothing throws that away -- so a host
     // holding a name between frames asks the machine rather than remembering
     // for it.
     if (!kest_still_holds(engine.runtime, name[0])) {
@@ -5138,8 +5119,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // A batch the host owns, walked in place. D007 measured the inward
-    // crossing as the wider of the two, so one call carries the whole batch
+    // A batch the host owns, walked in place. The inward crossing is the
+    // wider of the two, so one call carries the whole batch
     // rather than one call per event.
     Event events[4];
     events[0].tag = EVENT_HIT;
@@ -5175,7 +5156,7 @@ int main(int argc, char **argv) {
     // function of this host's that reads them back into its own union. What
     // the program works out in a `match` and what this host works out in a
     // `switch` are the same number over the same four events, and neither of
-    // them was written from the other. See D704.
+    // them was written from the other.
     engine.frame[0] = four_events;
     if (!asks(&engine, HURT_BY) || engine.frame[0].integer != inside) {
         fprintf(stderr, "the program answered %lld for these events and this "
@@ -5190,11 +5171,11 @@ int main(int argc, char **argv) {
 
     // And a tag this host writes into its own memory after lending it, which
     // is what a lend is: the bytes stay the host's and it goes on writing to
-    // them — this one writes through the same array below, and the program
+    // them -- this one writes through the same array below, and the program
     // writes through the view. Nothing at the lend could hold this, because
     // the lend happened before the mistake did. It is read where the program
     // reads it, which is the only place both the bytes and the type are in
-    // one hand. See D710.
+    // one hand.
     events[2].tag = EVENT_NAMED + 1;
     engine.frame[0] = four_events;
     if (asks(&engine, ON_EVENTS)) {
@@ -5221,7 +5202,7 @@ int main(int argc, char **argv) {
     // were, the first of them the tag: this host reads that, asks what the case
     // it names carries, and reads the rest the way the case says. Nothing in
     // this tree gave a value with a tag in it back until now, so nothing had
-    // ever read one out of a frame. See D705.
+    // ever read one out of a frame.
     const KestLayout *answered = kest_frame_gives(engine.runtime,
                                                   engine.entry[WORST]);
     if (answered == NULL || !answered->tagged) {
@@ -5267,7 +5248,7 @@ int main(int argc, char **argv) {
     // holds a name, and a name is a pointer into the machine's own memory: the
     // host would be handing over one the machine did not put there and cannot
     // take back when the lend ends, so a program that kept it would be reading
-    // the host's memory after the host had moved on. See D434.
+    // the host's memory after the host had moved on.
     Npc crowd[2];
     memset(crowd, 0, sizeof(crowd));
     if (kest_borrow(engine.runtime, crowd, 2, "Npc", sizeof(Npc)).object !=
@@ -5284,7 +5265,7 @@ int main(int argc, char **argv) {
     // where a host is wrong on purpose: a type the program has no array of,
     // and one it has and lays out in another number of bytes. Both are the
     // host's own declaration coming apart from the program's, and neither had
-    // ever been asked for. See D441.
+    // ever been asked for.
     if (kest_borrow(engine.runtime, tiles, 3, "Tyle", sizeof(Tile)).object !=
         NULL) {
         fprintf(stderr, "a lend of a type the program has not got was made\n");
@@ -5306,7 +5287,7 @@ int main(int argc, char **argv) {
     // host lending in a frame was paying 749 bytes a frame for the same
     // sentence, on the arena the build's diagnostics are written in and never
     // handed back. The lend is refused every time, which is the part that
-    // matters; what is said once is what there is to say about it. See D616.
+    // matters; what is said once is what there is to say about it.
     size_t laid_out_once = kest_build_cost(build);
     for (uint32_t again = 0; again < 100; again++) {
         if (kest_borrow(engine.runtime, tiles, 3, "Tile",
@@ -5326,8 +5307,8 @@ int main(int argc, char **argv) {
     // one say what it is, and this is the one thing about a handle the machine
     // checks, because the boundary cannot: `kest_call` knows how wide a frame
     // must be and not what is in it. Handing a store where an array was wanted
-    // is a host mistake with a message, and nothing had ever made it — the
-    // message was reached only by breaking the tree. See D527.
+    // is a host mistake with a message, and nothing had ever made it -- the
+    // message was reached only by breaking the tree.
     {
         if (!asks(&engine, CREATE)) {
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
@@ -5337,7 +5318,7 @@ int main(int argc, char **argv) {
         // of handle begin with what they are, so the door reads which one this
         // is and names the slot it is in: it used to get as far as the
         // instruction that walked it, which said `K0612` about the program for
-        // something the host had done. See D716.
+        // something the host had done.
         if (kest_call(engine.runtime, engine.entry[WORN], engine.frame,
                       sizeof(engine.frame) / sizeof(engine.frame[0]))) {
             fprintf(stderr, "a store was walked as an array\n");
@@ -5353,9 +5334,9 @@ int main(int argc, char **argv) {
 
         // And the other way round, which had nothing to say it at all: an
         // array where a store was wanted. Both are handles out of this heap,
-        // so the door's older questions — is there one, and did it come from
-        // this machine — both answer yes, and what told them apart was the
-        // instruction that used it. See D716.
+        // so the door's older questions -- is there one, and did it come from
+        // this machine -- both answer yes, and what told them apart was the
+        // instruction that used it.
         if (!asks(&engine, OWN_ARRAY)) {
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
             return 1;
@@ -5374,11 +5355,11 @@ int main(int argc, char **argv) {
                "same way\n");
     }
 
-    // And the shape D016 works out by hand, lent and read where it sits. The
-    // `bool` says whether the `u16` beside it counts, so a wrong offset for
-    // either is a wrong answer rather than a wrong size — and the size was
-    // agreed on above, by both sides working it out and neither being told.
-    // See D552.
+    // And the `u16` and `bool` worked out by hand above, lent and read where
+    // it sits. The `bool` says whether the `u16` beside it counts, so a wrong
+    // offset for either is a wrong answer rather than a wrong size, and the
+    // size was agreed on above, by both sides working it out and neither being
+    // told.
     {
         Flagged some[3] = {{7, 1}, {9, 0}, {11, 1}};
         KestValue run = kest_borrow(engine.runtime, some, 3, "Flagged",
@@ -5406,11 +5387,11 @@ int main(int argc, char **argv) {
     }
 
     // And the same block written through the layout and nothing else: no
-    // struct of this host's, no `offsetof` — the bytes go where the program
+    // struct of this host's, no `offsetof` -- the bytes go where the program
     // said each piece is, at the width it said each piece is. What is held
     // above is two descriptions agreeing, and two descriptions can agree and
     // both be wrong about memory. What cannot is the program reading back
-    // what was written at the places it named. See D899.
+    // what was written at the places it named.
     {
         const KestLayout *laid = NULL;
         if (kest_build_layout(build, "Flagged", &laid) != 1 || laid == NULL) {
@@ -5458,7 +5439,7 @@ int main(int argc, char **argv) {
     // about that is not about the type at all. `Twin` is declared here and in
     // `examples/twins/twin.kest`, both held in arrays, so both have a layout
     // and `Twin` names one of two. The whole name is what tells them apart and
-    // is what the machine says to write. See D526.
+    // is what the machine says to write.
     {
         int32_t twins[2] = {3, 4};
         if (kest_borrow(engine.runtime, twins, 2, "Twin",
@@ -5542,7 +5523,7 @@ int main(int argc, char **argv) {
     // And the frame a host could not make at all, which is the same news as
     // one nothing has been written into. Two of the three calls that take a
     // frame refused it already; the third read slot zero and this host had no
-    // way of being told. See D511.
+    // way of being told.
     {
         char nothing_said[8];
         if (kest_gave_text(engine.runtime, engine.entry[STEP], NULL,
@@ -5574,7 +5555,7 @@ int main(int argc, char **argv) {
 
     // And what a host does when what it has is bytes. A packet arrives as a
     // run of them at whatever address the reading put it, and the type the
-    // program wants is read wider than a byte at a time — so the lend above
+    // program wants is read wider than a byte at a time -- so the lend above
     // is refused, and refusing it is the whole of what the machine can do.
     // What a host does about it is this: copy into an array of the type
     // itself, which its own compiler aligns, and lend that. The copy is the
@@ -5638,8 +5619,8 @@ int main(int argc, char **argv) {
 
     // And the other way to write the same crossing: hand the bytes over as
     // bytes and let the program read what it wants out of them. Nothing is
-    // copied on either side — the buffer is the host's and stays where it is —
-    // and what a wire form costs a program is a shift and an or per byte.
+    // copied on either side -- the buffer is the host's and stays where it is
+    // -- and what a wire form costs a program is a shift and an or per byte.
     // Four bytes a record, least significant first, which is what the program
     // says it reads and not what this machine happens to do.
     unsigned char wire[8];
@@ -5669,7 +5650,7 @@ int main(int argc, char **argv) {
     // And the answer written back into the same buffer, which is the crossing
     // the other way: what a program writes into a lend is the host's own
     // memory, so a program answering in a wire form writes the bytes where the
-    // host will read them. Nothing is copied in either direction — the same
+    // host will read them. Nothing is copied in either direction -- the same
     // eight bytes carried the question and carry the answer.
     engine.frame[0] =
         kest_borrow(engine.runtime, wire, sizeof(wire), "u8", 1);
@@ -5707,7 +5688,7 @@ int main(int argc, char **argv) {
     // Down here rather than beside the other things done to these rows,
     // because the rows are lent and a write into a lend going somewhere else
     // is a fault of its own with a check of its own above: this one would
-    // notice it first and say the wrong thing about it. See D1133.
+    // notice it first and say the wrong thing about it.
     {
         Row halves[2];
         memset(halves, 0, sizeof(halves));
@@ -5775,7 +5756,6 @@ int main(int argc, char **argv) {
     // carried are written as nought along with the tag: the same value is the
     // same bytes whatever the memory held before, which is what a host that
     // compares two of them or writes one out is relying on without saying so.
-    // See D711.
     if (events[0].tag != EVENT_IDLE || events[0].as.hit != 0) {
         fprintf(stderr, "a case that carries nothing left %d under its tag\n",
                 events[0].as.hit);
@@ -5819,8 +5799,8 @@ int main(int argc, char **argv) {
     // And the one direction left: this host answering with a value that has a
     // tag in it, which the program then reads a case at a time. Three costs and
     // three cases, so the two slots after the tag are written as two floats
-    // once and as a whole number once — the same choice `read_event` makes,
-    // made by the host rather than read by it. See D706.
+    // once and as a whole number once -- the same choice `read_event` makes,
+    // made by the host rather than read by it.
     const struct {
         int32_t cost;
         int64_t damage;
@@ -5862,7 +5842,7 @@ int main(int argc, char **argv) {
     // And the same made-up tag going the other way, which is the door this
     // host fills by hand at every call: a frame is full before anything runs,
     // so a tag nobody declared is a question that can be asked at the door
-    // rather than at the instruction that meets it. See D707.
+    // rather than at the instruction that meets it.
     engine.frame[0].integer = EVENT_NAMED + 1;
     engine.frame[1].integer = 0;
     engine.frame[2].integer = 0;
@@ -5882,9 +5862,8 @@ int main(int argc, char **argv) {
     // refused this host for handing over a shape it had filled correctly.
     // And a piece of text inside a shape, which the door read nothing of until
     // it read an argument by what it is. `Npc` is a name and a number, so the
-    // first of its two slots is a word the machine has to own — the same
+    // first of its two slots is a word the machine has to own -- the same
     // question a piece of text handed over on its own gets, one field in.
-    // See D718.
     KestValue a_name[2] = {{0}, {0}};
     if (!kest_text(engine.runtime, "kept", 4, a_name)) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
@@ -5919,7 +5898,7 @@ int main(int argc, char **argv) {
     // the pieces of what it fills meets `KEST_L_TAG` and asks the cases there,
     // which is the same question it asks of a value that is an enum, with the
     // piece it happens to be at. Until a tag said it was one there was nothing
-    // to walk for. See D709.
+    // to walk for.
     const KestLayout *shaped =
         kest_frame_layout(engine.runtime, engine.entry[BLAMED_BY], 0);
     uint16_t tag_at = shaped == NULL ? 0 : shaped->count;
@@ -5954,7 +5933,7 @@ int main(int argc, char **argv) {
     // with the fields of a shape in the wrong order says. Both readings were
     // one reading until a tag said it was a tag: a tag and a number are four
     // bytes each and were both `KEST_L_I32`, so a frame with one at either end
-    // agreed with itself whichever way round this host had them. See D708.
+    // agreed with itself whichever way round this host had them.
     const uint8_t backwards[4] = {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD,
                                   KEST_L_I32};
     if (kest_frame_fills(engine.runtime, engine.entry[BLAMED_BY], backwards,
@@ -5970,7 +5949,7 @@ int main(int argc, char **argv) {
     // And a made-up tag inside that shape, which is what the door could not see
     // until a tag said it was one: the reading it had was about a value that is
     // an enum, and this is a whole number among whole numbers four slots wide.
-    // Refused now, by the same walk, at the same door. See D709.
+    // Refused now, by the same walk, at the same door.
     engine.frame[0].integer = 3;
     engine.frame[1].integer = EVENT_NAMED + 1;
     engine.frame[2].integer = 5;
@@ -5986,10 +5965,10 @@ int main(int argc, char **argv) {
 
     // And the pair the whole reading rests on: an enum whose cases carry
     // nothing is one slot of four bytes and so is an `i32`, so a tag beside a
-    // number and a number beside a tag were one run of pieces — same kinds,
-    // same offsets — and a host with the two the other way round agreed with
+    // number and a number beside a tag were one run of pieces -- same kinds,
+    // same offsets -- and a host with the two the other way round agreed with
     // itself about a frame it had back to front. Two calls that answer
-    // differently, and then the two said the wrong way round. See D713.
+    // differently, and then the two said the wrong way round.
     const struct {
         int32_t how;
         int64_t n;
@@ -6041,11 +6020,11 @@ int main(int argc, char **argv) {
 
     // And the same shape crossing the other way: an enum by value, in a frame
     // rather than in a lend. The tag goes into the first slot and what the case
-    // carries into the ones after it — and which member of a `KestValue` each
+    // carries into the ones after it -- and which member of a `KestValue` each
     // of those is depends on the tag, which is the one thing a layout cannot
     // say. It says `KEST_L_PAYLOAD` there and leaves it to whoever wrote the
     // tag, so a host that guesses writes a whole number where the program reads
-    // a float and nothing anywhere says so. See D702.
+    // a float and nothing anywhere says so.
     const KestLayout *carries =
         kest_frame_layout(engine.runtime, engine.entry[DAMAGE_OF], 0);
     if (carries == NULL || !carries->tagged) {
@@ -6073,8 +6052,8 @@ int main(int argc, char **argv) {
 
     // Three of them written into a frame and handed over. What the case carries
     // is a run of pieces like any other, so `kest_slot_of` says which member
-    // each slot is — the same reading this host does for a result of two kinds,
-    // over kinds the tag decided rather than the declaration.
+    // each slot is -- the same reading this host does for a result of two
+    // kinds, over kinds the tag decided rather than the declaration.
     const struct {
         int32_t tag;
         double carried[2];
@@ -6120,7 +6099,7 @@ int main(int argc, char **argv) {
     // A frame is not one call, it is the same call sixty times a second, and
     // a promise that holds once and leaks a little each time is a promise
     // that runs out overnight. `onEvents` says `no.alloc`, so a thousand of
-    // them have to leave the heap exactly where they found it — not nearly,
+    // them have to leave the heap exactly where they found it -- not nearly,
     // since what this is looking for is the byte a frame keeps.
     size_t before = kest_heap_taken(engine.runtime);
     for (int i = 0; i < 1000; i++) {
@@ -6152,11 +6131,11 @@ int main(int argc, char **argv) {
 
     // A shape with a flag in it that is not a tag, over memory this host filled
     // with something else first. An optional is a value and a byte saying
-    // whether the value is there, so an empty one is the byte set to nought —
+    // whether the value is there, so an empty one is the byte set to nought --
     // and what is under it is written as well, the same rule a case that
     // carries nothing is written by. Two empty ones are two of the same bytes
     // because of it, which is what a host comparing, hashing or writing out its
-    // own array is relying on. See D712.
+    // own array is relying on.
     Mark marks[2];
     memset(marks, 0xAB, sizeof(marks));
     KestValue lent_marks =
@@ -6211,10 +6190,10 @@ int main(int argc, char **argv) {
 
     // And the same shape crossing a frame, where a host says what it is putting
     // in each slot. A value, the byte that says whether the value is there, and
-    // a number are what a number, a `bool` and a number are too — one run of
-    // pieces, same kinds and same offsets and same size — so a host could lend
+    // a number are what a number, a `bool` and a number are too -- one run of
+    // pieces, same kinds and same offsets and same size -- so a host could lend
     // either of those two shapes under the other's name and be told nothing.
-    // The middle piece is what tells them apart now. See D714.
+    // The middle piece is what tells them apart now.
     const struct {
         int64_t at;
         int64_t held;
@@ -6315,7 +6294,7 @@ int main(int argc, char **argv) {
     // Asked before anything else is made, because what that answers about is
     // the memory: the first thing the machine makes goes where the text was,
     // and then the same pointer is the machine's again. Which is what happens
-    // next — a world of its own, because the one made before is on a heap that
+    // next -- a world of its own, because the one made before is on a heap that
     // was thrown away in there. This host follows the rule it is here to show,
     // rather than reading a store it happens to still point at.
     if (!asks(&engine, CREATE)) {
@@ -6339,8 +6318,8 @@ int main(int argc, char **argv) {
     }
 
     // A reference the host keeps between calls, and what happens to it when the
-    // program drops what it named. A reference is a number — a slot and how
-    // many times that slot has been used — so this host holds one across three
+    // program drops what it named. A reference is a number -- a slot and how
+    // many times that slot has been used -- so this host holds one across three
     // calls and is told at the third that what it named is gone, without ever
     // being able to look inside the store itself.
     engine.frame[0] = engine.world;
@@ -6350,10 +6329,10 @@ int main(int argc, char **argv) {
         return 1;
     }
     // Kept the way the kind says rather than copied whole. A reference is a
-    // number — the place it names and how many times that place has been
-    // handed out — and copying the slot worked while saying nothing about what
+    // number -- the place it names and how many times that place has been
+    // handed out -- and copying the slot worked while saying nothing about what
     // was in it: a host that asked `kest_slot_of` about this slot was told to
-    // read a pointer out of it, which is a pointer nobody made. See D715.
+    // read a pointer out of it, which is a pointer nobody made.
     int64_t kept_ref = engine.frame[0].integer;
     engine.frame[0] = engine.world;
     engine.frame[1].integer = kept_ref;
@@ -6389,7 +6368,7 @@ int main(int argc, char **argv) {
     // machine words, so a host handing two handles where a store and a place
     // were wanted said a frame that agreed with itself, and what the program
     // read as a place was a pointer. The second piece is what tells them apart
-    // now. See D715.
+    // now.
     const uint8_t two_handles[2] = {KEST_L_WORD, KEST_L_WORD};
     if (kest_frame_fills(engine.runtime, engine.entry[HEALTH_OF], two_handles,
                          2)) {
@@ -6421,7 +6400,7 @@ int main(int argc, char **argv) {
     // And the same reference handed to another store of the same shape, which
     // is the mistake a host makes rather than a program: two references are
     // two numbers and nothing about either says which store it came from. What
-    // says it is the stamp — the machine hands those out, so a place in one
+    // says it is the stamp -- the machine hands those out, so a place in one
     // store is never stamped like a place in another.
     if (!kest_call(engine.runtime, engine.entry[CREATE], engine.frame,
                    sizeof(engine.frame) / sizeof(engine.frame[0]))) {
@@ -6450,8 +6429,8 @@ int main(int argc, char **argv) {
 
     // And a reference from the other machine, which is two worlds of one
     // program: a host running both holds references from each and they are
-    // numbers. What tells them apart is that the stamps are the build's — two
-    // machines from one build never stamp a place the same — so a reference
+    // numbers. What tells them apart is that the stamps are the build's -- two
+    // machines from one build never stamp a place the same -- so a reference
     // from over there names nothing here.
     KestValue theirs_frame[6] = {{0}};
     int32_t their_create = kest_entry(other, "create");
@@ -6499,8 +6478,8 @@ int main(int argc, char **argv) {
 
     // And a handle that is a real handle and belongs to somebody else. The
     // other machine made this store, so everything the first machine reads to
-    // know what a handle is reads right — the tag at the front is the tag it
-    // looks for — and the only thing wrong with it is which heap it lives on.
+    // know what a handle is reads right -- the tag at the front is the tag it
+    // looks for -- and the only thing wrong with it is which heap it lives on.
     // A host running two worlds has one of these to hand every frame.
     KestValue theirs[2] = {{0}};
     int32_t make = kest_entry(other, "create");
@@ -6521,15 +6500,15 @@ int main(int argc, char **argv) {
     printf("and refused a store the other machine made\n");
 
     // And words, which is the one answer a program cannot hand back as a value
-    // without this host keeping a pointer into the machine's heap — and what
+    // without this host keeping a pointer into the machine's heap -- and what
     // is kept there is gone when the heap goes, which is the rule this host is
     // shown breaking further up. Written into a lend it is this host's own
     // memory: the bytes are here afterwards whatever the machine does next.
     unsigned char words[16];
     memset(words, 0, sizeof(words));
     engine.frame[0] = kest_borrow(engine.runtime, words, sizeof(words), "u8", 1);
-    // How many there are and how much room there is, which a host had nowhere
-    // to ask until D965. A lend is as long as it is lent and has no room over;
+    // How many there are and how much room there is, which a host can ask.
+    // A lend is as long as it is lent and has no room over;
     // a number a host wrote into a slot is not an array and answers nought,
     // which is the same answer an empty one gives.
     {
@@ -6577,11 +6556,11 @@ int main(int argc, char **argv) {
            (const char *)words);
 
     // And how long gone lasts, for text. What a host keeps a piece of text by
-    // is a pointer into the machine's heap, and a heap thrown away takes it —
+    // is a pointer into the machine's heap, and a heap thrown away takes it --
     // which this host was told above. What it is not told is that the next
     // thing the machine makes goes where that was: the same pointer, the same
     // answer from `kest_still_holds`, and something else written there. A lend
-    // has the same shape and the same reason (D352): a pointer carries no
+    // has the same shape and the same reason: a pointer carries no
     // stamp, so this is a rule rather than a refusal, and here is what it
     // looks like when a host keeps one anyway.
     if (!kest_heap_reset(engine.runtime)) {
@@ -6612,7 +6591,7 @@ int main(int argc, char **argv) {
     // the line above -- a pointer the host kept is not the machine's once the
     // heap has gone -- and this is the other half of the same rule: if it does
     // come round again, what is written there is what the machine made next
-    // and not what the host put there. See D353 and D996.
+    // and not what the host put there.
     if (next_word[0].text == first_word[0].text &&
         strcmp(first_word[0].text, "the second") != 0) {
         fprintf(stderr, "text kept across a reset reads `%s`\n",
@@ -6628,7 +6607,7 @@ int main(int argc, char **argv) {
     // And the same for a lend, which the paragraph above says has the same
     // shape and this host had never shown. It has one thing text has not: a
     // header on the heap with a place in a list beside it, and a reset takes
-    // the list as well. So the machine's answer is not the same — a piece of
+    // the list as well. So the machine's answer is not the same -- a piece of
     // text kept across a reset reads whatever was made next, and a lend kept
     // across one is refused twice over.
     Row outlived[8];
@@ -6650,9 +6629,9 @@ int main(int argc, char **argv) {
     if (!said_that(engine.runtime, "K0637", "not a lend this machine gave")) {
         return 1;
     }
-    // And what that leaves a host paying. Nothing was carried over — not the
-    // headers on the spare list and not the list of what is lent — so the
-    // first frame of lending after a reset buys both again. D561's widest
+    // And what that leaves a host paying. Nothing was carried over -- not the
+    // headers on the spare list and not the list of what is lent -- so the
+    // first frame of lending after a reset buys both again. The widest
     // frame is paid for once between resets, which is the number a host that
     // throws the heap away every frame is actually paying: all of it, every
     // frame.
@@ -6721,11 +6700,11 @@ int main(int argc, char **argv) {
     // And the same text handed back as a run of bytes, which is a host lending
     // the machine its own memory. What a program holds of text is a pointer
     // into the heap or into the build, and a lend is memory a program may write
-    // into — so this would make the one thing this language says cannot be
+    // into -- so this would make the one thing this language says cannot be
     // written into a thing that can, and a literal rewritten that way stays
     // rewritten for every machine the build starts. Asked for on purpose,
     // because a host holding a piece of text and a length has everything it
-    // needs to do it by accident. See D720.
+    // needs to do it by accident.
     if (kest_borrow(engine.runtime, (void *)(uintptr_t)written.text,
                     (uint32_t)strlen(written.text), "u8", 1)
             .object != NULL) {
@@ -6786,8 +6765,8 @@ int main(int argc, char **argv) {
            keeping(while_lent), keeping(when_ended), keeping(block_alone));
 
     // And the build under them, asked for while they are still standing. What
-    // the machines run is on it — the program, the layouts, and the text every
-    // diagnostic points at — so this is refused where it is asked for rather
+    // the machines run is on it -- the program, the layouts, and the text every
+    // diagnostic points at -- so this is refused where it is asked for rather
     // than found out about afterwards, and the report says how many are up.
     if (kest_build_free(build)) {
         fprintf(stderr, "a build was freed with machines standing on it\n");
@@ -6821,7 +6800,7 @@ int main(int argc, char **argv) {
     // how much heap it may have. Each refusal is read back from the build's
     // report by its code and what it names. Here rather than beside the first start,
     // because a machine started and freed there is one more counted before
-    // the build is asked how many are standing on it. See D1246.
+    // the build is asked how many are standing on it.
     {
         // A host of its own, because the one above has the doors it bound
         // for code it wrote, and this is a host saying which of them are for
@@ -6919,11 +6898,10 @@ int main(int argc, char **argv) {
     }
 
     // And what a machine that was never asked takes with it. What a host has
-    // been told is the host's and the room it was written in goes back (D617);
+    // been told is the host's and the room it was written in goes back;
     // what it was not told is the machine's, and a machine is freed with it. So
-    // a host that means to say why something went wrong asks before it frees —
+    // a host that means to say why something went wrong asks before it frees --
     // the build is not holding the words, it is holding the file they point at.
-    // See D637.
     {
         KestHost *quietly = kest_host_new();
         static Decider unasked = {-1, 1, false, true, false, false, DECIDER_MARK};
@@ -6968,7 +6946,7 @@ int main(int argc, char **argv) {
     // where a step is a jump that goes back or a call, because those are the
     // two things a program does to go on doing something. A host that runs code
     // it did not write needs it, and one that does not can leave it at nought
-    // and pay nothing for it. See D921.
+    // and pay nothing for it.
     {
         KestHost *timed = kest_host_new();
         static Decider untimed = {-1, 1, false, true, false, false, DECIDER_MARK};
@@ -7095,7 +7073,7 @@ int main(int argc, char **argv) {
     // run of `Row` handed where `[Tile]` was wanted used to be unpacked by the
     // callee's layout and read past the end of this host's own memory. Both
     // ways round, because the one that is bigger reads further and the one
-    // that is smaller reads somebody else's fields. See D927.
+    // that is smaller reads somebody else's fields.
     {
         static Row rows[4];
         static Tile tiles[4];
@@ -7145,7 +7123,7 @@ int main(int argc, char **argv) {
     // And a door that could not do what it was asked. A bound function gives
     // nothing back, so one that failed used to write a value that meant nothing
     // and the program carried on with it. It says so now, and the call refuses
-    // where it was made, with the host's own words under it. See D937.
+    // where it was made, with the host's own words under it.
     {
         KestHost *sorry = kest_host_new();
         static Decider unasked = {-1, 1, false, true, false, false, DECIDER_MARK};
@@ -7202,10 +7180,10 @@ int main(int argc, char **argv) {
     // of `KestValue`, so the wider of the two is wider by exactly that many
     // times that many bytes, and a host asking rather than working it out is
     // asking about the frames and the table of host functions as well. What it
-    // leaves on the build is less than what the machine is made of — it is a
-    // list to say things into, and everything else went with the machine —
+    // leaves on the build is less than what the machine is made of -- it is a
+    // list to say things into, and everything else went with the machine --
     // which is a host that reloads paying for one machine rather than for
-    // every machine it has ever started. See D574.
+    // every machine it has ever started.
     {
         KestLimits narrow_stack = {4096, 16, 0, 0};
         KestLimits wide_stack = {8192, 16, 0, 0};
@@ -7259,11 +7237,11 @@ int main(int argc, char **argv) {
         // And the two numbers a host actually has to pick between: what the
         // whole program needs, and what the functions this host calls need
         // with the way back in on top. The program has a run of calls ten
-        // deep that nothing here enters (D620), so what saying nothing costs
-        // is that chain's frames. The slots it costs are nothing at all —
+        // deep that nothing here enters, so what saying nothing costs
+        // is that chain's frames. The slots it costs are nothing at all --
         // naming what it calls is a slot dearer, not cheaper, because the way
         // back in is nearly the whole program's width and the function called
-        // from there is added to it. See D621 and D803.
+        // from there is added to it.
         KestLimits whole = {0, 0, 0, 0};
         KestLimits driven = {0, 0, 0, 0};
         static const char *const drives[] = {"step", "create", "spawn", NULL};
@@ -7304,9 +7282,9 @@ int main(int argc, char **argv) {
         // function called from inside a host function is added to it, so
         // naming asks for more slots than saying nothing does. Refused at
         // equal as well as at less, because equal is what this said for a
-        // while and what stopped being true without anything saying so — an
+        // while and what stopped being true without anything saying so -- an
         // order kept by two different arithmetics is the weaker one written
-        // down. See D803.
+        // down.
         if (driven.stack_slots <= whole.stack_slots ||
             driven.call_depth >= whole.call_depth || named_cost >= quiet_cost) {
             fprintf(stderr, "saying nothing wants %u slots and %u frames, "
@@ -7321,7 +7299,7 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("saying nothing is %u slots and %u frames at %zu bytes, and "
-               "naming what it calls is %u and %u at %zu — %u slot(s) dearer "
+               "naming what it calls is %u and %u at %zu -- %u slot(s) dearer "
                "and %u frame(s) cheaper\n",
                whole.stack_slots, whole.call_depth, quiet_cost,
                driven.stack_slots, driven.call_depth, named_cost,
@@ -7330,11 +7308,10 @@ int main(int argc, char **argv) {
 
         // And what happens when this host calls something it did not name. A
         // machine sized by naming is three frames deep and the chain is ten,
-        // so the call is refused — and what it is told is what that call
+        // so the call is refused -- and what it is told is what that call
         // needs, at the declaration of the function it called, rather than
         // what the whole program needs, which is the number it asked not to
         // pay for. Sized for what the words say, the same call goes through.
-        // See D622.
         KestHost *shallow = kest_host_new();
         if (shallow == NULL ||
             !kest_host_bind(shallow, "Io.write", io_write, stdout) ||
@@ -7384,12 +7361,12 @@ int main(int argc, char **argv) {
                driven.call_depth, enough.stack_slots, enough.call_depth);
 
         // And a host that picks neither, which is most hosts the first time.
-        // What it gets is what the program asked for — including room for the
+        // What it gets is what the program asked for -- including room for the
         // call this host makes from inside one of its own functions, which is
         // the half a machine cannot leave out because it does not know which
         // function a host will call. So it is asked to do exactly that: a
         // frame that steps the world, which asks this host, which asks the
-        // program back. See D575.
+        // program back.
         KestHost *unasked = kest_host_new();
         static Decider asking = {-1, 1, true, true, false, false, DECIDER_MARK};
         if (unasked == NULL ||
@@ -7419,7 +7396,7 @@ int main(int argc, char **argv) {
         // ceiling is, and the two beside it are always a number because a
         // machine always has a stack and a depth. One of the three answers
         // what a host wrote and the other two what the machine worked out, so
-        // a host reading all three the same way is wrong about one. See D830.
+        // a host reading all three the same way is wrong about one.
         if (was_given.heap_bytes != 0 || was_given.stack_slots == 0 ||
             was_given.call_depth == 0) {
             fprintf(stderr,
@@ -7458,7 +7435,7 @@ int main(int argc, char **argv) {
         // one too and adding is what writing nothing does. Held as the sum
         // rather than as an order, because an order is kept by a machine that
         // is merely generous and this is the arithmetic a host has to redo to
-        // get the same machine by hand. See D802.
+        // get the same machine by hand.
         KestLimits way_back = {0, 0, 0, 0};
         if (!kest_needs_from(build, NULL, &way_back, NULL) ||
             was_given.stack_slots != worst.stack_slots + way_back.stack_slots ||
@@ -7509,8 +7486,8 @@ int main(int argc, char **argv) {
                             "freed\n");
             return 1;
         }
-        printf("and a host that picked nothing got %u slots and %u frames — "
-               "%zu bytes — and stepped a world through this host and back\n",
+        printf("and a host that picked nothing got %u slots and %u frames -- "
+               "%zu bytes -- and stepped a world through this host and back\n",
                was_given.stack_slots, was_given.call_depth, asked_for_cost);
     }
 
@@ -7519,7 +7496,7 @@ int main(int argc, char **argv) {
     // so the promise is not that the number is right: it is that a machine
     // built from it refuses at the call that would go past it and says what
     // that call wanted. Shown on a program that reaches itself, because this
-    // file's own has a least and a least is not a guess. See D820.
+    // file's own has a least and a least is not a guess.
     {
         // The smallest host's program, which reaches itself and asks for
         // one name this host already has a function for. `examples/tree.kest`
@@ -7585,7 +7562,7 @@ int main(int argc, char **argv) {
     // without finishing, the frames and what a body called its slots read out
     // of it, and then the byte put back and the machine let go. Nothing here
     // is a refusal and the report is empty, which is why `kest_stopped` exists
-    // to tell one from the other. See D991.
+    // to tell one from the other.
     {
         KestBuild *stopping = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
         if (stopping == NULL) {
@@ -7631,7 +7608,7 @@ int main(int argc, char **argv) {
         // than written down here. It was written down here, and twice the
         // number moved when an instruction was added and this host wrote a
         // byte that had come to mean something else -- which is not a message,
-        // it is whatever running that instruction does. See D1012.
+        // it is whatever running that instruction does.
         uint8_t was = code[0];
         code[0] = kest_break_byte();
         KestValue asking[4] = {{0}};
@@ -7654,8 +7631,7 @@ int main(int argc, char **argv) {
         }
         // And where that is as a file and a line, which is what a host's
         // debugger shows a person and puts a breakpoint on. `doubled` is
-        // written on line 922 and its one statement on the line after. See
-        // D1290.
+        // written on line 922 and its one statement on the line after.
         uint32_t line = 0;
         uint32_t column = 0;
         const char *file = kest_entry_source(watched, doubled);
@@ -7679,8 +7655,7 @@ int main(int argc, char **argv) {
         }
         // Whether a slot is written is the proof's answer, and what it proved
         // is the body as compiled: with a breakpoint in it, nothing is said
-        // to be written, and a number is never handed over as text. See
-        // D1291.
+        // to be written, and a number is never handed over as text.
         uint32_t text_length = 0;
         if (kest_frame_written(watched, 0, 0)) {
             fprintf(stderr, "a body with a breakpoint in it was answered for\n");
@@ -7708,7 +7683,7 @@ int main(int argc, char **argv) {
         // And whether that slot holds where the value is rather than the
         // value. `n` is a number a caller handed over, so it holds what it is
         // called; what does not is an element a `for` bound by address, which
-        // `examples/engine.c` stops inside. See D1081.
+        // `examples/engine.c` stops inside.
         if (kest_frame_at_address(watched, 0, 0)) {
             fprintf(stderr, "a number handed in was said to be an address\n");
             return 1;
@@ -7729,7 +7704,6 @@ int main(int argc, char **argv) {
         // and a walk here gave the frames' memory back. Asked here because a
         // host writing a debugger is a host between two stops with time on its
         // hands, which is exactly when a frame loop does its housekeeping.
-        // See D1078.
         FILE *told = tmpfile();
         if (told == NULL) {
             fprintf(stderr, "this host has nowhere to read a report back\n");
@@ -7789,7 +7763,7 @@ int main(int argc, char **argv) {
     // worth and doubles the answer, so what the host does while it is in there
     // is something the program reads the result of: a call back in that
     // divides by nothing ten frames down, and one with a breakpoint written
-    // into it. Both have to leave `weighed` answering 42. See D1079.
+    // into it. Both have to leave `weighed` answering 42.
     {
         KestBuild *inward = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
         if (inward == NULL) {
@@ -7868,7 +7842,7 @@ int main(int argc, char **argv) {
     // that the machine was not keeping it, which is what a host that let go
     // twice wants to be told rather than left to guess. A heap thrown away
     // forgets every one of them, which is why this is asked of something made
-    // after the last one. See D996.
+    // after the last one.
     KestValue on_purpose[2] = {{0}, {0}};
     if (!kest_text(engine.runtime, "kept on purpose", 15, on_purpose) ||
         !kest_keeps(engine.runtime, on_purpose[0]) ||
@@ -7888,7 +7862,7 @@ int main(int argc, char **argv) {
     // the same question: what it holds is where it ended up, and this is the
     // work. Nothing was turned on to get it -- every one of these is at an
     // allocation, a walk or a lend, so they are counted whether or not
-    // anybody asks. See D1007.
+    // anybody asks.
     KestTelemetry did = {0};
     if (!kest_telemetry(engine.runtime, &did) ||
         kest_telemetry(NULL, &did) || kest_telemetry(engine.runtime, NULL)) {
@@ -7921,7 +7895,7 @@ int main(int argc, char **argv) {
     // the one number there is to turn: a host budgeting a frame leaves it at
     // one and gets the shortest pause, and a host that is not raises it and
     // gets fewer of them for more memory held. Asked of nothing too, and with
-    // nought, which means the same as one. See D1045.
+    // nought, which means the same as one.
     kest_collect_after(engine.runtime, 2);
     kest_collect_after(engine.runtime, 0);
     kest_collect_after(NULL, 3);
@@ -7973,8 +7947,8 @@ int main(int argc, char **argv) {
 
     // And the other side of the answer: outside a call there is nothing
     // standing on the machine, so this is the free that happens. Nothing takes
-    // a machine away by force — a host that asked from inside a call and never
-    // came back would still be holding this one — so here is where it goes.
+    // a machine away by force -- a host that asked from inside a call and never
+    // came back would still be holding this one -- so here is where it goes.
     if (!kest_runtime_free(other) || !kest_runtime_free(engine.runtime)) {
         fprintf(stderr, "a machine with nothing running on it was not freed\n");
         return 1;
@@ -7989,7 +7963,7 @@ int main(int argc, char **argv) {
     // Two things a host is told that need a machine of their own, kept to the
     // end and given their own build and their own host: what a machine says
     // above is about the machines this host drives, and a machine started to
-    // be refused something is not one of them. See D441.
+    // be refused something is not one of them.
     {
         KestHost *apart = kest_host_new();
         static Decider quiet = {-1, 1, false, true, false, false, DECIDER_MARK};
@@ -8044,7 +8018,7 @@ int main(int argc, char **argv) {
     // wants; a machine started with what one function wants runs that function
     // and has nowhere to take the call this host makes from inside it. That is the one
     // thing a host is told here rather than left to find out, and nothing had
-    // ever been told it. See D441.
+    // ever been told it.
     {
         // What `step` alone wants, which is what a host that knows which
         // function it drives would take and is exactly the number that leaves
@@ -8084,7 +8058,7 @@ int main(int argc, char **argv) {
         // What the working out costs the program, read on either side of the
         // refusal: the answer is worked out on the heap the program is running
         // on, and a refusal that leaves something there is a frame budget that
-        // shrinks every time something goes wrong. See D571.
+        // shrinks every time something goes wrong.
         size_t heap_before = kest_heap_used(tight);
         kest_call(tight, stepped, narrow, 6);
         if (!said_under(tight, "K0602", "this program needs")) {
@@ -8107,12 +8081,12 @@ int main(int argc, char **argv) {
     // And what a reload costs, which is the question a host that watches a
     // file for changes is really asking: every machine freed, the build freed,
     // the build made again, every machine started again. It is two numbers and
-    // no others — what the build costs and what the machines do — and both are
-    // the same every time round, because nothing in this library outlives a
+    // no others -- what the build costs and what the machines do -- and both
+    // are the same every time round, because nothing in this library outlives a
     // build. There is no global state to carry anything, which is a rule this
     // project keeps rather than a thing this measures; what this does is show
     // where it would fail. Three times round, because two of anything can
-    // agree by accident. See D578.
+    // agree by accident.
     {
         size_t built = 0;
         size_t started = 0;
@@ -8121,7 +8095,7 @@ int main(int argc, char **argv) {
         // as is the shape this build has. The same number is nothing to
         // migrate; a different one is a field that moved, changed width or
         // changed name, and a host that does not ask lays its old bytes over a
-        // new struct. See D948.
+        // new struct.
         const KestLayout *was = NULL;
         uint64_t shaped = kest_build_layout(build, "Row", &was) == 1
                               ? kest_layout_mark(was)
@@ -8181,11 +8155,11 @@ int main(int argc, char **argv) {
     // And the same file built inside a ceiling, which is the one thing this
     // door did not take. Last of everything this host asks, because what is
     // read back here is a refusal, and a refusal read before the checks above
-    // is one of them answered by the wrong question. See D844. A host that compiles a program somebody else wrote
-    // can be handed a file this compiler cannot make sense of, and one of
-    // those asked this machine for sixty-five gigabytes — so what a build may
-    // have is a number, and the number this host has in front of it is what
-    // building this one cost a moment ago. See D844.
+    // is one of them answered by the wrong question. A host that compiles a
+    // program somebody else wrote can be handed a file this compiler cannot
+    // make sense of, and one of those asked this machine for sixty-five
+    // gigabytes -- so what a build may have is a number, and the number this
+    // host has in front of it is what building this one cost a moment ago.
     KestBuild *walled = kest_build(path, NULL, stderr, KEST_FORM_TEXT,
                                    first_build);
     if (walled == NULL) {
@@ -8239,13 +8213,13 @@ int main(int argc, char **argv) {
 
     // Every door of this header knocked on with a machine that did not start.
     // `kest_start` answers NULL and says why into the build's report, and a
-    // host that carries on regardless is a host with a bug — but the answer to
+    // host that carries on regardless is a host with a bug -- but the answer to
     // that was thirteen of these taking the process down while eight answered
     // politely, which is a guard written where somebody happened to be rather
     // than a rule. The rule is that a machine that did not start is a machine
     // with nothing in it, and the answer is the one a real machine gives when
     // it has nothing. There is nowhere to say more: a report belongs to a
-    // machine and there is none. See D894.
+    // machine and there is none.
     {
         KestValue nothing = {0};
         int32_t numbers[2] = {1, 2};
@@ -8295,7 +8269,7 @@ int main(int argc, char **argv) {
     // build that did not compile is the first thing a host meets -- `kest_build`
     // answers NULL for it -- so this is the more likely of the two, and the
     // next line a host writes is `kest_start`. Twenty-five doors, and two of
-    // them took the process down. See D895.
+    // them took the process down.
     {
         KestLimits least;
         KestReason why = {0, NULL};

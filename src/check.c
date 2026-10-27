@@ -21,30 +21,30 @@ typedef struct {
     // Whether a `let` declared it, and whether anything has read it since. The
     // two together are what says a name in a body was written for nothing: a
     // local is the one name in this language nobody outside the body can be
-    // relying on. A loop's binding and a case's are not `let`s — one is how a
+    // relying on. A loop's binding and a case's are not `let`s -- one is how a
     // program says how many times to go round and the other is the only way to
-    // write the case at all — so neither is asked. See D726.
+    // write the case at all -- so neither is asked.
     bool from_let;
     bool read;
     // And whether it was an `if let` rather than a `let`, which changes what
     // to do about it: a `let` nothing reads comes out, and an `if let` nothing
-    // reads is a question asked the long way. See D728.
+    // reads is a question asked the long way.
     bool from_if_let;
     // Whether the body assigns to this name. Asked about the two a walk binds,
     // because a name nothing writes can be the walk's own count rather than a
     // copy of it made every turn. A write to a field of it is not one of
-    // these: this is the name itself on the left of an `=`. See D866.
+    // these: this is the name itself on the left of an `=`.
     bool written;
     // Whether anything assigns to the name or to anything inside it: a field
     // of it, one of a run it holds, a field of one of those. Wider than
     // `written` on purpose, and for a different question: a walk's binding is
     // a copy made every turn, so writing a field of it changes nothing that
     // outlives the turn, while a name the frame does not hold at all has
-    // nowhere for any of those writes to go. See D887.
+    // nowhere for any of those writes to go.
     bool written_into;
     // The `let` that declared it, so what was learned about the name can be
     // put where the compiler reads it. Whether a name is written is known when
-    // the scope holding it ends and not before. See D887.
+    // the scope holding it ends and not before.
     KestStmt *declared_by;
     // Declared `= array()`, which is an array with nothing in it and no room
     // for anything: `array(n, v)` is the one that comes with room. `fit`
@@ -52,7 +52,7 @@ typedef struct {
     // `fit` into one of these writes nothing, answers false, and says nothing
     // at all unless somebody reads the answer. It is the shape a body under
     // `no.alloc` falls into, because `push` is refused there and `fit` is
-    // what is left. See D1135.
+    // what is left.
     bool made_with_no_room;
     bool fitted;
     // And whether anything could have given it room since: `room` and `push`
@@ -80,13 +80,12 @@ typedef struct {
     bool naming_callee;
     // Set while the whole of an assignment's target is worked out, where that
     // target is a name and nothing else: writing to a local is not reading it,
-    // and the same walk checks both. A field or an index is not one of these —
-    // `p.x = 1` reads `p` to find the field. See D726.
+    // and the same walk checks both. A field or an index is not one of these --
+    // `p.x = 1` reads `p` to find the field.
     bool writing_to_a_name;
     // Whether what is being checked is an argument of a call to something
     // other than the builtins that read an array without giving it room. A
     // name handed over is a name this body can no longer say anything about.
-    // See D1135.
     bool handing_a_name_over;
     // Where the copy being checked was asked for, when one is. A copy asked
     // for inside a copy is asked for by whoever asked for that one: the reader
@@ -95,19 +94,19 @@ typedef struct {
     KestSpan asking;
     const KestSource *asking_source;
     // Set while a block's body is checked, where `return` would leave a
-    // function that is not the one the block is written in. See D1257.
+    // function that is not the one the block is written in.
     bool in_a_block;
     // Set while an argument that is a block is checked, where a block the
-    // body was handed may be handed on. See D1257.
+    // body was handed may be handed on.
     bool handing_a_block;
     // The declaration whose body is being checked, which a function that
     // takes a block may not call: it is written into where it is called, and
-    // written into itself it has no end. See D1257.
+    // written into itself it has no end.
     const KestDecl *function;
     // A body that resumes: the enum whose cases it waits at, how many names
     // were in reach when the body began -- the parameters, and nothing else
     // may be in reach of a `wait` -- how many times each case is waited at,
-    // and how many `scratch` blocks are open. See D1263.
+    // and how many `scratch` blocks are open.
     const KestType *resume_cases;
     uint32_t resume_mark;
     uint32_t *waited;
@@ -185,8 +184,8 @@ static void suggest(Checker *checker, const char *format, ...) {
 // An optional is the one type in the language whose refusal has an answer that
 // is a piece of syntax rather than a different value: what it holds is right
 // there and `if let` is how it comes out. Every place one is met where what it
-// holds would have done says so, and only there — an `i32?` handed where a
-// `text` was wanted is a different mistake and gets no such line. See D505.
+// holds would have done says so, and only there -- an `i32?` handed where a
+// `text` was wanted is a different mistake and gets no such line.
 static bool say_if_let(Checker *checker, const KestType *got,
                        const KestType *want) {
     if (got == NULL || got->tag != KEST_T_OPTIONAL || got->element == NULL) {
@@ -204,7 +203,7 @@ static bool say_if_let(Checker *checker, const KestType *got,
 // wanted. The conversion happens once, so the two are one step apart and the
 // message says only that the types differ -- which reads, to whoever wrote it,
 // as though the language made no conversion at all. What is missing is the
-// middle one, and it has to be named. See D885.
+// middle one, and it has to be named.
 static bool say_wrapped_once(Checker *checker, const KestType *got,
                              const KestType *want) {
     if (got == NULL || want == NULL || want->tag != KEST_T_OPTIONAL ||
@@ -222,7 +221,7 @@ static bool say_wrapped_once(Checker *checker, const KestType *got,
 
 // A number or a truth where text is wanted. What makes text of one here is a
 // hole, and a reader arriving from a language whose `print` takes anything
-// writes `io.print(3)` and is told only the two types. See D1148.
+// writes `io.print(3)` and is told only the two types.
 static bool say_made_text(Checker *checker, const KestType *got,
                           const KestType *want) {
     if (got == NULL || want == NULL || want->tag != KEST_T_TEXT ||
@@ -296,8 +295,7 @@ static Local *find_local(Checker *checker, const char *name, size_t length) {
 // in one body: no host can ask for one and no other file can name one, so a
 // Whether a `let`'s value is `array()` with no count in it, which is the one
 // shape that makes an array with no room. Written as a question of its own
-// because what it is for is asked where the scope ends and not here. See
-// D1135.
+// because what it is for is asked where the scope ends and not here.
 static bool made_with_no_room(Checker *checker, const KestExpr *value) {
     if (value == NULL || value->kind != KEST_EXPR_CALL ||
         value->call.arg_count != 0 ||
@@ -310,13 +308,13 @@ static bool made_with_no_room(Checker *checker, const KestExpr *value) {
 }
 
 // `let` nothing reads is the one name in this language nobody at all can be
-// relying on. See D726.
+// relying on.
 static void drop_locals(Checker *checker, uint32_t mark) {
     for (uint32_t i = checker->local_count; i > mark; i--) {
         const Local *local = &checker->locals[i - 1];
         // What was learned about the name, put where the compiler reads it.
         // Said here because this is where a scope ends, which is the first
-        // moment anybody knows. See D887.
+        // moment anybody knows.
         if (local->declared_by != NULL) {
             local->declared_by->let.name_written = local->written_into;
         }
@@ -325,7 +323,6 @@ static void drop_locals(Checker *checker, uint32_t mark) {
         // anybody knows nothing gave it room, and said at the `let` because
         // that is the line to change. A warning rather than a refusal, for
         // the reason K0346 is one: the shape that works is one word away.
-        // See D1135.
         if (local->made_with_no_room && local->fitted && !local->given_room) {
             kest_diags_add(checker->program->diags, KEST_SEVERITY_WARNING,
                            "K0347", local->span,
@@ -339,7 +336,7 @@ static void drop_locals(Checker *checker, uint32_t mark) {
         // A `let`, an `if let`, and the position a `for` binds beside an
         // element: the three a program had another way to write. What a `for`
         // binds on its own and what a `match` case binds are not asked, because
-        // there is no other way to write either. See D728 and D729.
+        // there is no other way to write either.
         if (local->read || !(local->from_let || local->is_loop_index)) {
             continue;
         }
@@ -400,10 +397,9 @@ static void declare_local(Checker *checker, KestSpan span, KestType *type) {
     }
 
     // Written whole rather than field by field. The array outlives the body it
-    // was filled for — a scope is dropped by rewinding a count, not by
-    // clearing what is past it — so a field this forgets is one the last name
+    // was filled for -- a scope is dropped by rewinding a count, not by
+    // clearing what is past it -- so a field this forgets is one the last name
     // at that place left behind, and the last name at that place was read.
-    // See D726.
     Local *local = &checker->locals[checker->local_count++];
     Local fresh = {name, type, span, checker->depth, false, false, false,
                    false, false, false, false, false, NULL,
@@ -437,7 +433,7 @@ static bool writes_only_a_copy(Checker *checker, const KestExpr *target,
 }
 
 // Whether this writes a field of a value the caller handed over, in a function
-// that has no way to hand it back. A struct is a value (D006), so the write is
+// that has no way to hand it back. A struct is a value, so the write is
 // on this frame's copy: a function using its parameter as a place to work
 // gives it back, and one that does not is writing where nobody will look.
 //
@@ -447,7 +443,7 @@ static bool writes_only_a_copy(Checker *checker, const KestExpr *target,
 // while answering how many things moved lost the write and was told nothing.
 // The shape the suggestion names is `fn f(one: T) -> T`, and an optional of
 // `T` is the same shape with a way to say no, so those two are what is
-// allowed. See D1065.
+// allowed.
 static bool answers_with(const KestType *result, const KestType *given) {
     if (result == NULL || given == NULL) {
         return false;
@@ -523,7 +519,7 @@ static bool is_error(const KestType *type) {
 // vector, and NULL when it gives nothing: a vector and one of its own width,
 // a component at a time, or a vector and an `f32` on either side of `*` and
 // `/`, which is every component and that one number. What a shading language
-// has, and nothing a program can add to. See D1250.
+// has, and nothing a program can add to.
 static KestType *vector_answer(KestTokenKind op, KestType *left,
                                KestType *right) {
     bool scales = op == KEST_TOK_STAR || op == KEST_TOK_SLASH ||
@@ -559,7 +555,7 @@ static const KestExpr *literal_of(const KestExpr *expr) {
 // And whether there is one. This was written out twice more -- once under this
 // name and once as `takes_a_type`, which is what a literal does rather than
 // what it is -- and three walks over one question is three answers the day any
-// of them moves. See D770.
+// of them moves.
 static bool is_literal(const KestExpr *expr) {
     return literal_of(expr) != NULL;
 }
@@ -581,8 +577,8 @@ static void as_component(Checker *checker, KestExpr *side, KestType **type) {
 }
 
 // A name that is several functions is one of them here, and which one is
-// settled by what is wanted. A call settles it by what is passed instead; see
-// D023, which this is the other half of.
+// settled by what is wanted. A call settles it by what is passed instead,
+// and this is the other half of that.
 static KestType *named_function(Checker *checker, const char *name,
                                 size_t length, const KestType *expected) {
     KestSymbol *all[32];
@@ -613,7 +609,7 @@ static KestType *named_function(Checker *checker, const char *name,
 // What the language's own functions call the things they take, in the words
 // the reference prints: `slice(t, from, count)`. A message says `from` rather
 // than `this argument` because a reader has met that name, and it has to be
-// that name — `check-tables.sh` holds this against the reference, the way it
+// that name -- `check-tables.sh` holds this against the reference, the way it
 // holds the keywords.
 //
 // Only the ones a message names are here. The reference calls some of them by
@@ -656,9 +652,9 @@ static const char *const BUILTINS[] = {
 // characters is suggested for at all, because every short name is one edit
 // from every other.
 // What this knows about one candidate: nearer than everything so far, or as
-// near as the nearest. The same word offered twice is one answer — a name
+// near as the nearest. The same word offered twice is one answer -- a name
 // reachable under its module and by its last piece is written two ways and
-// meant once — so what is compared is the words and not the pointers.
+// meant once -- so what is compared is the words and not the pointers.
 typedef struct {
     const char *best;
     const char *second;
@@ -689,7 +685,7 @@ static void offer(Nearest *found, const char *candidate, uint32_t distance) {
 // told one of two equally good answers is being chosen for; a reader told both
 // is being told what this knows. `also` is the second when there are two and
 // NULL when there is one, and nothing is answered at all when more than two
-// are level, because a list of names is not a suggestion. See D297.
+// are level, because a list of names is not a suggestion.
 static const char *nearest_name(Checker *checker, const char *name,
                                 size_t length, const char **also) {
     if (also != NULL) {
@@ -697,9 +693,9 @@ static const char *nearest_name(Checker *checker, const char *name,
     }
     // A name of one letter is not written back for: everything that size is one
     // edit from everything else, and what a reader would get is noise. Two is
-    // the shortest worth answering about — `io` and `os` are names a file
-    // writes — and what keeps those from being answered wrongly is the rule
-    // above, which says nothing when more than two are level. See D298.
+    // the shortest worth answering about -- `io` and `os` are names a file
+    // writes -- and what keeps those from being answered wrongly is the rule
+    // above, which says nothing when more than two are level.
     if (length < 2) {
         return NULL;
     }
@@ -730,7 +726,7 @@ static const char *nearest_name(Checker *checker, const char *name,
         const char *dot = strrchr(whole, '.');
         const char *tail = dot == NULL ? whole : dot + 1;
         // Compared against the way a file writes it, because that is what was
-        // written: `io.print` and not `std.io.print`. See D1039.
+        // written: `io.print` and not `std.io.print`.
         const char *as_written = kest_written_as(checker->program, whole);
         const char *against = written_plain ? tail : as_written;
         // Reachable by the last piece alone means this file declared it, and
@@ -761,7 +757,7 @@ static const char *nearest_name(Checker *checker, const char *name,
             }
             // The word a file writes, which is the last part of the module
             // and not the whole of it: a name lives under `std.io` and what
-            // goes in front of `print` is `io`. See D1039.
+            // goes in front of `print` is `io`.
             const char *from = whole;
             for (const char *at = whole; at < dot; at++) {
                 if (*at == '.') {
@@ -774,7 +770,7 @@ static const char *nearest_name(Checker *checker, const char *name,
             // A name written into the arena, so when there is no room there
             // is no name. A suggestion is the one thing a compiler with
             // nothing left can do without, so this one is left out rather
-            // than measured. See D508, and D510 for what else was.
+            // than measured.
             if (module == NULL) {
                 break;
             }
@@ -788,7 +784,7 @@ static const char *nearest_name(Checker *checker, const char *name,
     // unknown. It is the module loop above that reaches this, where a file
     // writes the name it calls itself somewhere a value goes -- and what is
     // wrong there is not the spelling. Nothing else can be level with it,
-    // since a word is no distance from itself. See D737.
+    // since a word is no distance from itself.
     if (found.best != NULL && kest_word_same(found.best, name, length)) {
         return NULL;
     }
@@ -821,7 +817,7 @@ static bool has_order(const KestProgram *program, const KestType *type) {
 // What a copy was asked for with, held to what the generic says it needs. The
 // body was checked against those words where it was written, so this is the
 // other half of the same contract and the place a reader meets it: the line
-// that asked, rather than a line inside somebody else's library. See D1043.
+// that asked, rather than a line inside somebody else's library.
 static bool wants_met(Checker *checker, const KestType *callee,
                       KestSpan named, KestType **bindings,
                       uint32_t generics, KestSpan where) {
@@ -879,7 +875,7 @@ static bool wants_met(Checker *checker, const KestType *callee,
 // what it gets -- and no instance is made, because an instance is a thing the
 // compiler is going to emit. Without this, checking a generic's body left one
 // uncompilable copy per call in the list, and the promise proof judged each of
-// them twice. See D1043.
+// them twice.
 static KestType *shape_of_call(Checker *checker, const KestType *callee,
                                const char **names, KestType **bindings,
                                uint32_t generics) {
@@ -905,7 +901,7 @@ static KestType *shape_of_call(Checker *checker, const KestType *callee,
 // of a generic shape is found by its name, so `Box<K, V>` is one copy in a
 // module and the `K` inside it belongs to whichever generic asked for it
 // first. That one said what its own `K` can do, and this one says what this
-// one's can. See D1043.
+// one's can.
 static void settle_names(KestProgram *program, KestType **bindings,
                          uint32_t count) {
     for (uint32_t g = 0; g < count; g++) {
@@ -935,7 +931,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     if (local != NULL) {
         // Read, unless this is the whole of what is being written to. The same
         // walk checks a target and a value, and a name written to is not a
-        // name read. See D726.
+        // name read.
         if (!checker->writing_to_a_name) {
             local->read = true;
         }
@@ -946,7 +942,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
                           expr->span, checker->program->source, local->span,
                           local->type, true);
         // A block is called, or handed to what takes one, and is nothing
-        // else: held, it would outlive the frame it runs in. See D1257.
+        // else: held, it would outlive the frame it runs in.
         if (local->type != NULL && local->type->tag == KEST_T_FN &&
             local->type->block && !checker->naming_callee &&
             !checker->handing_a_block) {
@@ -1011,7 +1007,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     // Except where the word in front is a module this file did not import:
     // `text.chars` with no `import std.text` is a missing import and not the
     // builtin `text` named where a value goes, and saying the second sends a
-    // reader to fix a line that is right. See D1039.
+    // reader to fix a line that is right.
     KestType *named = kest_lookup_type(checker->program, name, length);
     if (named != NULL && !is_error(named) &&
         kest_out_of_reach(checker->program, name, length)) {
@@ -1026,7 +1022,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
             // made from the values a builder is handed, and from where the
             // value is going only when those cannot tell. This used to say
             // the second of those and to ask for type names at a call, which
-            // is the thing K0211 exists to refuse. See D758.
+            // is the thing K0211 exists to refuse.
             suggest(checker,
                     "build one: `%.*s(...)`, or name a value of it: a copy is "
                     "made from what is passed, and from where it is going when "
@@ -1042,7 +1038,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     // And a type name a generic brought into scope, which is not in the type
     // table at all: it stands for whatever this copy was given. Saying
     // `unknown` about it sends a reader looking for a declaration of `T`,
-    // which is the one thing there will never be. See D741.
+    // which is the one thing there will never be.
     KestType *bound = kest_bound_type(checker->program, name, length);
     if (bound != NULL) {
         report(checker, expr->span, "K0361",
@@ -1058,13 +1054,13 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     // says where to look, written without the half that says what. It is not
     // an unknown name -- the program has it -- and it is not a spelling to
     // guess at either. The neighbouring mistake, a type named where a value
-    // goes, is refused just above. See D738.
+    // goes, is refused just above.
     if (kest_module_named(checker->program, name, length)) {
         report(checker, expr->span, "K0358",
                "`%.*s` is a module, and this wants a value", (int)length,
                name);
         // Naming it is writing to it, so the import it came through is not an
-        // import nothing writes. See D735.
+        // import nothing writes.
         kest_import_reached_by(checker->program, name, length);
         const KestSymbol *under = kest_first_under(checker->program, name, length);
         if (under != NULL) {
@@ -1088,19 +1084,18 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     }
     // And a name this program has, under a module this file has not asked for.
     // The walk below offers nothing a file cannot write, which is right for a
-    // spelling — but a name that is exactly right and one import away is not a
+    // spelling -- but a name that is exactly right and one import away is not a
     // spelling mistake, and saying nothing about it sends a reader looking for
-    // something they have already written. See D732.
+    // something they have already written.
     for (uint32_t i = 0; i < checker->program->global_count; i++) {
         const KestSymbol *symbol = &checker->program->globals[i];
         const char *whole = symbol->name;
         // Where the module ends is wherever this name begins, which is the
         // only split that answers the question being asked: a name lives under
         // the whole of its module and what comes after may hold dots of its
-        // own — `std.math.Math.floor` is a crossing the file declares, and
+        // own -- `std.math.Math.floor` is a crossing the file declares, and
         // what a reader would write for that is `math.Math.floor` rather than
         // `floor`. So the tail is matched and the head is whatever is left.
-        // See D732 and D1039.
         size_t reach = strlen(whole);
         const char *dot = reach > length + 1 &&
                                   whole[reach - length - 1] == '.' &&
@@ -1123,8 +1118,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     // And a module the library has, which no walk over this program can find:
     // a module nothing imported is in no program. A reader who wrote
     // `io.print` wrote the call exactly, and what was missing was the line
-    // above it — so the library is asked for a file of the name they wrote.
-    // See D734.
+    // above it -- so the library is asked for a file of the name they wrote.
     if (checker->program->files != NULL &&
         !kest_file_reaches(checker->program, name, length) &&
         kest_library_has(checker->program->files->library, name, length)) {
@@ -1155,7 +1149,7 @@ static void report_unimported(Checker *checker, KestSpan name) {
         !kest_out_of_reach(checker->program, text, name.length)) {
         // Reached, and this is where every name from another module is asked
         // about: what says an import is worth its place is a name written
-        // through it. See D725.
+        // through it.
         kest_import_reached(checker->program, text, name.length);
         return;
     }
@@ -1230,7 +1224,7 @@ static const KestVariantType *find_case(Checker *checker, const KestType *choice
     }
 
     // Every one of them, and what there is no room to show is counted by the
-    // diagnostic itself (D208) rather than by a rule written here: a list that
+    // diagnostic itself rather than by a rule written here: a list that
     // stops without saying so is a list a reader believes, and where the
     // stopping happens is where it is known.
     for (uint32_t i = 0; i < choice->case_count; i++) {
@@ -1309,7 +1303,7 @@ static void note_written(Checker *checker, const KestExpr *expr, uint32_t want,
     for (uint32_t i = expr->call.arg_count; i < want; i++) {
         uint32_t left = want - i - 1;
         // The last note there is room for counts the rest, the way every
-        // other list in these messages does (D200).
+        // other list in these messages does.
         if (i - expr->call.arg_count + 1 == KEST_MOST_PLACES && left > 0) {
             kest_diags_note(diags, declared_in, name_at(of, i),
                             "this one was not written, and %u more", left);
@@ -1324,7 +1318,7 @@ static void note_written(Checker *checker, const KestExpr *expr, uint32_t want,
 // is the whole of what a file calls itself, so the question is whether the
 // shape was declared in the module being checked. A file that names no module
 // declares under nothing, and nothing else in a program is under nothing with
-// it. See D1041.
+// it.
 static bool reaches_own(const Checker *checker, const KestType *type) {
     return type->unit != NULL &&
            strcmp(checker->program->module, type->unit->module) == 0;
@@ -1333,7 +1327,7 @@ static bool reaches_own(const Checker *checker, const KestType *type) {
 // A field the module that declared it keeps to itself. Reading is what is
 // refused rather than writing, because reading is the whole of it: `pop(t.keys)`
 // reads the field and changes what it names through the handle it was given,
-// so a field that can be read is a field that can be written. See D1041.
+// so a field that can be read is a field that can be written.
 static void refuse_own(Checker *checker, KestSpan where, const KestType *type,
                        const KestMember *member) {
     report(checker, where, "K0365", "`%s` is `%s`'s own", member->name,
@@ -1368,7 +1362,7 @@ static KestType *check_construction(Checker *checker, KestExpr *expr,
                "`%s` has %u field%s, found %u", type->name, type->member_count,
                type->member_count == 1 ? "" : "s", expr->call.arg_count);
         // A vector was declared by nobody, so there is nowhere to point at:
-        // what it is made of is said instead. See D1250.
+        // what it is made of is said instead.
         if (kest_is_vector(type)) {
             suggest(checker, "`%s` is made of `%s`", type->name,
                     type->member_count == 2   ? "x` and `y"
@@ -1425,7 +1419,7 @@ static bool could_take(const KestType *given, const KestType *declared) {
 }
 
 // A builtin is one more thing a name could mean, and which one is meant is
-// settled by what is passed (D023). A file that declares its own `remove`
+// settled by what is passed. A file that declares its own `remove`
 // gets that one where it fits and the builtin where it does not, so a module
 // can name a function after what it does without losing the builtin.
 // Whether two values of this type are one question with one answer, and if
@@ -1442,7 +1436,7 @@ static bool has_equality(const KestProgram *program, const KestType *type,
     // to say so, or it is a body that is right for some copies and not for
     // others. Asked here rather than in the walk below, because that walk is
     // held to the machine's own lists and the machine never meets one of
-    // these: a type name is gone before anything runs. See D1043.
+    // these: a type name is gone before anything runs.
     if (type->tag == KEST_T_PARAM) {
         return kest_wants((KestProgram *)program, type, KEST_WANTS_COMPARES);
     }
@@ -1466,9 +1460,9 @@ static bool has_equality(const KestProgram *program, const KestType *type,
         return true;
     // And a struct, for the same reason and by the same walk: it is a value
     // laid out flat, so what it is is its fields and nothing else. A field
-    // that does not compare is what stops it, and that field is what is said —
+    // that does not compare is what stops it, and that field is what is said --
     // a struct holding an array holds a handle, and comparing handles is the
-    // wrong answer to the question somebody asked. See D874.
+    // wrong answer to the question somebody asked.
     case KEST_T_STRUCT:
         for (uint32_t m = 0; m < type->member_count; m++) {
             if (!has_equality(program, type->members[m].type, without)) {
@@ -1484,22 +1478,21 @@ static bool has_equality(const KestProgram *program, const KestType *type,
     // Written out rather than left to a `default`, for the reason its twin in
     // `kest_type_has_text` gives: a tag added to the language would otherwise
     // land on this side without anybody deciding it should. An optional is the
-    // one that parts them — it can be written and it cannot be compared,
+    // one that parts them -- it can be written and it cannot be compared,
     // because the one way to ask an optional anything is to take what it holds
-    // out. See D541.
+    // out.
     // A reference is the one handle that is an identity rather than a way to
     // reach something, so it is the one that compares. Two of them are equal
     // when they name the same place with the same stamp, which is the question
     // a program asks about a reference and the only one it can ask: is this the
     // same entity, and is it still that entity. A stamp is the build's own
     // counter, so no two places in any two stores of any two machines from one
-    // build are ever stamped alike (D314, D316) and comparing two from
+    // build are ever stamped alike and comparing two from
     // different stores is answered rather than guessed.
     //
     // Reading both and comparing what they name is what this used to say to do,
     // and it answers something else: two settlers with the same fields are one
     // settler under that reading, and one settler whose hunger went up is two.
-    // See D923.
     case KEST_T_REF:
         return true;
     case KEST_T_VOID:
@@ -1589,7 +1582,7 @@ static KestType *check_store_argument(Checker *checker, KestExpr *expr,
 }
 
 // A run of bytes, which is the one array a piece of text goes on the end of
-// whole. See D1068.
+// whole.
 static bool bytes_run(const KestType *array) {
     return array != NULL && array->tag == KEST_T_ARRAY &&
            array->element != NULL && array->element->tag == KEST_T_INT &&
@@ -1611,7 +1604,6 @@ static void check_ref_argument(Checker *checker, KestExpr *expr, uint32_t at,
 // the two that do give room say so themselves. Cleared across the whole of
 // one rather than around each argument, because a call to somebody's own
 // function nested inside a builtin sets it again on its own way down.
-// See D1135.
 static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
                                     const KestType *expected, bool *handled);
 
@@ -1712,8 +1704,7 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
     }
 
     if (is_builtin(checker, expr, name, "push")) {
-        // And this one gives it room, so nothing is said about it. See
-        // D1135.
+        // And this one gives it room, so nothing is said about it.
         if (expr->call.arg_count > 0 &&
             expr->call.args[0]->kind == KEST_EXPR_NAME) {
             Local *held = find_local(
@@ -1739,11 +1730,11 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
             check_expr(checker, expr->call.args[1], NULL);
             return builtin(checker, "void");
         }
-        // Text is its bytes (D021), so a run of bytes and a piece of text are
+        // Text is its bytes, so a run of bytes and a piece of text are
         // the same bytes: `push(out, "ab")` puts the piece on the end whole,
         // and that is the one thing the machine can do in a move where a
         // program has to write a loop. Every other element takes one of
-        // itself. See D1068.
+        // itself.
         KestType *value =
             check_expr(checker, expr->call.args[1], array->element);
         if (bytes_run(array) && value != NULL && value->tag == KEST_T_TEXT) {
@@ -1758,10 +1749,9 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
 
     // The same append with the growth taken out, which is what a body under a
     // promise can do: it answers whether it fitted rather than making room.
-    // See D940.
     if (is_builtin(checker, expr, name, "fit")) {
         // The name itself, so what this body did to it can be read where the
-        // scope ends. See D1135.
+        // scope ends.
         if (expr->call.arg_count > 0 &&
             expr->call.args[0]->kind == KEST_EXPR_NAME) {
             Local *held = find_local(
@@ -1803,11 +1793,9 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
     // Room for what is coming, which is the other half of `array(n, v)`: that
     // one makes a new array with room and this one gives an array it already
     // has. What it does not change is what is in it or how many there are, so
-    // a program that asks for less than it holds has asked for nothing. See
-    // D912.
+    // a program that asks for less than it holds has asked for nothing.
     if (is_builtin(checker, expr, name, "room")) {
-        // And this one gives it room, so nothing is said about it. See
-        // D1135.
+        // And this one gives it room, so nothing is said about it.
         if (expr->call.arg_count > 0 &&
             expr->call.args[0]->kind == KEST_EXPR_NAME) {
             Local *held = find_local(
@@ -2018,7 +2006,7 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
     // A float as the bits it is made of, and back: what a float written into
     // bytes and read out of them has to be to come back as itself, which a
     // conversion to a whole number is not. The width goes with it: an `f32`
-    // is thirty-two bits and an `f64` sixty-four. See D1171.
+    // is thirty-two bits and an `f64` sixty-four.
     if (is_builtin(checker, expr, name, "bits")) {
         uint32_t checked = check_arity(checker, expr, 1);
         KestType *of = expr->call.arg_count > 0
@@ -2137,7 +2125,7 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
         }
         check_ref_argument(checker, expr, 1, store);
         // Reading through a reference is a lookup that can fail, so what comes
-        // back is an optional and D013 is what opens it.
+        // back is an optional, and a lookup that finds nothing is a value.
         return getting ? kest_optional_of(checker->program, store->element)
                        : builtin(checker, "bool");
     }
@@ -2197,10 +2185,9 @@ static uint32_t find_callable(Checker *checker, const KestExpr *expr,
     uint32_t count = kest_overloads(checker->program, text, length, found, room);
     if (count > 0) {
         // A name with a dot in it, resolved: the other way a module is
-        // reached, and the one a name several functions share takes — the
+        // reached, and the one a name several functions share takes -- the
         // lookups that ask for one symbol answer nothing for those, so this is
         // where `math.abs` says the import it came through is worth its place.
-        // See D725.
         kest_import_reached(checker->program, text, length);
     }
     return count;
@@ -2221,7 +2208,7 @@ static KestType *arguments_checked(Checker *checker, KestExpr *expr,
 // gives a bare literal its type and the pass that settles a call between two
 // widths are asking one question, and it was answered in two places -- a
 // default changed in one of them would have left the other preferring the old
-// one, and nothing would have said so. See D766.
+// one, and nothing would have said so.
 static KestType *literal_alone(Checker *checker, const KestExpr *literal) {
     return builtin(checker, literal->kind == KEST_EXPR_INT ? "i32" : "f32");
 }
@@ -2259,7 +2246,7 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
     // second is a tie-breaker and not a second chance: what fits exactly fits
     // the family too, so a family pass that found nothing is an exact pass
     // that would find nothing, and it is asked only where the first left more
-    // than one standing. See D765.
+    // than one standing.
     KestSymbol *chosen = NULL;
     uint32_t matches = 0;
     uint32_t by_family = 0;
@@ -2318,7 +2305,7 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
         // because every argument was settled before any candidate was tried.
         // A literal is said as what it is rather than as the type it would
         // have taken alone: `pick(1)` is a whole number, and calling it `i32`
-        // would be this compiler answering a question nobody asked. See D764.
+        // would be this compiler answering a question nobody asked.
         char passed[256];
         int wrote = 0;
         for (uint32_t i = 0; i < argument_count && wrote >= 0 &&
@@ -2350,7 +2337,7 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
         // several where a pass over the exact types finds none -- two `pick`s
         // taking `u8` and `u16`, called with `1` -- and what a reader was told
         // then was that nothing takes it. More than one does, and no one of
-        // them is the one. See D764.
+        // them is the one.
         bool several = matches > 1 || (matches == 0 && by_family > 1);
         report(checker, expr->span, "K0329",
                several ? "more than one `%.*s` takes these"
@@ -2359,7 +2346,7 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
                span_text(checker, expr->call.callee->span));
         // Beside the caret rather than in the sentence, because the sentence
         // is what the log quotes and what a reader greps: `these` is what
-        // happened and this is what `these` are. See D764.
+        // happened and this is what `these` are.
         kest_diags_suggest(diags, "these are (%s)", passed);
         // Which eight. A diagnostic holds eight places and counts the rest,
         // and the first eight declared are eight in an order that has nothing
@@ -2368,7 +2355,7 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
         // counts for more than agreeing about any of them, because a call of
         // the wrong length is a different mistake from a call of the wrong
         // kinds. Ties keep the order they were declared in, which is the only
-        // order that is not this compiler's opinion. See D763.
+        // order that is not this compiler's opinion.
         uint32_t order[16];
         uint32_t scored[16];
         uint32_t listed = count < 16 ? count : 16;
@@ -2403,7 +2390,7 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
             // When more than one takes these, the places to show are the ones
             // that do. The others are what a reader is not looking at: the
             // sentence says several take it, and a list holding the ones that
-            // do not is a list answering a different sentence. See D765.
+            // do not is a list answering a different sentence.
             if (several && !fitted[order[c]]) {
                 continue;
             }
@@ -2457,9 +2444,9 @@ static const char *instance_symbol(KestProgram *program, const char *base,
 }
 
 // A generic function named where a function type is wanted: the copy that
-// fits. A call settles what its type names are by what is passed (D023); this
+// fits. A call settles what its type names are by what is passed; this
 // settles them by what is wanted, which is the same question from the other
-// side — and without it, `sort.by(items, sort.ascending)` cannot be written
+// side -- and without it, `sort.by(items, sort.ascending)` cannot be written
 // with an `ascending` that works for every type that has an order.
 static KestType *copy_for_shape(Checker *checker, const KestType *callee,
                                 const KestType *expected, KestSpan where) {
@@ -2529,7 +2516,7 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
         // A copy that could not be made is nothing to write a name into, and
         // what is under this reads it as a signature: `symbol` is sixty-four
         // bytes into a type, which is where a run with nothing left used to
-        // stop. Out of memory is a refusal like any other. See D645.
+        // stop. Out of memory is a refusal like any other.
         if (instance->type == NULL) {
             checker->out_of_memory = true;
             return error_type(checker);
@@ -2544,12 +2531,12 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
 
 // One sentence for a type name nothing settles, and one for two places that
 // settle it differently. Four mistakes shared `K0343` -- these two, a generic
-// named rather than called, and a copy whose declaration is not there -- which
-// is D756's fault the other way round: a code is what a reader looks up, so one
+// named rather than called, and a copy whose declaration is not there -- but
+// a code is what a reader looks up, so one
 // code over four things is four answers to one question. `K0343` stays with
 // this one because the log quotes it saying this, and what varies between the
 // two places is where the compiler looked, which is an argument rather than a
-// sentence. See D759.
+// sentence.
 static void cannot_be_told(Checker *checker, KestSpan where, const char *name,
                            const char *from) {
     report(checker, where, "K0343",
@@ -2560,7 +2547,7 @@ static void cannot_be_told(Checker *checker, KestSpan where, const char *name,
     // Measured, both are true of both -- a builder settles its names from a
     // `return` type and from an argument position, and a call settles them
     // from an argument position as readily as from an annotation. So the
-    // sentence says the rule once and names the name it is about. See D760.
+    // sentence says the rule once and names the name it is about.
     kest_diags_suggest(checker->program->diags,
                        "what tells `%s` is what is passed, or where the value "
                        "is going",
@@ -2572,7 +2559,7 @@ static void cannot_be_told(Checker *checker, KestSpan where, const char *name,
 // known here: the walk remembers the position that bound each name, and what
 // this position makes it comes of unifying this one on its own. The name is
 // what the sentence is about, so it is in the sentence; the two places are what
-// the notes are for. See D761.
+// the notes are for.
 //
 // `what` is `argument` or `field`, because the two walks are two and a builder's
 // places are its fields. `at` is the position that would not agree, and `was`
@@ -2691,7 +2678,6 @@ static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
 // as much as it can -- `Answer.Held(5)` is an `Answer<i32>` -- and where a case
 // carries nothing of the shape's own names, the copy comes from where the value
 // is going, which is the same rule `array()` and `store()` already keep.
-// See D1048.
 static KestType *copy_of_case(Checker *checker, KestExpr *expr,
                               KestType *shape, KestSpan case_name,
                               const KestType *expected) {
@@ -2762,7 +2748,7 @@ static KestType *copy_of_case(Checker *checker, KestExpr *expr,
 
 // A call to a generic function makes the copy it needs. What each type name
 // stands for is worked out from what was passed, and the copy is checked and
-// compiled as if it had been written out. See D040.
+// compiled as if it had been written out.
 static KestType *check_generic(Checker *checker, KestExpr *expr,
                                const KestType *callee,
                                const KestType *expected) {
@@ -2770,7 +2756,7 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
     if (callee->decl == NULL || callee->unit == NULL) {
         // A copy asked for from somewhere its own source is not, which is
         // this project's mistake and not the program's -- so it says so, the
-        // way the compiler's own faults do. See D759.
+        // way the compiler's own faults do.
         report(checker, expr->call.callee->span, "K0364",
                "`%s` cannot be made here", type_name(checker, callee));
         kest_diags_fault(program->diags,
@@ -2916,7 +2902,7 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
                                          bindings, generics);
         // The same guard as the one above, at the other place a copy is made:
         // a type that could not be made is read as a signature under this, and
-        // `symbol` is sixty-four bytes into one. See D645.
+        // `symbol` is sixty-four bytes into one.
         if (instance->type == NULL) {
             checker->out_of_memory = true;
             return error_type(checker);
@@ -2931,11 +2917,11 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
 }
 
 // `Doing` or `world.Doing`: a name for a type, written the way a file writes
-// one — bare for its own and with the module in front for anybody else's.
+// one -- bare for its own and with the module in front for anybody else's.
 // Either way it is one span, and `kest_lookup_type` reads either. A case of an
 // enum another module declared could be matched and could not be made until
 // this said so: the name in front of the case was read as a value, and a type
-// is not one. See D1062.
+// is not one.
 static bool names_a_type(const KestExpr *expr) {
     if (expr->kind == KEST_EXPR_NAME) {
         return true;
@@ -2949,7 +2935,6 @@ static bool names_a_type(const KestExpr *expr) {
 // what the dotted chain starts from is a name this body holds, a constant, or
 // something worked out -- a call, an index -- and nothing that only names a
 // place. And not a field the value has, which is called as the value it is.
-// See D1256.
 static bool is_method_call(Checker *checker, const KestExpr *expr) {
     const KestExpr *callee = expr->call.callee;
     if (callee->kind != KEST_EXPR_FIELD) {
@@ -2976,7 +2961,7 @@ static bool is_method_call(Checker *checker, const KestExpr *expr) {
 // Whether the value has a field of that name, which is a function held in the
 // value and called as one rather than a function taking the value: `r.apply(3)`
 // on a `Rule` that holds `apply`. Asked quietly, because the value is checked
-// again on the way that is taken. See D1256.
+// again on the way that is taken.
 static bool calls_a_field(Checker *checker, KestExpr *expr) {
     const KestExpr *callee = expr->call.callee;
     KestDiags *diags = checker->program->diags;
@@ -3036,7 +3021,7 @@ static size_t module_of(const KestType *type, const char **module) {
 // are and where `x`'s type was declared, and taken if the first thing it takes
 // could be `x`; the language's own come last, so a module's `get` is the one a
 // value of that module's type means. What is checked after that is the call it
-// would have been written as. See D1256.
+// would have been written as.
 static KestType *check_method(Checker *checker, KestExpr *expr,
                               const KestType *expected) {
     if (!expr->call.method) {
@@ -3168,7 +3153,7 @@ static KestType *check_method(Checker *checker, KestExpr *expr,
 
 // What else this file calls by a name, said beside a refusal about the other
 // one. The note is the same sentence a body that gives a name away is told
-// (D730), because it is the same situation one step out: two things answer to
+//, because it is the same situation one step out: two things answer to
 // one name and the message named the one the reader was not asking about.
 static void note_the_other(Checker *checker, KestSpan where) {
     const char *name = span_text(checker, where);
@@ -3208,13 +3193,13 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
         KestType *result = check_builtin(checker, expr, expected, &handled);
         if (handled) {
             // And what else the file calls by that name, when the language's
-            // own refused. A file may declare `len` or `get` — this tree does
-            // it six times, in `table` and two examples — and what a
+            // own refused. A file may declare `len` or `get` -- this tree does
+            // it six times, in `table` and two examples -- and what a
             // name of that kind means is settled by what it is handed: the
             // file's one for the shapes it takes, the language's for the rest.
             // So a call that fits neither is told what the language wanted and
             // left to notice the other, which is the one the reader is most
-            // likely to have meant. See D731.
+            // likely to have meant.
             if (checker->program->diags->count > said) {
                 note_the_other(checker, expr->call.callee->span);
             }
@@ -3223,9 +3208,9 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
     }
 
     // A case of an enum is built by naming it after its enum, which is one
-    // name with a dot in it like everything else that has one — and an enum
+    // name with a dot in it like everything else that has one -- and an enum
     // another module declared is named with the module in front, which is two
-    // dots and the same one name. See D1062.
+    // dots and the same one name.
     if (expr->call.callee->kind == KEST_EXPR_FIELD &&
         names_a_type(expr->call.callee->field.object)) {
         KestSpan owner = expr->call.callee->field.object->span;
@@ -3268,7 +3253,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
         }
         // A set of bits with none of them set, or one made out of a number
         // the host handed over. `array()` and `store()` already read "an
-        // empty one" from a name with nothing in the brackets (D030).
+        // empty one" from a name with nothing in the brackets.
         if (type != NULL && type->tag == KEST_T_FLAGS) {
             expr->call.callee->type = type;
             if (expr->call.arg_count > 1) {
@@ -3307,7 +3292,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
                     ((literal->kind == KEST_EXPR_INT &&
                       type->tag == KEST_T_INT &&
                       // One that does not fit is a narrowing, which is what
-                      // `i8(300)` is written for and what D018 answers.
+                      // `i8(300)` is written for.
                       literal_fits(checker, literal, type)) ||
                      (literal->kind == KEST_EXPR_FLOAT &&
                       type->tag == KEST_T_FLOAT));
@@ -3336,7 +3321,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             }
             return type;
         }
-        // Text is its bytes (D021), so a run of them is the one thing it can
+        // Text is its bytes, so a run of them is the one thing it can
         // be made from. That is what lets text be built a piece at a time:
         // the pieces go on an array and become text once.
         if (type != NULL && type->tag == KEST_T_TEXT &&
@@ -3410,7 +3395,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             // A name this program holds under a module this file did not ask
             // for. Said before the halves are looked at on their own, because
             // `text.chars` with no import is a missing line and not the
-            // builtin `text` named where a value goes. See D1039.
+            // builtin `text` named where a value goes.
             report_unimported(checker, whole);
             return error_type(checker);
         }
@@ -3435,10 +3420,10 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
                "`%s` is not a function", type_name(checker, callee));
         // And whether the file has a function of that name that this body has
         // given the name to something else. A local may take a name the file
-        // uses — a body's names are its own — and the file's one is still
+        // uses -- a body's names are its own -- and the file's one is still
         // there, written with the module in front of it. Without this the
         // reader is told the type of the local and left to work out that the
-        // function they wrote is the one three lines up. See D730.
+        // function they wrote is the one three lines up.
         if (expr->call.callee->kind == KEST_EXPR_NAME) {
             KestSpan where = expr->call.callee->span;
             const char *name = span_text(checker, where);
@@ -3511,7 +3496,6 @@ static KestType *check_arguments(Checker *checker, KestExpr *expr,
     // a name among it is a name this body can no longer say anything about --
     // an array with no room handed over may come back with room. Set here
     // rather than at each argument because every path below reaches one.
-    // See D1135.
     bool was_handing = checker->handing_a_name_over;
     checker->handing_a_name_over = true;
     KestType *answered = arguments_checked(checker, expr, callee);
@@ -3524,7 +3508,7 @@ static void check_block(Checker *checker, KestBlock *block);
 // What is handed to a `block` parameter: one written here, `|x| x * 2`, or a
 // block this body was handed, handed on. The block is checked where it is
 // written, in the frame it will run in, with its names standing for what the
-// function says it calls it with. See D1257.
+// function says it calls it with.
 static KestType *check_block_argument(Checker *checker, KestExpr *argument,
                                       const KestType *wanted) {
     if (argument->kind == KEST_EXPR_NAME) {
@@ -3624,7 +3608,7 @@ static const KestDecl *written_at(Checker *checker, const KestType *callee) {
 static KestType *arguments_checked(Checker *checker, KestExpr *expr,
                                    const KestType *callee) {
     // A function that takes a block is written into where it is called, so
-    // one calling itself is one written into itself for ever. See D1257.
+    // one calling itself is one written into itself for ever.
     if (kest_takes_a_block(callee) && checker->function != NULL &&
         written_at(checker, callee) == checker->function) {
         report(checker, expr->span, "K0367",
@@ -3700,7 +3684,7 @@ static KestType *arguments_checked(Checker *checker, KestExpr *expr,
 // The function this name would be, if it is one: the language's own, one this
 // file declared, or one under a module it imported. A field that is not a
 // field and is one of those is somebody writing `p.len()`, and what to suggest
-// is what they would have to write instead — `len(p)` for the first two and
+// is what they would have to write instead -- `len(p)` for the first two and
 // `text.upper(t)` for the third.
 static const char *names_a_function(Checker *checker, KestSpan name) {
     const char *written = span_text(checker, name);
@@ -3753,7 +3737,7 @@ static const char *nearest_under(Checker *checker, const char *module,
                 : checker->program->types[i - checker->program->global_count]
                       ->name;
         // Under the module the word means rather than under the word: a name
-        // lives under the whole of its module. See D1039.
+        // lives under the whole of its module.
         const char *under = kest_module_for(checker->program, module,
                                             module_length);
         size_t under_length = under == NULL ? module_length : strlen(under);
@@ -3770,7 +3754,7 @@ static const char *nearest_under(Checker *checker, const char *module,
             nearest_so_far = distance;
             // Written the way the reader writes it, which is the word they
             // put in front and not the whole module: a file that imported
-            // `std.io` writes `io.print`. See D1039.
+            // `std.io` writes `io.print`.
             size_t room = module_length + strlen(member) + 2;
             char *written = kest_arena_alloc(checker->program->arena, room, 1);
             if (written == NULL) {
@@ -3802,11 +3786,11 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
             return error_type(checker);
         }
         // `box.CELLS`: a constant from another module. A `const` crosses out
-        // of the file it is in — which is what the reference says it does and
-        // what a program that imports one expects — and the lookup here had
+        // of the file it is in -- which is what the reference says it does and
+        // what a program that imports one expects -- and the lookup here had
         // only ever answered for functions, so the name was found, shown in a
         // note, offered as a suggestion spelled exactly as it was written, and
-        // refused. See D665.
+        // refused.
         if (host != NULL && host->is_const && host->type != NULL &&
             host->type->tag != KEST_T_FN) {
             report_unimported(checker, expr->span);
@@ -3866,7 +3850,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
             report_unimported(checker, owner);
             // A case of a shape carrying nothing: which copy it is comes from
             // where the value is going, because the case itself says nothing
-            // about the names. See D1048.
+            // about the names.
             if (choice->type_param_count > 0) {
                 choice = copy_of_case(checker, NULL, choice, expr->field.name,
                                       expected);
@@ -3891,8 +3875,8 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
     }
 
     // `io.prnt(...)`: the module is there and the name under it is not. What
-    // was said before this was that `io` was an unknown name, or — when a
-    // module is spelt like a type, as `text` is — that a type had been named
+    // was said before this was that `io` was an unknown name, or -- when a
+    // module is spelt like a type, as `text` is -- that a type had been named
     // where a value goes. Both blame the half that was written correctly.
     if (expr->field.object->kind == KEST_EXPR_NAME) {
         KestSpan owner = expr->field.object->span;
@@ -3923,7 +3907,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
             // needs to know.
             // The import this reached through was written and is written to,
             // so a file whose only use of it is the one that was spelt wrong
-            // is not a file with an import nothing writes. See D735.
+            // is not a file with an import nothing writes.
             kest_import_reached_by(checker->program, module, owner.length);
             const KestSymbol *read = kest_first_under(checker->program, module, owner.length);
             if (read != NULL && read->source != NULL) {
@@ -3972,7 +3956,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
             suggest(checker, "did you mean `%s`?", nearest);
         } else {
             // A function named where a field would be, without the brackets
-            // that call it: `x.f()` is `f(x)` (D1256), and `x.f` is nothing.
+            // that call it: `x.f()` is `f(x)`, and `x.f` is nothing.
             const char *elsewhere = names_a_function(checker, expr->field.name);
             if (elsewhere != NULL) {
                 suggest(checker, "`%s` is a function, and one is called: "
@@ -3988,7 +3972,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
     // A walk over a store gives a reference, so this is what somebody writes
     // the first time they walk one: the field is on what the reference names
     // and not on the reference. Saying only that a reference has no fields is
-    // true and leaves the reader where they were. See D504.
+    // true and leaves the reader where they were.
     if ((object->tag == KEST_T_REF || object->tag == KEST_T_OPTIONAL) &&
         object->element != NULL &&
         object->element->tag == KEST_T_STRUCT) {
@@ -4040,9 +4024,8 @@ static KestType *check_array(Checker *checker, KestExpr *expr,
         uint32_t said = checker->program->diags->count;
         KestType *item = check_expr(checker, expr->array.items[i], element);
         // The one place a value that is not one went in without a word. Every
-        // other place something is taken says so — an argument, an operand, a
-        // field, a walk — and this held them, laid them out, and counted them.
-        // See D518.
+        // other place something is taken says so -- an argument, an operand, a
+        // field, a walk -- and this held them, laid them out, and counted them.
         if (item != NULL && item->tag == KEST_T_VOID &&
             checker->program->diags->count == said) {
             report(checker, word_of(expr->array.items[i]), "K0356",
@@ -4072,7 +4055,7 @@ static KestType *check_array(Checker *checker, KestExpr *expr,
 
 
 // True when the number is known here, whatever it is, so that a caller with
-// something else to ask of it — how many there are, for a `[T; N]` — has it
+// something else to ask of it -- how many there are, for a `[T; N]` -- has it
 // without working it out twice.
 static bool written_place(Checker *checker, const KestExpr *expr, bool in_text,
                           int64_t *at) {
@@ -4163,7 +4146,6 @@ static bool applies(const KestProgram *program, const KestType *type,
     // And a type name that says it orders, which is the one thing a generic
     // can say about what it is handed. Only the comparisons: arithmetic on a
     // type name is a body written for numbers and declared for anything.
-    // See D1043.
     if (type->tag == KEST_T_PARAM) {
         return is_comparison(op) &&
                kest_wants((KestProgram *)program, type, KEST_WANTS_ORDERS);
@@ -4221,7 +4203,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     // `none` on the left takes its type from the other side, the way a number
     // literal does: `none != x` and `x != none` are one question written two
     // ways, and a literal with no type of its own is the one thing that has to
-    // be worked out second. See D727.
+    // be worked out second.
     KestType *left = NULL;
     KestType *right = NULL;
     if (expr->binary.left->kind == KEST_EXPR_NONE &&
@@ -4248,7 +4230,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
 
     // A vector, which has four of these and no others. Asked before the rule
     // that both sides are one type, because a vector and the number it is
-    // scaled by are two. See D1250.
+    // scaled by are two.
     bool arithmetic = op == KEST_TOK_PLUS || op == KEST_TOK_MINUS ||
                       op == KEST_TOK_STAR || op == KEST_TOK_SLASH;
     if (arithmetic && (kest_is_vector(left) || kest_is_vector(right))) {
@@ -4293,19 +4275,19 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     if (op == KEST_TOK_EQEQ || op == KEST_TOK_BANGEQ) {
         // An optional against `none`, which is the one question an optional
         // answers without being taken apart: whether it holds anything. Two
-        // optionals still do not compare — that is a question about what they
-        // hold, and one of them may hold nothing — but this is a question
-        // about the flag beside the value and nothing else. See D727.
+        // optionals still do not compare -- that is a question about what they
+        // hold, and one of them may hold nothing -- but this is a question
+        // about the flag beside the value and nothing else.
         bool left_is_none = expr->binary.left->kind == KEST_EXPR_NONE;
         bool right_is_none = expr->binary.right->kind == KEST_EXPR_NONE;
         if (left->tag == KEST_T_OPTIONAL && left_is_none != right_is_none) {
             return builtin(checker, "bool");
         }
-        // A value laid out flat compares when everything in it compares — a
+        // A value laid out flat compares when everything in it compares -- a
         // struct is its fields, an enum is its case and what that case
         // carries, `[T; N]` is N of them in a row. A handle never does: two
         // arrays are equal when they hold the same things and comparing the
-        // handles answers a different question. See D874.
+        // handles answers a different question.
         const KestType *without = NULL;
         if (!is_error(left) && !has_equality(checker->program, left, &without)) {
             report(checker, expr->span, "K0314",
@@ -4318,7 +4300,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
             } else if (left->tag == KEST_T_OPTIONAL) {
                 // Two optionals are a question about what they hold, and one
                 // of them may hold nothing. Against `none` is the other
-                // question and it is answered above. See D727.
+                // question and it is answered above.
                 kest_diags_suggest(checker->program->diags,
                                    "take what it holds out with `if let`, or "
                                    "ask whether it holds anything with "
@@ -4339,7 +4321,6 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
                 // What is left is a function that gives nothing back, a
                 // module, and a type name inside a copy that was never made:
                 // none of the three is a value with anything in it to compare.
-                // A struct used to land here and does not since D874.
                 kest_diags_suggest(checker->program->diags,
                                    "there is nothing in one of these that two "
                                    "of them could differ by");
@@ -4379,10 +4360,10 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
                type_name(checker, left));
         // And what to write instead, which for an order is a different sort of
         // answer from the one `==` gets. Two of a struct are equal in exactly
-        // one way and there is nothing for a program to decide (D874); which
+        // one way and there is nothing for a program to decide; which
         // of them comes first is a choice, and there are as many orders as
-        // fields. So this does not offer a default — it says the choice is
-        // there and what shape the answer takes. See D875.
+        // fields. So this does not offer a default -- it says the choice is
+        // there and what shape the answer takes.
         bool told = left != NULL && applies(checker->program, left->element, op) &&
                     say_if_let(checker, left, NULL);
         if (told) {
@@ -4409,10 +4390,10 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         } else if (left != NULL && left->tag == KEST_T_TEXT &&
                    op == KEST_TOK_PLUS) {
             // Text and `+` is what everybody writes first. The reference says
-            // there is no `+` on text and why — building a string reaches the
-            // heap, so a `no.alloc` body may hold one and may not build one —
+            // there is no `+` on text and why -- building a string reaches the
+            // heap, so a `no.alloc` body may hold one and may not build one --
             // and the reader who wrote it is looking for what to write
-            // instead. See D884.
+            // instead.
             kest_diags_suggest(checker->program->diags,
                                "a hole joins them: `\"{a}{b}\"`, and "
                                "`text.join` joins a run of them");
@@ -4422,7 +4403,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     // `/` and `%` go together, which is the rule the whole numbers already
     // keep. A float keeps it too: `kest_left_over` answers for every pair C
     // has an answer for, and for the pair it has none for the answer is what
-    // is not a number rather than a program that stops. See D776.
+    // is not a number rather than a program that stops.
     if (op == KEST_TOK_PERCENT && !is_error(left) &&
         left->tag != KEST_T_INT && left->tag != KEST_T_FLOAT) {
         report(checker, expr->span, "K0314",
@@ -4461,11 +4442,10 @@ static bool literal_fits(Checker *checker, const KestExpr *expr,
 // A literal is written in a type, and one that does not fit in it is a
 // mistake the reader made rather than a value the machine should wrap.
 //
-// Whether it fits is `literal_fits` and nothing else. This worked the limits
-// out again -- the width, the sign, the one further down than up -- and the two
-// agreed by having been written the same way twice, which is what D766 took out
-// of the defaults. What is left here is the words: which of the two things
-// happened, and what to say about it. See D767.
+// Whether it fits is `literal_fits` and nothing else, so the limits (the
+// width, the sign, the one further down than up) are worked out in one place.
+// What is left here is the words: which of the two things
+// happened, and what to say about it.
 static void check_literal_fits(Checker *checker, const KestExpr *expr,
                                const KestType *type) {
     if (type == NULL || type->tag != KEST_T_INT) {
@@ -4584,7 +4564,7 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
     // The same shape an `if` has, and the same one mistake: every arm written
     // as a block and every one of them ending in a value. Said once at the
     // word, before the arms are walked, so the arms themselves can be passed
-    // over rather than each saying it again. See D516.
+    // over rather than each saying it again.
     if (!choose->gives && choose->arm_count > 0) {
         bool ends_in_one = true;
         for (uint32_t a = 0; a < choose->arm_count && ends_in_one; a++) {
@@ -4719,8 +4699,7 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
             // The first arm that has a type of its own settles what the match
             // is; a literal takes it, the way a literal always does.
             // What checking an arm gives back is nothing once compiling has
-            // run out of work, and the arms after it are still walked. See
-            // D1248.
+            // run out of work, and the arms after it are still walked.
             if (given == NULL ||
                 (value != NULL && !is_literal(arm->value) &&
                  is_literal(choose->arms[0].value) &&
@@ -4747,7 +4726,7 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
         } else {
             // Every combination nothing answered, not the first of them: the
             // checker knows all of them before it says anything, and a reader
-            // told one at a time compiles once per mistake. See D507.
+            // told one at a time compiles once per mistake.
             char missing[240];
             size_t used = 0;
             uint32_t unanswered = 0;
@@ -4873,7 +4852,7 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
                                  const KestType *expected) {
     switch (expr->kind) {
     // A block is handed to what takes one, which checks it there; anywhere
-    // else it is a value, which it is not. See D1257.
+    // else it is a value, which it is not.
     case KEST_EXPR_BLOCK:
         report(checker, expr->span, "K0367",
                "a block is handed to a function that takes one, and is "
@@ -4956,7 +4935,7 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
         KestType *operand =
             check_expr(checker, expr->unary.operand, inside(expected));
         checker->negating = was_negating;
-        // A vector is turned round a component at a time. See D1250.
+        // A vector is turned round a component at a time.
         if (!is_error(operand) && !is_numeric(operand) &&
             !kest_is_vector(operand)) {
             report(checker, expr->span, "K0314", "`-` does not apply to `%s`",
@@ -5027,7 +5006,7 @@ static KestType *check_expr(Checker *checker, KestExpr *expr,
         return error_type(checker);
     }
     // Every copy of a generic is checked again, so what copies cost is
-    // counted here too. See D1248.
+    // counted here too.
     kest_diags_work(checker->program->diags, 1);
     KestType *type = check_expr_kind(checker, expr, expected);
 
@@ -5037,8 +5016,8 @@ static KestType *check_expr(Checker *checker, KestExpr *expr,
     // What it does not do is wrap one twice, and nothing here says so because
     // nothing has to: what is wanted is `T?` and what would be wrapped has to
     // be a `T`, so a value that is already `T?` is not one. A test for it was
-    // written here and could not be made to fail — a condition that cannot be
-    // false is a reader's second guess about what the rule is. See D414.
+    // written here and could not be made to fail -- a condition that cannot be
+    // false is a reader's second guess about what the rule is.
     if (expected != NULL && expected->tag == KEST_T_OPTIONAL && type != NULL &&
         type->tag != KEST_T_ERROR &&
         kest_type_equal(type, expected->element)) {
@@ -5080,7 +5059,7 @@ static void check_condition(Checker *checker, KestExpr *condition,
 // for the two that hold blocks and can be written over as many lines as
 // somebody likes. An `if` written over six is six lines of caret, and what is
 // wrong with it is not inside it. K0333 points at `match d` for the same
-// reason, and K0212 at `flags`. See D516.
+// reason, and K0212 at `flags`.
 static KestSpan word_of(const KestExpr *expr) {
     KestSpan word = expr->span;
     if (expr->kind == KEST_EXPR_IF) {
@@ -5134,7 +5113,7 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
     // `if c { 1 } else { 2 }`, which is the shape every language whose blocks
     // are expressions writes. Arms that are blocks give nothing here, so both
     // ends are a value nothing takes: one mistake, said once, where the `if`
-    // is rather than twice inside it. See D516.
+    // is rather than twice inside it.
     if (branch->then_value == NULL && branch->has_else &&
         branch->else_value == NULL && branch->otherwise == NULL) {
         KestStmt *first = tail_value(&branch->then_body);
@@ -5158,10 +5137,9 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
     if (held != NULL) {
         declare_local(checker, branch->binding, held);
         // Asked about like a `let`, because an `if let` whose name nothing
-        // reads is a program that meant `!= none` and had no way to write it
-        // until D727. A `while let` is not asked: a loop that runs while there
-        // is something has no other form, since a condition that only asks
-        // takes nothing out and runs for ever. See D728.
+        // reads is a program that meant `!= none`. A `while let` is not asked:
+        // a loop that runs while there is something has no other form, since a
+        // condition that only asks takes nothing out and runs for ever.
         if (checker->local_count > 0) {
             checker->locals[checker->local_count - 1].from_let = true;
             checker->locals[checker->local_count - 1].from_if_let = true;
@@ -5229,7 +5207,7 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
 // `wait Walking`: where the next call carries on from, which is a case of the
 // enum the body resumes from, one that carries nothing and is waited at once.
 // What is kept across it is the parameter and nothing else, so nothing else
-// may be in reach of it. See D1263.
+// may be in reach of it.
 static void check_wait(Checker *checker, KestStmt *stmt) {
     const KestType *cases = checker->resume_cases;
     if (checker->in_a_block) {
@@ -5299,7 +5277,7 @@ static void check_wait(Checker *checker, KestStmt *stmt) {
 }
 
 // `for ... in fields(x)`, which is the language's walk over a struct's fields
-// unless the file can reach a `fields` of its own. See D1264.
+// unless the file can reach a `fields` of its own.
 static bool is_fields_walk(Checker *checker, const KestStmt *stmt) {
     const KestExpr *sequence = stmt->each->sequence;
     if (stmt->each->until != NULL || sequence == NULL ||
@@ -5326,7 +5304,7 @@ static bool names_a_place(const KestExpr *expr) {
 
 // The walk written out: the body read again from the source once a field,
 // each copy checked with `value` standing for that field and `name` for its
-// name, and the copies put where the body was. See D1264.
+// name, and the copies put where the body was.
 static void check_fields_walk(Checker *checker, KestStmt *stmt) {
     KestEach *each = stmt->each;
     KestExpr *walked = each->sequence->call.args[0];
@@ -5440,10 +5418,9 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         }
         // A name that holds nothing is a name that cannot be read, and every
         // reading of it was refused somewhere else with a message about
-        // `void`. It is refused where it is written now — but only where
+        // `void`. It is refused where it is written now -- but only where
         // nothing has been said already: a type written on the binding says it
-        // better, and an `if` whose arms are blocks has said it itself. See
-        // D517.
+        // better, and an `if` whose arms are blocks has said it itself.
         if (declared == NULL && checker->program->diags->count == said &&
             value != NULL && value->tag == KEST_T_VOID) {
             report(checker, word_of(stmt->let.value), "K0356",
@@ -5453,7 +5430,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                                "it does");
         }
         // A name bound to nothing is named all the same, so the reader is not
-        // also told the name does not exist — but what it holds is the error
+        // also told the name does not exist -- but what it holds is the error
         // type, so every reading of it is quiet. One mistake, one message.
         if (declared == NULL && value != NULL && value->tag == KEST_T_VOID) {
             value = error_type(checker);
@@ -5478,12 +5455,12 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         checker->writing_to_a_name = was_writing;
         // Written down where the name is known, because a walk that is about
         // to bind its count to a name needs to know before it does it, and
-        // only the checker ever resolved the name. See D866.
+        // only the checker ever resolved the name.
         //
         // The name itself and the name something inside it was reached
         // through are two answers to two questions, so both are kept: a walk
         // asks whether the count was written and a `let` asks whether
-        // anything went into the value at all. See D887.
+        // anything went into the value at all.
         const KestExpr *assigned_to = stmt->assign.target;
         while (assigned_to != NULL && assigned_to->kind != KEST_EXPR_NAME) {
             assigned_to = assigned_to->kind == KEST_EXPR_FIELD
@@ -5520,7 +5497,6 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
             // turns a write the caller cannot see into a write the caller
             // cannot see coming. Giving the changed one back is the answer,
             // and a caller that wants the change is a caller that takes it.
-            // See D1038.
             kest_diags_suggest(checker->program->diags,
                                "answer with the changed one and let the "
                                "caller take it: `fn f(one: T) -> T`");
@@ -5572,7 +5548,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                     type_name(checker, target));
         }
         // `+=` and its like on a vector, which are what the operators are:
-        // `*=` and `/=` scale it by an `f32`. See D1250.
+        // `*=` and `/=` scale it by an `f32`.
         bool vector_step = stmt->assign.op != KEST_TOK_EQ && kest_is_vector(target);
         if (vector_step) {
             as_component(checker, stmt->assign.value, &value);
@@ -5595,14 +5571,14 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
     case KEST_STMT_EXPR:
     case KEST_STMT_DEFER: {
         // A body that resumes leaves at every `wait`, and what a `defer`
-        // would run there would run again on every call. See D1263.
+        // would run there would run again on every call.
         if (stmt->kind == KEST_STMT_DEFER && checker->resume_cases != NULL) {
             report(checker, stmt->span, "K0368",
                    "a body that resumes runs no `defer`: it leaves at every "
                    "`wait` and comes back to where it left");
         }
         // A statement that is only an expression has to do something. A call
-        // does — what it gives back may be worth ignoring — and an `if` or a
+        // does -- what it gives back may be worth ignoring -- and an `if` or a
         // `match` whose arms are blocks does. Anything else works a value out
         // and leaves it lying there, which is `a == b` written where `a = b`
         // was meant, and every other slip of that shape.
@@ -5613,7 +5589,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
             (value->kind == KEST_EXPR_IF && value->branch != NULL &&
              !value->branch->gives);
         // One that gives a value, written where a statement belongs, is a
-        // `return` with the word left off — which is what the function is
+        // `return` with the word left off -- which is what the function is
         // told. So it is measured against what the function gives back rather
         // than against nothing: `none` has a type there, and a reader who
         // forgot the word is not also told that the value they meant to give
@@ -5713,7 +5689,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
             checker->depth--;
             // A name the body never assigns to can be the count itself. A
             // name that was refused before it was declared is one the body's
-            // writes went somewhere else, so it counts as written. See D866.
+            // writes went somewhere else, so it counts as written.
             stmt->each->name_written = checker->local_count <= counted ||
                                        checker->locals[counted].written;
             checker->local_count = counted;
@@ -5743,7 +5719,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                 // What a walk of a store has to give is a reference, because
                 // a reference is what removing and writing take. The value is
                 // a `get` away, and that `get` returns an optional it cannot
-                // fail, which is the noise probe 4 asked about; see D020.
+                // fail, which is noise.
                 element = kest_ref_of(checker->program, sequence->element);
             } else if (sequence->tag == KEST_T_FLAGS) {
                 if (stmt->each->index.length > 0) {
@@ -5899,7 +5875,7 @@ static bool expr_returns(const KestExpr *value) {
 // of those nested loops, because those are read where this loop's body is.
 // An `if` and a `match` are expressions with blocks in them, so the walk goes
 // through expressions as well: a `break` inside the arm of a `match` is a
-// `break` in the body it is written in. See D1080.
+// `break` in the body it is written in.
 static bool block_leaves(const KestBlock *block);
 
 static bool expr_leaves(const KestExpr *expr) {
@@ -6027,7 +6003,7 @@ static bool stmt_returns(const KestStmt *stmt) {
         // A loop written `while true` that nothing breaks out of is a loop the
         // program does not come back from, so a body that ends in one ends in
         // a `return` or in nothing at all. `while let` is not one: it ends
-        // when what it asks for is `none`. See D1080.
+        // when what it asks for is `none`.
         return stmt->loop.binding.length == 0 && stmt->loop.condition != NULL &&
                stmt->loop.condition->kind == KEST_EXPR_BOOL &&
                stmt->loop.condition->boolean &&
@@ -6052,7 +6028,7 @@ static bool check_unit(KestProgram *program, KestUnit *unit);
 // `resumes c.at`, held to what it says: `c` is something the function takes, a
 // struct, and what it gives back; `at` is a field of it that is an enum. What
 // the body waits at is a case of that enum. Answers the enum, or NULL with the
-// reason said. See D1263.
+// reason said.
 static const KestType *resumes_from(Checker *checker, const KestDecl *decl,
                                     const KestType *signature) {
     KestSpan param = {0, 0};
@@ -6166,13 +6142,13 @@ static bool check_function(KestProgram *program, Checker *checker,
     checker->resume_cases = NULL;
     // What the body itself declared, which is the one scope nothing else
     // rewinds: a block inside it is dropped where it ends, and this is where
-    // the outermost one does. See D726.
+    // the outermost one does.
     drop_locals(checker, body);
 
     // Nothing is said about a result nobody could read. A signature already
     // refused is a signature this has no opinion about, and saying `can end
     // without returning `<unknown>`` above the refusal that made it unknown is
-    // the second voice D507 keeps taking out. See D519.
+    // a second voice saying less.
     if (checker->result != NULL && checker->result->tag != KEST_T_VOID &&
         checker->result->tag != KEST_T_ERROR &&
         !always_returns(&decl->function.body)) {
@@ -6236,10 +6212,9 @@ static bool check_unit(KestProgram *program, KestUnit *unit) {
         }
         // A generic's body is checked here too, once, with each type name
         // standing for a value that can do what the declaration says it can
-        // and nothing else. Until D1043 this was skipped entirely and a body
-        // was first read when something copied it -- so a generic calling a
-        // name that is not there, or reading a field of a type parameter,
-        // checked clean and shipped. Each copy is still checked where it is
+        // and nothing else, so a generic calling a name that is not there, or
+        // reading a field of a type parameter, is refused even when nothing
+        // copies it. Each copy is still checked where it is
         // made, because that is where the types are known.
         if (symbol->type->type_param_count > 0) {
             if (symbol->type->type_param_stands == NULL) {
@@ -6251,8 +6226,7 @@ static bool check_unit(KestProgram *program, KestUnit *unit) {
             // A generic's own body, checked with its type names standing
             // for themselves: what is asked there is whether the body is
             // right for every type the declaration allows rather than for
-            // one, which is what `kest_bind_types` above puts in place. See
-            // D1043.
+            // one, which is what `kest_bind_types` above puts in place.
             bool ok = check_function(program, &checker, decl, symbol->type);
             kest_unbind_types(program);
             if (!ok) {
@@ -6261,7 +6235,7 @@ static bool check_unit(KestProgram *program, KestUnit *unit) {
             // And a requirement the body never asked for, which refuses types
             // that would have worked and is how a written contract drifts
             // away from the body it is about. The same rule as an import
-            // nothing writes through. See D1043.
+            // nothing writes through.
             for (uint32_t g = 0; g < symbol->type->type_param_count; g++) {
                 const KestType *stands = symbol->type->type_param_stands[g];
                 uint8_t spare = (uint8_t)(stands->wants & ~stands->took);
@@ -6291,7 +6265,7 @@ static bool check_unit(KestProgram *program, KestUnit *unit) {
 
 // `main` is what `kest run` calls: with nothing, and what it answers becomes
 // the exit status. That is a shape, and a shape is a declaration, so it is
-// held to here rather than when somebody tries to run it — a program that
+// held to here rather than when somebody tries to run it -- a program that
 // compiles and then cannot be run has been told it was fine.
 //
 // Only the file that was named is held to it. A `main` further in is a
@@ -6458,7 +6432,7 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
             // nothing has nothing to put it on -- and building the string
             // anyway spends an arena allocation, and one per binding inside
             // `kest_type_name`, on a sentence nobody will read. Most copies
-            // in a program that compiles are quiet ones. See D742.
+            // in a program that compiles are quiet ones.
             size_t room = 1;
             if (instance->site.length == 0 ||
                 program->diags->count == before) {
@@ -6504,7 +6478,7 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
 
     // An `extern` nothing calls is not asked of any host: what starting holds
     // a host to is what the program can reach, and a declaration nobody
-    // reached is a name in a file. Saying so is the point — a host writer
+    // reached is a name in a file. Saying so is the point -- a host writer
     // reading that file would bind it, and binding it is work with nothing on
     // the other end.
     //
@@ -6539,13 +6513,13 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
                     is_called(symbol, "main") && symbol->source == root;
     }
 
-    // A constant nothing reads. A host cannot ask for one — what it can ask
+    // A constant nothing reads. A host cannot ask for one -- what it can ask
     // for by name is a function, which is why there is no warning about a
-    // function nobody in the program calls (D224) — so a constant nothing
+    // function nobody in the program calls -- so a constant nothing
     // reads is one nothing will ever read.
     for (uint32_t i = 0; a_program && i < program->global_count; i++) {
         const KestSymbol *symbol = &program->globals[i];
-        // A function name is a constant too — nothing may write to it — so
+        // A function name is a constant too -- nothing may write to it -- so
         // what tells the two apart is the type, the same way the JSON does.
         if (!symbol->is_const || symbol->type == NULL ||
             symbol->type->tag == KEST_T_FN || symbol->named ||
@@ -6574,7 +6548,7 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
     // host may lend is a type the program holds in an array, and holding it
     // in one is naming it.
     //
-    // A shape that names itself — a list whose next is one of its own — is
+    // A shape that names itself -- a list whose next is one of its own -- is
     // named by that, so this is quiet about a shape nobody but itself
     // mentions. What it catches is one nobody mentions at all.
     for (uint32_t i = 0; a_program && i < program->type_count; i++) {
@@ -6596,9 +6570,9 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
     // And an import nothing reached. A module named here is read, parsed,
     // checked and compiled whether or not a name comes through it, so one
     // nothing writes is a file's worth of work for a file that never mentions
-    // it — the only one of these warnings with a number behind it. About the
+    // it -- the only one of these warnings with a number behind it. About the
     // file somebody asked about, because the rest were reached from it and a
-    // library module is read for whoever imports it. See D725.
+    // library module is read for whoever imports it.
     const KestUnitInfo *named = units->count > 0 ? &units->items[0] : NULL;
     for (uint32_t i = 0; a_program && named != NULL && i < named->import_count;
          i++) {

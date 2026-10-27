@@ -31,7 +31,7 @@ double kest_left_over(double left, double right) {
     // says "potential divide by 0" about the one place here that means to, and
     // a warning about what was written on purpose is a warning nobody reads.
     // There is no `NAN` to reach for -- the library is libc and this file does
-    // not include `<math.h>` for one constant. See D970.
+    // not include `<math.h>` for one constant.
     volatile double nothing = 0.0;
     if (left != left || right != right || right == 0.0 ||
         left - left != 0.0) {
@@ -49,8 +49,7 @@ double kest_left_over(double left, double right) {
     // Two whole numbers under two to the fifty-third are whole numbers, and
     // what one leaves over from the other is what a whole number's `%` says,
     // which every double under that holds exactly. A frame's `x % 1000.0` of
-    // a count is that, and the walk below was a tenth of `bench/kernel`. See
-    // D1288.
+    // a count is that, and the walk below was a tenth of `bench/kernel`.
     if (rest < 9007199254740992.0) {
         int64_t whole = (int64_t)rest;
         int64_t by = (int64_t)divisor;
@@ -64,7 +63,7 @@ double kest_left_over(double left, double right) {
     // halving only move the exponent, and every subtraction here is of two
     // numbers close enough together that nothing is rounded off. Which is why
     // this is written out rather than asking C for `fmod`: the engine is held
-    // to libc and nothing beyond it, and this is arithmetic. See D776.
+    // to libc and nothing beyond it, and this is arithmetic.
     double scaled = divisor;
     while (scaled <= rest * 0.5) {
         scaled += scaled;
@@ -84,7 +83,7 @@ double kest_left_over(double left, double right) {
 // does. The types it made, the names it registered and the table it finds them
 // in, the composed types it keeps so that two of one are one, and the copies of
 // generic shapes. Everything left over after these and the module's four is
-// text: names kept out of spans, and the source they were cut from. See D784.
+// text: names kept out of spans, and the source they were cut from.
 void kest_program_holds(const KestProgram *program, uint32_t *types,
                         uint32_t *globals, uint32_t *found_by,
                         uint32_t *composed) {
@@ -101,7 +100,7 @@ static const char *span_string(KestProgram *program, KestSpan span) {
         // Every reader of this keeps what comes back as a name and measures it
         // later, so nothing is what none of them can be given. An empty name
         // is a name no file can write, and saying the arena is empty stops the
-        // build before one is compared with anything. See D510.
+        // build before one is compared with anything.
         kest_diags_starve(program->diags);
         return "";
     }
@@ -135,7 +134,7 @@ void kest_program_in(KestProgram *program, const KestUnitInfo *unit) {
 // is already qualified when it names something imported.
 // A name under this file's own module: `player.hurt` for `hurt`. Asked of
 // every name in every file, so the room for it is the stack until a name is
-// longer than that — which used to mean the name was not looked up at all, and
+// longer than that -- which used to mean the name was not looked up at all, and
 // a struct with a long name was unknown in the file that declared it.
 static const char *under_alias(KestProgram *program, const char *name,
                                size_t length, char *stack, size_t room) {
@@ -149,7 +148,7 @@ static const char *under_alias(KestProgram *program, const char *name,
         }
     }
     // Copied rather than printed: this is asked for nearly every name a body
-    // uses, and formatting it was a twentieth of a build. See D1276.
+    // uses, and formatting it was a twentieth of a build.
     size_t head = needed - length - 2;
     memcpy(out, program->module, head);
     out[head] = '.';
@@ -166,7 +165,7 @@ static const char *under_alias(KestProgram *program, const char *name,
 // This is where two modules under one last part stop being one module. What a
 // file writes is the last part, and which module that means is the file's own
 // question -- so `render.math` and `physics.math` are two names here and one
-// name to each of the files that import them. See D1039.
+// name to each of the files that import them.
 static const char *under_import(KestProgram *program, const char *name,
                                 size_t length, char *stack, size_t room) {
     if (program->unit == NULL) {
@@ -284,7 +283,7 @@ static uint32_t name_hash(const char *name, size_t length);
 // Where a type's name says it goes. Nothing is ever taken out, so a run of
 // full slots is a run of names that landed on the same one and it ends at the
 // first empty slot -- and what was put there first is what a lookup answers
-// with, which is what the walk this replaced did. See D1086.
+// with, which is what the walk this replaced did.
 static void type_index_put(KestProgram *program, uint32_t at) {
     const char *name = program->types[at]->name;
     if (name == NULL || program->types_by_name_slots == 0) {
@@ -319,7 +318,7 @@ static bool type_index_room(KestProgram *program) {
 }
 
 // The name is given here rather than written on afterwards, because a type in
-// the list under no name is a type the index cannot find. See D1086.
+// the list under no name is a type the index cannot find.
 static bool register_type(KestProgram *program, KestType *type,
                           const char *name) {
     if (program->type_count == program->type_capacity) {
@@ -348,7 +347,7 @@ void kest_import_reached_by(KestProgram *program, const char *alias,
     // question: that one asks whether a name is out of reach and this marks
     // which import put it in reach. Kept apart because the suggestion machine
     // asks the first of every name it offers, and a name offered is not a name
-    // written. See D725.
+    // written.
     for (uint32_t i = 0; i < program->unit->import_count; i++) {
         const char *imported = program->unit->imports[i];
         if (kest_word_same(imported, alias, length)) {
@@ -395,7 +394,7 @@ bool kest_file_reaches(KestProgram *program, const char *alias,
     // Its own module first. A file writing the name it calls itself in front
     // of one of its own names has written nothing that needs bringing into
     // reach, and is the one shape where asking only about imports answers no
-    // to a file that may write it. See D736.
+    // to a file that may write it.
     if (kest_word_same(program->alias, alias, length)) {
         return true;
     }
@@ -414,7 +413,7 @@ bool kest_file_reaches(KestProgram *program, const char *alias,
 // Which module a file means by the word it writes in front of a name: `io` is
 // `std.io` in a file that imported it, and its own module where the word is
 // the file's own. NULL where the word is not one this file may write, which is
-// what makes a name out of reach out of reach. See D1039.
+// what makes a name out of reach out of reach.
 const char *kest_module_for(KestProgram *program, const char *alias,
                             size_t length) {
     if (program->module[0] != '\0' &&
@@ -434,7 +433,7 @@ const char *kest_module_for(KestProgram *program, const char *alias,
 
 // Whether a registered name lives under a module a file wrote the word for.
 // The word is expanded first, because a name lives under the whole of its
-// module and what a file writes is the last part of it. See D1039.
+// module and what a file writes is the last part of it.
 static bool under_module_of(KestProgram *program, const char *whole,
                                  const char *name, size_t length) {
     const char *module = kest_module_for(program, name, length);
@@ -467,7 +466,7 @@ const KestSymbol *kest_first_under(KestProgram *program, const char *name,
         // `io.Io.write`, which is a crossing the module declares and not the
         // name anybody reaches for first. One with another dot in it is kept
         // in case there is no plainer one, because pointing at the file is
-        // the whole of what the other caller wants. See D738.
+        // the whole of what the other caller wants.
         if (strchr(symbol->name + length + 1, '.') == NULL) {
             return symbol;
         }
@@ -525,7 +524,7 @@ bool kest_needs_import(KestProgram *program, const char *name, size_t length) {
     // the first dot, because a name lives under the whole of its module and
     // `std.io.print` begins with `std`, which is nobody's module. A name a
     // file wrote itself -- `io.print` -- is matched by its last part, which is
-    // what `kest_file_reaches` answers. See D1039.
+    // what `kest_file_reaches` answers.
     for (uint32_t i = 0; program->unit != NULL &&
                          i <= program->unit->import_count;
          i++) {
@@ -551,9 +550,9 @@ bool kest_needs_import(KestProgram *program, const char *name, size_t length) {
 // It is the question `kest_needs_import` cannot answer once the lookups have
 // failed: they expand through this file's imports and a module this file did
 // not import is exactly the one they cannot see. Without it a reader writing
-// `text.chars` with no import was told `text` is a type. See D1039.
+// `text.chars` with no import was told `text` is a type.
 // The files of this program in a table, by the alias their names are written
-// through. Built once, on the first question that needs it. See D1087.
+// through. Built once, on the first question that needs it.
 static bool alias_index(KestProgram *program) {
     if (program->files_by_alias_slots > 0 || program->files == NULL ||
         program->files->count == 0) {
@@ -594,7 +593,7 @@ bool kest_out_of_reach(KestProgram *program, const char *name, size_t length) {
     // Which files could answer this: the ones whose alias is the head of the
     // name. Through the table where there is one, and every file where there
     // is not -- two files may share an alias, so what answers is a run of
-    // slots rather than one. See D1087.
+    // slots rather than one.
     bool tabled = alias_index(program);
     uint32_t mask = tabled ? program->files_by_alias_slots - 1 : 0;
     uint32_t slot = tabled ? (name_hash(name, head) & mask) : 0;
@@ -661,7 +660,7 @@ static bool add_primitive(KestProgram *program, const char *name,
     }
     // A piece of text is two: what it is made of and how many bytes that is.
     // Its length is part of it rather than something to go and count, which is
-    // what makes `len` a read and a cut free. See D964.
+    // what makes `len` a read and a cut free.
     type->slots = tag == KEST_T_VOID ? 0 : (tag == KEST_T_TEXT ? 2 : 1);
     // A handle is a machine word. A piece of text is two of them where it is
     // laid out in memory, for the same reason it is two slots: what it is made
@@ -688,7 +687,6 @@ static bool add_primitive(KestProgram *program, const char *name,
 // a program declares can give one another meaning. Each is a struct like any
 // other once it is made, laid out as a C struct of those floats, so a host
 // lends the bytes it already has and `std.vec`'s shapes are the same bytes.
-// See D1250.
 static bool add_vector(KestProgram *program, const char *name,
                        uint16_t count) {
     static const char *const AXES[4] = {"x", "y", "z", "w"};
@@ -820,10 +818,10 @@ static const KestDecl *constant_in_file(KestProgram *program, const char *name,
 }
 
 // The same, in the file another module is. A count may name a constant from one
-// — `[i32; box.CELLS]` — and the name is read before there is a symbol for it,
-// so the file is found by what it calls itself and its declarations are read
-// there. The source is that file's, because a declaration's spans are into it.
-// See D681.
+// -- `[i32; box.CELLS]` -- and the name is read before there is a symbol for
+// it, so the file is found by what it calls itself and its declarations are
+// read there. The source is that file's, because a declaration's spans are into
+// it.
 static const KestDecl *constant_in_module(KestProgram *program,
                                           const char *module,
                                           uint32_t module_length,
@@ -899,7 +897,7 @@ bool kest_is_narrow(const KestType *type) {
 }
 
 // Whether a function takes a block, which is what makes it written into every
-// place it is called rather than called. See D1257.
+// place it is called rather than called.
 bool kest_takes_a_block(const KestType *function) {
     if (function == NULL || function->tag != KEST_T_FN) {
         return false;
@@ -990,7 +988,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
         return false;
     case KEST_EXPR_NAME: {
         // A name the body declared is the body's before it is a constant's,
-        // and worth something only where the body holds its value. See D1231.
+        // and worth something only where the body holds its value.
         if (program->held_name != NULL) {
             const KestValue *value = NULL;
             uint32_t slots = 0;
@@ -1017,8 +1015,8 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
     // type, and what it does to a number is what the machine does to one with
     // an instruction. Refused where it was written until now, which made a
     // narrowing a thing a program may write everywhere except where it is
-    // worked out — and `const N: i32 = 130` was taken and wrapped, which is the
-    // same narrowing with nobody asking for it. See D669.
+    // worked out -- and `const N: i32 = 130` was taken and wrapped, which is
+    // the same narrowing with nobody asking for it.
     case KEST_EXPR_CALL: {
         const KestType *to = expr->call.callee != NULL
                                  ? expr->call.callee->type
@@ -1029,7 +1027,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             // a run of them, which the type says, and the number standing for
             // a value, which this language promises does not move. Both are
             // worked out here rather than run, so a program may have a table
-            // of them before it starts. See D670.
+            // of them before it starts.
             const char *called =
                 kest_span_text(program->source, expr->call.callee->span);
             uint32_t length = expr->call.callee->span.length;
@@ -1053,7 +1051,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
                 // hashes and what this works out: one walk, asked of slots
                 // either way. A case of an enum is its tag and what it
                 // carries, so it is folded like anything else and hashed like
-                // anything else. See D671.
+                // anything else.
                 const KestType *what = expr->call.args[0]->type;
                 uint32_t wide = what == NULL ? 0 : what->slots;
                 if (wide == 0) {
@@ -1077,7 +1075,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             // as the bits it is: a coefficient taken from somebody else's
             // table is those bits and not whatever a decimal of it parses to.
             // Each does what the machine's instruction does, a `u32` and an
-            // `f32` through a `float` the way `bits.f32` goes. See D1235.
+            // `f32` through a `float` the way `bits.f32` goes.
             if ((kest_word_same("float", called, length) ||
                  kest_word_same("bits", called, length)) &&
                 expr->call.arg_count == 1) {
@@ -1094,7 +1092,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
                 bool to_bits = kest_word_same("bits", called, length);
                 if (!narrow) {
                     *out = held;
-                    // What is not a number is one value as bits. See D1238.
+                    // What is not a number is one value as bits.
                     if (to_bits && held.real != held.real) {
                         out->integer = (int64_t)UINT64_C(0x7FF8000000000000);
                     }
@@ -1150,8 +1148,8 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
     // `box.CELLS` inside a constant: a constant another module declared, which
     // is one name with a dot in it. What it is written as is in that module's
     // file, so it is worked out against that file rather than against this
-    // one — the spans are into it, and read here they name bytes nobody
-    // wrote. See D665.
+    // one -- the spans are into it, and read here they name bytes nobody
+    // wrote.
     case KEST_EXPR_FIELD: {
         KestSymbol *elsewhere = kest_lookup_global(
             program, kest_span_text(program->source, expr->span),
@@ -1183,7 +1181,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             } else {
                 // Unsigned, so that the smallest number negates to itself
                 // the way this language says it does rather than being
-                // undefined the way C says it is. See D667.
+                // undefined the way C says it is.
                 out->integer = (int64_t)(0 - (uint64_t)held.integer);
             }
             return true;
@@ -1227,10 +1225,10 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             // whole number: the machine answers an infinity with a sign, or
             // what is not a number for nought over nought, and does not stop.
             // A constant is worked out by a second arithmetic and has to be
-            // the same one — a program that says a float divide has an answer
+            // the same one -- a program that says a float divide has an answer
             // and then refuses the one written down says it in two voices.
             // The whole numbers below keep their refusal, because there the
-            // machine does stop. See D805.
+            // machine does stop.
             case KEST_TOK_SLASH:
                 out->real = a / b;
                 break;
@@ -1308,11 +1306,10 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             }
             // The one pair whose quotient does not fit, which the reference
             // says wraps to itself with nought left over and which C leaves
-            // undefined — a trap on the machine this compiles on, so a
+            // undefined -- a trap on the machine this compiles on, so a
             // constant written this way took the compiler down rather than
             // being worked out. The machine has held this since it had a
-            // divide; this is the same guard on the other arithmetic. See
-            // D806.
+            // divide; this is the same guard on the other arithmetic.
             if (!unsigned_ && a == INT64_MIN && b == -1) {
                 out->integer = INT64_MIN;
                 break;
@@ -1343,11 +1340,10 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             break;
         // A count of nothing is not a count, which the machine says while
         // running and a constant has nothing to work out; a count past the
-        // width has an answer, and it is the one the machine gives — nothing
+        // width has an answer, and it is the one the machine gives -- nothing
         // is left of a number shifted further than it is wide, except the
         // sign a signed shift keeps shifting in. Refused for the first and
         // answered for the second, which is where these were one refusal.
-        // See D806.
         case KEST_TOK_LTLT:
             if (b < 0) {
                 *why = "a shift of a count below nought is not a shift";
@@ -1409,9 +1405,9 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
     // A choice is where this stops on purpose rather than for want of a case.
     // Working one out would mean binding what a case carries to a name and
     // folding an arm under it, which is an environment, which is a second
-    // machine — and this compiler has spent a week making two of a thing into
+    // machine -- and this compiler has spent a week making two of a thing into
     // one. A constant that picks between two values is two constants and a
-    // program that picks. See D672.
+    // program that picks.
     case KEST_EXPR_MATCH:
     case KEST_EXPR_IF:
         *why = "a choice is made while running: a constant that picks between "
@@ -1432,7 +1428,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
 // it takes. Read the other way round, `random.next(random.from(5))` folded to
 // the seed it was handed -- a constant of a type the program never worked out.
 // What tells them apart is that a function's name is of a function type and a
-// shape's name is of the shape. See D887.
+// shape's name is of the shape.
 static bool builds_rather_than_calls(const KestExpr *expr) {
     const KestExpr *callee = expr->call.callee;
     return callee != NULL &&
@@ -1440,7 +1436,7 @@ static bool builds_rather_than_calls(const KestExpr *expr) {
 }
 
 // How many bytes a piece of text worked out where it was written is. Measuring
-// it would stop at a nought, and a nought is a byte text may hold since D971,
+// it would stop at a nought, and a nought is a byte text may hold,
 // so this reads it from the source the value came from instead: a written
 // piece of text says how long it is, and a name that stands for one is asked
 // about whatever it stands for. Anything else has no written form to read and
@@ -1519,7 +1515,7 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
     // A case of an enum, written with what it carries or without: the tag is
     // slot nought and each piece sits where the case says it does. Every other
     // slot is nought, because a value with a hole in it is bytes nobody wrote
-    // and two of them built the same way would not compare alike. See D671.
+    // and two of them built the same way would not compare alike.
     if (type != NULL && type->tag == KEST_T_ENUM &&
         (expr->kind == KEST_EXPR_FIELD || expr->kind == KEST_EXPR_CALL) &&
         builds_rather_than_calls(expr)) {
@@ -1570,7 +1566,7 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
         // One with no fields is one slot of nought, which is what the machine
         // pushes for it and what its width says it is. Worked out as no slots
         // at all, it was a constant that could not be written down of a value
-        // a program may make anywhere else. See D807.
+        // a program may make anywhere else.
         if (type->member_count == 0 && expr->call.arg_count == 0) {
             out[0].integer = 0;
             return 1;
@@ -1651,7 +1647,7 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
     // A piece of text is two: what it is made of and how many bytes that is.
     // The fold above works out the first and this is the second, which is the
     // one place a value worked out where it was written has a width that is
-    // not one. See D964.
+    // not one.
     if (type != NULL && type->tag == KEST_T_TEXT) {
         if (room < 2) {
             return 0;
@@ -1671,27 +1667,27 @@ uint64_t kest_hash_value(const KestType *type, const KestValue *slots) {
     switch (type->tag) {
     case KEST_T_FLOAT:
         // Nought with either sign is one value, and so is everything that is
-        // not a number, whatever sign and payload it was made with. See D1238.
+        // not a number, whatever sign and payload it was made with.
         return kest_mix(slots[0].real == 0.0 ? 0
                         : slots[0].real != slots[0].real
                             ? UINT64_C(0x7FF8000000000000)
                             : (uint64_t)slots[0].integer);
     // The same whole number `==` compares, mixed the way every other whole
     // number here is: `hash` applies to exactly what `==` applies to, so a
-    // reference that compares is a reference that hashes. See D923.
+    // reference that compares is a reference that hashes.
     // By the place alone. What is above the place is the number the process
     // handed out, which is one count shared by every machine of a process: a
     // hash of the whole word answers differently on the second machine of a
     // run, and `deterministic` says the same program answers the same thing.
     // Two references to one place that are not the same reference hash alike
     // and compare unequal, which is what a hash is allowed to do and what
-    // every table here already handles. See D1054.
+    // every table here already handles.
     case KEST_T_REF:
         return kest_mix((uint64_t)slots[0].integer &
                         ((1ull << KEST_REF_PLACE_BITS) - 1ull));
     case KEST_T_TEXT:
         // Through the one fold this compiler has, which is what a file is
-        // marked with and what a program's `hash` over text answers. See D663.
+        // marked with and what a program's `hash` over text answers.
         return kest_mark_bytes(KEST_MARK_START, slots[0].text,
                                (size_t)slots[1].integer);
     case KEST_T_ENUM: {
@@ -1709,7 +1705,7 @@ uint64_t kest_hash_value(const KestType *type, const KestValue *slots) {
     }
     // And a struct, which is a value laid out flat: what it is is its fields,
     // so what it hashes to is what they hash to, folded the way a case's
-    // payload is. See D874.
+    // payload is.
     case KEST_T_STRUCT: {
         uint64_t bits = kest_mix((uint64_t)type->member_count);
         for (uint32_t m = 0; m < type->member_count; m++) {
@@ -1738,7 +1734,7 @@ uint64_t kest_hash_value(const KestType *type, const KestValue *slots) {
     // Every other tag written out rather than left to a `default`, so that a
     // tag added to the language cannot land here by not being mentioned. What
     // decides which reach this is `has_equality`, which lists the same tags,
-    // and the compiler holds the two lists to being one another. See D542.
+    // and the compiler holds the two lists to being one another.
     case KEST_T_ERROR:
     case KEST_T_VOID:
     case KEST_T_OPTIONAL:
@@ -1857,7 +1853,7 @@ int64_t kest_real_to_int(uint16_t scalar, double value) {
     // by the time it reaches this line, and a `u64` does not: the whole top
     // half of its range is above `INT64_MAX`, so `(int64_t)value` was undefined
     // where it mattered and saturated at two to the sixty-third in practice.
-    // Ten to the nineteenth came back as nine and a quarter. See D930.
+    // Ten to the nineteenth came back as nine and a quarter.
     if (scalar == KEST_L_U64) {
         return (int64_t)(uint64_t)value;
     }
@@ -1873,7 +1869,7 @@ uint32_t kest_fold_const(KestProgram *program, const KestExpr *expr,
     // Counted when it worked, because an asking that came to nothing is a
     // question rather than a piece of work: what a reader wants to know is
     // how many values this compiler worked out, and a constant is one of
-    // those however many times it is read. See D675.
+    // those however many times it is read.
     if (filled == room) {
         program->folds++;
     } else {
@@ -1907,9 +1903,9 @@ bool kest_type_has_text(const KestType *type, const KestType **without) {
         }
         return true;
     // A value laid out flat is written the way a program writes one, which is
-    // the same rule that gave it `==` in D874: a struct is its name and its
+    // the same rule that gives it `==`: a struct is its name and its
     // fields, `[T; N]` is its elements in brackets, and each is written when
-    // everything in it is. See D876.
+    // everything in it is.
     case KEST_T_STRUCT:
         for (uint32_t m = 0; m < type->member_count; m++) {
             if (!kest_type_has_text(type->members[m].type, without)) {
@@ -2005,7 +2001,7 @@ const char *kest_type_written(const KestType *type) {
 // then the name, `vec.Vec2` for `std.vec.Vec2`. It is what a suggestion has to
 // answer with and what a written name has to be compared against, because a
 // name lives under the whole of its module and nobody types the whole of it.
-// The name itself where it is under no module. See D1039.
+// The name itself where it is under no module.
 const char *kest_written_as(KestProgram *program, const char *whole) {
     const char *dot = strrchr(whole, '.');
     if (dot == NULL) {
@@ -2053,7 +2049,7 @@ static const char *nearest_type(KestProgram *program, const char *name,
             continue;
         }
         // A declared type is held under its module and written without it, so
-        // what is compared is the part that was written the same way (D198).
+        // what is compared is the part that was written the same way.
         const char *dot = strrchr(candidate, '.');
         const char *tail = dot == NULL ? candidate : dot + 1;
         const char *written = kest_written_as(program, candidate);
@@ -2079,7 +2075,7 @@ static const char *nearest_type(KestProgram *program, const char *name,
 // The type names a shape is waiting for, said as names: `` `T` `` for one and
 // `` `A` and `B` `` for two. NULL for a shape that takes none. Static, because
 // the one sentence that says them is in this file and nothing else has a
-// reason to build the list. See D757 and D758.
+// reason to build the list.
 static const char *type_names(KestArena *arena, const KestType *type) {
     if (type->type_param_count == 0) {
         return NULL;
@@ -2090,7 +2086,6 @@ static const char *type_names(KestArena *arena, const KestType *type) {
     // that form compile and mean a box of something else. A suggestion that
     // compiles and is wrong is worse than one that does not. So the names are
     // said as names, and where they were written is what the note carries.
-    // See D757.
     size_t room = 1;
     for (uint32_t i = 0; i < type->type_param_count; i++) {
         const char *held = type->type_param_names == NULL
@@ -2124,7 +2119,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
 // What a composed type is made of, as a number: the kind, what it holds and
 // how many. The element is compared by address rather than by shape, which is
 // what the walk this replaced did -- a composed type is interned here, so two
-// of the same shape are one address. See D1088.
+// of the same shape are one address.
 static uint32_t shape_hash(KestTypeTag tag, const KestType *element,
                            uint32_t count) {
     uint64_t mixed = (uint64_t)tag * 1099511628211u;
@@ -2177,7 +2172,7 @@ static KestType *compose(KestProgram *program, KestTypeTag tag,
     // is the same type. Asked by what went in rather than by what came out:
     // `kest_type_equal` is assignability and would answer yes for a
     // `fn() no.alloc` where a `fn()` was wanted, which is the right answer to
-    // a different question. See D780.
+    // a different question.
     if (!composed_room(program)) {
         return NULL;
     }
@@ -2230,7 +2225,7 @@ static KestType *compose(KestProgram *program, KestTypeTag tag,
 // Which of the two kinds of name a global is. `is_const` does not say: a
 // function is declared with it set, because what it marks is a name that
 // cannot be written to rather than a name for a value. What a function has
-// that nothing else does is a signature. See D740.
+// that nothing else does is a signature.
 static bool is_a_function(const KestSymbol *symbol) {
     return symbol->type != NULL && symbol->type->tag == KEST_T_FN;
 }
@@ -2256,7 +2251,7 @@ KestType *kest_bound_type(KestProgram *program, const char *name,
 // that happened: what the shape takes, and what was written. The shape is
 // named as the reader wrote it, because a diagnostic about what somebody wrote
 // calls it what they called it, and where it came from is what the note is
-// for. See D756.
+// for.
 static void wrong_type_count(KestProgram *program, KestSpan where,
                              const char *name, size_t length, uint32_t takes,
                              uint32_t written, const KestType *shape,
@@ -2311,9 +2306,8 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     }
     // The absence of a value is registered under a name so the compiler can
     // look it up, and that name is reachable to anybody who writes it. `fn f()
-    // -> void` compiled, which is a second spelling of `fn f()` — and this
-    // language refuses second spellings, the way it refuses `if (x < 3)`. See
-    // D519.
+    // -> void` compiled, which is a second spelling of `fn f()` -- and this
+    // language refuses second spellings, the way it refuses `if (x < 3)`.
     if (type != NULL && type->tag == KEST_T_VOID) {
         kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0357", ref->name,
                        "`void` is not a type this language writes");
@@ -2343,14 +2337,14 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     // A name the program has, written where a type goes: the other half of
     // the refusal the name walk makes for a type written where a value goes.
     // Saying `unknown` about a name a reader has declared sends them looking
-    // for a spelling mistake in a word they spelt right. See D740.
+    // for a spelling mistake in a word they spelt right.
     KestSymbol *held = kest_lookup_global(program, name, length);
     if (held != NULL) {
         kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0360", ref->name,
                        "`%.*s` is %s, and this wants a type", (int)length, name,
                        is_a_function(held) ? "a function" : "a constant");
         // Written down is named, which is what keeps a reader from being told
-        // to take out the constant they have just written. See D735.
+        // to take out the constant they have just written.
         held->named = true;
         kest_import_reached(program, name, length);
         if (!is_a_function(held)) {
@@ -2370,23 +2364,23 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     // that says where to look, and the program has it -- so it is not an
     // unknown type and not a spelling to guess at. The same refusal the name
     // walk makes, about the same word, asked of the one place that knows what
-    // a module is. See D739.
+    // a module is.
     // Or a word the file imported, which is a module whatever has been
     // registered under it yet: a signature is resolved before the functions
     // of the modules it names are, so a module of functions and no types --
-    // `std.io`, and `std.vec` since D1251 -- was an unknown type here and a
-    // module in a body. See D1251.
+    // `std.io` or `std.vec` -- would otherwise be an unknown type here and a
+    // module in a body.
     if (kest_module_named(program, name, length) ||
         kest_module_for(program, name, length) != NULL) {
         kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0359", ref->name,
                        "`%.*s` is a module, and this wants a type", (int)length,
                        name);
-        // Naming it is writing to it. See D735.
+        // Naming it is writing to it.
         kest_import_reached_by(program, name, length);
         // A type under it first, which is what was asked for -- and what a
         // module of shapes has nothing but. Signatures resolve before bodies,
         // so the functions under a module may not be registered yet where a
-        // type is asked for, which is the other reason to look here. See D739.
+        // type is asked for, which is the other reason to look here.
         const char *example = NULL;
         for (uint32_t i = 0; i < program->type_count; i++) {
             const char *whole = program->types[i]->name;
@@ -2412,12 +2406,12 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
 
     // The module in front of the name was written to, whatever answers under
     // it: a file whose one use of an import is the name it got wrong would
-    // otherwise be told to take the import out as well. See D735.
+    // otherwise be told to take the import out as well.
     kest_import_reached(program, name, length);
     kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0301", ref->name,
                    "unknown type `%.*s`", (int)length, name);
     // One the library had, which is not a spelling to guess at either: what
-    // took its place is known. See D1252.
+    // took its place is known.
     const char *dot_at = memchr(name, '.', length);
     const char *instead =
         dot_at == NULL
@@ -2431,7 +2425,7 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     // And one this program has under a module this file has not asked for,
     // which is the same certainty a name of that kind is: not a spelling to
     // try, but the shape the reader has already written, in the file beside
-    // this one. Said before any spelling is guessed at. See D733.
+    // this one. Said before any spelling is guessed at.
     for (uint32_t i = 0; i < program->type_count; i++) {
         const KestType *other = program->types[i];
         const char *whole = other->name;
@@ -2439,7 +2433,7 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
             continue;
         }
         // Where the module ends is wherever this name begins, because a name
-        // lives under the whole of its module. See D1039.
+        // lives under the whole of its module.
         size_t reach = strlen(whole);
         const char *dot = reach > length + 1 &&
                                   whole[reach - length - 1] == '.' &&
@@ -2461,9 +2455,9 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
         return error_type(program);
     }
     // And a module the library has. Here the reader wrote the module in front
-    // of the type — `vec.Vec2` is the whole name — so what is asked about is
+    // of the type -- `vec.Vec2` is the whole name -- so what is asked about is
     // the part before the first dot, and what was missing is the line at the
-    // top of the file. See D734.
+    // top of the file.
     const char *dot = memchr(name, '.', length);
     if (dot != NULL && program->files != NULL &&
         !kest_file_reaches(program, name, (size_t)(dot - name)) &&
@@ -2505,7 +2499,7 @@ KestType *kest_fixed_of(KestProgram *program, KestType *element,
     // What it is made of is the element and how many, so two of them are one
     // type, the same way an array of one thing is. Asked through the same
     // lookup, which is why that one takes a count: everything else composed
-    // here has none, and nought is what they all agree on. See D781.
+    // here has none, and nought is what they all agree on.
     KestType *type = compose(program, KEST_T_FIXED, element, count);
     if (type == NULL) {
         return error_type(program);
@@ -2572,7 +2566,7 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     // And what writing it costs is counted, a unit a byte: a copy of a shape
     // over two copies of the one before is a name twice as long, so the words
     // that ask for twenty of them are a name of a million pieces, and the
-    // time it took was two seconds nothing counted. See D1248.
+    // time it took was two seconds nothing counted.
     if (!kest_diags_work(program->diags, room)) {
         return error_type(program);
     }
@@ -2592,7 +2586,7 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     if (made != NULL) {
         // A copy is found by its name, and its name is built from the types it
         // was given, so the one found holds those types. If it does not, this
-        // project built the name wrongly and two copies are one struct — which
+        // project built the name wrongly and two copies are one struct -- which
         // is what a name built in a buffer did, and what a program was then
         // refused for.
         // By their names, which is what the key was built from: two of one
@@ -2628,7 +2622,7 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     // naming it: `Box<i32>` written on a `let`, in a signature, or built by
     // naming the shape is what makes this copy at all. Without this, every
     // program that declares a generic struct of its own and uses it was
-    // warned that nothing names the copy it had just made — which no file in
+    // warned that nothing names the copy it had just made -- which no file in
     // this tree could show, because the one generic struct here is the
     // library's and the warning is about the file that was named.
     made->named = true;
@@ -2686,7 +2680,7 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
         // for what this copy was asked for. A case's name and how many things
         // it carries are the shape's; what they are is this copy's. The walk
         // that refuses two cases of one name ran when the shape was resolved,
-        // so it is not run again here. See D1048.
+        // so it is not run again here.
         uint32_t how_many = decl->choice.case_count;
         KestVariantType *cases = KEST_ARENA_ARRAY(program->arena,
                                                   KestVariantType,
@@ -2768,7 +2762,6 @@ KestType *kest_resolve_type_ref(KestProgram *program,
         // A block is code written where a function is called, handed to that
         // function, and nothing that can be kept: not a field, not a local,
         // not an answer, not held inside anything, and nothing a host takes.
-        // See D1257.
         if (ref->block && !block_here) {
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0367",
                            ref->span,
@@ -2821,8 +2814,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
             // A shape that takes none, written with some. It is not an
             // unknown generic type -- it is a type, and what is wrong is the
             // angle brackets -- and the walk below would offer the name back
-            // as itself, which is D737's mistake in the other walk.
-            // See D755.
+            // as itself, which says nothing.
             if (shape != NULL && shape->tag != KEST_T_ERROR) {
                 wrong_type_count(program, ref->span, name, ref->name.length, 0,
                                  ref->arg_count, shape, NULL);
@@ -2862,8 +2854,8 @@ KestType *kest_resolve_type_ref(KestProgram *program,
         if (ref->count.length == 0) {
             return compose(program, KEST_T_ARRAY, element, 0);
         }
-        // A number, or the name of a constant that is one. D064 asked for a
-        // literal because a name could be a size that changes; a constant is
+        // A number, or the name of a constant that is one. A name that could
+        // be a size that changes would be wrong here, but a constant is
         // worked out where it is written and cannot, and a program with the
         // same number in five places is the thing that changes wrongly.
         const char *digits = kest_span_text(program->source, ref->count);
@@ -2883,7 +2875,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
             // yet when a type is being resolved.
             // A name with a dot in it is a constant another module declared,
             // found in the file that module is: there are no symbols yet, and
-            // the declarations of every file are here. See D681.
+            // the declarations of every file are here.
             const KestSource *read_in = program->source;
             const char *dot = memchr(digits, '.', ref->count.length);
             const KestDecl *declared =
@@ -2912,7 +2904,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                 // read, the module is there and has no such constant, or the
                 // name is a constant and not a number. One refusal for all
                 // three sent a reader to look for whichever they thought of
-                // first. See D683.
+                // first.
                 if (dot != NULL && declared == NULL) {
                     uint32_t named = (uint32_t)(dot - digits);
                     bool anywhere = false;
@@ -2996,8 +2988,8 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                                MAX_ELEMENTS);
             return error_type(program);
         }
-        // What it holds may not be measured yet — a struct is measured after
-        // the fields that name it are resolved — and then this is sized again
+        // What it holds may not be measured yet -- a struct is measured after
+        // the fields that name it are resolved -- and then this is sized again
         // where it is held. Where it is already known, it is known here.
         KestType *run = kest_fixed_of(program, element, (uint32_t)how_many);
         if (element != NULL && element->byte_size != 0 &&
@@ -3025,7 +3017,7 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
     // What a message calls the absence of a value. `void` is the name it is
     // registered under, because that is what the compiler looks it up by, and
     // it is not a word this language has: a reader told `found `void`` is told
-    // about a type they cannot write and cannot look up. See D519.
+    // about a type they cannot write and cannot look up.
     if (type->tag == KEST_T_VOID) {
         return "nothing";
     }
@@ -3036,10 +3028,10 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
     if (type->tag == KEST_T_FN) {
         // Sized from what it is made of, both promises included. This was two
         // hundred and fifty-six bytes and gave back what fitted, which is a
-        // name that is not the type's — and it is the name a copy of a generic
+        // name that is not the type's -- and it is the name a copy of a generic
         // is compiled under as well as the one a message says. Room for one
         // promise where there are two gave back `no.alloc n`, which is the
-        // same mistake one promise later. See D853.
+        // same mistake one promise later.
         const char *result =
             type->result == NULL || type->result->tag == KEST_T_VOID
                 ? NULL
@@ -3067,14 +3059,11 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
             used += (size_t)snprintf(written + used, room - used, " -> %s",
                                      result);
         }
-        // All three, in the order the library writes them. The third was
-        // added to the language by D942 and to this by nobody: what stood here
-        // was `room += 14`, which grew a number after the memory it described
-        // had been handed out and wrote no word at all. So a shape that
-        // promised `deterministic` was named as one that did not — in a
+        // All three, in the order the library writes them. A word left out
+        // here names a shape that promised it as one that did not, in a
         // message telling a reader to write the promise into the shape, in
         // what `check` prints, and in the name a copy of a generic is compiled
-        // under. See D1064.
+        // under.
         if (type->no_alloc) {
             used += (size_t)snprintf(written + used, room - used, " no.alloc");
         }
@@ -3118,9 +3107,8 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
     // and a declared type are registered under one, a function type is written
     // out where it is made, and an error is `<unknown>`. Nothing reaches these
     // and they are written out rather than left to a `default`, so that a
-    // composed tag added to the language cannot come out as `?` — a name that
+    // composed tag added to the language cannot come out as `?` -- a name that
     // is not the type's is a copy of a generic compiled under somebody else's.
-    // See D546.
     case KEST_T_ERROR:
     case KEST_T_VOID:
     case KEST_T_BOOL:
@@ -3141,7 +3129,7 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
 // What the library had and has not, and what a program writes instead. A name
 // that went is refused whatever happens -- what it was is not there to be
 // called -- and the refusal says what took its place, which is the promise a
-// break makes before there were editions to make it under. See D1252.
+// break makes before there were editions to make it under.
 typedef struct {
     const char *module;
     const char *name;
@@ -3178,7 +3166,7 @@ const char *kest_retired(KestProgram *program, const char *alias,
 // was made from, and a copy that is too big is one that holds too much: the
 // first refused for it was named in a hundred and eighty megabytes, and a
 // message that long is one nobody reads and a tool is choked by. Cut where a
-// character starts, so what is said is still text. See D1248.
+// character starts, so what is said is still text.
 #define NAMED_AS_FAR_AS 120
 
 const char *kest_type_name_read(KestArena *arena, const KestType *type) {
@@ -3201,7 +3189,7 @@ const char *kest_type_name_read(KestArena *arena, const KestType *type) {
 
 // A name to a slot, one byte at a time. Every name here is a name somebody
 // wrote, so what this has to be is spread over short words that differ in a
-// letter or two — not the fastest one there is.
+// letter or two -- not the fastest one there is.
 uint32_t kest_name_hash(const char *name, size_t length) {
     uint32_t hash = 2166136261u;
     for (size_t i = 0; i < length; i++) {
@@ -3270,7 +3258,7 @@ static void index_agrees(const KestProgram *program, const char *after) {
     // and not in the list it indexes is a place nobody looks at. Every
     // declaration is found where it was written, and every named type is
     // found by its name -- the first one declared under it, which is what the
-    // walk they replaced answered with. See D1086.
+    // walk they replaced answered with.
     for (uint32_t at = 0; at < program->global_count; at++) {
         const KestSymbol *one = &program->globals[at];
         const KestSymbol *found =
@@ -3328,8 +3316,7 @@ static void index_put(KestProgram *program, uint32_t at) {
 }
 
 // The same for where a declaration is written. A place is a file and an
-// offset in it, and the two together are one name for one declaration. See
-// D1086.
+// offset in it, and the two together are one name for one declaration.
 static uint32_t place_hash(const KestSource *source, uint32_t offset) {
     uint64_t mixed = (uint64_t)(uintptr_t)source * 1099511628211u;
     mixed ^= (uint64_t)offset * 2654435761u;
@@ -3397,7 +3384,7 @@ static uint32_t under_one_name(KestProgram *program, const char *name,
 // Every function under one name, where the name may be written the way a file
 // writes it. The three forms are the ones `kest_lookup_global` tries and for
 // the same reason: a name lives under the whole of its module and a file
-// writes the last part. See D1039.
+// writes the last part.
 uint32_t kest_overloads(KestProgram *program, const char *name, size_t length,
                         KestSymbol **found, uint32_t room) {
     if (program->module[0] != '\0') {
@@ -3534,7 +3521,7 @@ static const char *symbol_of(KestProgram *program, const char *name,
                              const KestType *type) {
     // As long as it is, in the arena. This was five hundred and twelve bytes
     // of the stack, and what it did when they ran out was give back the name
-    // without what it takes — so two functions of one name, told apart by
+    // without what it takes -- so two functions of one name, told apart by
     // exactly that, were compiled under one symbol.
     size_t room = strlen(name) + 1;
     for (uint32_t i = 0; i < type->param_count; i++) {
@@ -3665,7 +3652,7 @@ static bool declare_structs(KestProgram *program, const KestUnit *unit) {
         // Which file declared it, which is where the module a field marked
         // `own` belongs to comes from. It used to be set for generic shapes
         // alone, because a copy is made from where the shape was written and
-        // nothing else asked. See D1041.
+        // nothing else asked.
         type->unit = program->unit;
 
         // A generic struct is not a type but the shape of one. `Pair<i32>` is
@@ -3810,7 +3797,7 @@ static bool measure_held(KestProgram *program, KestType *type,
         return true;
     }
     // That many of something is sized from what it holds, and it is composed
-    // while fields are resolved — before the structs among them are measured.
+    // while fields are resolved -- before the structs among them are measured.
     // So it is sized here, where what it holds has just been.
     if (type->tag == KEST_T_FIXED) {
         if (!measure_held(program, type->element, whole)) {
@@ -3842,7 +3829,7 @@ static bool measure_held(KestProgram *program, KestType *type,
     // before `Piece` is measured, and was a tag beside nothing -- one slot and
     // a byte -- for as long as the program was compiled, so reading the field
     // read one slot where the type said three. Found by a game brought over
-    // from Lua, whose falling piece is exactly that. See D1268.
+    // from Lua, whose falling piece is exactly that.
     if (type->tag == KEST_T_OPTIONAL) {
         if (!measure_held(program, type->element, whole)) {
             return false;
@@ -3886,7 +3873,6 @@ static bool refuse_cycle(KestProgram *program, KestType *type) {
 // that crossed is seen rather than wrapped: two fields of 64000 bytes each
 // were a struct of 62464, and eight shapes each holding two of the one before
 // were one that wrote its layout past the end of where it was being written.
-// See D1248.
 static bool within_a_value(KestProgram *program, KestType *type,
                            uint32_t bytes, uint32_t slots) {
     if (bytes <= UINT16_MAX && slots <= UINT16_MAX) {
@@ -4031,7 +4017,6 @@ static bool measure_all(KestProgram *program) {
 // One walk for the two shapes that are a name and a list of cases. An enum and
 // a set of flags are declared the same way and differ in the tag each carries,
 // and it was written out twice until a check read the two bodies as one shape.
-// See D770.
 static bool declare_cased(KestProgram *program, const KestUnit *unit,
                           KestDeclKind wanted, KestTypeTag tag) {
     for (uint32_t i = 0; i < unit->count; i++) {
@@ -4063,7 +4048,7 @@ static bool declare_cased(KestProgram *program, const KestUnit *unit,
         // same as a struct that does: `Answer<i32>` is a type and `Answer` on
         // its own has no size and is never measured. A `flags` set takes none
         // -- it is a width and a list of bits -- and the parser never reads
-        // any for one. See D1048.
+        // any for one.
         if (decl->type_param_count > 0) {
             type->type_param_count = decl->type_param_count;
             type->type_param_names = KEST_ARENA_ARRAY(
@@ -4117,7 +4102,7 @@ static bool resolve_flags_cases(KestProgram *program, const KestUnit *unit) {
         }
         // One slot however wide it is declared, because every value of every
         // width fits in one. The byte layout is the declared width, which is
-        // what a host reading the same memory sees (D016).
+        // what a host reading the same memory sees.
         type->width = over->width;
         type->is_signed = false;
         type->slots = 1;
@@ -4206,7 +4191,7 @@ static bool resolve_enum_cases(KestProgram *program, const KestUnit *unit) {
         // A shape's cases are resolved with its names standing for
         // themselves, the same way a struct's fields are: what a case carries
         // is a `T` until a copy says what `T` is. It is never measured; a copy
-        // is. See D1048.
+        // is.
         uint32_t generics = type->type_param_count;
         const char **stand_names = KEST_ARENA_ARRAY(program->arena,
                                                     const char *, generics);
@@ -4345,7 +4330,7 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
             program,
             kest_substitute(program, type->element, names, bindings, count));
     // And the same run, made again with what its element turned out to be.
-    // How many there are is the type's and not the copy's. See D546.
+    // How many there are is the type's and not the copy's.
     case KEST_T_FIXED:
         return kest_fixed_of(
             program,
@@ -4379,7 +4364,6 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
     // A copy of a shape, made again with what its types turned out to be. An
     // enum that takes types is a shape like a struct that does, so the two go
     // through the same door; one that takes none has no `shape` and is itself.
-    // See D546 and D1048.
     case KEST_T_STRUCT:
     case KEST_T_ENUM: {
         if (type->shape == NULL) {
@@ -4400,9 +4384,9 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
     // Everything left stands for itself: a primitive, a set of bits and a type
     // name already bound are what they were, and a type this is asked about
     // with nothing to put in it is too. Written out for the reason the three
-    // beside it are — a composed tag added to the language would come back
+    // beside it are -- a composed tag added to the language would come back
     // unsubstituted, which is a copy of a generic made with the name still in
-    // it. See D546.
+    // it.
     case KEST_T_ERROR:
     case KEST_T_VOID:
     case KEST_T_BOOL:
@@ -4443,7 +4427,7 @@ bool kest_unify(const KestType *declared, const KestType *given,
     }
     // A copy of a shape against a copy of the same shape: what each was made
     // with, one at a time. An enum that takes types is a shape like a struct
-    // that does. See D1048.
+    // that does.
     if (declared->tag == KEST_T_STRUCT || declared->tag == KEST_T_ENUM) {
         if (declared->shape == NULL || declared->shape != given->shape) {
             return true;
@@ -4461,8 +4445,8 @@ bool kest_unify(const KestType *declared, const KestType *given,
     switch (declared->tag) {
     // A run of a written length is one of these: `[T; 3]` says what `T` is as
     // plainly as `[T]` does, and leaving it out of this list left a generic
-    // over one uncallable — `what T is here cannot be told from what was
-    // passed`, about an argument it was written in. See D546.
+    // over one uncallable -- `what T is here cannot be told from what was
+    // passed`, about an argument it was written in.
     case KEST_T_ARRAY:
     case KEST_T_FIXED:
     case KEST_T_OPTIONAL:
@@ -4486,8 +4470,7 @@ bool kest_unify(const KestType *declared, const KestType *given,
     // Everything left mentions no name, so there is nothing here to work out:
     // what a primitive or a declared type says about `T` is nothing, and a
     // mismatch between the declaration and what was passed is reported against
-    // the instance rather than here. Written out for the same reason. See
-    // D546.
+    // the instance rather than here. Written out for the same reason.
     case KEST_T_ERROR:
     case KEST_T_VOID:
     case KEST_T_BOOL:
@@ -4510,7 +4493,7 @@ bool kest_unify(const KestType *declared, const KestType *given,
 // is found by its name, and `Box<K, V>` asked for by two generics in one
 // module is one copy -- so the `K` inside it is whichever of them asked first,
 // and what that one said about `K` is not what this one says. The name is what
-// is meant; which name is bound here is the question. See D1043.
+// is meant; which name is bound here is the question.
 static KestType *stands_here(const KestProgram *program,
                              const KestType *type) {
     if (type == NULL || type->tag != KEST_T_PARAM || type->name == NULL) {
@@ -4565,7 +4548,7 @@ void kest_unbind_types(KestProgram *program) {
 // What a copy is of and what it was given, as a number. A type is read for its
 // kind, its width and its name rather than for its address, because two types
 // that are the same are not always one object -- so two sets that are equal
-// land on one slot and are compared there the way they always were. See D1088.
+// land on one slot and are compared there the way they always were.
 static uint32_t binding_hash(const KestType *type) {
     if (type == NULL) {
         return 2166136261u;
@@ -4771,7 +4754,7 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
             const KestField *param = decl->function.params[p];
             // What a function takes may be a block, and what a host provides
             // may not: a block is code written into the caller, and a host
-            // has nowhere to write it. See D1257.
+            // has nowhere to write it.
             program->block_here = !decl->function.is_extern;
             type->params[p] = kest_resolve_type_ref(program, param->type);
             program->block_here = false;
@@ -4784,7 +4767,7 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
                 // had no room for comes back empty, and comparing that many
                 // bytes of an empty name reads past the end of it -- which a
                 // run that refused the allocation under this found, and which
-                // was there before anything asked. See D510.
+                // was there before anything asked.
                 if (kest_word_same(param_name,
                                    kest_span_text(program->source,
                                                   earlier->name),
@@ -4943,7 +4926,7 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
         // A value promising more may go where one promising less is wanted,
         // and each promise is asked about on its own: one that promises the
         // heap and not the host is neither above nor below one that promises
-        // the other way, and neither goes where the other is wanted. See D853.
+        // the other way, and neither goes where the other is wanted.
         return (a->no_alloc || !b->no_alloc) && (a->no_host || !b->no_host) &&
                (a->deterministic || !b->deterministic);
     }
@@ -4953,7 +4936,7 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
     // instance bound. Two of any of them that did not match by pointer above
     // are two types. Written out rather than left to a `default` so that a tag
     // added to the language has to be thought about here, where the wrong
-    // answer is a program refused for nothing. See D546.
+    // answer is a program refused for nothing.
     case KEST_T_ERROR:
     // A name standing for itself, which is what a type parameter is while the
     // generic it belongs to is being checked. Two of them are one type when
@@ -4961,7 +4944,6 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
     // is cached under the name it was made with, so `Table<K, V>` asked for
     // twice in one module is one copy and the `K` in it is the `K` of
     // whichever asked first. Without this a body was told that `K` is not `K`.
-    // See D1043.
     case KEST_T_PARAM:
         return a->name != NULL && b->name != NULL &&
                strcmp(a->name, b->name) == 0;
@@ -4983,7 +4965,7 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
 // Whether any one file imports both of these, which is the only way a `math.`
 // written in a file could mean either of them. A program holding two modules
 // under one last part is fine; a file reaching two of them is not, and the
-// file is where the fix goes. See D1039.
+// file is where the fix goes.
 static const KestUnitInfo *one_file_reaches_both(const KestUnits *units,
                                                 const KestUnitInfo *first,
                                                 const KestUnitInfo *second) {
@@ -5053,7 +5035,7 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
 
     // Nothing is declared for a program before it says what it imports.
     // Saying something is the host's to do and `std.io` is where it is asked
-    // for; see D024.
+    // for.
     if (!add_primitives(program)) {
         return false;
     }
@@ -5062,8 +5044,7 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
     // `b.math.min` are two entries and a program may hold both. What cannot
     // happen is one *file* writing `math.` and meaning either of them, which
     // is what the walk below looks for: two modules a file imports whose last
-    // parts are the same. Under D185 this was refused for the whole program,
-    // because the table was keyed by the last part alone. See D1039.
+    // parts are the same, and not the same last part across the program.
     for (uint32_t i = 0; i < units->count; i++) {
         if (units->items[i].alias[0] == '\0') {
             continue;
@@ -5077,7 +5058,7 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
             // calls itself, so `render.math` and `physics.math` are two names
             // here. What cannot happen is one *file* writing `math.` and
             // meaning either, so this is a refusal about a file rather than
-            // about the program. See D1039.
+            // about the program.
             const KestUnitInfo *reaching = one_file_reaches_both(
                 units, &units->items[i], &units->items[j]);
             if (reaching == NULL) {
@@ -5097,7 +5078,7 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
             // The refusal is about the file that reaches both, because that
             // is the only place `math.` could mean either -- and it is the
             // file whose lines a reader can change. Two modules under one
-            // last part are fine everywhere else. See D1039.
+            // last part are fine everywhere else.
             KestSpan at_first = where_imported(reaching, first);
             KestSpan at_second = where_imported(reaching, second);
             kest_diags_in(diags, &reaching->source);
@@ -5166,7 +5147,7 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
 // the longest module this program holds that the name begins with, asked of
 // the program rather than guessed from a dot. Everything before the last dot
 // where nothing matches, which is what a name from no module of this program
-// can be given. See D1039.
+// can be given.
 static size_t module_of_in(const KestUnits *files, const char *name) {
     size_t best = 0;
     for (uint32_t i = 0; files != NULL && i < files->count; i++) {
@@ -5193,7 +5174,7 @@ static const KestUnits *dumping_files;
 // its module ends is a lookup rather than a walk of every file. A listing of a
 // thousand modules spent a fifth of a `check` inside that walk, and the walk
 // that gathered what each module holds spent as much again. Both are keyed on
-// the same table here. See D1086.
+// the same table here.
 typedef struct {
     // One more than the place in `names`, so nought is an empty slot.
     uint32_t *slots;
@@ -5380,7 +5361,7 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
     // one this cannot answer from. It used to answer anyway, and what it wrote
     // then was every type of every module the program imports, listed as
     // though the file had declared them: a run that came back nought having
-    // said something else. See D845.
+    // said something else.
     if (held == NULL) {
         return false;
     }
@@ -5477,7 +5458,7 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
         // The names it takes and what each has to be able to do, written the
         // way the file writes them. A generic's requirements are part of what
         // it is -- `set` wants a key that compares and hashes -- so a reader
-        // handed the signature is handed them. See D1043.
+        // handed the signature is handed them.
         for (uint32_t g = 0; g < type->type_param_count; g++) {
             fputs(g == 0 ? "<" : ", ", out);
             fputs(type->type_param_names[g], out);
@@ -5503,7 +5484,7 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
                     kest_type_name(arena, type->params[p]));
         }
         // Written the way the file writes it: a function that gives nothing
-        // back has no arrow, so this has none either. See D519.
+        // back has no arrow, so this has none either.
         bool gives = type->result != NULL && type->result->tag != KEST_T_VOID;
         fprintf(out, ")%s%s%s%s%s\n", gives ? " -> " : "",
                 gives ? kest_type_name(arena, type->result) : "",
@@ -5572,7 +5553,7 @@ static bool a_name_byte(char byte) {
 // the same declaration with `U` written in place of `T` are one function said
 // twice: the name is the declaration's own and nothing outside it can see it,
 // so a fingerprint that tells the two apart is one that moves when nothing a
-// caller can act on has. See D945.
+// caller can act on has.
 static const char *where_it_stands(KestArena *arena, const char *written,
                                    const KestType *of) {
     if (of->type_param_count == 0 || of->type_param_names == NULL) {
@@ -5679,12 +5660,11 @@ void kest_program_costs(const KestProgram *program, FILE *out) {
 // Which module a declaration is in, written beside its name. A name lives
 // under the whole of its module and what comes after may hold dots of its own,
 // so a tool splitting the name at a dot would invent modules -- `std.io.Io` is
-// a capability inside `std.io`. It is written rather than derivable. See
-// D1039.
+// a capability inside `std.io`. It is written rather than derivable.
 static void write_module(const KestProgram *program, const char *name,
                          FILE *out) {
     // The same table the printed listing uses where there is one, and the walk
-    // of every file where there is not. See D1086.
+    // of every file where there is not.
     size_t length = 0;
     if (dumping_modules != NULL && dumping_modules->slot_count > 0) {
         length = module_of_prepared(dumping_modules, name);
@@ -5815,7 +5795,7 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         // The type names it takes, each with what it has to be able to do.
         // A generic's requirements are part of what it is, so a tool reading
         // this is handed them rather than left to find out at a call. Empty
-        // for a function that takes no types. See D1043.
+        // for a function that takes no types.
         fputs(",\"typeParameters\":[", out);
         for (uint32_t g = 0; g < symbol->type->type_param_count; g++) {
             fputs(g == 0 ? "{\"name\":" : ",{\"name\":", out);
@@ -5843,7 +5823,7 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         // What it gives back, under a name of its own: `result` is what a
         // call answered and is null when there is none, and this is the type
         // a function gives back, which is `nothing` when it gives nothing.
-        // One name for one thing, and these were two things. See D590.
+        // One name for one thing, and these were two things.
         fputs("],\"gives\":", out);
         kest_json_text(kest_type_name(arena, symbol->type->result), out);
         fprintf(out, ",\"noAlloc\":%s,\"noHost\":%s,"
@@ -5860,7 +5840,7 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         // that reaches nothing and says nothing is a promise somebody could
         // make, and `could` says so. A foreign body is judged by what it
         // declares, because there is no body here to walk, so nothing is
-        // proved about one and `could` is false. See D976.
+        // proved about one and `could` is false.
         {
             bool foreign = symbol->type->is_foreign || symbol->decl == NULL ||
                            symbol->decl->kind != KEST_DECL_FN ||
@@ -5889,8 +5869,8 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         // things that get called identity and is the only one of them this
         // number is: not where the declaration is, not what its body compiled
         // to -- `emit` says that per chunk -- and not what a value made while
-        // it runs is. See D924 and D945. A tool that watches a file -- a reloader, a save format, a
-        // debugger, something reading a diff -- needs to know that the thing
+        // it runs is. A tool that watches a file -- a reloader, a save format,
+        // a debugger, something reading a diff -- needs to know that the thing
         // it saw yesterday is the thing it is looking at today, and a line
         // number is not that: a blank line above it moves every one of them.
         //
@@ -5900,7 +5880,7 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         // which are part of what a caller may do with it. So it survives
         // formatting, a comment, a renamed local and a declaration moved past
         // it, and it changes when the signature or a promise changes -- which
-        // is when a caller has to be told. See D924.
+        // is when a caller has to be told.
         uint64_t stands_for = kest_mark_bytes(KEST_MARK_START, symbol->name,
                                               strlen(symbol->name));
         stands_for = kest_mark_bytes(stands_for, "(", 1);
@@ -5948,10 +5928,10 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
     // And how many types checking this program made, against the ones above
     // that have names. A program makes one for every signature, every optional
     // and every run of something, and those are most of them: the list is what
-    // a reader asks about and this is what the stage cost. See D644.
+    // a reader asks about and this is what the stage cost.
     // And what one weighs on the machine that answered, for the same reason a
     // node and a token say it: a tool holding what a build keeps against what
-    // it is made of wants both numbers from the same run. See D754.
+    // it is made of wants both numbers from the same run.
     fprintf(out, ",\"typesMade\":%u,\"typeBytes\":%zu", program->types_made,
             sizeof(KestType));
     dumping_modules = were_modules;

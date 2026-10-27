@@ -10,7 +10,7 @@ import std.vec
 // something is, and keeping every answer inside the room.
 //
 // Nothing here is new language. What is new is that these functions are run
-// rather than only compiled — the library is written in Kest and held to the
+// rather than only compiled -- the library is written in Kest and held to the
 // same rules as a program, and a program is what runs it.
 
 struct Camera {

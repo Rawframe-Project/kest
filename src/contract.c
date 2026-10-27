@@ -40,14 +40,14 @@ typedef struct {
     // And every other place in this body that reaches it. A promise broken in
     // four places is four lines to change, and a reader told the first of them
     // compiles four times to hear the rest. One note each, and the promise
-    // takes the last, which is what bounds this. See D509.
+    // takes the last, which is what bounds this.
     KestSpan sites[MORE_SITES];
     const char *whys[MORE_SITES];
     uint32_t site_count;
     uint32_t more;
     // Every call this body makes through a value, in the order the walk met
     // them, which is the one thing a body does that the three promises read
-    // differently. See D1284.
+    // differently.
     struct Through *throughs;
     uint32_t through_count;
     uint32_t through_capacity;
@@ -69,15 +69,15 @@ typedef struct {
     uint32_t count;
     bool out_of_memory;
     // Which promise this walk is about. The graph is the same graph either
-    // way — the calls a body makes are the calls a body makes — and what
+    // way -- the calls a body makes are the calls a body makes -- and what
     // differs is what counts as reaching: a builtin that grows, or a function
     // the host provides. Walked once for each rather than once for both,
     // because a body that breaks one and keeps the other has one thing wrong
-    // with it and a reader wants that one. See D853.
+    // with it and a reader wants that one.
     // Which promise this walk is about: nought for `no.alloc`, one for
     // `no.host`, two for `deterministic`. The graph is the same graph for all
     // three -- the calls a body makes are the calls a body makes -- and what
-    // differs is what counts as reaching. See D942.
+    // differs is what counts as reaching.
     int about;
     // Whether what is being read is a generic declaration rather than a copy
     // of one. A declaration has no types until a copy gives it some, so what a
@@ -85,13 +85,12 @@ typedef struct {
     // `array()` makes something that can grow whatever `T` is. So a template
     // is read for what it does and not for what it calls, which leaves a
     // promise on one that nothing instantiates proved rather than assumed.
-    // See D939.
     bool a_template;
     // Where each function is, by the name the checker gave it. The walk that
     // found one was the graph's own size for every call in it: a project of
     // nine thousand functions spent two fifths of a clean check inside it,
     // and three times over, because a promise is proved once for each of the
-    // three. Slots hold one more than the place they name. See D1087.
+    // three. Slots hold one more than the place they name.
     uint32_t *by_name;
     uint32_t by_name_slots;
 } Graph;
@@ -142,7 +141,7 @@ static const char *span_text(Graph *graph, KestSpan span) {
 // written down whatever `T` turns out to be, and a promise is part of a shape.
 // Without this a promise on a generic that nothing instantiates was proved
 // against nothing, and the refusal arrived at the first use, in the file of
-// whoever called it rather than the file that made the promise. See D943.
+// whoever called it rather than the file that made the promise.
 static const KestTypeRef *written_shape(Graph *graph, Function *function,
                                         const KestExpr *callee) {
     if (callee->kind != KEST_EXPR_NAME || function->decl == NULL) {
@@ -180,7 +179,7 @@ static const char *shape_written(Graph *graph, KestSpan span) {
 // Every function put in once, after the nodes are made and their names are
 // known. The first one under a name is the one a lookup answers with, which is
 // what the walk this replaced did. Answers false only for no room, and a graph
-// with no table walks itself the way it always did. See D1087.
+// with no table walks itself the way it always did.
 static bool graph_index(Graph *graph, KestArena *arena) {
     uint32_t slots = 64;
     while (slots < (graph->count + 1) * 2) {
@@ -242,7 +241,7 @@ static int32_t find_called(Graph *graph, const KestExpr *callee) {
 static void record_call(Graph *graph, Function *caller, uint32_t callee,
                         KestSpan span) {
     // What a template calls is settled per copy, and each copy is a node of
-    // its own. See D939.
+    // its own.
     if (graph->a_template) {
         return;
     }
@@ -325,7 +324,6 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
     switch (expr->kind) {
     // What a block does is done in the body it is written in, whichever
     // function it is handed to, so it is walked as part of that body.
-    // See D1257.
     case KEST_EXPR_BLOCK:
         if (expr->lambda->value != NULL) {
             walk_expr(graph, function, expr->lambda->value);
@@ -334,7 +332,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         }
         break;
     case KEST_EXPR_ARRAY:
-        // A run of a written length is laid out where it stands (D064): slots
+        // A run of a written length is laid out where it stands: slots
         // in the frame, or bytes inside the struct it is written into. Nothing
         // reaches the heap, and the compiler emits no instruction that could.
         // What allocates is the kind that can grow.
@@ -387,7 +385,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
                 {"find", NULL},
                 {"float", NULL},
                 // It writes where there is room and answers false where there
-                // is not, so it never reaches the heap. See D940.
+                // is not, so it never reaches the heap.
                 {"fit", NULL},
                 {"get", NULL},
                 {"hash", NULL},
@@ -399,7 +397,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
                 // A piece of a piece of text is a place inside it and how
                 // many bytes of it, so there is nothing to copy. It used to
                 // cost one: a piece of text was a pointer that had to end in
-                // a nought, so a cut out of the middle was a copy. See D964.
+                // a nought, so a cut out of the middle was a copy.
                 {"rest", NULL},
                 {"room", "`room` makes room in what it is given"},
                 {"set", NULL},
@@ -431,7 +429,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         // rather than a declaration, and its promise is part of its type,
         // which is what keeps this provable at all.
         // A block is not one of those: what it does is written where it is,
-        // and judged there, as part of the body it was written in. See D1257.
+        // and judged there, as part of the body it was written in.
         if (callee->type != NULL && callee->type->tag == KEST_T_FN &&
             callee->type->symbol == NULL && !callee->type->is_foreign &&
             !callee->type->block) {
@@ -517,7 +515,7 @@ static void walk_stmt(Graph *graph, Function *function, const KestStmt *stmt) {
         break;
     case KEST_STMT_FOR:
         // A walk over fields calls nothing: `fields` is the walk, and what is
-        // walked is the one thing in it that is worked out. See D1264.
+        // walked is the one thing in it that is worked out.
         walk_expr(graph, function,
                   stmt->each->fields ? stmt->each->sequence->call.args[0]
                                      : stmt->each->sequence);
@@ -531,8 +529,8 @@ static void walk_stmt(Graph *graph, Function *function, const KestStmt *stmt) {
         // A block of working memory is a block that has some. A promise to
         // reach no heap has none to put back, so writing one inside such a
         // function is the promise being kept by a body that has nothing to do
-        // with it — refused where it is written rather than allowed and
-        // pointless. See D966.
+        // with it -- refused where it is written rather than allowed and
+        // pointless.
         reaches(graph, function, stmt->span,
                 "a `scratch { }` block is working memory, and a promise to "
                 "reach no heap has none");
@@ -650,7 +648,7 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
     // be typed into it last -- and a call carries the copy's own name, so the
     // walk below looked for a node that was not there and read the call as
     // reaching nothing at all. That is how `check` accepted what `emit`
-    // refused, and blamed the compiler for a mistake in the program. See D933.
+    // refused, and blamed the compiler for a mistake in the program.
     graph.count += program->instance_count;
     if (graph.count == 0) {
         return true;
@@ -694,7 +692,7 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
                                           : decl->function.no_alloc;
         function->is_extern = decl->function.is_extern;
         // A foreign body is not here to be read, so its promise is the only
-        // thing there is to go on — and about the host there is nothing to go
+        // thing there is to go on -- and about the host there is nothing to go
         // on either way: a function the host provides is the host, whatever it
         // says about the heap.
         function->allocates =
@@ -736,7 +734,7 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
 
     // Every node is made and named by here, which is where the table can be
     // built: a name is what a call is looked up by, and nothing is added
-    // after. See D1087.
+    // after.
     // Made the same way from the same program, so the same nodes in the same
     // order, which the count says before anything of the first is read.
     bool walk = walked == NULL || walked->count != graph.count;
@@ -801,7 +799,7 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
     // that reaches nothing and promises nothing is a promise somebody could
     // make, and `kest check --cost` is where that is said. A generic is
     // written once per copy of it and the copies are OR-ed, because a copy is
-    // what runs. See D976.
+    // what runs.
     for (uint32_t i = 0; i < graph.count; i++) {
         Function *function = &graph.functions[i];
         if (function->decl == NULL || !function->allocates) {
@@ -885,7 +883,7 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
 
         // Every other place this body breaks it, before the promise, so the
         // allocations read as one list. A path through calls stays a chain
-        // because there the chain is the story; a body is a list. See D509.
+        // because there the chain is the story; a body is a list.
         if (path.shape == NULL && path.count == 0 && path.why != NULL &&
             path.site.offset == function->site.offset) {
             for (uint32_t n = 0; n < function->site_count; n++) {

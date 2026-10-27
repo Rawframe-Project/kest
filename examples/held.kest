@@ -6,7 +6,7 @@ import std.bytes
 // frames and reloads looks like from this side: a world made once, a step the
 // host calls with it, and the two functions a reload is made of -- `save`,
 // which writes the world as bytes, and `restore`, which makes a world out of
-// nothing but those bytes in a machine that never saw the first. See D1151.
+// nothing but those bytes in a machine that never saw the first.
 
 // Two handles, held in step: the turns count what was done to the cells, and
 // a save writes both or neither.

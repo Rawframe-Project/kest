@@ -3,7 +3,6 @@
 // the page to the machine built for this one. The first word is the module,
 // the second a program; the program is put where the page puts what is typed,
 // beside the standard library, and run the way the page's Run button runs it.
-// See D1266.
 import { readFile, readdir } from 'node:fs/promises';
 import { argv } from 'node:process';
 import { run } from '../playground/wasi.js';

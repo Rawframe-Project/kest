@@ -14,7 +14,7 @@ typedef KestHost *(*KestHostMaker)(FILE *output, FILE *input);
 // on two streams. The editor names the program in its `launch` request; it is
 // built with `library` and run with a host the build makes, and what it writes
 // arrives in the editor as output rather than in the protocol. Answers what
-// the process should exit with. See D1182.
+// the process should exit with.
 int kest_dap_serve(const char *library, KestHostMaker make, FILE *in,
                    FILE *out);
 

@@ -14,9 +14,9 @@ import examples.game.npc
 fn main() -> i32 {
     // What a full one is, counted where the shape is declared. A constant
     // crosses out of the file it is in, which is what a name with a dot in it
-    // is for here as much as `npc.Npc` is. See D665.
+    // is for here as much as `npc.Npc` is.
     // A run of a size another module counts. The count is a name with a dot
-    // in it, the same as the type beside it. See D681.
+    // in it, the same as the type beside it.
     let party: [npc.Npc; npc.PARTY] = [
         npc.Npc("guard", npc.FULL),
         npc.Npc("scout", 20),
@@ -41,7 +41,7 @@ fn main() -> i32 {
 
     // A case of an enum the module beside this one declared, made here and
     // matched here. Making one is the half that did not work: a program could
-    // be handed a `Mood` and read it and could not write one down. See D1062.
+    // be handed a `Mood` and read it and could not write one down.
     if npc.mood(guard) != npc.Mood.Calm {
         return 4
     }

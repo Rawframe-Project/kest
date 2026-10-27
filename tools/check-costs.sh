@@ -7,13 +7,13 @@
 #
 # The list of what to ask comes from the library rather than from here, because
 # a list written here is one that goes stale the day somebody adds a function.
-# What cannot be asked from a command line — anything taking an array — has to
+# What cannot be asked from a command line -- anything taking an array -- has to
 # be measured by the host that can, and `examples/embed.c` is the one that is.
 #
 # What this weighs is memory, because memory is what a run can be asked for
 # without timing it, and this project times one thing in one place on purpose.
-# So a rewrite that does more work without allocating more — a table that
-# rehashed every time it was written to, say — is not something this catches,
+# So a rewrite that does more work without allocating more -- a table that
+# rehashed every time it was written to, say -- is not something this catches,
 # and nothing here pretends otherwise.
 set -u
 exec python3 - "$@" <<'PY'
@@ -103,8 +103,7 @@ def cost_of(where, name, arguments):
         return None
     # What it was handed rather than what it is holding when it comes back.
     # A call that makes a megabyte of text and lets it go holds what a call
-    # that made nothing holds, and what this is weighing is the making. See
-    # D996.
+    # that made nothing holds, and what this is weighing is the making.
     return json.loads(ran.stdout)['taken']
 
 
@@ -186,7 +185,7 @@ fn work(n: i32) -> i32 {
 """,
     # A save of so many records written and read back, which is what the
     # module is for: twice the records is twice the bytes, and reading them
-    # back makes a piece of text for each. See D1171.
+    # back makes a piece of text for each.
     'bytes': """import std.bytes
 
 fn work(n: i32) -> i32 {
@@ -215,7 +214,7 @@ fn work(n: i32) -> i32 {
 # And the other half of the count the machine holds. `K0655` refuses a body
 # that goes deeper than it was given; nothing says a body never went that deep
 # at all. Room asked for and never used is memory a host is told to find for
-# nothing, and `needs_of` carries it up every chain of calls — a body four
+# nothing, and `needs_of` carries it up every chain of calls -- a body four
 # slots wider than it needs makes every caller of it four wider too.
 #
 # The build that checks itself counts what each body reached and says so when
@@ -223,7 +222,7 @@ fn work(n: i32) -> i32 {
 # does not. Every body every example runs reaches the room it was given. Where
 # that stops being true it is usually not the compiler: it is an arm, or a
 # branch, or a copy of a generic that nothing here runs, and the answer is a
-# program that runs it. See D812.
+# program that runs it.
 asked_for = 0
 reached = 0
 loose = []
@@ -260,7 +259,7 @@ for deep_path in (sorted(glob.glob(os.path.join('examples', '*.kest')))
         # the frame never goes through the stack, and the reckoning does not
         # know that. Reducing what is asked for would be wrong, because the
         # deepest moment may be elsewhere, so a body is held to asking for no
-        # more than its deepest run used plus this. See D1012.
+        # more than its deepest run used plus this.
         deep_fused = int(deep_words[-1])
         deep_name = ' '.join(deep_words[1:-6])
         asked_for += 1
@@ -295,7 +294,7 @@ if have_checked:
 # the room left over is worth saying, because it is what a host is asked to
 # find and never uses. A program with no answer takes the usual numbers and is
 # counted apart: what it wants cannot be worked out, so what it did not use is
-# not slack. See D813.
+# not slack.
 run_asked = 0
 run_went = 0
 run_frames = 0
@@ -305,7 +304,7 @@ for run_path, run_line in deep_runs:
     run_words = run_line.split(' ')
     # A program with no least is not sized by what it needs but bounded by
     # what a frame of it costs, so the room it did not use is a bound being
-    # loose rather than a number being wrong. Counted apart. See D815.
+    # loose rather than a number being wrong. Counted apart.
     if run_words[1] != 'least':
         continue
     room, frames, went, went_frames = (int(run_words[3]), int(run_words[5]),
@@ -325,7 +324,7 @@ if have_checked:
 # what every example between them reaches is room enough for the paths they do
 # not take. Adding a call's arguments to its caller without taking them off
 # again -- they are one set of slots, and the machine puts the callee's frame
-# on top of them -- was a quarter over on its own. See D813.
+# on top of them -- was a quarter over on its own.
 if have_checked and (run_asked > run_went * 5 // 4 or
                      run_frames != run_went_frames):
     print("costs: %u example(s) ask for %u slot(s) and %u frame(s) and reach "
@@ -409,13 +408,13 @@ try:
     # program works out is so many slots wide, and the compiler adds that up
     # as it goes to say how much room a body needs. A byte written as a letter
     # and the same byte written as a number are the same one slot, so the two
-    # programs below have to ask for the same room -- until D808 the letter was
-    # counted twice, because `emit_constant` pushes and four places pushed
-    # beside it, and a body full of them asked for twice the stack it uses.
+    # programs below have to ask for the same room. A letter counted twice,
+    # once by `emit_constant` and once by whatever pushed beside it, would make
+    # a body full of them ask for twice the stack it uses.
     # Written as two programs rather than as a number, because a number here
     # would be this compiler's arithmetic held to itself. Each byte is added to
     # something the function was handed, because a conversion of a byte written
-    # down is a value the compiler works out where it stands since D886 -- and
+    # down is a value the compiler works out where it stands -- and
     # a value worked out is a byte literal this never compiles.
     letters = ["'a'", "'b'", "'c'", "'d'", "'e'"]
     numbers = ["97", "98", "99", "100", "101"]
@@ -452,7 +451,7 @@ some("the library's modules", proved + driven)
 
 # A promise about a host is a claim about the heap like any other, and this is
 # where the claims are read. `K0631` holds a host to one while something runs,
-# which is the only thing that can hold a host nobody here compiles — but the
+# which is the only thing that can hold a host nobody here compiles -- but the
 # two hosts in this tree are compiled here, and what they do directly can be
 # read without running anything. A path nothing runs is then still held.
 #
@@ -523,9 +522,9 @@ def what_it_cost(command, where):
 
 # And what a program pays for what it imports, which is what a host reloading
 # one file of its own re-reads every time: a build is its own arena and carries
-# nothing from the last one (D573), so importing the library is reading and
+# nothing from the last one, so importing the library is reading and
 # compiling the library again. Three programs of a few lines each, one alone,
-# one that prints and one that makes text. See D638.
+# one that prints and one that makes text.
 def what_a_program_costs(body):
     where = os.path.join(work, 'reading.kest')
     with open(where, 'w') as out:
@@ -568,7 +567,7 @@ fn main() -> i32 {
 """)
 # And the same program using five of that module rather than one of it. What a
 # program pays for is the module, because a module is checked and compiled
-# whole: what it uses of it is the difference between these two. See D639.
+# whole: what it uses of it is the difference between these two.
 using_five_costs = what_a_program_costs("""module reading
 
 import std.io
@@ -583,11 +582,11 @@ fn main() -> i32 {
 }
 """)
 # What a constant costs to work out, which is once however many times it is
-# read. D674 moved the working out to the declaration and nothing said it had
-# arrived: a compiler that folded a constant at every use would print the same
-# numbers everywhere else and grow with how often a program named a thing. So a
-# run says how many values it worked out, and two programs reading one constant
-# a different number of times have to say the same number. See D675.
+# read, because it is worked out at the declaration. A compiler that folded a
+# constant at every use would print the same numbers everywhere else and grow
+# with how often a program named a thing. So a run says how many values it
+# worked out, and two programs reading one constant a different number of times
+# have to say the same number.
 def folds_in(source):
     at = os.path.join(work, 'folding.kest')
     with open(at, 'w') as writing:
@@ -604,7 +603,7 @@ def folds_in(source):
 WIDE = "struct Big {\n" + "".join(
     "    f%d: i32\n" % i for i in range(8)) + "}\n\nconst P: Big = Big(" + (
     ", ".join(str(i + 1) for i in range(8))) + ")\n\n"
-# Handed to a function rather than bound to a name, because since D887 a name
+# Handed to a function rather than bound to a name, because a name
 # nothing writes is itself a value the chunk holds -- which is one value worked
 # out per name and has nothing to do with how often the constant was read.
 FIRST_OF = "fn first(b: Big) -> i32 {\n    return b.f0\n}\n\n"
@@ -623,7 +622,7 @@ if read_once is None or read_once < 1 or read_once != read_often:
 # for more than once. A copy exists per set of types a generic is called with
 # and not per call, so sixty calls of one generic are one copy and sixty calls,
 # while sixty generics called once are sixty copies. Two programs of the same
-# number of lines, differing only in that. See D742.
+# number of lines, differing only in that.
 one_copy_costs = what_a_program_costs(
     "module reading\n\nfn box<A, B>(x: A, y: B) -> A {\n    return x\n}\n\n"
     "fn main() -> i32 {\n    let t = 0\n" +
@@ -641,7 +640,7 @@ many_copies_costs = what_a_program_costs(
 # shapes and the same calls, differing only in how many sets of types the one
 # generic is called with: everything that is not the copy is in both, so the
 # difference divided by the copies is one copy. Run at two body lengths, and
-# under both the stage that checks and the stage that compiles. See D743.
+# under both the stage that checks and the stage that compiles.
 def per_copy(command, lines):
     def shaped(distinct):
         src = ["module reading", ""]
@@ -681,22 +680,21 @@ flat = per_copy('emit', 1)
 #
 # Measured so the two sides can be read against each other. What it costs is
 # the bytes; what it buys is that a copy is compiled against real types, which
-# is the only way a promise can be proved through one — a generic that boxed
+# is the only way a promise can be proved through one -- a generic that boxed
 # its argument would allocate, and `no.alloc` through it would be a promise
 # nothing could check. So the promises are counted beside the bytes, and a day
 # when most of what the rule costs stops carrying one is a day to ask again.
-# See D778.
 # And what room a token array takes against what is put in it. The array grows
 # where it stands, so the factor it grows by is free to be chosen for the room
 # it leaves rather than for a copy it is not making, and it is bounded by the
 # bytes left to read because the shortest token there is is one byte. Doubling
-# left a third of every array never written to. See D783.
+# left a third of every array never written to.
 # And what a build still holds when it is done, by what asked for it. A total
 # is a number with nothing under it: `held` said 63975 for the library and
 # nothing said which part of it was the code, which the types and which the
 # source it was all cut from. Every number `holds` gives is part of `held`, so
 # the sum of them and the source they came from cannot pass it -- one that does
-# is a number counted twice. See D784.
+# is a number counted twice.
 held_ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'emit', 'lib/std/text.kest', '--json'],
                           capture_output=True, text=True,
                           stdin=subprocess.DEVNULL)
@@ -756,7 +754,7 @@ if (copied_total == 0 or copied_bodies == 0 or copied_bytes == 0 or
         copied_total <= copied_bodies or
         copied_quiet * 2 <= copied_total):
     print("costs: %u copies came from %u bodies and the ones past the first "
-          "are %u of %u bytes of code, and %u of them promise `no.alloc` — "
+          "are %u of %u bytes of code, and %u of them promise `no.alloc` -- "
           "which is what a copy per set of types is for"
           % (copied_total, copied_bodies, copied_bytes, copied_code,
              copied_quiet))
@@ -773,9 +771,8 @@ deep_checked = per_copy('check', 20)
 # go wrong. Where nothing in the body assigns to it there is nothing to defend
 # against and the name is the count itself: a load and a store off every turn of
 # the loop this language is written with most. Both halves are read, because a
-# copy that is never made is as wrong as one that is always made — one is two
-# instructions nobody needed and the other is a walk a body can derail. See
-# D866.
+# copy that is never made is as wrong as one that is always made -- one is two
+# instructions nobody needed and the other is a walk a body can derail.
 def what_emit_printed(body):
     where = os.path.join(work, 'walking.kest')
     with open(where, 'w') as walking:
@@ -857,8 +854,8 @@ fn main() -> i32 {
 # A result wider than its type is not the answer the type describes and is cut
 # back, but two of the places that cut had nothing to cut. A cast to a type that
 # already holds every value of what it is cast from cuts nothing, and an
-# unsigned division cannot leave the width at all — while a signed one can, for
-# the one pair at the end of the range, and `/=` was not cutting it. See D867.
+# unsigned division cannot leave the width at all -- while a signed one can, for
+# the one pair at the end of the range, and `/=` was not cutting it.
 def narrows_in(body):
     printed = what_emit_printed(body)
     if printed is None:
@@ -872,7 +869,7 @@ def cuts_after_dividing(body, dividing):
         return None
     in_order = [printed[each] for each in sorted(printed)]
     # A division by a constant, of a local or of what is on the stack, is the
-    # same division written as one instruction. See D1168.
+    # same division written as one instruction.
     places = [i for i, (op, rest) in enumerate(in_order)
               if op in (dividing, dividing + '.c', dividing + '.k')]
     if len(places) != 1:
@@ -889,8 +886,7 @@ def one_program(lines):
 # And whether the cut arrives with the arithmetic that needed it. Every `+`,
 # `-` and `*` on a whole number narrower than a slot used to be two
 # instructions: one that adds and one that cuts what it added. They are one
-# now, and what says so is that the pair is nowhere in what `emit` prints. See
-# D868.
+# now, and what says so is that the pair is nowhere in what `emit` prints.
 def cuts_apart(body, arithmetic):
     printed = what_emit_printed(body)
     if printed is None:
@@ -911,7 +907,7 @@ def cuts_together(body, arithmetic):
 # And whether a struct built out of locals is loaded a field at a time. The
 # machine has an instruction that takes a run of slots in one go, which is what
 # a wide value is loaded with, and the compiler now writes it wherever two loads
-# ask for slots that sit next to each other. See D871.
+# ask for slots that sit next to each other.
 def loads_apart(body):
     printed = what_emit_printed(body)
     if printed is None:
@@ -934,7 +930,7 @@ def runs_loaded(body):
     return sum(1 for each in printed if printed[each][0] == 'load.n')
 
 
-# Built out of three numbers the compiler cannot work out, because since D887 a
+# Built out of three numbers the compiler cannot work out, because a
 # name nothing writes whose value is worked out where it stands is a value the
 # chunk holds -- and a value in the chunk is never loaded out of a frame at
 # all, which is not what this is weighing. How long a piece of text is is asked
@@ -968,10 +964,10 @@ ADDING = one_program(
 apart = cuts_apart(ADDING, 'add.i')
 # `add.i.narrow` and `add.i.narrow.to` are both the one instruction this is
 # about: the second is the first with the store after it taken in as well
-# (D1014), and a check that counted only the first would be a check that
+#, and a check that counted only the first would be a check that
 # stopped counting the day the addition got shorter still.
 # And `add.k.self`, which is the local and the constant it adds taken in too
-# (D1155): `n` here is a name nothing writes, so it is a constant.
+#: `n` here is a name nothing writes, so it is a constant.
 together = (cuts_together(ADDING, 'add.i.narrow') +
             cuts_together(ADDING, 'add.i.narrow.to') +
             cuts_together(ADDING, 'add.k.self'))
@@ -1028,15 +1024,14 @@ if written_walk is None or not written_walk[1]:
 # question: `emit` says what a turn is written as, and this says what the
 # machine did with it. Two loops differing only in how many turns they take, so
 # everything that is not the loop is in both and the difference divided by the
-# turns is one turn. Only the build that checks itself counts what it ran — the
-# release build's numbers stay the release build's — which is why this is asked
-# of that one. See D870.
+# turns is one turn. Only the build that checks itself counts what it ran -- the
+# release build's numbers stay the release build's -- which is why this is asked
+# of that one.
 # And how many questions that build asked of its own compiler on the way. Every
 # number an instruction carries is read by something that asks whether it could
-# be that number, and the seven turns from D900 to D906 put those questions
-# there -- so what the build that checks itself does is this many more things
-# than the build that ships. A count rather than a duration, which is why it
-# belongs here: the ratio is the same anywhere and the seconds are not. See D907.
+# be that number -- so what the build that checks itself does is this many more
+# things than the build that ships. A count rather than a duration, which is why
+# it belongs here: the ratio is the same anywhere and the seconds are not.
 def what_it_asked(body):
     where = os.path.join(work, 'running.kest')
     with open(where, 'w') as running:
@@ -1091,13 +1086,13 @@ if have_checked and (turn_ran is None or quiet_walk is None or
 # And the three kinds of value the reference names one by one: a case written
 # in a body, a hash of a piece of text, and a run of numbers indexed by one --
 # the last written both ways, as a constant and inside a body, because where it
-# was written decided whether it was a value or work until D887.
+# is written must not decide whether it is a value or work.
 # Each is something the folder has always known how to work out, and a call
-# written in a body was never offered to it — so a program that hashed a name
+# written in a body was never offered to it -- so a program that hashed a name
 # of three letters hashed them again on every frame that went past, while the
 # same call written as a constant was a number before the program started. What
 # says a value was not paid for is that the instruction which would have done
-# the work is nowhere in what `emit` printed. See D886.
+# the work is nowhere in what `emit` printed.
 def instructions_of(where):
     ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'emit', where], capture_output=True,
                          text=True, stdin=subprocess.DEVNULL,
@@ -1166,10 +1161,10 @@ if (there is None or worked_out is None or 'hash.t' in there or
 # above -- the world is built once either way, so what is left is the step. And
 # the same frame with its two helpers written out where they are called beside
 # it, because what a call costs is the one thing a program cannot ask for from
-# inside the language. See D889. The helpers are carried to where they are
+# inside the language. The helpers are carried to where they are
 # called now, so what is held is that they cost nothing: a frame written with
 # them is no dearer than the same frame written out, which is what makes a
-# helper something a reader can be given for free. See D1157.
+# helper something a reader can be given for free.
 ENTITIES = 20
 ROUNDS = 4
 
@@ -1267,10 +1262,10 @@ instruction_names = some("the machine's instructions", re.findall(
 
 
 # And how much of the machine a frame is: which of its instructions a frame
-# reaches at all. Every one of them costs every program that runs (D889), and
+# reaches at all. Every one of them costs every program that runs, and
 # what a frame touches is the list to read before anybody moves one of them --
 # it is what said which end of the jump family is the cold end. A count of the
-# names a run says it ran, which is the same list anywhere. See D891.
+# names a run says it ran, which is the same list anywhere.
 def what_a_frame_reaches(middle):
     body = SHAPED + middle + WALKED % (ENTITIES, ROUNDS, ENTITIES * ROUNDS)
     where = os.path.join(work, 'running.kest')
@@ -1304,7 +1299,7 @@ def a_step_asks():
 # are, and a round has a loop of its own however many entities are in it, so
 # one difference leaves one of the two behind whichever way it is taken; the
 # difference of two differences, over entities and over rounds both, leaves
-# neither. See D915.
+# neither.
 def what_it_ran_each(body):
     where = os.path.join(work, 'running.kest')
     with open(where, 'w') as running:
@@ -1385,7 +1380,7 @@ fn main() -> i32 {
 # a call the program makes and takes longer, which is the one thing on that page
 # a reader would get backwards from either number alone. Their loop lengths are
 # a `const`, so the count is written in where the constant is; the bodies
-# themselves are taken as they are, the way the frame's are. See D917.
+# themselves are taken as they are, the way the frame's are.
 CROSSED = bodies_of('crossing.kest').replace(
     'const CALLS: i32 = 1000000', 'const CALLS: i32 = HOW_MANY') + """
 fn main() -> i32 {
@@ -1433,7 +1428,7 @@ def as_written(said):
 # spells a number. A word this has no figure for is a sentence nobody can hold,
 # which is what answering nothing rather than nought is for.
 # `nought` is here because a difference may be nought: an index read costs the
-# same as a hop of the loop it is in since D1044, and a sentence that says so
+# same as a hop of the loop it is in, and a sentence that says so
 # has to be a sentence this can read.
 FIGURES = {"nought": 0,
            "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
@@ -1461,7 +1456,7 @@ def in_figures(spelled_out):
 # promises `no.alloc` comes to nought an entity, which is what the promise
 # means read from outside it, and one that makes a piece of text a frame pays
 # for the text -- both halves, because a measurement that says nought for
-# either is a measurement of nothing. See D908.
+# either is a measurement of nothing.
 TICKED = """module ticking
 
 import std.text
@@ -1549,7 +1544,7 @@ def what_a_tick_took(body):
     # What it was handed rather than what it is holding at the end. A world
     # that makes a name a frame and lets it go holds nothing at the end of it
     # and paid for every one, and it is the paying that a frame budget is
-    # about. See D996.
+    # about.
     return None if said.get('errors') else said.get('taken')
 
 
@@ -1592,12 +1587,10 @@ roomy_store = a_step_takes('housed(all, kept)', TOLD_STORE)
 # them. What is held here is the noughts -- for the promise, because that is
 # what `no.alloc` means seen from outside, and for a container told how many
 # were coming, because that is what being told is worth. The rest of it is held
-# to the numbers the reference writes, below. It was held to an order once -- a
-# pair in a table above an element in an array above a piece of text -- and an
-# order is what you hold when you do not know the number; D912 put seventy-seven
-# bytes where fifty-one belonged and every one of those held, because seventy-
-# seven is above twenty-five too. The numbers are known and written down now.
-# See D909 and D915.
+# to the numbers the reference writes, below, rather than to an order (a pair in
+# a table above an element in an array above a piece of text): an order still
+# holds with seventy-seven bytes where fifty-one belong, because seventy-seven
+# is above twenty-five too.
 if (quiet_frame is None or text_frame is None or grown_frame is None or
         keyed_frame is None or told_frame is None or roomy_frame is None or
         stored_frame is None or housed_frame is None or quiet_frame != 0 or
@@ -1630,11 +1623,11 @@ if have_checked and (a_frame is None or by_hand is None or reaches is None or
 
 # A copy is its body, and its body is paid for when it is compiled. Compiling a
 # twenty-line copy costs more over a one-line copy than checking one does --
-# which is the shape held here. It was held at four times as much until D933
-# gave the contract proof a node per copy and the tree is typed again for each:
-# checking a copy is now most of what it costs, and the difference between a
-# body of one line and one of twenty is a difference in both. The shape is the
-# same and the multiple is not, so the multiple is gone rather than tuned.
+# which is the shape held here. The contract proof has a node per copy and the
+# tree is typed again for each, so checking a copy is most of what it costs, and
+# the difference between a body of one line and one of twenty is a difference in
+# both. The shape is the same and the multiple is not, so the multiple is gone
+# rather than tuned.
 shutil.rmtree(work, ignore_errors=True)
 if (one_copy_costs is None or many_copies_costs is None or
         many_copies_costs <= one_copy_costs * 2 or
@@ -1662,8 +1655,8 @@ if (alone_costs is None or printing_costs is None or
 
 # The four stages of reading one file, which stop where they stop: `lex` at the
 # tokens, `parse` at the tree, `check` at the types and `emit` at the code. Each
-# does what the one before it did and then more, so the four numbers grow — and
-# what they say is where the work is. See D640.
+# does what the one before it did and then more, so the four numbers grow -- and
+# what they say is where the work is.
 def what_it_said(command, where, name):
     ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), command, '--json', where],
                          capture_output=True, text=True,
@@ -1678,8 +1671,7 @@ def what_it_said(command, where, name):
 # happens in two of them: the checker asks about numbers a program wrote down,
 # so that a count below nought is refused where it stands, and the compiler
 # works out every constant once. So what `emit` says it worked out is what
-# `check` said and more, the way every other number about the stages is. See
-# D677.
+# `check` said and more, the way every other number about the stages is.
 wider = 0
 for reading in ('examples/numbers.kest', 'examples/state.kest',
                 'examples/lookup.kest', LIBRARY):
@@ -1696,7 +1688,7 @@ for reading in ('examples/numbers.kest', 'examples/state.kest',
     # constant worked out at its declaration, or a value written inside a body
     # and put in the chunk rather than built while the function runs. The three
     # add up to all of them, and a value that belongs to none is work nothing
-    # can point at. See D678.
+    # can point at.
     declared = what_it_said('check', reading, 'constants')
     inside = what_it_said('emit', reading, 'functions')
     in_bodies = (None if inside is None
@@ -1711,9 +1703,9 @@ for reading in ('examples/numbers.kest', 'examples/state.kest',
         continue
     # And how big those values are, which is what says whether eight of them
     # are eight numbers or eight structs. A value takes a slot at least, and
-    # somewhere in this tree one takes more than one — a count that answered
+    # somewhere in this tree one takes more than one -- a count that answered
     # the same number twice would be the count of values wearing a second
-    # name. See D679.
+    # name.
     for one in inside:
         if one['foldedSlots'] < one['folded']:
             print("costs: `%s` was given %u value(s) taking %u slot(s), and a "
@@ -1735,7 +1727,7 @@ lexing = what_it_cost('lex', LIBRARY)
 # taken again: what a run costs to lex is the tokens it kept and not every size
 # the array passed through. A quarter over is the room in the last doubling,
 # which is a run's worth of tokens that were never reached. What one weighs is
-# asked of the run, for the reason D688 gives. See D746.
+# asked of the run, because a size written here is a size on one machine.
 tokens_read = what_it_said('lex', LIBRARY, 'tokens')
 token_bytes = what_it_said('lex', LIBRARY, 'tokenBytes')
 held_by_lexing = None
@@ -1754,25 +1746,24 @@ parsing = what_it_cost('parse', LIBRARY)
 # for a declaration, so a tree is at least its nodes and not much more: what is
 # beside them is the lists a block and an argument list are. The floor here is
 # what the smallest of those is, because a file of nothing but expressions is
-# the cheapest tree there is. See D641 and D642.
+# the cheapest tree there is.
 #
 # The ceiling is five thirds of the floor, and what it holds is that a list is
 # handed over as exactly what it holds rather than as whatever size it grew to:
 # a tree was seventeen tenths of its nodes while lists grew in the arena and is
 # fifteen tenths now, so the number between them is the one worth writing down.
-# See D745.
 nodes = what_it_said('parse', LIBRARY, 'nodes')
 # And what checking made, which is types: one for every signature, every
 # optional and every run of something, beside the ones that have names. A type
 # is a hundred and sixty-eight bytes, so what the stage costs is at least what
-# it made — and most of the rest is the symbols and the member lists beside
-# them. See D644.
+# it made -- and most of the rest is the symbols and the member lists beside
+# them.
 types_made = what_it_said('check', LIBRARY, 'typesMade')
 # And what the statements of that tree are, which is what a statement being
-# sixty-four bytes rests on. The biggest arm of one is `for` — two names, the
-# thing walked, what it walks to and the block — and every statement is as big
+# sixty-four bytes rests on. The biggest arm of one is `for` -- two names, the
+# thing walked, what it walks to and the block -- and every statement is as big
 # as that whether it is one or not. The decision not to put it out of line
-# rests on loops being few; this is that premise, held. See D643.
+# rests on loops being few; this is that premise, held.
 written = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'parse', LIBRARY], capture_output=True,
                          text=True, stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib')).stdout
@@ -1792,8 +1783,7 @@ if (statements == 0 or loops != in_the_file or
 # What a node weighs is asked of the run rather than written here: it is
 # fifty-six bytes on this machine and something else where a pointer is another
 # width, and a number about a machine written into a check is a rule that holds
-# until somebody builds it elsewhere. D684, D686 and D687 are three of those in
-# three days. See D688.
+# until somebody builds it elsewhere.
 weighs = what_it_said('parse', LIBRARY, 'nodeBytes') or {}
 smallest = weighs.get('expression')
 if (nodes is None or lexing is None or parsing is None or nodes == 0 or
@@ -1810,16 +1800,15 @@ compiling = what_it_cost('emit', LIBRARY)
 # program of four lines that imports the library costs what the library costs,
 # and dividing by the file somebody named calls it fifteen times dearer a byte
 # than it is. So the compiler says which files it read and how big each of them
-# is, and what holds that is the files themselves — a build that says it read
+# is, and what holds that is the files themselves -- a build that says it read
 # less than is there is a build whose costs are divided by the wrong number.
-# See D656.
 # And what the compiler wrote, beside what writing it cost. A run says how many
 # bytes each function's code takes, which is the one thing about a compiled
 # function a reader could otherwise get only by adding up the instructions and
 # knowing how wide each of them is. What holds that number is the instructions
 # themselves: the last one listed starts inside it and no further back than the
 # widest instruction there is, so a number that is anything else is caught by
-# the code it claims to measure. See D744.
+# the code it claims to measure.
 WIDEST = 7
 compiled = what_it_said('emit', LIBRARY, 'functions') or []
 code_bytes = sum(one['bytes'] for one in compiled)
@@ -1827,7 +1816,7 @@ code_bytes = sum(one['bytes'] for one in compiled)
 # against what a body holds, so the room a body ends in is between what it took
 # and twice that, plus the floor for a body that never filled one. Held so that
 # a floor or a doubling changed without measuring is caught by the room it
-# leaves. See D750 and D753.
+# leaves.
 room_taken = sum(one['room'] for one in compiled)
 # And how many constants a body keeps, which is the measurement the constants'
 # own floor rests on: four, because the middle body has three.
@@ -1852,21 +1841,21 @@ if (not code_bytes or not ends_inside or compiling is None or
 
 # And what is given back, which is everything a stage made that the stages after
 # it do not read. The tokens a file is read into are dead the moment its tree is
-# made — a node holds a span into the source and never a token — and the tree is
-# dead when the last copy of every generic has been compiled and the promise has
-# been held against what was emitted. What the build says it cost is the same
-# number either way, because a ceiling refuses against what was asked for and
-# not against what is still held; what moves is what it holds when it is done.
-# At least this file's tokens and this file's nodes, and more than that, because
-# the library is read with everything it imports and every one of them gives its
-# own back. See D747 and D748.
+# made -- a node holds a span into the source and never a token -- and the tree
+# is dead when the last copy of every generic has been compiled and the promise
+# has been held against what was emitted. What the build says it cost is the
+# same number either way, because a ceiling refuses against what was asked for
+# and not against what is still held; what moves is what it holds when it is
+# done. At least this file's tokens and this file's nodes, and more than that,
+# because the library is read with everything it imports and every one of them
+# gives its own back.
 # And how many times it was asked, which tells a stage that keeps a lot from one
 # that asks a lot. An arena is not a `malloc`: what it is asked for is a thing
 # somebody declared, or an array that doubles, and never an entry at a time. So
 # what the number grows with is what the program has in it rather than how big
 # any of that is -- twenty askings for every function and every type it made is
 # well over what this measures and well under what an array grown an entry at a
-# time would say. See D752.
+# time would say.
 askings = what_it_said('emit', LIBRARY, 'askings')
 written = what_it_said('check', LIBRARY, 'functions')
 things = None
@@ -1885,7 +1874,7 @@ if (askings is None or askings == 0 or things is None or things == 0 or
 # file it read, the types it made, and the module -- and the file and the types
 # are two numbers a run says. Two and seven tenths of them, measured; held at
 # four, because a build that holds twice what it is made of has started keeping
-# something again. See D754.
+# something again.
 type_bytes = what_it_said('check', LIBRARY, 'typeBytes')
 read_bytes = what_it_said('check', LIBRARY, 'source')
 made_of = None
@@ -1895,11 +1884,11 @@ if read_bytes and types_made is not None and type_bytes:
 holding = what_it_said('emit', LIBRARY, 'held')
 # And what compiling worked in beside the build and gave back as it went, which
 # is in what it cost and was never held, so it is not what a stage left behind
-# for nobody. See D1247.
+# for nobody.
 working = what_it_said('emit', LIBRARY, 'working')
 # And what a build that was checked and not compiled holds. It still has its
 # trees, because the compiler is one of the two stages that read one, and it has
-# given its tokens back all the same — which is the thing held here, because a
+# given its tokens back all the same -- which is the thing held here, because a
 # stage that gives something back only when a later stage runs is a stage that
 # gives nothing back to whoever stopped early. The two numbers are not
 # subtracted from each other: a run that compiles holds a module the other never
@@ -1921,8 +1910,8 @@ if (given_back is None or given_back <= 0 or token_bytes is None or
 
 if (made_of is None or holding is None or holding < made_of or
         holding > made_of * 4):
-    print("costs: that library holds %s when it is done and is made of %s — "
-          "the %s bytes it read and the %s type(s) it made — and what a build "
+    print("costs: that library holds %s when it is done and is made of %s -- "
+          "the %s bytes it read and the %s type(s) it made -- and what a build "
           "holds is what it is made of and the module it wrote"
           % (holding, made_of, read_bytes, types_made))
     failed = 1
@@ -1970,8 +1959,8 @@ if not failed:
           "written and %u nothing here provides, and what the compiler's own "
           "work costs is %u bytes to read that library as tokens, %u as a "
           "tree of %u nodes of which %u statements are loops, %u to check it "
-          "into %u types and %u to compile it — %u bytes of memory for "
-          "every hundred of the %u bytes of source it read — "
+          "into %u types and %u to compile it -- %u bytes of memory for "
+          "every hundred of the %u bytes of source it read -- "
           "against %u bytes for a program of four lines, %u for one that "
           "prints, %u for one that makes text and %u for one that uses five "
           "of that module rather than one, and its arena was asked %u time(s) "
@@ -1983,8 +1972,8 @@ if not failed:
           "code, which is %u bytes of memory for every byte of it, "
           "and what one copy of a generic "
           "is made of, which is %u bytes to compile and %u to check for a "
-          "body of one line against %u and %u for one of twenty — a copy is "
-          "its body, and its body is paid for when it is compiled — and %u "
+          "body of one line against %u and %u for one of twenty -- a copy is "
+          "its body, and its body is paid for when it is compiled -- and %u "
           "calls of one generic "
           "against %u generics called once is %u against %u, because a copy "
           "is paid for and a call is not, and what that rule costs the "

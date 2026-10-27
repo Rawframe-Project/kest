@@ -2,7 +2,7 @@
 // What this holds is not that any of them compile -- almost none do -- but that
 // every one of them ends in one of two ways: a program, or a refusal that says
 // what is wrong. A crash, a hang or a quiet nothing is what this is looking
-// for. See D984.
+// for.
 //
 // Deterministic, from a seed, so a run that finds something can be run again:
 // `tools/fuzz 12345 1000` is the same thousand inputs on any machine. There is
@@ -19,7 +19,7 @@
 
 #include "kest.h"
 // And three of the library's own, for the one boundary here that is not a door:
-// what the verifier is handed. See D1253.
+// what the verifier is handed.
 #include "build.h"
 #include "value.h"
 #include "verify.h"
@@ -99,7 +99,7 @@ static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
     // other way -- with the lowering's fusions turned off -- have to fold to
     // the same number, and a fusion that changed what a program answers is a
     // fusion that changed the program. Thousands of programs nobody wrote is
-    // exactly where a miscompilation hides. See D1013 and D1015.
+    // exactly where a miscompilation hides.
     uint64_t folded = 1469598103934665603ull;
     for (unsigned long round = 0; round < many; round++) {
         uint64_t state = seed + round;
@@ -124,7 +124,7 @@ static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
             uint32_t doings = (uint32_t)(next_number(&state) % 8) + 1;
             // Half of them changed only in their numbers, which is a program
             // that still reads as one and so reaches the compiler and the
-            // machine rather than the parser's refusal. See D1210.
+            // machine rather than the parser's refusal.
             bool gently = (next_number(&state) & 1) != 0;
             for (uint32_t i = 0; i < doings && used > 4; i++) {
                 size_t at = (size_t)(next_number(&state) % used);
@@ -135,7 +135,7 @@ static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
                     // above break what they touch, and of the inputs they
                     // made one in eighty compiled, so the fold below was
                     // over forty programs a gate. This one runs the same
-                    // program down another path. See D1210.
+                    // program down another path.
                     // A number standing on its own, and not the digits of a
                     // name: `i32` made `i857` is no type at all.
                     size_t digit = at;
@@ -433,7 +433,7 @@ static int fuzz_handles(uint64_t seed, unsigned long many, const char *where) {
         // two: the address in the first and, in the second, whatever a host
         // might have left in it -- including a length that has nothing to do
         // with the bytes. What is held is that it answers with the number it
-        // was given rather than reading to find one. See D964.
+        // was given rather than reading to find one.
         KestValue said[2] = {{0}, {0}};
         said[0] = handed;
         said[1].integer = (int64_t)next_number(&state);
@@ -463,7 +463,7 @@ static int fuzz_handles(uint64_t seed, unsigned long many, const char *where) {
 // ended again, read after ending, begun inside another, and the header handed
 // out again to the next one. The order is what this is for -- every one of
 // these is right on its own, and the class of mistake it looks for is a
-// descriptor that comes back to life. See D283 and D352.
+// descriptor that comes back to life.
 static int fuzz_lends(uint64_t seed, unsigned long many, const char *where) {
     KestBuild *build = NULL;
     KestRuntime *runtime = NULL;
@@ -479,7 +479,7 @@ static int fuzz_lends(uint64_t seed, unsigned long many, const char *where) {
     // How long each lend said it was, or nought where there is no lend. While
     // one is open the machine has to answer with the number the host gave it;
     // once it has ended the handle names whatever was lent next and nothing
-    // can be asked of it, which is D352 and is why this goes back to nought.
+    // can be asked of it, which is why this goes back to nought.
     uint32_t lending[8];
     memset(blocks, 0, sizeof(blocks));
     memset(held, 0, sizeof(held));
@@ -540,7 +540,7 @@ static int fuzz_lends(uint64_t seed, unsigned long many, const char *where) {
             break;
         case 5: {
             // One begun inside another, over the same block: two handles and
-            // one block, and ending either ends both. See D283.
+            // one block, and ending either ends both.
             KestValue again =
                 kest_borrow(runtime, blocks[which], 16, "u8", 1);
             (void)kest_array_length(runtime, again, NULL);
@@ -575,7 +575,7 @@ static int fuzz_lends(uint64_t seed, unsigned long many, const char *where) {
 // References nobody handed out, into a world that is being changed underneath
 // them: made, dropped, made again, and read at every point. A reference is a
 // number a host can write, so this writes them -- and what is held is that a
-// stale one names nothing rather than naming whoever is there now. See D934.
+// stale one names nothing rather than naming whoever is there now.
 static int fuzz_refs(uint64_t seed, unsigned long many, const char *where) {
     KestBuild *build = NULL;
     KestRuntime *runtime = NULL;
@@ -675,8 +675,7 @@ static int fuzz_refs(uint64_t seed, unsigned long many, const char *where) {
 // Bytes a host hands over as text: any of them, including the one that used to
 // end a piece of text and the ones that begin no character. What is held is
 // that every one of them is taken and read back as the bytes it was, or
-// refused -- and that what comes back is as long as what went in. See D964 and
-// D971.
+// refused -- and that what comes back is as long as what went in.
 static int fuzz_text(uint64_t seed, unsigned long many, const char *where) {
     KestBuild *build = NULL;
     KestRuntime *runtime = NULL;
@@ -729,7 +728,7 @@ static int fuzz_text(uint64_t seed, unsigned long many, const char *where) {
         if (!kest_text(runtime, bytes, used, into)) {
             // Refused, which is the right answer for bytes that begin no
             // character. What is held is that it still answered with an empty
-            // piece of text rather than with nothing at all. See D436.
+            // piece of text rather than with nothing at all.
             if (into[0].text == NULL || into[1].integer != 0) {
                 fprintf(stderr,
                         "fuzz: text refused came back as %p of %lld\n",
@@ -775,8 +774,7 @@ static int fuzz_text(uint64_t seed, unsigned long many, const char *where) {
 // A program edited underneath a world that is already running: a field added,
 // taken away, moved, renamed, or given another type. What is held is the half
 // a host cannot do for itself -- that the machine it is already driving is
-// still there and still answers, whether the edited program built or not. See
-// D985.
+// still there and still answers, whether the edited program built or not.
 static int fuzz_migrate(uint64_t seed, unsigned long many, const char *where) {
     static const char *const EDITS[] = {
         // A field added, which is what a program grows.
@@ -900,8 +898,7 @@ static int fuzz_migrate(uint64_t seed, unsigned long many, const char *where) {
 // writing what it does not own. So a module the verifier refuses is an answer,
 // and one it lets through is run, under the sanitisers and with ceilings, and
 // has to answer or be refused in words the way anything else does. A report
-// from the sanitisers here is a chunk the verifier should have refused. See
-// D1253.
+// from the sanitisers here is a chunk the verifier should have refused.
 static const char *const PROVEN[] = {
     "examples/math.kest",   "examples/vectors.kest", "examples/boxes.kest",
     "examples/words.kest",  "examples/tree.kest",    "examples/state.kest",
@@ -930,7 +927,7 @@ static int fuzz_chunks(uint64_t seed, unsigned long many, const char *where) {
     // round sees the program as compiled with only its own changes in it --
     // and building it again every round was most of what this boundary cost:
     // thirty-three minutes on the arm64 runner, for rounds the verifier
-    // refused in a moment. See D1260.
+    // refused in a moment.
     enum { PROGRAMS = sizeof(PROVEN) / sizeof(PROVEN[0]) };
     KestBuild *built[PROGRAMS];
     for (size_t i = 0; i < PROGRAMS; i++) {

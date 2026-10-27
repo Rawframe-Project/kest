@@ -30,16 +30,15 @@ struct KestTypeRef {
     // grow; a count makes it that many, laid out where it stands.
     KestSpan count;
     // FN only: written `block(...)`, which a function takes and a value never
-    // is. See D1257.
+    // is.
     bool block;
     // FN only. What the value promises, which is part of what it is. Two of
     // them, and a value promising more may go where one promising less is
-    // wanted. See D853.
+    // wanted.
     bool no_alloc;
     bool no_host;
     // The third promise: the same answer on every machine that keeps the
-    // simulation profile. Not a `no`, because it says what a body does. See
-    // D942.
+    // simulation profile. Not a `no`, because it says what a body does.
     bool deterministic;
 };
 
@@ -61,7 +60,7 @@ typedef enum {
     KEST_EXPR_MATCH,
     KEST_EXPR_IF,
     // `|x| x * 2` and `|x| { total += x }`: a body handed to a function that
-    // takes a `block`, which runs where it was written. See D1257.
+    // takes a `block`, which runs where it was written.
     KEST_EXPR_BLOCK,
 } KestExprKind;
 
@@ -102,7 +101,7 @@ struct KestExpr {
     // the language converts on its own.
     //
     // Beside the kind rather than after the type, because a `bool` after two
-    // words is seven bytes of padding on every node a program has. See D642.
+    // words is seven bytes of padding on every node a program has.
     bool wrapped;
     KestSpan span;
     KestType *type;
@@ -124,7 +123,7 @@ struct KestExpr {
             // Written `x.f(a)` and read as `f(x, a)`: the checker moves `x` to
             // the front of what is passed and names `f` by its own name, and
             // this says so for everything after it, which would otherwise
-            // take a local called `f` for the function. See D1256.
+            // take a local called `f` for the function.
             bool method;
         } call;
         struct {
@@ -146,7 +145,7 @@ struct KestExpr {
         // Held through a pointer the way a branch beside it is. Written out
         // it is the widest thing this union can be, and eight `match`
         // expressions in the whole of this tree were making every name and
-        // every `+` eight bytes wider. See D782.
+        // every `+` eight bytes wider.
         KestChoose *choose;
         // Out of line because it holds blocks, which are named below this.
         KestBranch *branch;
@@ -164,7 +163,7 @@ typedef struct {
 
 // What an `if` is, whichever it is used as. An arm gives a value when it is
 // written `-> expression` and does something when it is a block, and both arms
-// are the same kind, which is D027's rule and not a second one.
+// are the same kind, which is a match's rule and not a second one.
 struct KestBranch {
     // `if let x = maybe`. Zero length for a plain `if`.
     KestSpan binding;
@@ -183,7 +182,6 @@ struct KestBranch {
 // called with, and either the value it gives or the statements it runs. It
 // runs in the frame it was written in, reading and writing that frame's
 // names, and goes nowhere else, which is what lets it be no more than code.
-// See D1257.
 struct KestLambda {
     KestSpan *params;
     uint32_t param_count;
@@ -229,19 +227,19 @@ typedef enum {
     KEST_STMT_BLOCK,
     // A block whose working memory goes back where it was when it ends: what
     // the program made inside it is gone, and nothing made inside it may be
-    // kept. See D966.
+    // kept.
     KEST_STMT_SCRATCH,
     KEST_STMT_DEFER,
     // `wait Walking` in a body that resumes: the field it resumes from is set
     // to that case and the parameter is given back, and the next call carries
-    // on from the line after it. See D1263.
+    // on from the line after it.
     KEST_STMT_WAIT,
 } KestStmtKind;
 
 // What a `for` walks. `index` is zero length when the position was not asked
 // for, which is most of the time; `until` non-NULL makes `sequence` the first
 // number of a range rather than the thing being walked. Named so a statement
-// can hold one through a pointer rather than inside itself. See D782.
+// can hold one through a pointer rather than inside itself.
 typedef struct {
     KestSpan index;
     KestSpan name;
@@ -254,13 +252,13 @@ typedef struct {
     // name a copy, so that writing the name cannot make the count go wrong;
     // where nothing writes it, the copy is two instructions a turn spent
     // defending against nothing and the name is the count itself. Assigning
-    // to a field of the name is not assigning to the name. See D866.
+    // to a field of the name is not assigning to the name.
     bool name_written;
     bool index_written;
     // `for name, value in fields(x)`: a walk written out while compiling,
     // once a field of the struct `x`. The checker gives each field a tree of
     // its own and puts them where the body was, a block each, in the order
-    // the fields are declared. See D1264.
+    // the fields are declared.
     bool fields;
 } KestEach;
 
@@ -268,18 +266,17 @@ struct KestStmt {
     KestStmtKind kind;
     // Set by the checker on the last statement of an arm written as a block
     // where a value was meant, so the one message about the arms is not said
-    // again once for every arm. See D516.
+    // again once for every arm.
     //
     // Beside the kind for the reason the same bit is beside an expression's:
-    // a `bool` after a span is padding on every statement a program has. See
-    // D642.
+    // a `bool` after a span is padding on every statement a program has.
     bool passed_over;
     KestSpan span;
     union {
         struct {
             KestSpan name;
             // NULL when the type is left to inference, which is the usual case
-            // inside a body; see D005.
+            // inside a body, where types are inferred.
             KestTypeRef *type;
             KestExpr *value;
             // Whether anything in the body assigns to that name or to
@@ -288,7 +285,7 @@ struct KestStmt {
             // parser and cleared by the checker, so a name nobody has looked
             // at is a name that was written: a value the compiler puts in the
             // chunk because nothing changes it is the one thing that must not
-            // be got wrong by a walk that did not happen. See D887.
+            // be got wrong by a walk that did not happen.
             bool name_written;
         } let;
         struct {
@@ -308,7 +305,7 @@ struct KestStmt {
         // widest thing this union can be by sixteen bytes, and a `for` is one
         // statement in twenty-five: the other twenty-four were carrying the
         // room for a position, a name, a sequence, an until and a body, and
-        // using none of it. See D782.
+        // using none of it.
         KestEach *each;
         // NULL for a bare `return`.
         KestExpr *result;
@@ -333,7 +330,7 @@ typedef struct {
     // The `own` in front of a struct field, and nothing wide for a field
     // written without one or for a parameter, which cannot take it. The span
     // rather than a flag because the formatter leads a field from where it
-    // begins, and where a marked one begins is the word. See D1041.
+    // begins, and where a marked one begins is the word.
     KestSpan own;
 } KestField;
 
@@ -359,7 +356,7 @@ typedef enum {
 // required of the type at every call that makes a copy. A struct is a value
 // laid out flat, so what a struct can do is what its fields can do, and none
 // of these is a thing a program declares for a type of its own: they are the
-// three the language itself provides. See D1043.
+// three the language itself provides.
 typedef enum {
     KEST_WANTS_COMPARES = 1u << 0,
     KEST_WANTS_ORDERS = 1u << 1,
@@ -392,7 +389,7 @@ void kest_capability_list(char *out, size_t room);
 typedef struct {
     KestDeclKind kind;
     // Beside the kind, because two four byte numbers together are eight bytes
-    // and apart they are sixteen. See D642.
+    // and apart they are sixteen.
     uint32_t type_param_count;
     KestSpan span;
     // The declared name. For a module or an import it covers the whole dotted
@@ -403,7 +400,7 @@ typedef struct {
     // Each carries what it has to be able to do, written after a colon:
     // `fn set<K: compares, V>`. A generic's body is checked against those
     // where it is written, and a copy is refused where the type it was asked
-    // for has not got them. See D1043.
+    // for has not got them.
     KestTypeParam *type_params;
     union {
         struct {
@@ -432,7 +429,7 @@ typedef struct {
             // two spans because it sits in the four bytes after the count,
             // which were padding, and a node widened is every node of every
             // program widened; `kest_resumes_spans` reads the two names back
-            // out of the source. See D1263.
+            // out of the source.
             uint32_t resumes;
             // NULL when the function returns nothing.
             KestTypeRef *result;
@@ -447,7 +444,7 @@ typedef struct {
             // a body that could keep a promise and does not say so is a thing
             // a reader can be told rather than a thing they have to try. For a
             // generic these are true if any copy of it is, because a copy is
-            // what runs. See D976.
+            // what runs.
             bool reaches_heap;
             bool reaches_host;
             bool not_deterministic;
@@ -461,10 +458,10 @@ typedef struct {
     uint32_t count;
     // How many nodes are under those declarations: every expression, every
     // statement and every declaration the parser made for this file. A tree is
-    // the biggest thing reading a file makes — more than the tokens it came
-    // from — and what it is made of was a thing nobody could ask. Counted where
-    // the nodes are made, because a walk to count them would be a second walk
-    // of the one thing this file already walks. See D641.
+    // the biggest thing reading a file makes -- more than the tokens it came
+    // from -- and what it is made of was a thing nobody could ask. Counted
+    // where the nodes are made, because a walk to count them would be a second
+    // walk of the one thing this file already walks.
     uint32_t nodes;
 } KestUnit;
 
@@ -472,7 +469,7 @@ typedef struct {
 void kest_ast_dump(const KestUnit *unit, const KestSource *source, FILE *out);
 
 // The two names of a `resumes c.at` as spans of the source: the parameter and
-// the field. False for a function that does not wait. See D1263.
+// the field. False for a function that does not wait.
 bool kest_resumes_spans(const KestSource *source, const KestDecl *decl,
                         KestSpan *param, KestSpan *field);
 

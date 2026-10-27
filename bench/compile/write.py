@@ -9,7 +9,7 @@ game's scripts before the first frame costs. And a generic taken 3,200 ways:
 one function over a type parameter, called with 3,200 shapes of its own, which
 is what a language that writes a copy per type pays for each copy. The Lua
 family has no types to copy over and is not in the second; C++, Rust and
-daslang each write a copy per type as Kest does. See D1273.
+daslang each write a copy per type as Kest does.
 
     python3 bench/compile/write.py <directory> <lines> <copies>
 """

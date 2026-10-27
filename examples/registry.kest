@@ -5,20 +5,19 @@ import std.io
 // The same `store<T>` and `ref<T>` a world of entities is made of, asked of
 // something that is not a game: a registry of assets, each naming the ones it
 // is built from. What a build system, a package manager and an asset pipeline
-// all have is this shape — things with identities, things naming other things,
-// things going away while something still points at them — and whether the
+// all have is this shape -- things with identities, things naming other things,
+// things going away while something still points at them -- and whether the
 // language's one answer to identity is general or is a game feature wearing a
 // general name is a question with a program in it rather than an argument.
 //
 // What it holds to: a name is found again, a dependency that was deleted reads
 // as nothing rather than as whoever took its place, a cycle is found rather
 // than walked for ever, and what is built is built after what it is built from.
-// See D975.
 
 const MOST: i32 = 64
 
 // One asset. `from` is what it is built out of, and a reference in it may name
-// something that has been taken out of the registry since — which is the whole
+// something that has been taken out of the registry since -- which is the whole
 // reason a reference is checked rather than followed.
 struct Asset {
     name: text
@@ -165,7 +164,7 @@ fn main() -> i32 {
 
     // And the part a registry has that a list has not: something goes away
     // while something else still names it. What `screen` holds is a reference
-    // to a place, and the place is handed out again to somebody else — so the
+    // to a place, and the place is handed out again to somebody else -- so the
     // reference reads as nothing rather than as whoever is there now, which is
     // what makes taking things out of a live registry safe at all.
     remove(registry, atlas)

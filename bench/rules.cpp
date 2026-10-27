@@ -5,7 +5,7 @@
 // This is the native ceiling for the gameplay shape rather than a competitor:
 // it keeps the same data layout and the same bounds checks a Kest program
 // pays, and it copies the actor the way Kest's value structs do, so what it
-// measures is the work with no interpreter under it. See D1090.
+// measures is the work with no interpreter under it.
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>

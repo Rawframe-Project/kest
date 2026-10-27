@@ -4,8 +4,7 @@ name: determinism
 # in Kest, Lua 5.4, LuaJIT, Luau and JavaScript, on each of the four machines
 # CI has, and the answers put side by side in one table. It is run when asked
 # and when what it runs changes, because it measures languages rather than
-# holding this one to anything the gate does not already hold it to. See
-# D1274.
+# holding this one to anything the gate does not already hold it to.
 on:
   workflow_dispatch:
   push:

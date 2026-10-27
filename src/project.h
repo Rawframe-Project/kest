@@ -9,7 +9,7 @@
 // nothing more: no sections, no quoting, no nesting, no parser worth the name.
 // A manifest is read by a person as often as by a tool and there is nothing
 // here that wants a shape, so what it is written in is the simplest thing that
-// can say it. See D982.
+// can say it.
 //
 // The whole grammar: a line is a word, a space, and the rest of the line. A
 // line whose first character is `#` is a comment; a blank line is nothing. A
@@ -32,7 +32,7 @@ typedef struct {
     // Which edition of the language it is written in: `KEST_EDITION` for a
     // project that says so and for one that says nothing, because a manifest
     // written before there were editions was written against the first one.
-    // One this compiler does not know is refused. See D1252.
+    // One this compiler does not know is refused.
     const char *edition;
     // Where its own modules are, and where the ones it depends on are. A
     // dependency here is a path and nothing else: there is no registry, so a
@@ -54,7 +54,7 @@ KestProject *kest_project_read(KestArena *arena, const char *where,
 
 // The same, from the text of a manifest handed over rather than read, which is
 // how a release binary is a project with no files around it. `handed` NULL is
-// `kest_project_read`. See D1172.
+// `kest_project_read`.
 KestProject *kest_project_from(KestArena *arena, const char *where,
                                const char *handed, const char **why);
 

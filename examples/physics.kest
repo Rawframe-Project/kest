@@ -8,7 +8,7 @@ import std.vec
 
 // The frame step the predecessor research used to measure what an object
 // graph costs: helpers that take and return vectors, called from a hot path.
-// D006 is the decision that lets this keep its shape, and the bytecode shows
+// A struct is a value, which lets this keep its shape, and the bytecode shows
 // what it costs: a field is an offset, and building a vector is the values
 // already being on the stack.
 //
@@ -47,7 +47,7 @@ fn damp(b: Body, keep: f32, dt: f32) -> Body no.alloc {
 // The normal of a face, which is what a cross product is for: two edges of a
 // triangle, and the direction standing off both of them. Three points in a
 // line have no face and no normal, which `direction` answers by giving
-// nothing rather than by handing back a zero (D013).
+// nothing rather than by handing back a zero.
 fn normal(a: vec3, b: vec3, c: vec3) -> vec3? no.alloc {
     return vec.direction(vec.cross(b - a, c - a))
 }
@@ -63,8 +63,8 @@ fn into(b: Body, face: vec3) -> bool no.alloc {
 // A position kept in `f64` and bounced between two walls, which is what a
 // simulation that cannot carry `f32`'s drift writes. The walls are weighed both
 // ways round, and what a step came to against the speed, because each is an
-// instruction of its own (D1165), and the step and what it came to are sums of
-// two locals (D1166).
+// instruction of its own, and the step and what it came to are sums of
+// two locals.
 fn bounced(at: f64, speed: f64, steps: i32) -> f64 no.alloc {
     let x = at
     let v = speed

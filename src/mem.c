@@ -3,10 +3,10 @@
 // And the one thing outside this file that wants the answer `mem.h` works out.
 // It lives here rather than beside `kest_version`, where a reader would look
 // for it, because `src/kest.c` is above this file in the pipeline and a file
-// may not reach down — and what it answers is this file's own reading of the
+// may not reach down -- and what it answers is this file's own reading of the
 // compiler. A host outside the tree cannot include `mem.h`, and a host inside
 // it should not have to: what it wants to know is about the library it is
-// linked against and not about its own build. See D828.
+// linked against and not about its own build.
 #include "kest.h"
 
 bool kest_checked(void) {
@@ -59,7 +59,7 @@ struct KestArena {
     Block *first;
     // The block that last answered `kest_arena_holds`. A host handing the same
     // handle over every frame asks about the same block every frame, and the
-    // block it is in may be an old one — the walk would be as long as the
+    // block it is in may be an old one -- the walk would be as long as the
     // program has grown, at a crossing that happens every frame.
     Block *recent;
     // What all the blocks together sit between. A pointer outside it belongs
@@ -78,13 +78,12 @@ struct KestArena {
     // And what was handed out on its behalf by an arena that has since been
     // given back: the tokens a file is read into live in one of those. A
     // ceiling is refused against both, because what a build asked the host for
-    // is the same number whether it kept it or not. See D747.
+    // is the same number whether it kept it or not.
     size_t also;
     // And how many of those have been given back. What is asked for and what
     // is held apart by exactly this: an arena taken on another's behalf is
     // charged where it grows, because a ceiling refuses there, and returned
     // where it is freed, because that is when the host has the room again.
-    // See D748.
     size_t returned;
     // How many times it has handed something out. What a block has given away
     // is what was asked for plus the gap the sanitised build keeps after it,
@@ -96,27 +95,27 @@ struct KestArena {
     // arenas taken under this one hold now, which its ceiling counts beside
     // its own; and the most this one and everything under it ever held at
     // once, which is what a build given exactly what it cost has to have had
-    // room for. See D1247.
+    // room for.
     KestArena *under;
     size_t beneath;
     size_t widest;
     // And the most the arenas under this one held at once, which is what a
     // build needed on top of what it keeps: what it holds afterwards grows
-    // with what is asked of it, and this does not. See D1247.
+    // with what is asked of it, and this does not.
     size_t most_beneath;
     // What the last allocation this arena refused was asking for. A ceiling
     // stops a program at the allocation that would have crossed it, so what a
-    // host reads afterwards is a total that stopped short — and the difference
+    // host reads afterwards is a total that stopped short -- and the difference
     // between missing by eight bytes and missing by a megabyte is the whole of
-    // what a host does about it. See D248.
+    // what a host does about it.
     size_t refused;
     // And what was held when a ceiling refused it, counting what was held
     // under it then: what is held afterwards may be less, once a stage that
-    // worked in memory of its own has given it back. See D1247.
+    // worked in memory of its own has given it back.
     size_t refused_holding;
     // And which of the two refused it: the ceiling above, or the host with
     // nothing left. Read beside the number, because a refusal of nought bytes
-    // is not a thing that happens. See D321.
+    // is not a thing that happens.
     bool refused_by_ceiling;
 };
 
@@ -180,7 +179,7 @@ static void holds_together(const KestArena *arena, const char *after) {
 }
 // And what it hands out: nought, every time. A block is taken zeroed, a reset
 // clears what had been handed out of the one it keeps, and what an extension
-// gains is cleared where it is gained — three places, each of which is the
+// gains is cleared where it is gained -- three places, each of which is the
 // promise and none of which is the whole of it. What reads an allocation
 // expecting nought is everything above this file: a header whose unwritten
 // fields are noughts, a length nobody has set yet, a slot nobody has stored to.
@@ -275,7 +274,7 @@ static void shrank(KestArena *arena, size_t lost) {
 // first block, and the refusals above are aimed at what an arena hands out,
 // so every stage that takes an arena of its own -- the verifier, the bodies,
 // a machine -- had never been seen told no. `KEST_REFUSE_ARENA=n` refuses the
-// n-th, in the build that checks itself only. See D1251.
+// n-th, in the build that checks itself only.
 static uint64_t arenas_so_far;
 
 static bool refuse_this_arena(void) {
@@ -462,7 +461,7 @@ void kest_arena_rewind(KestArena *arena, KestMark mark) {
 // release build and a run nobody aimed at is the run it always was.
 //
 // It is the only way to ask a compiler what it says when it has nothing left
-// and mean a particular nothing. See D880.
+// and mean a particular nothing.
 static uint64_t allocations_so_far;
 static uint64_t refuse_at;
 static bool refuse_asked;
@@ -480,7 +479,7 @@ static bool refuse_this_one(void) {
 
 // Whether anything has been refused since the last build opened. One bit,
 // because that is what a reader needs: not which arena ran out but that one
-// did. See D880.
+// did.
 static bool anybody_refused;
 
 
@@ -520,9 +519,9 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
         if (block == NULL) {
             // The other way to be refused, and the same number either way:
             // what the allocation that failed was asking for. The block the
-            // host would not give may be bigger than that — a block is at
-            // least what a block is — but what a reader wants is what was
-            // being made when this happened. See D320.
+            // host would not give may be bigger than that -- a block is at
+            // least what a block is -- but what a reader wants is what was
+            // being made when this happened.
             arena->refused = taking;
             arena->refused_by_ceiling = false;
             anybody_refused = true;

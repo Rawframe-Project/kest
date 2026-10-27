@@ -13,7 +13,6 @@
 // the keys, and writes what the window showed at the end, which is how this is
 // run where there is no screen to look at, under a display nobody sees. The
 // shot is a name and not a path: raylib writes it where the host was started.
-// See D1269.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

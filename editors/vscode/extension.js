@@ -1,6 +1,6 @@
 // The client, which is all this extension is: every semantic answer comes from
 // `kest lsp`, which is the compiler. Nothing here parses Kest, because a second
-// parser in an editor is a second answer about what a file means. See D978.
+// parser in an editor is a second answer about what a file means.
 
 const {
     commands,
@@ -16,8 +16,7 @@ let client;
 // The debugger is `kest dap`, the same debugger `kest debug` is, answering the
 // Debug Adapter Protocol: breakpoints set in the gutter, the frames and what
 // each body called its slots in the side bar, and the program's own writing on
-// the debug console. This starts it on the file in front of the person. See
-// D1182.
+// the debug console. This starts it on the file in front of the person.
 function debugThisFile() {
     const editor = window.activeTextEditor;
     if (!editor || editor.document.languageId !== "kest") {

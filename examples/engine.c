@@ -6,7 +6,7 @@
 // `examples/embed.c` is the other host here and is a different thing: it asks
 // every door this language has, one after another, and is long because the
 // list is. This one asks the doors a frame loop uses, in the order a frame
-// loop uses them, and is meant to be read start to finish. See D949.
+// loop uses them, and is meant to be read start to finish.
 
 // A monotonic clock is not in ISO C, so this asks for the POSIX one by name
 // before anything is included, and takes the other one where there is no
@@ -49,7 +49,7 @@ typedef struct {
     int32_t watched;
     // How wide each of those was the first time it was looked up, so a reload
     // that changed one is caught before this host calls it. Nought is one
-    // nobody has looked at yet. See D985.
+    // nobody has looked at yet.
     uint32_t wide[7];
 } Engine;
 
@@ -66,11 +66,11 @@ typedef struct {
     int32_t chases[BODIES];
     // What each body was doing, which is an enum in the program and a number
     // here: a tag is its case's place, so a host writing one down is writing a
-    // number whose meaning is the case list it was written under. See D1072.
+    // number whose meaning is the case list it was written under.
     int32_t doings[BODIES];
     // And which named bits each body carried, which is the same kind of number
     // as the tag beside it: a bit is one shifted by its place in the list, so
-    // what a saved byte means is the list it was saved under. See D1076.
+    // what a saved byte means is the list it was saved under.
     int32_t marks[BODIES];
     uint64_t shaped;
     int32_t count;
@@ -114,8 +114,8 @@ static void engine_watch(KestValue *frame, KestRuntime *runtime,
 // the call refuses at the instruction that made it, with these words under it.
 // And what a door of this host's reads when the program hands it text: the
 // bytes and how many there are, asked for rather than measured here. What that
-// buys is a host that did not have to be rewritten the day this language
-// started carrying a length beside the bytes, which is the day D964 came.
+// buys is a host that does not depend on how the language keeps the length
+// beside the bytes.
 static void engine_named(KestValue *frame, KestRuntime *runtime,
                          void *context) {
     (void)runtime;
@@ -136,13 +136,12 @@ static void engine_refuse(KestValue *frame, KestRuntime *runtime,
 // held to it. A name found again is not the same function: a `round` that
 // takes one more thing than it did is a call this host makes with a frame the
 // program does not agree with, and nothing but this notices. The shape of the
-// world is checked by its layout's mark; the shape of a *call* is this. See
-// D985.
+// world is checked by its layout's mark; the shape of a *call* is this.
 // The seven doors, asked of whichever machine is handed in and written into
 // `found` and `wide` rather than into the engine. A reload asks them of the
 // candidate *before* it publishes it: a host that asks after it has swapped
 // has already thrown the old machine away by the time it finds out, and then
-// has nothing true to say about which world it is holding. See D1127.
+// has nothing true to say about which world it is holding.
 #define DOORS 7
 static const char *const door_names[DOORS] = {"begin", "step",    "place",
                                               "save",  "restore", "round",
@@ -258,8 +257,8 @@ static bool one_frame(Engine *engine, int frame, float xs[BODIES],
     KestValue there = kest_borrow(engine->runtime, ys, BODIES, "f32",
                                   sizeof(float));
     // How many the machine says are there, against how many this host lent.
-    // A host driving a world reads a run back and has to know where it stops,
-    // and until D964 it had to ask the program. See D965.
+    // A host driving a world reads a run back and has to know where it stops
+    // without asking the program.
     uint32_t room = 0;
     bool lent = here.object != NULL && there.object != NULL &&
                 kest_array_length(engine->runtime, here, &room) == BODIES &&
@@ -433,7 +432,7 @@ static bool restore_into(KestRuntime *into, int32_t restore, int32_t round,
         // Said to the machine, because this host holds the world in its own
         // memory between frames and the machine gives back what the program
         // can no longer reach. A walk reads the program's slots and what a
-        // host says it keeps; it cannot read this host's variables. See D996.
+        // host says it keeps; it cannot read this host's variables.
         if (!kest_keeps(into, world[0])) {
             kest_report(into, stderr, KEST_FORM_TEXT);
             return false;
@@ -610,7 +609,6 @@ int main(int argc, char **argv) {
     // named. A reload in a real host is the file changing under it; a second
     // path is the only way to say "and now it is this" without editing a file
     // somebody else is reading. It is what the edit corpus is driven with.
-    // See D985.
     const char *after = argc > 2 ? argv[2] : path;
     Engine engine = {NULL, NULL, {{0}, {0}}, -1, -1, -1, -1, -1, -1, -1,
                      {0, 0, 0, 0, 0, 0, 0}};
@@ -685,7 +683,7 @@ int main(int argc, char **argv) {
     // many bodies the answer described, and what it does not want is the text
     // that said so: it marks, calls, copies the number out, and puts the heap
     // where it was. A frame loop that does this costs the same every frame
-    // rather than every frame costing the last one. See D957.
+    // rather than every frame costing the last one.
     {
         size_t before = kest_heap_used(engine.runtime);
         uint32_t mark = kest_scratch_mark(engine.runtime);
@@ -721,7 +719,6 @@ int main(int argc, char **argv) {
         // nothing can reach rather than everything since the mark. So a
         // reading taken before the mark may itself have held what a walk would
         // have taken, and the number after one is at most the number before.
-        // See D957 and D996.
         if (!kest_scratch_rewind(engine.runtime, mark) ||
             kest_heap_used(engine.runtime) > before) {
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
@@ -774,7 +771,7 @@ int main(int argc, char **argv) {
         // The same sentence the other path ends with, because that is what
         // makes the claim above checkable: a reload that was refused has to
         // end where no reload at all ends, and a host that published before
-        // it found out would end somewhere else. See D1127.
+        // it found out would end somewhere else.
         printf("a reload kept nothing, and %d frames later the first body is "
                "at %.3f %.3f\n", FRAMES, (double)xs[0], (double)ys[0]);
         driving = NULL;
