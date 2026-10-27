@@ -2340,6 +2340,61 @@ static bool release_parts(const char *executable, char *header, char *archive,
     return header[0] != '\0';
 }
 
+// Whether a release may be called this: letters, digits, `.`, `_` and `-`,
+// which every shell, `cmd.exe` and file system read the same, and not starting
+// with `-`, which a compiler reads as an option. A binary is named after its
+// program, and a name that means something else to one of them is a binary
+// that cannot be made, moved or run everywhere.
+static bool portable_name(const char *name, size_t length) {
+    if (length == 0 || name[0] == '-') {
+        return false;
+    }
+    for (size_t i = 0; i < length; i++) {
+        char c = name[i];
+        bool plain = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                     (c >= '0' && c <= '9') || c == '.' || c == '_' || c == '-';
+        if (!plain) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// `text` in single quotes for a POSIX shell, with a quote inside it written as
+// `'\''`, so that a path holding one is still the one path it is. Answers how
+// many bytes that is, and writes them only when `to` is not NULL.
+static size_t shell_quoted(char *to, const char *text) {
+    size_t at = 0;
+    if (to != NULL) {
+        to[at] = '\'';
+    }
+    at++;
+    for (const char *c = text; *c != '\0'; c++) {
+        if (*c == '\'') {
+            if (to != NULL) {
+                memcpy(to + at, "'\\''", 4);
+            }
+            at += 4;
+        } else {
+            if (to != NULL) {
+                to[at] = *c;
+            }
+            at++;
+        }
+    }
+    if (to != NULL) {
+        to[at] = '\'';
+    }
+    return at + 1;
+}
+
+// `text` written at `at`, answering where it ends.
+static size_t put_plain(char *to, size_t at, const char *text) {
+    size_t length = strlen(text);
+    memcpy(to + at, text, length);
+    return at + length;
+}
+
 // A release of the program at `program`: the C that carries it, written beside
 // where the binary goes, compiled by the compiler this machine names -- `CC`,
 // or `cc` -- against the header and the library above, and taken away again.
@@ -2366,6 +2421,14 @@ static char *made_release(const char *executable, const char *program,
     if (length > 5 && strcmp(base + length - 5, ".kest") == 0) {
         length -= 5;
     }
+    if (!portable_name(base, length)) {
+        kest_diags_in(diags, NULL);
+        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0663", nowhere,
+                       "`%.*s` cannot name a release", (int)length, base);
+        kest_diags_suggest(diags, "a release is named after its program, in "
+                                  "letters, digits, `.`, `_` and `-`");
+        return NULL;
+    }
     char *out = malloc(length + 1);
     char source[1100];
     if (out == NULL) {
@@ -2383,10 +2446,27 @@ static char *made_release(const char *executable, const char *program,
     if (compiler == NULL || compiler[0] == '\0') {
         compiler = "cc";
     }
-    char command[4600];
-    snprintf(command, sizeof(command),
-             "%s -std=c11 -O2 -I'%s' -o '%s' '%s' '%s' -lm", compiler, header,
-             out, source, archive);
+    // Sized to what it holds rather than to a guess, so that a long `CC` or a
+    // deep install is never cut short.
+    const char *paths[] = {header, out, source, archive};
+    const char *between[] = {" -std=c11 -O2 -I", " -o ", " ", " "};
+    size_t room = strlen(compiler) + strlen(" -lm") + 1;
+    for (size_t i = 0; i < 4; i++) {
+        room += strlen(between[i]) + shell_quoted(NULL, paths[i]);
+    }
+    char *command = malloc(room);
+    if (command == NULL) {
+        remove(source);
+        free(out);
+        return NULL;
+    }
+    size_t at = put_plain(command, 0, compiler);
+    for (size_t i = 0; i < 4; i++) {
+        at = put_plain(command, at, between[i]);
+        at += shell_quoted(command + at, paths[i]);
+    }
+    at = put_plain(command, at, " -lm");
+    command[at] = '\0';
     // A command line built as WebAssembly has no other program to run, so
     // the C compiler a release is made with is out of its reach, and it says
     // so the way a compiler that is not there is said.
@@ -2396,6 +2476,7 @@ static char *made_release(const char *executable, const char *program,
 #else
     int status = wrote && strchr(command, '\n') == NULL ? system(command) : -1;
 #endif
+    free(command);
     remove(source);
     if (status != 0) {
         kest_diags_in(diags, NULL);
