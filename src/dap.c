@@ -485,13 +485,25 @@ int kest_dap_serve(const char *library, KestHostMaker make, FILE *in,
         KestMark before = kest_arena_mark(arena);
         KestJson *request = NULL;
         KestWireRead read = kest_wire_read(arena, body, length, &request);
-        if (read == KEST_WIRE_JSON) {
+        switch (read) {
+        case KEST_WIRE_JSON:
             handle(&adapter, request);
-        } else if (read == KEST_WIRE_NO_ROOM) {
+            break;
+        case KEST_WIRE_NO_ROOM:
             unread(&adapter, KEST_STARVED_CODE
                    ": a message was not read: " KEST_STARVED_SAYS);
-        } else {
+            break;
+        case KEST_WIRE_NOT_JSON:
             unread(&adapter, "a message that is not JSON was not read");
+            break;
+        case KEST_WIRE_TOO_DEEP: {
+            char why[96];
+            snprintf(why, sizeof why,
+                     "a message nesting more than %d deep was not read",
+                     KEST_WIRE_DEEPEST);
+            unread(&adapter, why);
+            break;
+        }
         }
         kest_arena_rewind(arena, before);
         free(body);
