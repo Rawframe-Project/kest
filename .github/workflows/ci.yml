@@ -36,14 +36,14 @@ jobs:
   # docs/user is not documentation only here: tools/check_guide.py runs every
   # program on those pages.
   changes:
-    uses: Rawframe-Project/.github/.github/workflows/changes.yml@bf59dbcd696369b51a9831145fb3b60f3bc71280 # v0.0.26
+    uses: Rawframe-Project/.github/.github/workflows/changes.yml@595e1c52a0fae00e49974c5152a7a6f3ed39753c # v0.0.28
     permissions:
       pull-requests: read
     with:
       docs: '^(docs/(internals|operations)/|docs/README\.md$|\.github/ISSUE_TEMPLATE/)|^[A-Z]+\.md$'
 
   zizmor:
-    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@bf59dbcd696369b51a9831145fb3b60f3bc71280 # v0.0.26
+    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@595e1c52a0fae00e49974c5152a7a6f3ed39753c # v0.0.28
     permissions:
       contents: read
 
@@ -148,7 +148,7 @@ jobs:
           - { preset: linux-arm64, runner: ubuntu-24.04-arm }
           - { preset: macos-clang, runner: macos-15 }
           - { preset: windows-msvc, runner: windows-2025 }
-    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@bf59dbcd696369b51a9831145fb3b60f3bc71280 # v0.0.26
+    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@595e1c52a0fae00e49974c5152a7a6f3ed39753c # v0.0.28
     permissions:
       contents: read
     with:
@@ -161,7 +161,7 @@ jobs:
   build-main:
     needs: changes
     if: github.event_name != 'pull_request' && needs.changes.outputs.code == 'true'
-    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@bf59dbcd696369b51a9831145fb3b60f3bc71280 # v0.0.26
+    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@595e1c52a0fae00e49974c5152a7a6f3ed39753c # v0.0.28
     permissions:
       contents: read
     with:
