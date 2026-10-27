@@ -81,7 +81,7 @@ The exit status is 1 when anything was refused, and otherwise what `main` return
 
 ## Editors
 
-`kest lsp` answers an editor over the Language Server Protocol on standard input and output. It is the same build as `kest check`, so what the editor shows and what the command line says cannot differ. It provides diagnostics, hover, go to definition, references, document and workspace symbols, rename within a file, completion and formatting. It reads unsaved buffers, every open one, and a file importing an edited buffer is checked against what is on screen.
+`kest lsp` answers an editor over the Language Server Protocol on standard input and output. It is the same build as `kest check`, so what the editor shows and what the command line says cannot differ. It provides diagnostics, hover, go to definition, references, document and workspace symbols, rename within a file, completion and formatting. It reads unsaved buffers, every open one, and a file importing an edited buffer is checked against what is on screen. Every request is answered: one it ran out of memory answering gets error `-32603` saying so, and a message it cannot read gets an error with no id (`-32700` when it is not JSON).
 
 The VS Code extension is in `editors/vscode` and ships in the release archive. Its one setting, `kest.path`, is the `kest` command to run. It starts `kest lsp`, highlights Kest, and has a *Kest: debug this file* command that starts `kest dap`.
 
@@ -105,4 +105,4 @@ stopped at game.kest:43:5 in game.step
 
 `break <line>` sets a breakpoint in the named file and `break other.kest:12` in another; `step` stops at the next instruction anywhere, `next` steps over calls, `where` lists the frames innermost first, and `locals` shows each slot under the name the body gave it (`not written yet` for one the body has not reached). A breakpoint is written into the bytecode and taken out again when hit, so a machine nobody is debugging pays nothing. A breakpoint inside a call a host makes back into the program from a door cannot stop there (`K0708`), because the host's C frame is gone by the time anyone could resume.
 
-`kest dap` is the same debugger driven by an editor: breakpoints in the gutter, the call stack, a frame's variables, continue, step over, step into and step out. The program's output goes to the editor's debug console. It cannot pause a running program.
+`kest dap` is the same debugger driven by an editor: breakpoints in the gutter, the call stack, a frame's variables, continue, step over, step into and step out. The program's output goes to the editor's debug console. It cannot pause a running program. A message it cannot read is said in the debug console, and every request it reads is answered.

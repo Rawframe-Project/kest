@@ -6359,6 +6359,172 @@ if [ "$served" != "yes" ]; then
     complain "lsp: the editor was not answered by this compiler: $served"
 fi
 
+# And every request answered, whatever happened to it. A client that sends a
+# request waits for its answer, so a message the server could not read -- one
+# that is not JSON, or one there was no memory to read into its tree -- and an
+# answer there was no memory to write are each answered all the same: the
+# second with an error under the request's id, the first with one under no id,
+# which is all JSON-RPC can name a message it could not read. The debugger has
+# no such answer, since a reply names its request; it says in the console what
+# it could not read, and answers every request it did read. Asked of both
+# servers as they come, and again in the build that checks itself with every
+# allocation refused from points spread over a session: both used to drop such
+# a message without a word, and an editor sat waiting.
+answered=$(timeout 600 python3 - "$kest" "$build_dir"/kest-debug \
+        "$scratch"/serving/serving.kest <<'PY'
+import json, os, subprocess, sys
+
+kest, checking, path = sys.argv[1], sys.argv[2], os.path.abspath(sys.argv[3])
+text = open(path).read()
+uri = "file://" + path
+where = {"textDocument": {"uri": uri}, "position": {"line": 5, "character": 12}}
+
+
+def framed(bodies):
+    out = b""
+    for body in bodies:
+        if not isinstance(body, bytes):
+            body = json.dumps(body).encode()
+        out += b"Content-Length: %d\r\n\r\n" % len(body) + body
+    return out
+
+
+def heard(out):
+    said, at = [], 0
+    while True:
+        head = out.find(b"Content-Length: ", at)
+        blank = out.find(b"\r\n\r\n", head)
+        if head < 0 or blank < 0:
+            return said
+        many = int(out[head + 16:blank])
+        said.append(json.loads(out[blank + 4:blank + 4 + many]))
+        at = blank + 4 + many
+
+
+served = framed([
+    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+    b"{this is not",
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": uri, "languageId": "kest",
+                                 "version": 1, "text": text}}},
+    {"jsonrpc": "2.0", "id": 2, "method": "textDocument/hover",
+     "params": where},
+    {"jsonrpc": "2.0", "id": 3, "method": "textDocument/definition",
+     "params": where},
+    {"jsonrpc": "2.0", "id": 4, "method": "textDocument/references",
+     "params": where},
+    {"jsonrpc": "2.0", "id": "five", "method": "textDocument/documentSymbol",
+     "params": {"textDocument": {"uri": uri}}},
+    {"jsonrpc": "2.0", "id": 6, "method": "textDocument/formatting",
+     "params": {"textDocument": {"uri": uri}, "options": {}}},
+    {"jsonrpc": "2.0", "id": 7, "method": "shutdown"},
+    {"jsonrpc": "2.0", "method": "exit"},
+])
+asked = [1, 2, 3, 4, "five", 6, 7]
+debugged = framed([
+    {"seq": 1, "type": "request", "command": "initialize", "arguments": {}},
+    b"[nor is this",
+    {"seq": 2, "type": "request", "command": "threads", "arguments": {}},
+    {"seq": 3, "type": "request", "command": "setExceptionBreakpoints",
+     "arguments": {"filters": []}},
+    {"seq": 4, "type": "request", "command": "disconnect", "arguments": {}},
+])
+requested = [1, 2, 3, 4]
+
+
+def lsp(command, refuse=None):
+    env = dict(os.environ)
+    if refuse is not None:
+        env["KEST_REFUSE_AT"] = str(refuse)
+    ran = subprocess.run([command, "lsp"], input=served, capture_output=True,
+                         env=env, timeout=120)
+    return ran, heard(ran.stdout)
+
+
+def dap(command, refuse=None):
+    env = dict(os.environ)
+    if refuse is not None:
+        env["KEST_REFUSE_AT"] = str(refuse)
+    ran = subprocess.run([command, "dap"], input=debugged,
+                         capture_output=True, env=env, timeout=120)
+    return ran, heard(ran.stdout)
+
+
+def lsp_wrong(ran, said, whole):
+    if ran.returncode >= 128 or ran.returncode < 0 or b"Sanitizer" in ran.stderr:
+        return "it died"
+    ids = [one.get("id") for one in said if "id" in one]
+    unread = [one for one in said if "id" in one and one["id"] is None]
+    left = [one for one in asked if one not in ids]
+    if len(left) > len(unread):
+        return "requests %s were never answered" % left
+    for one in said:
+        if one.get("id") in asked and "result" not in one and (
+                one.get("error", {}).get("code") != -32603):
+            return "request %s was answered with neither a result nor an " \
+                   "error saying there was no memory" % one["id"]
+    if whole and not any(one.get("error", {}).get("code") == -32700
+                         for one in unread):
+        return "a message that is not JSON was not answered as one"
+    return None
+
+
+def dap_wrong(ran, said, whole):
+    if ran.returncode >= 128 or ran.returncode < 0 or b"Sanitizer" in ran.stderr:
+        return "it died"
+    answered = [one.get("request_seq") for one in said
+                if one.get("type") == "response"]
+    told = [one for one in said if one.get("event") == "output" and
+            one.get("body", {}).get("category") == "important"]
+    left = [one for one in requested if one not in answered]
+    if len(left) > len(told):
+        return "requests %s were never answered" % left
+    if whole and not any("not JSON" in one["body"]["output"] for one in told):
+        return "a message that is not JSON was not said to have been dropped"
+    return None
+
+
+wrong = []
+for name, talk, judge in (("lsp", lsp, lsp_wrong), ("dap", dap, dap_wrong)):
+    ran, said = talk(kest)
+    found = judge(ran, said, True)
+    if found:
+        wrong.append("%s: %s" % (name, found))
+        continue
+    # How many allocations a whole session takes in the build that checks
+    # itself: the least refusal after which nothing it said changes.
+    _, whole = talk(checking)
+    low, high = 1, 400000
+    while high - low > 1:
+        middle = (low + high) // 2
+        if talk(checking, middle)[1] == whole:
+            high = middle
+        else:
+            low = middle
+    for step in range(1, 25):
+        at = max(1, high * step // 25)
+        ran, said = talk(checking, at)
+        found = judge(ran, said, False)
+        if found:
+            wrong.append("%s with allocation %d of %d refused: %s" %
+                         (name, at, high, found))
+            break
+# And a length one short of wrapping round: the byte after the body was asked
+# for on top of it, came to none, and what followed the header was written
+# past the end of nothing. Such a length is the end of what can be framed.
+for name in ("lsp", "dap"):
+    ran = subprocess.run([checking, name], capture_output=True, timeout=120,
+                         input=b"Content-Length: %d\r\n\r\n{}" % (2**64 - 1))
+    if ran.returncode != 0 or b"Sanitizer" in ran.stderr:
+        wrong.append("%s: a length that does not fit came back %d" %
+                     (name, ran.returncode))
+print("; ".join(wrong) if wrong else "yes")
+PY
+)
+if [ "$answered" != "yes" ]; then
+    complain "lsp and dap: a request went unanswered: $answered"
+fi
+
 # And the sentence the README makes of that: `kest lsp` is this compiler, so
 # what an editor is told about a file and what `kest check` says about it
 # cannot differ. Held over a file with four mistakes of four kinds, code by

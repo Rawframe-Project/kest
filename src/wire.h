@@ -46,10 +46,18 @@ struct KestJson {
     uint32_t capacity;
 };
 
+// What reading a message into a tree came to. A client is told which of the
+// two failures it was: one is about what it sent and the other is not.
+typedef enum {
+    KEST_WIRE_JSON,
+    KEST_WIRE_NOT_JSON,
+    KEST_WIRE_NO_ROOM,
+} KestWireRead;
 
-// The value a message holds, or NULL for one that is not JSON. The tree is in
-// `arena` and goes with it.
-KestJson *kest_wire_read(KestArena *arena, const char *bytes, size_t length);
+// The value a message holds, into `value`, which is NULL unless the message
+// was read. The tree is in `arena` and goes with it.
+KestWireRead kest_wire_read(KestArena *arena, const char *bytes, size_t length,
+                            KestJson **value);
 
 // A member of an object by name, and a member of a member. NULL where there is
 // none or where what was asked about is not an object.
@@ -57,10 +65,20 @@ const KestJson *kest_wire_member(const KestJson *object, const char *name);
 const KestJson *kest_wire_down(const KestJson *object, const char *first,
                                const char *second);
 
-// The next message on a stream, read by the length its header gives, and how
-// long it is. NULL at the end of the stream or for a header with no length.
-// The caller frees it.
-char *kest_wire_next(FILE *in, size_t *length);
+// What waiting for the next message came to. A message there was no memory to
+// hold has been read past, so the stream is still in step, and it is said
+// apart from the end because a client that sent a request is waiting for an
+// answer to it.
+typedef enum {
+    KEST_WIRE_HELD,
+    KEST_WIRE_ENDED,
+    KEST_WIRE_UNHELD,
+} KestWireNext;
+
+// The next message on a stream, read by the length its header gives, into
+// `body` with its length; the caller frees it. A header with no length is the
+// end, because nothing after it can be framed.
+KestWireNext kest_wire_next(FILE *in, char **body, size_t *length);
 
 // A message written out framed by its length.
 void kest_wire_send(FILE *out, const char *body, size_t length);

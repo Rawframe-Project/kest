@@ -29,7 +29,7 @@ Identity is four separate questions with four answers: a declaration is its modu
 - It takes whole documents on every change, never incremental edits: applying an edit twice is the one way a server can disagree with the client about what a file says.
 - Rename stays within a file, because a rename that reached another file would be done halfway rather than refused.
 
-[`src/wire.c`](../../src/wire.c) is what the language server and the debug adapter share: length-framed messages, a small JSON reader into an arena thrown away per message, and a JSON writer, with no library underneath.
+[`src/wire.c`](../../src/wire.c) is what the language server and the debug adapter share: length-framed messages, a small JSON reader into an arena thrown away per message, and a JSON writer, with no library underneath. Reading a message comes to one of three things, a tree, a message that is not JSON, or a message there was no memory to hold or read, and the last two are told apart because a client is told which. The language server answers both with an error under no id (`-32700` and `-32603`), and a request whose answer could not be written with `-32603` under its own id. These are written from fixed text, because they are needed exactly when there may be no memory to write anything else. The adapter cannot answer a message it could not read, since a reply names the request it answers, so it says so in the debug console and answers every request it read.
 
 ## Debugger and adapter
 
