@@ -452,7 +452,10 @@ void kest_build_report(KestBuild *build, FILE *out, KestForm form) {
     // The tail rather than anything taken out, the way a machine reports what
     // it has said: what came before was written when it was said.
     KestDiags tail = build->diags;
-    tail.items = build->diags.items + build->reported;
+    // Nothing said yet is no array at all, and no offset is taken from that.
+    tail.items = build->diags.items == NULL
+                     ? NULL
+                     : build->diags.items + build->reported;
     tail.count = build->diags.count - build->reported;
     tail.error_count = 0;
     for (uint32_t i = 0; i < tail.count; i++) {

@@ -757,7 +757,8 @@ static const KestDecl **constants_of(KestProgram *program,
                                      const KestUnitInfo *info,
                                      uint32_t *count) {
     const KestUnits *files = program->files;
-    if (files == NULL || info < files->items ||
+    // An empty list may have no array, and no offset is taken from that.
+    if (files == NULL || files->count == 0 || info < files->items ||
         info >= files->items + files->count) {
         return NULL;
     }
