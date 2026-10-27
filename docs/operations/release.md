@@ -19,8 +19,8 @@ Four numbers beside the version move on their own, each named in the changelog w
 
 | File | Is |
 | --- | --- |
-| `kest-<version>-linux-x86_64.tar.gz`, `-linux-aarch64`, `-darwin-arm64` | `make release` on each platform: `bin/kest`, `lib/libkest.a`, `include/kest.h`, the standard library in `lib/kest`, the sources, the VS Code extension, the documentation, `README.md`, `CHANGELOG.md`, `LICENSE` and a `VERSION` file. `bin/kest` finds the library beside it, so the archive works wherever it is unpacked. |
-| `kest-<version>-windows-x86_64.zip` | the same for Windows, from `tools\build.bat` and `tools\package.bat` |
+| `kest-<version>-linux-x86_64.tar.gz`, `-linux-aarch64`, `-darwin-arm64` | the `release` preset and `cpack --preset release` on each platform: `bin/kest`, `lib/libkest.a`, `include/kest.h`, the standard library in `lib/kest`, the sources, the VS Code extension, the documentation, `README.md`, `CHANGELOG.md`, `LICENSE` and a `VERSION` file. `bin/kest` finds the library beside it, so the archive works wherever it is unpacked. |
+| `kest-<version>-windows-x86_64.zip` | the same for Windows, with `lib/kest.lib` in place of `lib/libkest.a` |
 | `kest-<version>-source.tar.gz` | the tagged tree |
 | `SHA256SUMS` | the checksum of every file above |
 | `sbom.spdx.json` | the SPDX software bill of materials |

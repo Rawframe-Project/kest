@@ -11,12 +11,17 @@
 # And that some of them were refused, because a run in which every door
 # answered everything was not handed anything hard. See D1254.
 set -u
+
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+case $build_dir in /*) ;; *) build_dir=$(pwd)/$build_dir ;; esac
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
 cd "$(dirname "$0")/.." || exit 1
 here=$(pwd)
 
-if [ ! -x ./kest ] || [ ! -x examples/embed-debug ]; then
+if [ ! -x $build_dir/kest ] || [ ! -x $build_dir/examples/embed-debug ]; then
     echo "doors: the compiler and the sanitised engine are not built"
     exit 1
 fi
@@ -31,14 +36,14 @@ failed=0
 calls=0
 refused=0
 for seed in 1 2 3 4 5 6 7 8; do
-    if ! ./kest hostile examples/embed.kest "$seed" \
+    if ! $build_dir/kest hostile examples/embed.kest "$seed" \
             >"$scratch"/examples/embed.kest 2>"$scratch"/written; then
         echo "doors: \`kest hostile\` at seed $seed said" \
              "\`$(head -1 "$scratch"/written)\`"
         failed=1
         continue
     fi
-    said=$(cd "$scratch" && "$here"/examples/embed-debug examples/embed.kest \
+    said=$(cd "$scratch" && $build_dir/examples/embed-debug examples/embed.kest \
                2>&1 </dev/null)
     why=$?
     case "$said" in

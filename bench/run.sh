@@ -1,6 +1,6 @@
 #!/bin/sh
 # What four workloads cost, in this language and in the two beside it. It is
-# not part of `make check`: a duration is not a pass or a fail, and this is
+# not part of the gate: a duration is not a pass or a fail, and this is
 # here to catch a change that made something slower and to say where this
 # language sits rather than to hold anything.
 #
@@ -29,7 +29,11 @@
 # than shown as a slow one. See D1108.
 set -eu
 
-kest=${KEST:-./kest}
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+
+kest=${KEST:-$build_dir/kest}
 best=${BEST:-5}
 cc=${CC:-cc}
 built=$(mktemp -d)
@@ -121,7 +125,7 @@ for one in kernel control graph words rules; do
     # for is one the machine runs, so a row here is whatever mixture that
     # program turns out to be -- which is what shipping one would be.
     if "$kest" emit --c "bench/$one.kest" >"$built/$one.c" 2>/dev/null &&
-            $cc -O2 -Iinclude -o "$built/$one" "$built/$one.c" libkest.a \
+            $cc -O2 -Iinclude -o "$built/$one" "$built/$one.c" $build_dir/libkest.a \
                 -lm 2>/dev/null; then
         run_it "$one" "kest, compiled" "$built/$one" "bench/$one.kest"
     fi

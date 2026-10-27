@@ -18,6 +18,10 @@ import subprocess
 import sys
 import tempfile
 
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+BUILD_DIR = os.path.abspath(os.environ.get('KEST_BUILD', 'out/dev'))
+
 failed = 0
 pythons = 0
 # How many conditions gate more than one complaint, which is the shape D877
@@ -658,7 +662,7 @@ try:
             open(probe, 'w').write(
                 "fn main() -> i32 {\n    let b = '%s'\n    return 0\n}\n"
                 % written)
-            ran = subprocess.run(['./kest', 'check', probe],
+            ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'check', probe],
                                  capture_output=True, text=True,
                                  stdin=subprocess.DEVNULL)
             if ran.returncode == 0:
@@ -671,7 +675,7 @@ try:
     open(probe, 'w').write(
         "fn main() -> i32 {\n    let b = '\\%s'\n    return 0\n}\n"
         % (unknown[0] if unknown else 'e'))
-    said_back = subprocess.run(['./kest', 'check', probe], capture_output=True,
+    said_back = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'check', probe], capture_output=True,
                           text=True, stdin=subprocess.DEVNULL)
     said = said_back.stdout + said_back.stderr
 
@@ -690,7 +694,7 @@ try:
         open(shaped, 'w').write(
             "fn takes(f: fn(i32) -> i32 %s) -> i32 %s {\n"
             "    return f(1)\n}\n" % (word, word))
-        shown = subprocess.run(['./kest', 'check', shaped],
+        shown = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'check', shaped],
                                capture_output=True, text=True,
                                stdin=subprocess.DEVNULL)
         carried = re.search(r'\(fn\(i32\) -> i32([^)]*)\)', shown.stdout)
@@ -890,61 +894,24 @@ if says != writes:
               "be written" % one.lower())
         failed = 1
 
-# The `Makefile`, which is the file nothing here has ever read. What it says is
-# what "it passes" means, what a reader is told to type, and what is left on a
-# machine afterwards — and a line taken out of it is the same silence as a line
-# taken out of the gate.
-make = open('Makefile').read()
-targets = some("the targets the `Makefile` has", set(
-    re.findall(r'^([A-Za-z][A-Za-z0-9_-]*):', make, re.M)))
-
-def rule(name):
-    found = re.search(r'\n%s:[^\n]*\n((?:\t[^\n]*\n)+)' % name, make)
-    return '' if found is None else found.group(1)
-
-
-# What a build leaves behind, cleaned. The gate builds four things and asks
-# each of them whether it answers; a fifth added and not cleaned is rubbish a
-# reader finds in a tree they thought was clean.
-# Where a build says the library will be, against where an install puts it.
-# One is a string compiled into every object — the last place a program looks
-# for `std` — and the other is a line in a rule, and they are the same path
-# said twice. A build installed under one and told the other finds no library
-# and says so from a path nobody can fix by moving anything.
+# The build, `CMakeLists.txt`. Where a build says the library will be, against
+# where an install puts it: one is a string compiled into every object (the
+# last place a program looks for `std`) and the other is an install rule, and
+# they are the same path said twice. A build installed under one and told the
+# other finds no library and says so from a path nobody can fix by moving
+# anything.
+cmake = open('CMakeLists.txt').read()
 told_where = some("what a build says the library will be", {
-    where.replace('$(PREFIX)', '').rstrip('/')
-    for where in re.findall(r"-DKEST_LIB_DIR='\"([^\"]*)\"'", make)})
+    where.rstrip('/')
+    for where in re.findall(r'set\(kest_lib_dir_default "\$\{CMAKE_INSTALL_PREFIX\}/([^"]*)"\)',
+                            cmake)})
 puts = some("where an install puts the library", {
-    where.rstrip('/')[:-len('/std')]
-    for where in re.findall(r'\$\(DESTDIR\)\$\(PREFIX\)(\S*/kest/std\S*)',
-                            rule('install'))})
-# Every place it puts them and not one of them: a rule that makes a directory
-# in one place and copies into another is two paths, and both have to be the
-# one the build was told_where.
+    where + '/kest'
+    for where in re.findall(r'install\(DIRECTORY lib/std DESTINATION (\S+)/kest\b', cmake)})
 for where in sorted(puts):
     if {where} != told_where:
-        print("Makefile: a build says `std` is under `%s` and an install puts "
-              "it under `%s`" % (", ".join(sorted(told_where)), where))
-        failed = 1
-
-cleaned = rule('clean')
-for built in some("what the gate builds", re.findall(
-        r'for built in ([^;\n]*); do', open('tools/check.sh').read())):
-    for one in built.split():
-        if one.lstrip('./') not in cleaned:
-            print("Makefile: `%s` is built and `clean` does not remove it"
-                  % one.lstrip('./'))
-            failed = 1
-
-# And what an install leaves on a machine, removed. A file copied somewhere and
-# never removed is this project's rubbish in somebody else's tree.
-put = re.findall(r'\tcp [^\n]* (\$\(DESTDIR\)[^\n]+)', rule('install'))
-takes = rule('uninstall')
-for where in some("what an install puts on a machine", put):
-    if not any(where.startswith(gone) or gone.startswith(where.rsplit('/', 1)[0])
-               for gone in re.findall(r'\trm -[rf]+ ([^\n]+)', takes)):
-        print("Makefile: `install` puts `%s` where `uninstall` leaves it"
-              % where)
+        print("CMakeLists.txt: a build says `std` is under `%s` and an install "
+              "puts it under `%s`" % (", ".join(sorted(told_where)), where))
         failed = 1
 
 # And the order of it, which is the one thing about the gate that is not a
@@ -954,17 +921,17 @@ for where in some("what an install puts on a machine", put):
 # that reaches for what was built comes after the line that says it was.
 gate = open('tools/check.sh').read().splitlines()
 builds = next((at for at, line in enumerate(gate)
-               if line.startswith('if ! make')), None)
+               if line.startswith('for built in ')), None)
 reaches = next((at for at, line in enumerate(gate)
-                if './kest' in line and not line.lstrip().startswith('#')),
+                if '$build_dir/kest' in line and not line.lstrip().startswith('#')),
                None)
 if builds is None or reaches is None:
-    print("checks: `check.sh` does not build, or never reaches for what it "
-          "built")
+    print("checks: `check.sh` does not hold what was built, or never reaches "
+          "for it")
     failed = 1
 elif reaches < builds:
-    print("checks: `check.sh` reaches for what it built on line %u and builds "
-          "it on line %u" % (reaches + 1, builds + 1))
+    print("checks: `check.sh` reaches for what was built on line %u and holds "
+          "that it was on line %u" % (reaches + 1, builds + 1))
     failed = 1
 
 # A check that is written and never run is no check, and one that is run and
@@ -973,9 +940,9 @@ elif reaches < builds:
 # `check.sh` reaches for.
 tools = some("the checks in `tools`", sorted(
     os.path.basename(path) for path in glob.glob('tools/check-*.sh')))
-run = some("the checks `check.sh` runs", sorted(set(
-    re.findall(r'ask "[a-z]+" tools/(check-[a-z]+\.sh)',
-               open('tools/check.sh').read()))))
+run = some("the checks ctest runs", sorted(set(
+    re.findall(r'tools/(check-[a-z]+\.sh)',
+               open('cmake/Tests.cmake').read()))))
 # And the shape of a check, which is the thing a tenth one would copy from
 # whichever it was written beside. Nothing here says what a check is, so this
 # does: it runs as a shell script, it stops on a name it never set, it writes
@@ -1413,7 +1380,7 @@ if saying_fault - {"src/diag.c"}:
               "place for that" % where)
         failed = 1
 
-for what, these in (("run by `check.sh`", run),):
+for what, these in (("run by ctest", run),):
     for one in tools:
         if one not in these:
             print("checks: `%s` is in `tools` and is not %s" % (one, what))
@@ -1445,7 +1412,7 @@ def other_width(params, kind):
 
 declared = {}
 for path in sorted(glob.glob('lib/std/*.kest')):
-    asked = subprocess.run(['./kest', 'check', path], capture_output=True,
+    asked = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'check', path], capture_output=True,
                            text=True, stdin=subprocess.DEVNULL)
     for line in asked.stdout.splitlines():
         found = re.match(r'^fn ([A-Za-z0-9_.]+)\(([^)]*)\)', line)
@@ -1680,7 +1647,7 @@ if some("what a mark is folded from", [folds] if folds else []):
 # compiler says as well. See D697.
 def shapes_of(program):
     """Every shape a program declares, as the compiler resolved them."""
-    ran = subprocess.run(['./kest', 'check', '--json', program],
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'check', '--json', program],
                          capture_output=True, text=True,
                          stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib'))
@@ -1704,7 +1671,7 @@ MEANS_MORE = {"flags": ("flags8", "flags16", "flags32", "flags64"),
 
 def laid_out_in(program):
     """Every layout a program makes, whole."""
-    ran = subprocess.run(['./kest', 'emit', '--json', program],
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'emit', '--json', program],
                          capture_output=True, text=True,
                          stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib'))
@@ -1715,7 +1682,7 @@ def laid_out_in(program):
 
 def laid_out_by(program):
     """What each type of a program lays out as, by the name it is laid out under."""
-    ran = subprocess.run(['./kest', 'emit', '--json', program],
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'emit', '--json', program],
                          capture_output=True, text=True,
                          stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib'))
@@ -1727,7 +1694,7 @@ def laid_out_by(program):
 
 def told_apart(program):
     """Every type of a program with the kind the checker calls it."""
-    ran = subprocess.run(['./kest', 'check', '--json', program],
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'check', '--json', program],
                          capture_output=True, text=True,
                          stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib'))

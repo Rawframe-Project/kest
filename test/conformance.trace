@@ -1,0 +1,173 @@
+== examples/ants.kest
+8 ants, 100 frames, the furthest 11.0 from the middle
+answered 0
+== examples/blocks.kest
+blocks 14
+answered 0
+== examples/borrow.kest
+4 slots, borrowed and given back on every way out
+answered 0
+== examples/boxes.kest
+one body, and a copy for every set of types it was called with
+answered 0
+== examples/camera.kest
+3 frames to arrive, and it stops at 4.0
+answered 0
+== examples/carried.kest
+
+answered 0
+== examples/chance.kest
+...........#............#.......
+50 spots twice from one seed, 266 of a thousand at a quarter
+answered 0
+== examples/chores.kest
+chores 10 ChoreAt.Walking
+answered 0
+== examples/churn.kest
+200 rounds of all over 200 things, and the ring came back round
+answered 0
+== examples/determinism.kest
+wrapping 761968223942102592
+narrowing 15613878802566093
+crossings 16292529355942238246
+rounding 6628790028852937101
+rounded 7705789375475744983
+turned 15850301067386899915
+edges 17614996376493448596
+ordering 10899371189039907582
+hashing 11339989403408028319
+seeded 2972298803077851393
+keyed 9437946307182263224
+this platform answers 1130490413983204738 and the profile says 1130490413983204738
+the simulation profile holds on this platform
+answered 0
+== examples/embed.kest
+one frame under kest, 1 left standing
+answered 0
+== examples/events.kest
+both shapes agree; run `kest tick` to have the host drive them
+answered 0
+== examples/flags.kest
+State.Airborne | State.Hurt | State.Armed is 3 flags, and a handle is 12884901929
+answered 0
+== examples/frame.kest
+
+answered 0
+== examples/game.kest
+guard is at 18, and the module said so
+answered 0
+== examples/grow.kest
+grew 9 samples adding up to 18.0
+answered 0
+== examples/held.kest
+
+answered 0
+== examples/holding.kest
+holding 15999 63996 16001
+answered 0
+== examples/host.kest
+crossed the boundary and came back with 5.0
+[ok][][ok]
+<.,.,.,>
+answered 0
+== examples/inline.kest
+a transform is 4 floats and a tag, 2.0 across
+answered 0
+== examples/inventory.kest
+sword      12.00
+rope        0.35
+2 kinds carried, worth 1245
+answered 0
+== examples/least.kest
+hello, host
+answered 0
+== examples/lines.kest
+sword     1200
+rope        35
+lamp        90
+3 lines, 1325 altogether
+answered 0
+== examples/locale.kest
+en fa fr ja tr: 5 lines
+answered 0
+== examples/lookup.kest
+found what was there, and said nothing about what was not
+answered 0
+== examples/math.kest
+120 and 84 share 12, which is positive
+answered 0
+== examples/methods.kest
+methods 3
+answered 0
+== examples/numbers.kest
+every width wraps at its own end, and -126 is one of them
+answered 0
+== examples/ordering.kest
+seven lengths sorted four ways over four spreads, eight tables filled, emptied by thirds and compacted, and four thousand numbers written and read back
+answered 0
+== examples/parse.kest
+read 3 fields adding up to 49, and wrote x=1.50, y=-0.25
+answered 0
+== examples/physics.kest
+one second of falling, and the vectors kept their shape
+answered 0
+== examples/pieces.kest
+ada  12
+bo   7
+answered 0
+== examples/player.kest
+dead after 94 ticks, at y 0.0 with 0 health
+answered 0
+== examples/quests.kest
+3 left, and the guard's escort reads "gone"
+answered 0
+== examples/queue.kest
+3 done, and the queue is empty
+answered 0
+== examples/records.kest
+name: ann
+hunger: 3
+awake: true
+at: Where(1.5, -2.0)
+born: 1234567890123
+answered 0
+== examples/registry.kest
+5 assets, built in 1 pass(es), and a deleted one reads as nothing
+answered 0
+== examples/rows.kest
+Row([Cell(1, 0.5), Cell(2, 1.5), Cell(3, 1.0)], 4)
+a row is three cells and a tag, heaviest 3
+answered 0
+== examples/saving.kest
+50 bytes written and read back as themselves
+answered 0
+== examples/scan.kest
+3 fields adding up to 49, and nothing was copied
+answered 0
+== examples/settlement.kest
+day 12: 14 hungry, worst 8
+saved and read back: 12 48 60 21 4
+no such command: nonsense
+48 alive, 60 starved, 21 jobs done, 4 reference(s) into nothing
+answered 0
+== examples/shapes.kest
+2 of 3 are far, and cook sorts first
+answered 0
+== examples/state.kest
+Door.Shut is shut
+answered 0
+== examples/tetromino.kest
+tetromino 52 pieces, 5 lines
+answered 0
+== examples/tree.kest
+a tree of 4 adding up to 4
+answered 0
+== examples/vectors.kest
+vectors 12749663293315105001
+answered 0
+== examples/words.kest
+by vowels: smith herald guard cook
+answered 0
+== examples/world.kest
+3 enemies, 0 standing, average height 1.8333334
+answered 0

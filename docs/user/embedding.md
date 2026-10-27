@@ -87,7 +87,7 @@ int main(void) {
 ```
 
 ```sh
-cc -std=c11 -Iinclude host.c libkest.a -lm -o host && ./host
+cc -std=c11 -Iinclude host.c out/dev/libkest.a -lm -o host && ./host
 ```
 
 The objects, and what must outlive what:

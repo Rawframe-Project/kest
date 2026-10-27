@@ -13,12 +13,17 @@
 # library's own headers as well as the public one, written here rather than
 # kept in `tools/` because it is this check's and nothing else's. See D1237.
 set -u
+
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+case $build_dir in /*) ;; *) build_dir=$(pwd)/$build_dir ;; esac
 cc=${CC:-cc}
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
 cd "$(dirname "$0")/.." || exit 1
 
-if [ ! -f libkest.a ]; then
+if [ ! -f $build_dir/libkest.a ]; then
     echo "the library is not built"
     exit 1
 fi
@@ -303,7 +308,7 @@ int main(int argc, char **argv) {
 REFUSE
 
 if ! $cc -std=c11 -Wall -Wextra -Wshadow -Wconversion -Werror -O2 -Iinclude \
-        -Isrc -o "$scratch"/refuse "$scratch"/refuse.c libkest.a -lm \
+        -Isrc -o "$scratch"/refuse "$scratch"/refuse.c $build_dir/libkest.a -lm \
         2>"$scratch"/why; then
     echo "the verifier's own test does not build:"
     sed 's/^/    /' "$scratch"/why | head -5

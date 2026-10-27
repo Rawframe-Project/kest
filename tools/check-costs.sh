@@ -26,6 +26,10 @@ import subprocess
 import sys
 import tempfile
 
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+BUILD_DIR = os.path.abspath(os.environ.get('KEST_BUILD', 'out/dev'))
+
 LIBRARY = 'lib/std/text.kest'
 HOST = 'examples/embed.c'
 SMALL = 200
@@ -89,7 +93,7 @@ left_to_the_host = []
 # What one call to one function cost. The library is where the standard one
 # lives, so a driver written for a loop says where it is instead.
 def cost_of(where, name, arguments):
-    ran = subprocess.run(['./kest', 'call', '--json', where, name] + arguments,
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'call', '--json', where, name] + arguments,
                          capture_output=True, text=True,
                          stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib'))
@@ -234,12 +238,12 @@ KEST_STACK_SLOTS = int(re.search(r"#define KEST_STACK_SLOTS (\d+)",
 # is there before anything runs. A tree with only the release build in it --
 # which is what a hole that does not ask for the other one leaves -- has
 # nothing to read here, and reading nothing is not the same as reading nought.
-have_checked = os.path.exists('./kest-debug')
+have_checked = os.path.exists(os.path.join(BUILD_DIR, 'kest-debug'))
 for deep_path in (sorted(glob.glob(os.path.join('examples', '*.kest')))
                   if have_checked else []):
     deep_env = dict(os.environ)
     deep_env['KEST_DEEP'] = '1'
-    deep_ran = subprocess.run(['./kest-debug', 'run', deep_path],
+    deep_ran = subprocess.run([os.path.join(BUILD_DIR, 'kest-debug'), 'run', deep_path],
                               capture_output=True, text=True,
                               stdin=subprocess.DEVNULL, env=deep_env)
     for deep_line in deep_ran.stderr.split("\n"):
@@ -426,7 +430,7 @@ try:
             "fn main() -> i32 {\n"
             "    return f(0) - 495\n"
             "}\n" % ' + '.join("i32(%s + by)" % one for one in written))
-        asked_ran = subprocess.run(['./kest', 'emit', spelled, '--json'],
+        asked_ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'emit', spelled, '--json'],
                                    capture_output=True, text=True,
                                    stdin=subprocess.DEVNULL)
         # One that did not compile is counted as nought, which no program
@@ -508,7 +512,7 @@ for path in HOSTS:
 # `check` on the same file. A number that is nought, or the same for both, is a
 # number wired to something that is not the work.
 def what_it_cost(command, where):
-    ran = subprocess.run(['./kest', command, '--json', where],
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), command, '--json', where],
                          capture_output=True, text=True,
                          stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib'))
@@ -588,7 +592,7 @@ def folds_in(source):
     at = os.path.join(work, 'folding.kest')
     with open(at, 'w') as writing:
         writing.write(source)
-    ran = subprocess.run(['./kest', 'emit', '--json', at],
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'emit', '--json', at],
                          capture_output=True, text=True,
                          stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib'))
@@ -693,7 +697,7 @@ flat = per_copy('emit', 1)
 # source it was all cut from. Every number `holds` gives is part of `held`, so
 # the sum of them and the source they came from cannot pass it -- one that does
 # is a number counted twice. See D784.
-held_ran = subprocess.run(['./kest', 'emit', 'lib/std/text.kest', '--json'],
+held_ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'emit', 'lib/std/text.kest', '--json'],
                           capture_output=True, text=True,
                           stdin=subprocess.DEVNULL)
 held_said = json.loads(held_ran.stdout) if held_ran.returncode == 0 else {}
@@ -709,7 +713,7 @@ if not held_parts or held_named > held_said.get('held', 0):
 room_tokens = 0
 room_slots = 0
 for room_path in sorted(glob.glob(os.path.join('examples', '*.kest'))):
-    room_ran = subprocess.run(['./kest', 'lex', room_path, '--json'],
+    room_ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'lex', room_path, '--json'],
                               capture_output=True, text=True,
                               stdin=subprocess.DEVNULL)
     if room_ran.returncode != 0:
@@ -729,7 +733,7 @@ copied_bytes = 0
 copied_code = 0
 copied_quiet = 0
 for copied_path in sorted(glob.glob(os.path.join('examples', '*.kest'))):
-    copied_ran = subprocess.run(['./kest', 'emit', '--json', copied_path],
+    copied_ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'emit', '--json', copied_path],
                                 capture_output=True, text=True,
                                 stdin=subprocess.DEVNULL,
                                 env=dict(os.environ, KEST_LIB='lib'))
@@ -776,7 +780,7 @@ def what_emit_printed(body):
     where = os.path.join(work, 'walking.kest')
     with open(where, 'w') as walking:
         walking.write(body)
-    ran = subprocess.run(['./kest', 'emit', where], capture_output=True,
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'emit', where], capture_output=True,
                          text=True, stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib'))
     if ran.returncode != 0:
@@ -794,7 +798,7 @@ def what_emit_printed(body):
 # against the stage before it and how a body is read for what was worked
 # out inside it.
 def what_it_said(command, where, name):
-    ran = subprocess.run(['./kest', command, '--json', where],
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), command, '--json', where],
                          capture_output=True, text=True,
                          stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib'))
@@ -1037,7 +1041,7 @@ def what_it_asked(body):
     where = os.path.join(work, 'running.kest')
     with open(where, 'w') as running:
         running.write(body)
-    ran = subprocess.run(['./kest-debug', 'run', where], capture_output=True,
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest-debug'), 'run', where], capture_output=True,
                          text=True, stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib', KEST_DEEP='1'))
     if ran.returncode != 0:
@@ -1052,7 +1056,7 @@ def what_it_ran(body):
     where = os.path.join(work, 'running.kest')
     with open(where, 'w') as running:
         running.write(body)
-    ran = subprocess.run(['./kest-debug', 'run', where], capture_output=True,
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest-debug'), 'run', where], capture_output=True,
                          text=True, stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib', KEST_DEEP='1'))
     if ran.returncode != 0:
@@ -1095,7 +1099,7 @@ if have_checked and (turn_ran is None or quiet_walk is None or
 # says a value was not paid for is that the instruction which would have done
 # the work is nowhere in what `emit` printed. See D886.
 def instructions_of(where):
-    ran = subprocess.run(['./kest', 'emit', where], capture_output=True,
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'emit', where], capture_output=True,
                          text=True, stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib'))
     if ran.returncode != 0:
@@ -1272,7 +1276,7 @@ def what_a_frame_reaches(middle):
     where = os.path.join(work, 'running.kest')
     with open(where, 'w') as running:
         running.write(body)
-    ran = subprocess.run(['./kest-debug', 'run', where], capture_output=True,
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest-debug'), 'run', where], capture_output=True,
                          text=True, stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib', KEST_DEEP='1'))
     if ran.returncode != 0:
@@ -1305,7 +1309,7 @@ def what_it_ran_each(body):
     where = os.path.join(work, 'running.kest')
     with open(where, 'w') as running:
         running.write(body)
-    ran = subprocess.run(['./kest-debug', 'run', where], capture_output=True,
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest-debug'), 'run', where], capture_output=True,
                          text=True, stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib', KEST_DEEP='1'))
     if ran.returncode != 0:
@@ -1535,7 +1539,7 @@ def what_a_tick_took(body):
     where = os.path.join(work, 'ticking.kest')
     with open(where, 'w') as ticking:
         ticking.write(body)
-    ran = subprocess.run(['./kest', 'tick', '--json', where],
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'tick', '--json', where],
                          capture_output=True, text=True,
                          stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib'))
@@ -1661,7 +1665,7 @@ if (alone_costs is None or printing_costs is None or
 # does what the one before it did and then more, so the four numbers grow — and
 # what they say is where the work is. See D640.
 def what_it_said(command, where, name):
-    ran = subprocess.run(['./kest', command, '--json', where],
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), command, '--json', where],
                          capture_output=True, text=True,
                          stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib'))
@@ -1769,7 +1773,7 @@ types_made = what_it_said('check', LIBRARY, 'typesMade')
 # thing walked, what it walks to and the block — and every statement is as big
 # as that whether it is one or not. The decision not to put it out of line
 # rests on loops being few; this is that premise, held. See D643.
-written = subprocess.run(['./kest', 'parse', LIBRARY], capture_output=True,
+written = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'parse', LIBRARY], capture_output=True,
                          text=True, stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib')).stdout
 loops = len(re.findall(r'\((?:for|while) ', written))

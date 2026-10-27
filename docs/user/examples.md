@@ -9,14 +9,15 @@ Every program under `examples/` checks its own answers and exits with which chec
 ```sh
 git clone --depth 1 --branch 5.5 https://github.com/raysan5/raylib.git ../raylib
 make -C ../raylib/src PLATFORM=PLATFORM_DESKTOP
-make colony RAYLIB=../raylib/src
-./examples/colony/colony
-./examples/colony/colony --size 512x384 --people 512 --native 1
+cmake --preset dev -DKEST_RAYLIB=$PWD/../raylib/src
+cmake --build --preset dev --target colony
+out/dev/examples/colony/colony
+out/dev/examples/colony/colony --size 512x384 --people 512 --native 1
 ```
 
 Run it from the root of the tree. Keys: `1` chop, `2` build a wall, `3` sow a field, `0` cancel; drag with the left button to mark, move with `WASD` or the arrows, zoom with the wheel. `--frames n` runs that many frames with no player and prints what a frame cost; `--shot file.png` saves the last one. `kest run examples/colony/game/trial.kest` plays five simulated minutes with no window and checks the result.
 
-**Tetris** (`examples/tetris/`) is a Tetris clone written for LÖVE in Lua, brought over: the rules are `examples/tetromino.kest`, and `examples/tetris/game.kest` adapts them to an engine that keeps the game between frames and draws through two doors. `make tetris RAYLIB=../raylib/src`, then `examples/tetris/host`. `kest run examples/tetromino.kest` plays a whole game with a player written in Kest that drops every piece where it lands lowest.
+**Tetris** (`examples/tetris/`) is a Tetris clone written for LÖVE in Lua, brought over: the rules are `examples/tetromino.kest`, and `examples/tetris/game.kest` adapts them to an engine that keeps the game between frames and draws through two doors. `cmake --build --preset dev --target tetris` with `KEST_RAYLIB` set the same way, then `out/dev/examples/tetris/host`. `kest run examples/tetromino.kest` plays a whole game with a player written in Kest that drops every piece where it lands lowest.
 
 ## Hosts
 
@@ -24,7 +25,7 @@ Run it from the root of the tree. Keys: `1` chop, `2` build a wall, `3` sow a fi
 - `examples/engine.c` with `engine.kest`: a game-shaped host that keeps a world, lends memory, spends a budget and reloads.
 - `examples/embed.c` with `embed.kest`: every door of the C API, including the mistakes a host can make.
 
-`make least engine embed` builds them.
+Every build makes them, in `out/<preset>/examples`.
 
 ## Programs by topic
 

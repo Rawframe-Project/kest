@@ -9,7 +9,7 @@ import std.text
 // runs under a host that has it — which the command line is.
 //
 // With nothing on the input this reads nothing, which is what it gets under
-// `make check` and what it would get from an empty file. The line it falls back
+// the gate and what it would get from an empty file. The line it falls back
 // on is what the rest of it is checked against.
 
 extern fn Io.read() -> text
@@ -65,7 +65,7 @@ fn main() -> i32 {
         return 1
     }
 
-    // The fallback, which is what `make check` runs into and the one answer
+    // The fallback, which is what the gate runs into and the one answer
     // this program has that does not depend on what it was given.
     if len(all) == 0 {
         if len(stock) != 3 {

@@ -6,7 +6,8 @@
 // It is the shape a host has in an engine rather than a list of doors: the
 // loop is the engine's, and the program is asked for one frame at a time.
 //
-//   make tetris RAYLIB=path/to/raylib && examples/tetris/host
+//   cmake --preset dev -DKEST_RAYLIB=path/to/raylib/src
+//   cmake --build --preset dev --target tetris && out/dev/examples/tetris/host
 //
 // `--frames N --shot out.png` plays N frames with the program's own player at
 // the keys, and writes what the window showed at the end, which is how this is

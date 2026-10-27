@@ -78,29 +78,20 @@ jobs:
             echo "::error::the tag is $TAG and kest.h says $built"
             exit 1
           fi
-      - if: runner.os != 'Windows'
-        name: The archive
+      # The release preset, packed by CPack: a .tar.gz on Linux and macOS and a
+      # .zip on Windows, named for the version, system and processor.
+      - name: The archive
         run: |
-          make -j
-          make release
-      - if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
-      # Two steps rather than two lines: a batch file run from cmd without
-      # `call` hands control over and never comes back.
-      - if: runner.os == 'Windows'
-        name: The build
-        shell: cmd # zizmor: ignore[misfeature] a batch file runs where it was written to run
-        run: tools\build.bat
-      - if: runner.os == 'Windows'
-        name: The archive
-        shell: cmd # zizmor: ignore[misfeature] a batch file runs where it was written to run
-        run: tools\package.bat
+          cmake --preset release
+          cmake --build --preset release
+          # CMake's own cpack: Windows runners have a Chocolatey one first on the path.
+          "$(dirname "$(command -v cmake)")/cpack" --preset release
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: archive-${{ matrix.runner }}
           path: |
-            build/kest-*.tar.gz
-            build/kest-*.zip
+            out/release/package/kest-*.tar.gz
+            out/release/package/kest-*.zip
           if-no-files-found: error
 
   assets:

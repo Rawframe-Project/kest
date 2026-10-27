@@ -16,8 +16,12 @@
 # something and what to read after.
 set -eu
 
-kest=${KEST:-./kest}
-measure=${MEASURE:-./bench/measure}
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+
+kest=${KEST:-$build_dir/kest}
+measure=${MEASURE:-$build_dir/bench/measure}
 rounds=${ROUNDS:-100000}
 samples=${SAMPLES:-30}
 
@@ -41,11 +45,11 @@ else
 fi
 
 if [ ! -x "$measure" ]; then
-    echo "bench/families.sh: $measure is not there; \`make bench/measure\`" >&2
+    echo "bench/families.sh: $measure is not there; \`cmake --build out/dev\` first" >&2
     exit 2
 fi
 if [ ! -x "$kest" ]; then
-    echo "bench/families.sh: $kest is not there; \`make\`" >&2
+    echo "bench/families.sh: $kest is not there; \`cmake --build out/dev\` first" >&2
     exit 2
 fi
 
@@ -161,11 +165,11 @@ done
 echo
 
 # The boundary, which needs its own host because a host is what crosses one.
-if [ -x ./bench/frame ]; then
+if [ -x $build_dir/bench/frame ]; then
     echo "boundary"
-    ./bench/frame --bodies "$bodies" --frames "$frames"
+    $build_dir/bench/frame --bodies "$bodies" --frames "$frames"
 else
-    echo "boundary                skipped: \`make bench/frame\` first"
+    echo "boundary                skipped: \`cmake --build out/dev\` first"
 fi
 echo
 

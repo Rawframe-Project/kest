@@ -32,7 +32,7 @@
 ## Maintaining it
 
 - [Development](operations/development.md): toolchain, builds, switches and source conventions.
-- [Checks](operations/checks.md): the local tiers, what `make check` holds, CI and fuzzing.
+- [Checks](operations/checks.md): the local tiers, what the gate holds, CI and fuzzing.
 - [Debugging](operations/debugging.md): the checking build, switches and fuzz findings.
 - [Benchmarks](operations/benchmarks.md): taking the numbers in `bench/` again.
 - [Release](operations/release.md).

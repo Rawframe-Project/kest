@@ -633,8 +633,8 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
 
 // A clock that measures elapsed time and only goes forwards. `clock()` is the
 // processor time this process has used, which is not that: a program that waits
-// for anything reads a clock that stopped, and `make time` was measuring how
-// busy the processor had been rather than how long a frame took. See D935.
+// for anything reads a clock that stopped, and the `time` target was measuring
+// how busy the processor had been rather than how long a frame took. See D935.
 //
 // Every platform this is built for has a real monotonic clock and this reads
 // it: `QueryPerformanceCounter` on Windows, `CLOCK_MONOTONIC` elsewhere. There
@@ -1989,8 +1989,8 @@ typedef struct {
 // What a run did, said to a person. Counts and no durations: the machine
 // counted what it did and a clock is the host's, so a number of nanoseconds
 // here would be this command line's clock read out as though it were the
-// program's cost. `make time` and `kest tick` are where a duration comes from,
-// and both run something.
+// program's cost. The `time` target and `kest tick` are where a duration comes
+// from, and both run something.
 //
 // On the error stream, because what a program wrote is the program's answer
 // and a measurement written into the middle of it is a line nobody asked for.
@@ -2364,7 +2364,7 @@ static char *made_release(const char *executable, const char *program,
         kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0663", nowhere,
                        "a release needs `kest.h` and `libkest.a` where this "
                        "command line is, and they are not there");
-        kest_diags_suggest(diags, "`make install` puts all three in one "
+        kest_diags_suggest(diags, "`cmake --install` puts all three in one "
                                   "place");
         return NULL;
     }

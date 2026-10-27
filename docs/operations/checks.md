@@ -4,17 +4,19 @@ What runs locally and in CI, what each part holds, and how to run one part on it
 
 ## Tiers
 
+Every check is a ctest test of the build it runs against, labeled with its tier (`cmake/Tests.cmake`).
+
 | Command | What it runs | Time on a desktop |
 | --- | --- | --- |
-| `make fast` | the build, every example run for its answer, the library resolving, the one form over every Kest file, a diagnostic in text and JSON, a fuel budget stopping a loop, the example host | about a minute |
-| `make check` | everything below | several minutes |
-| `make fuzz` | the seeded fuzzer, eight seeds of 400 inputs over each boundary, under the sanitizers | about a minute |
+| `cmake --workflow --preset dev-fast` | the build, then the `fast` label: every example run for its answer, the library resolving, the one form over every Kest file, a diagnostic in text and JSON, a fuel budget stopping a loop, the example host, the guide, the regression programs and the conformance trace | about a minute |
+| `cmake --workflow --preset dev` | the build, then every test below | several minutes |
+| `ctest --preset dev -R fuzzing` | the seeded fuzzer, eight seeds of 400 inputs over each boundary, under the sanitizers | under a minute |
 
-`make fast` is the loop while writing a change; `make check` is what passing means. On the shared server both go through the workspace's heavy-job wrapper.
+`dev-fast` is the loop while writing a change; `dev` is what passing means. On the shared server both go through the workspace's heavy-job wrapper. Each check also runs on its own from the root of the tree (`sh tools/check-c.sh ...`), against `out/dev` or the build `KEST_BUILD` names.
 
-## What `make check` holds
+## What the gate holds
 
-`tools/check.sh` builds the release, the sanitized build and the example hosts, then runs these, eight files at a time where a check sweeps many files, each in a scratch directory it removes:
+The test `gate` (`tools/check.sh`) runs the examples, threads, reload and room steps over the build; every other line is a test of its own, run through `tools/ask.sh`. A check that sweeps many files runs eight at a time, each in a scratch directory it removes:
 
 - **examples** under the release build, the sanitized build, `KEST_PLAIN` and `KEST_NOOPT`, each answering 0 with the same output; every library module checking; a project built and tested.
 - **formatting** (`check-fmt.sh`): every Kest file in the tree is in the one form; the formatter's output parses, means the same, is stable under a second pass, and leaves a file it cannot parse untouched.
@@ -28,7 +30,8 @@ What runs locally and in CI, what each part holds, and how to run one part on it
 - **guide** (`check_guide.py`): every Kest block in `docs/user` checks with nothing to say, every block followed by its output runs and prints exactly that, and every C host on those pages builds.
 - **threads**: four machines started at once and two machines of one build run on two threads under ThreadSanitizer.
 - **reload**: every kind of edit a reload must answer, driven through the held doors, ends with either the new program's world or the old one untouched.
-- **fuzzing**: a short seeded campaign and, where clang is present, the libFuzzer target.
+- **fuzzing** (`check-fuzz.sh`): a short seeded campaign over every boundary, and the source boundary folding to the same answers with the fusions and the optimizer turned off.
+- **conformance** (`conformance.sh`): every example's output and answer, byte for byte the same as `test/conformance.trace`, on every platform.
 - **room**: every check gave back the scratch it took, and the tree is unchanged by running the gate.
 
 Each check prints one summary line when it passes; anything else is a failure with what broke.
@@ -43,16 +46,10 @@ Each check prints one summary line when it passes; anything else is a failure wi
 | `zizmor` | audits every workflow |
 | `site` | builds the documentation site with `tools/build_site.py`, in the CI image |
 | `fuzz` | the libFuzzer target through `tools/fuzz_target.sh`: a minute on a pull request, from the committed programs only; ten minutes on `main` and at night, from the kept corpus, which is then minimized and saved from `main` |
-| `linux` | build, `make fast`, `make fuzz`, the conformance trace, and what the workload families cost |
-| `linux-arm64` | the same on arm64 hardware, plus the C backend over every example |
-| `macos` | build, `make fast`, the conformance trace, and the archive unpacked and used |
-| `windows` | MSVC build, the conformance trace, the zip unpacked and a host built against it |
-| `clang` | the build and `make fast` under clang |
-| `threads` | four machines of one build at once under ThreadSanitizer |
-| `package` | `make release`, the Linux archive unpacked and a host built against it |
-| `check` | `make check` |
-| `tetris`, `tetris-windows` | the raylib hosts built and played under Xvfb, and the colony run both ways; the Windows zip built |
-| `agree` | the four conformance traces are identical |
+| `build` | one cell per CMake preset through the organization's `cpp.yml`, warnings as errors, each running its test preset: `linux-gcc` every test but the C backend, the doors, fuzzing and WebAssembly, with ThreadSanitizer; `linux-clang` the fast tests, the C backend, the doors, fuzzing and WebAssembly; `linux-arm64` the fast tests, the regression programs and the C backend, where every processor fuses a multiply and an add; `macos-clang` the fast tests; `windows-msvc` the conformance trace |
+| `build-main` | on `main` and at night only: the seeded fuzzer under the checking build on arm64 (`linux-arm64-fuzz`), which takes ten minutes on that runner |
+| `package` | the release archive from the `release` preset on Linux, macOS and Windows, unpacked elsewhere, run, and a host built against it |
+| `games`, `tetris-windows` | the raylib hosts built with warnings as errors and played under Xvfb, the colony run both ways, and a warning planted in each host refused; the Windows zip built |
 | `required` | passes when every job above passed or was skipped by `changes`; the ruleset requires this and the pull request title check |
 
 Every workflow sets `permissions: {}` and grants each job what it needs, runs its steps in bash unless a step names another shell (`scorecard.yml` sets no default shell, which Scorecard's publishing rejects), checks out without keeping credentials, and pins every action by commit SHA; Dependabot moves the pins weekly.
@@ -69,4 +66,4 @@ Other workflows:
 
 ## Fuzzing
 
-`tools/fuzz.c` is deterministic from a seed: `tools/fuzz-debug <seed> <count> <file> <target>` replays exactly the same inputs on any machine, so a finding is a seed and a count. Targets: `source` (bytes and source assembled from language pieces), `handles`, `lends`, `refs`, `text`, `migrate` (a world carried between program versions) and `chunks` (compiled bytecode with one operand changed, handed to the verifier and run where it is accepted). `tools/fuzz-cover.c` is a libFuzzer target over the source boundary that keeps inputs reaching new code (`make tools/fuzz-cover`, then `tools/fuzz-cover corpus/ -max_total_time=60`). `tools/fuzz_target.sh` is how CI runs it: with a fresh seed it does not print, writing what it finds and its log under `out/`, and saying only which kind of finding it was and the sanitizer's report, never the input. `tools/oss-fuzz-build.sh` builds it the way OSS-Fuzz does. Every input runs with ceilings on compile memory, work, heap and fuel; a finding is anything other than a program or a diagnostic. A finding becomes a program in `test/regress` or `test/refused`.
+`tools/fuzz.c` is deterministic from a seed: `out/dev/tools/fuzz-debug <seed> <count> <file> <target>` replays exactly the same inputs on any machine, so a finding is a seed and a count. Targets: `source` (bytes and source assembled from language pieces), `handles`, `lends`, `refs`, `text`, `migrate` (a world carried between program versions) and `chunks` (compiled bytecode with one operand changed, handed to the verifier and run where it is accepted). `tools/fuzz-cover.c` is a libFuzzer target over the source boundary that keeps inputs reaching new code (the `fuzz-cover` target of the `linux-clang` preset, then `out/linux-clang/tools/fuzz-cover corpus/ -max_total_time=60`). `tools/fuzz_target.sh` is how CI runs it: with a fresh seed it does not print, writing what it finds and its log under `out/`, and saying only which kind of finding it was and the sanitizer's report, never the input. `tools/oss-fuzz-build.sh` builds it the way OSS-Fuzz does. Every input runs with ceilings on compile memory, work, heap and fuel; a finding is anything other than a program or a diagnostic. A finding becomes a program in `test/regress` or `test/refused`.

@@ -8,10 +8,12 @@
 # A link between two published pages points at the other page; a link to
 # anything else points at the repository.
 #
-# Requires ./kest (make) and the markdown package, which the CI image has.
+# Requires a build (cmake --build --preset dev) and the markdown package,
+# which the CI image has.
 #
 # Usage: python3 tools/build_site.py  (from the repository root)
 
+import os
 import pathlib
 import re
 import subprocess
@@ -22,6 +24,9 @@ import markdown
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "_site"
 DOCS = OUT / "docs"
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+BUILD_DIR = pathlib.Path(os.environ.get("KEST_BUILD", ROOT / "out" / "dev")).resolve()
 SITE = "https://rawframe-project.github.io/kest/"
 REPOSITORY = "https://github.com/Rawframe-Project/kest"
 SUMMARY = ("Kest is a small, fast, statically typed language for the gameplay "
@@ -38,7 +43,7 @@ def library_reference():
     if not modules:
         sys.exit("build_site: lib/std has no modules")
     for module in modules:
-        said = subprocess.run([str(ROOT / "kest"), "doc", str(module)],
+        said = subprocess.run([str(BUILD_DIR / "kest"), "doc", str(module)],
                               capture_output=True, text=True, cwd=ROOT)
         if said.returncode != 0 or not said.stdout.strip():
             sys.exit("build_site: kest doc %s failed:\n%s"

@@ -1,26 +1,10 @@
-build/
-*.d
-examples/embed
-examples/embed-debug
-examples/engine
-examples/engine-debug
-examples/least
-tools/inward
-tools/fuzz
-tools/fuzz-debug
-tools/fuzz-cover
-/kest
-/kest-debug
-/kest-before
-libkest.a
-*.o
-bench/*-cpp
-bench/measure
-bench/frame
-kest-settlement-day.txt
-.jitted_scripts/
-kest.wasm
-examples/tetris/host
-examples/colony/colony
-_site/
+# Every build, in the directory of its preset.
 out/
+# The documentation site tools/build_site.py writes.
+_site/
+# What examples/settlement.kest writes where it is run.
+kest-settlement-day.txt
+# What LuaJIT leaves where bench/run.sh runs it.
+.jitted_scripts/
+# The comparators bench/run.sh builds beside their sources.
+bench/*-cpp

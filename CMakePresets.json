@@ -1,0 +1,265 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/out/${presetName}",
+      "cacheVariables": {
+        "KEST_WERROR": "ON"
+      }
+    },
+    {
+      "name": "unix",
+      "hidden": true,
+      "inherits": "base",
+      "generator": "Ninja",
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "dev",
+      "displayName": "This machine's compiler: the release build, the checking build, the ThreadSanitizer objects and every host",
+      "inherits": "unix",
+      "cacheVariables": {
+        "KEST_RACES": "ON"
+      }
+    },
+    {
+      "name": "linux-gcc",
+      "displayName": "GCC 14, with the checking build and ThreadSanitizer objects",
+      "inherits": "unix",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc-14",
+        "KEST_RACES": "ON"
+      }
+    },
+    {
+      "name": "linux-clang",
+      "displayName": "Clang 20, with the checking build, the libFuzzer target and WebAssembly",
+      "inherits": "unix",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-20",
+        "KEST_FUZZ": "ON",
+        "KEST_WASM": "ON"
+      }
+    },
+    {
+      "name": "linux-arm64",
+      "displayName": "GCC 14 on arm64, where every processor fuses a multiply and an add",
+      "inherits": "unix",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc-14"
+      }
+    },
+    {
+      "name": "linux-arm64-fuzz",
+      "displayName": "The linux-arm64 build, for the seeded fuzzer on main and at night",
+      "inherits": "linux-arm64"
+    },
+    {
+      "name": "macos-clang",
+      "displayName": "Apple Clang, with the checking build",
+      "inherits": "unix",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "windows-msvc",
+      "displayName": "MSVC through Visual Studio",
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "A release archive: the release build with the sources and documentation installed",
+      "inherits": "base",
+      "cacheVariables": {
+        "KEST_CHECKED": "OFF",
+        "KEST_RELEASE": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "jobs": 8
+    },
+    {
+      "name": "linux-gcc",
+      "configurePreset": "linux-gcc"
+    },
+    {
+      "name": "linux-clang",
+      "configurePreset": "linux-clang"
+    },
+    {
+      "name": "linux-arm64",
+      "configurePreset": "linux-arm64"
+    },
+    {
+      "name": "linux-arm64-fuzz",
+      "configurePreset": "linux-arm64-fuzz"
+    },
+    {
+      "name": "macos-clang",
+      "configurePreset": "macos-clang"
+    },
+    {
+      "name": "windows-msvc",
+      "configurePreset": "windows-msvc",
+      "configuration": "Release"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "configuration": "Release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "timeout": 1200,
+        "jobs": 4
+      }
+    },
+    {
+      "name": "dev",
+      "inherits": "base",
+      "configurePreset": "dev"
+    },
+    {
+      "name": "dev-fast",
+      "inherits": "base",
+      "configurePreset": "dev",
+      "filter": {
+        "include": {
+          "label": "fast"
+        }
+      }
+    },
+    {
+      "name": "linux-gcc",
+      "inherits": "base",
+      "configurePreset": "linux-gcc",
+      "filter": {
+        "exclude": {
+          "name": "^(backend|doors|fuzzing|wasm)$"
+        }
+      }
+    },
+    {
+      "name": "linux-clang",
+      "inherits": "base",
+      "configurePreset": "linux-clang",
+      "filter": {
+        "include": {
+          "name": "^(conformance|fast|guide|regressions|backend|doors|fuzzing|wasm)$"
+        }
+      }
+    },
+    {
+      "name": "linux-arm64",
+      "inherits": "base",
+      "configurePreset": "linux-arm64",
+      "filter": {
+        "include": {
+          "name": "^(conformance|fast|regressions|backend)$"
+        }
+      }
+    },
+    {
+      "name": "linux-arm64-fuzz",
+      "inherits": "base",
+      "configurePreset": "linux-arm64-fuzz",
+      "filter": {
+        "include": {
+          "name": "^fuzzing$"
+        }
+      }
+    },
+    {
+      "name": "macos-clang",
+      "inherits": "base",
+      "configurePreset": "macos-clang",
+      "filter": {
+        "include": {
+          "label": "fast"
+        }
+      }
+    },
+    {
+      "name": "windows-msvc",
+      "inherits": "base",
+      "configurePreset": "windows-msvc",
+      "configuration": "Release"
+    }
+  ],
+  "packagePresets": [
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "configurations": [
+        "Release"
+      ]
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "dev",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "dev"
+        },
+        {
+          "type": "build",
+          "name": "dev"
+        },
+        {
+          "type": "test",
+          "name": "dev"
+        }
+      ]
+    },
+    {
+      "name": "dev-fast",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "dev"
+        },
+        {
+          "type": "build",
+          "name": "dev"
+        },
+        {
+          "type": "test",
+          "name": "dev-fast"
+        }
+      ]
+    }
+  ]
+}

@@ -6,6 +6,11 @@
 # for the cost D1255 measured; what is held here is that it is the same
 # language there. See D1255.
 set -u
+
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+case $build_dir in /*) ;; *) build_dir=$(pwd)/$build_dir ;; esac
 scratch=$(mktemp -d)
 # And a day `examples/settlement.kest` left at the root of the machine, which a
 # build that forgets where it was run writes as whoever may write there: this
@@ -16,7 +21,7 @@ trap 'rm -rf "$scratch"; [ "$at_the_root" = false ] && rm -f /kest-settlement-da
 cd "$(dirname "$0")/.." || exit 1
 here=$(pwd)
 
-if [ ! -x ./kest ]; then
+if [ ! -x $build_dir/kest ]; then
     echo "wasm: the compiler is not built"
     exit 1
 fi
@@ -74,7 +79,7 @@ rm -f kest-settlement-day.txt
 mkdir -p "$scratch"/runs
 for program in examples/*.kest; do
     grep -q '^fn main(' "$program" || continue
-    native=$(cd "$scratch"/runs && KEST_LIB="$here"/lib/ "$here"/kest run \
+    native=$(cd "$scratch"/runs && KEST_LIB="$here"/lib/ $build_dir/kest run \
                  "$here/$program" 2>/dev/null </dev/null; echo "status $?")
     inside=$(cd "$scratch"/runs && KEST_LIB="$here"/lib/ node \
                  "$here"/tools/wasi-run.mjs "$scratch"/kest.wasm run \
@@ -99,7 +104,7 @@ paged=0
 for program in examples/*.kest; do
     grep -q '^fn main(' "$program" || continue
     grep -q '^import examples\.' "$program" && continue
-    native=$(cd "$scratch"/runs && KEST_LIB="$here"/lib/ "$here"/kest run \
+    native=$(cd "$scratch"/runs && KEST_LIB="$here"/lib/ $build_dir/kest run \
                  "$here/$program" 2>/dev/null </dev/null; echo "status $?")
     page=$(node tools/page-run.mjs "$scratch"/kest.wasm "$program" \
                2>/dev/null </dev/null; echo "status $?")

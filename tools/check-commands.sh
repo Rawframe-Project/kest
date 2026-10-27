@@ -7,12 +7,17 @@
 # prints nothing no longer looks the same as one that works.
 set -u
 
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+case $build_dir in /*) ;; *) build_dir=$(pwd)/$build_dir ;; esac
+
 # A scratch of this run's own. Two of these run at once when the backstops put
 # one out of order while another is being asked, and fixed names in `/tmp` are
 # two runs writing to one file.
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
-kest=./kest
+kest=$build_dir/kest
 failed=0
 
 # What this was given. A check that reads the files it is handed passes when it
@@ -1556,8 +1561,8 @@ fi
 # Where the library is, which is not where the program is. `std` resolves from
 # a path built out of the name the command line was run under — beside the
 # binary in a tree, beside its directory once installed — and every check here
-# runs `./kest` from the root of the tree, where that path and the working
-# directory are the same thing. This runs it from somewhere else by its whole
+# runs the build's `kest` from the root of the tree, where the `lib` beside the
+# binary and the one in the working directory are the same thing. This runs it from somewhere else by its whole
 # name, which is how anybody who has installed it runs it.
 here=$(pwd)
 elsewhere="$scratch"/check-elsewhere
@@ -1572,7 +1577,7 @@ fn main() -> i32 {
     return 0
 }
 KEST
-if ! found=$(cd "$elsewhere" && "$here/$kest" run asking.kest 2>&1 </dev/null)
+if ! found=$(cd "$elsewhere" && "$kest" run asking.kest 2>&1 </dev/null)
 then
     complain "run: the library is not where a program run from elsewhere looks"
     printf '%s\n' "$found" | sed 's/^/    /' | head -4
@@ -1582,7 +1587,7 @@ fi
 # the rest: a library named and not there is a message about the library rather
 # than about the program that imported from it.
 if told=$(cd "$elsewhere" && KEST_LIB="$elsewhere/none" \
-          "$here/$kest" run asking.kest 2>&1 </dev/null); then
+          "$kest" run asking.kest 2>&1 </dev/null); then
     complain "run: a library that is not where it was said to be was read"
     printf '%s\n' "$told" | sed 's/^/    /' | head -3
 else
@@ -1596,12 +1601,11 @@ else
 fi
 
 # And the third place a library can be, which is where it was put when this was
-# installed: `../lib/kest/` beside the binary's own directory. Nothing had ever
-# installed anything, so what held `make install` was a check reading the
-# `Makefile` — the lines being there rather than the files arriving. This puts
-# them somewhere of its own, runs what it put there, and takes it away again.
+# installed: `../lib/kest/` beside the binary's own directory. This installs
+# the build somewhere of its own, runs what it put there, and takes away
+# everything the install says it put.
 put="$scratch"/check-put
-if ! made=$(make -C "$here" install DESTDIR="$put" PREFIX=/usr/local 2>&1); then
+if ! made=$(cmake --install $build_dir --prefix "$put/usr/local" 2>&1); then
     complain "install: this does not install"
     printf '%s\n' "$made" | sed 's/^/    /' | head -3
 elif ! ran=$(cd "$elsewhere" &&
@@ -1653,7 +1657,12 @@ what its program answers"
         ;;
     esac
     rm -rf "$release_room" "$release_bare" "$elsewhere/asking"
-    gone=$(make -C "$here" uninstall DESTDIR="$put" PREFIX=/usr/local 2>&1)
+    # The manifest ends its last line without a newline, so a `read` that
+    # stopped at the end of the file would leave that file behind.
+    gone=$(while IFS= read -r one || [ -n "$one" ]; do
+               rm -f "$one" || echo "$one stayed"
+           done <$build_dir/install_manifest.txt
+           find "$put" -depth -type d -empty -delete 2>&1)
     left=$(find "$put" -type f 2>/dev/null | wc -l)
     if [ "$left" -ne 0 ]; then
         complain "install: what was installed is still there after removing it"
@@ -1670,7 +1679,7 @@ rm -rf "$put"
 # function, and the one that answers says which was read.
 places="$scratch"/check-places
 mkdir -p "$places/bin" "$places/lib/kest" "$places/other"
-cp "$here/$kest" "$places/bin/kest"
+cp "$kest" "$places/bin/kest"
 cp -r "$here"/lib "$places/bin/lib"
 cp -r "$here"/lib/std "$places/lib/kest/std"
 cp -r "$here"/lib/std "$places/other/std"
@@ -3758,7 +3767,7 @@ fi
 # those has to match where the value is handed over. Nothing in this tree ever
 # hands one of the wrong shape — a program that did would not compile, and
 # every program here compiles — so loosening any of the three refused nothing
-# and `make check` stayed green. These are written here because the tree cannot
+# and the gate stayed green. These are written here because the tree cannot
 # hold them. See D412.
 mkdir "$scratch"/shapes
 for shape in "fn other(word: text, also: text) -> bool no.alloc|takes two" \
@@ -5564,7 +5573,7 @@ esac
 mkdir -p "$scratch"/projects
 here=$(pwd)
 wrong=""
-(cd "$scratch"/projects && "$here/$kest" new demo) >"$scratch"/projects/made 2>&1 ||
+(cd "$scratch"/projects && "$kest" new demo) >"$scratch"/projects/made 2>&1 ||
     wrong="a project could not be made"
 if [ -z "$wrong" ] && [ ! -f "$scratch"/projects/demo/kest.project ]; then
     wrong="a project was made with no manifest in it"
@@ -5573,7 +5582,7 @@ if [ -z "$wrong" ] && [ ! -f "$scratch"/projects/demo/src/main.kest ]; then
     wrong="a project was made with no program in it"
 fi
 if [ -z "$wrong" ]; then
-    case "$(cd "$scratch"/projects/demo && "$here/$kest" doctor 2>&1)" in
+    case "$(cd "$scratch"/projects/demo && "$kest" doctor 2>&1)" in
     *"nothing here is wrong"*) ;;
     *) wrong="a project this command line just made is wrong" ;;
     esac
@@ -5581,7 +5590,7 @@ fi
 if [ -z "$wrong" ]; then
     # `build` with no file at all, which is what being inside a project means,
     # and nothing said, which is what a build that worked says.
-    if ! (cd "$scratch"/projects/demo && "$here/$kest" build) \
+    if ! (cd "$scratch"/projects/demo && "$kest" build) \
             >"$scratch"/projects/built 2>&1; then
         wrong="a project this command line just made will not build"
     elif [ -s "$scratch"/projects/built ]; then
@@ -5590,7 +5599,7 @@ if [ -z "$wrong" ]; then
 fi
 if [ -z "$wrong" ]; then
     case "$(cd "$scratch"/projects/demo &&
-            "$here/$kest" test tests/adding.kest 2>&1)" in
+            "$kest" test tests/adding.kest 2>&1)" in
     *"1 of 1 passed"*) ;;
     *) wrong="a test this command line just wrote does not pass" ;;
     esac
@@ -5599,7 +5608,7 @@ if [ -z "$wrong" ]; then
     # And without naming one, which is what the manifest's `tests` line says:
     # a project is a thing to be inside. The line was read and nothing asked
     # for it until D1082, so this ran nothing and said so as a pass.
-    case "$(cd "$scratch"/projects/demo && "$here/$kest" test 2>&1)" in
+    case "$(cd "$scratch"/projects/demo && "$kest" test 2>&1)" in
     *"tests/adding.kest"*"1 of 1 passed"*) ;;
     *) wrong="a project's own tests do not run when none is named" ;;
     esac
@@ -5609,7 +5618,7 @@ if [ -z "$wrong" ]; then
     # a project saying something that is not so.
     mv "$scratch"/projects/demo/tests/adding.kest \
         "$scratch"/projects/demo/adding.kest.kept
-    said_it=$(cd "$scratch"/projects/demo && "$here/$kest" test 2>&1) &&
+    said_it=$(cd "$scratch"/projects/demo && "$kest" test 2>&1) &&
         said_it="$said_it and came back nought"
     case "$said_it" in
     *"K0649"*"no program there"*) ;;
@@ -5623,7 +5632,7 @@ if [ -z "$wrong" ]; then
     printf 'fn main() -> i32 {\n    return 7\n}\n' \
         > "$scratch"/projects/demo/tests/failing.kest
     said_it=$(cd "$scratch"/projects/demo &&
-        "$here/$kest" test tests/failing.kest 2>&1) &&
+        "$kest" test tests/failing.kest 2>&1) &&
         said_it="$said_it and came back nought"
     case "$said_it" in
     *FAILED*"answered 7"*) ;;
@@ -5635,13 +5644,13 @@ if [ -z "$wrong" ]; then
     # read past: a misspelt line reads exactly like one that is not there.
     printf 'project one\nentyr src/main.kest\n' \
         > "$scratch"/projects/kest.project
-    case "$(cd "$scratch"/projects && "$here/$kest" doctor 2>&1)" in
+    case "$(cd "$scratch"/projects && "$kest" doctor 2>&1)" in
     *"says something this does not know"*) ;;
     *) wrong="a project with a line nothing knows is read anyway" ;;
     esac
     # And the same asked for as JSON, which looked for a project in a
     # directory called `--json` and said nothing was wrong. See D1252.
-    case "$(cd "$scratch"/projects && "$here/$kest" doctor --json 2>&1)" in
+    case "$(cd "$scratch"/projects && "$kest" doctor --json 2>&1)" in
     *'"projectSaid":"a project says something this does not know","wrong":true'*) ;;
     *) wrong="\`kest doctor --json\` read past a project it could not read" ;;
     esac
@@ -5654,13 +5663,13 @@ if [ -z "$wrong" ]; then
     # `kest new` writes the line. See D1252.
     printf 'project one\nentry src/main.kest\nedition 2099\n' \
         > "$scratch"/projects/kest.project
-    case "$(cd "$scratch"/projects && "$here/$kest" doctor 2>&1)" in
+    case "$(cd "$scratch"/projects && "$kest" doctor 2>&1)" in
     *"says an edition this does not know"*) ;;
     *) wrong="a project written in an edition nobody has was read anyway" ;;
     esac
     printf 'project one\nentry src/main.kest\n' \
         > "$scratch"/projects/kest.project
-    case "$(cd "$scratch"/projects && "$here/$kest" doctor --json 2>&1)" in
+    case "$(cd "$scratch"/projects && "$kest" doctor --json 2>&1)" in
     *'"edition":"2026"'*) ;;
     *) wrong="a project that names no edition is not read as the first" ;;
     esac
@@ -6545,7 +6554,7 @@ esac
 # variable nobody sets. One question, asked one way. See D827.
 plain_counted=$(KEST_DEEP=1 "$kest" run "$scratch"/marking/real.kest 2>&1 \
                 </dev/null | grep -c '^deep \|^run ' || true)
-checked_counted=$(KEST_DEEP=1 ./kest-debug run "$scratch"/marking/real.kest \
+checked_counted=$(KEST_DEEP=1 $build_dir/kest-debug run "$scratch"/marking/real.kest \
                   2>&1 </dev/null | grep -c '^deep \|^run ' || true)
 # One complaint for both ways round, because a reading in the wrong build and
 # a reading in no build are the same thing to be told: the two builds are not
@@ -6556,7 +6565,7 @@ checked_counted=$(KEST_DEEP=1 ./kest-debug run "$scratch"/marking/real.kest \
 # library that says one thing and does the other is a host told to run what only
 # a checked build catches by a build that catches nothing. See D828.
 plain_says=$("$kest" --version 2>&1 </dev/null | grep -c checked || true)
-checked_says=$(./kest-debug --version 2>&1 </dev/null | grep -c checked || true)
+checked_says=$($build_dir/kest-debug --version 2>&1 </dev/null | grep -c checked || true)
 if [ "$plain_counted" != 0 ] || [ "$checked_counted" = 0 ] ||
    [ "$plain_says" != 0 ] || [ "$checked_says" = 0 ]; then
     complain "run: the build that checks itself counted $checked_counted \

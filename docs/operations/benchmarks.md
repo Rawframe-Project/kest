@@ -6,7 +6,7 @@ How to take the numbers in `bench/` again, what each script measures, and when t
 
 `bench/*.tsv` are the results and `bench/chart-*.svg` the charts drawn from them. Each row carries the date, the commit, the machine and how busy it was, so a number can be compared. They are regenerated when a release changes them, not on every change, and a pull request that regenerates them says so. [Performance](../internals/performance.md) reads them.
 
-Nothing under `bench/` is part of `make check`: a duration is not a pass or a fail. The gate runs `bench/families.sh` at its smallest scale only to hold that the instruments still run and fill every row.
+Nothing under `bench/` is part of the gate: a duration is not a pass or a fail. The gate runs `bench/families.sh` at its smallest scale only to hold that the instruments still run and fill every row.
 
 ## The scripts
 
@@ -39,9 +39,9 @@ Comparators are found, not built: a row whose engine is not given is left out.
 
 ## The instruments
 
-- `make bench/measure` builds the host with a monotonic clock that keeps every sample and reports the middle, the tails, the worst and the spread. Read it when a number moved; `run.sh` cannot say where a millisecond went.
-- `make bench/frame` builds the boundary host: one crossing a frame, one a body, and the same arithmetic in C, all answering one checksum, run once by the machine and once by the generated C.
-- `make time` prints the frame step, the crossing, a reference read and the inward crossing (`tools/frame.kest`, `tools/crossing.kest`, `tools/reference.kest`, `tools/inward.c`), each with the spread beside it.
+- `bench/measure`, in every build, is the host with a monotonic clock that keeps every sample and reports the middle, the tails, the worst and the spread. Read it when a number moved; `run.sh` cannot say where a millisecond went.
+- `bench/frame`, in every build, is the boundary host: one crossing a frame, one a body, and the same arithmetic in C, all answering one checksum, run once by the machine and once by the generated C.
+- `cmake --build --preset dev --target time` prints the frame step, the crossing, a reference read and the inward crossing (`tools/frame.kest`, `tools/crossing.kest`, `tools/reference.kest`, `tools/inward.c`), each with the spread beside it.
 - `KEST_DEEP=1` under `kest-debug` counts every instruction; an instruction count is the same on any machine and is the number to compare across commits.
 
 ## Taking them

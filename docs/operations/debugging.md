@@ -4,13 +4,13 @@ Finding what went wrong in the compiler, the machine or a host.
 
 ## The checking build
 
-`make kest-debug` builds the command line with the library's own checks (`KEST_CHECKED`) under AddressSanitizer and UndefinedBehaviorSanitizer. It is told where every host allocation ends, poisons arena blocks around each allocation, and holds every allocation to arriving as zeros, so a read one past the end is a report rather than whatever was next. Run the failing program under it first:
+`kest-debug`, in every build but MSVC's, is the command line with the library's own checks (`KEST_CHECKED`) under AddressSanitizer and UndefinedBehaviorSanitizer. It is told where every host allocation ends, poisons arena blocks around each allocation, and holds every allocation to arriving as zeros, so a read one past the end is a report rather than whatever was next. Run the failing program under it first:
 
 ```sh
-./kest-debug run program.kest
+out/dev/kest-debug run program.kest
 ```
 
-`make embed-debug` and `make engine-debug` are the example hosts built the same way, which is where the public boundary is crossed in both directions. `tools/fuzz-debug` is the fuzzer under the same build.
+`examples/embed-debug` and `examples/engine-debug` are the example hosts built the same way, which is where the public boundary is crossed in both directions. `tools/fuzz-debug` is the fuzzer under the same build.
 
 ## Switches
 
@@ -42,8 +42,8 @@ A program that answers differently with `KEST_PLAIN` or `KEST_NOOPT` set is a mi
 
 ## Fuzz findings
 
-A finding is a seed, a count and a target. `tools/fuzz-debug <seed> <count> <file> <target>` replays exactly the same inputs on any machine, under the checking build, writing each input to `<file>` before it is handed over, so after a crash `<file>` holds the input that broke; reduce it by hand to the smallest program that still shows the defect, and add that program to `test/regress` (it answers 0 once fixed) or `test/refused` (its first line names the code it is refused with). See [Checks](checks.md#fuzzing) for the targets.
+A finding is a seed, a count and a target. `out/dev/tools/fuzz-debug <seed> <count> <file> <target>` replays exactly the same inputs on any machine, under the checking build, writing each input to `<file>` before it is handed over, so after a crash `<file>` holds the input that broke; reduce it by hand to the smallest program that still shows the defect, and add that program to `test/regress` (it answers 0 once fixed) or `test/refused` (its first line names the code it is refused with). See [Checks](checks.md#fuzzing) for the targets.
 
 ## Threads
 
-`make races` builds the objects for ThreadSanitizer, and `make check` runs four machines of one build on four threads under it. A machine belongs to one thread at a time; a race report almost always means two threads touched one machine or one build was freed under its machines.
+`KEST_RACES=ON` (the `linux-gcc` preset) builds the objects for ThreadSanitizer, and the gate runs four machines of one build on four threads under it. A machine belongs to one thread at a time; a race report almost always means two threads touched one machine or one build was freed under its machines.

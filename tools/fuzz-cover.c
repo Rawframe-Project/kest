@@ -6,9 +6,10 @@
 // machine, which is where source nobody trusts goes on somebody else's
 // machine. See D1253.
 //
-// Built with clang's libFuzzer and the sanitisers (`make tools/fuzz-cover`),
-// and run as `tools/fuzz-cover corpus/ -max_total_time=...`: what a finding is
-// is the input it writes, which is a file a reader runs `kest` on.
+// Built with clang's libFuzzer and the sanitisers (the `fuzz-cover` target of
+// the `linux-clang` preset), and run as `out/linux-clang/tools/fuzz-cover
+// corpus/ -max_total_time=...`: what a finding is is the input it writes,
+// which is a file a reader runs `kest` on.
 //
 // Every input is compiled with a ceiling on its bytes and its work and run with
 // a ceiling on its heap and its fuel, which is what a host compiling what it

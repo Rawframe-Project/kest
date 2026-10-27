@@ -23,7 +23,7 @@
  * instrument the gate runs everywhere and holds itself to ISO C. This is a
  * bench tool, run by whoever is optimizing, and it says which clock it read.
  *
- * It is not part of `make check`. A duration is not a pass or a fail. */
+ * It is not part of the gate. A duration is not a pass or a fail. */
 
 /* A monotonic clock is not in ISO C, so this one file asks for the POSIX one
    by name, before anything is included. `include/kest.h` is held to the
@@ -69,7 +69,7 @@ static long long in_nanoseconds(void) {
 }
 #else
 static long long in_nanoseconds(void) {
-    return (long long)clock() * (1000000000LL / CLOCKS_PER_SEC);
+    return (long long)clock() * (1000000000LL / (long long)CLOCKS_PER_SEC);
 }
 #endif
 

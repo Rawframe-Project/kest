@@ -1,6 +1,8 @@
 # Continuous integration: the pull request check, and the full check on main
-# and every night, which fuzzes longer. docs/operations/checks.md explains each
-# job; `required` is the one check the ruleset asks for.
+# and every night, which fuzzes longer. Each build cell is a CMake preset built
+# and tested by the organization's shared workflow, which runs the preset's
+# ctest tests; the other jobs are what no preset holds. docs/operations/checks.md
+# explains each job; `required` is the one check the ruleset asks for.
 name: ci
 
 on:
@@ -34,14 +36,14 @@ jobs:
   # docs/user is not documentation only here: tools/check_guide.py runs every
   # program on those pages.
   changes:
-    uses: Rawframe-Project/.github/.github/workflows/changes.yml@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
+    uses: Rawframe-Project/.github/.github/workflows/changes.yml@bf59dbcd696369b51a9831145fb3b60f3bc71280 # v0.0.26
     permissions:
       pull-requests: read
     with:
       docs: '^(docs/(internals|operations)/|docs/README\.md$|\.github/ISSUE_TEMPLATE/)|^[A-Z]+\.md$'
 
   zizmor:
-    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
+    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@bf59dbcd696369b51a9831145fb3b60f3bc71280 # v0.0.26
     permissions:
       contents: read
 
@@ -62,8 +64,9 @@ jobs:
           persist-credentials: false
       - name: The site
         run: |
-          make -j kest
-          python3 tools/build_site.py
+          cmake --preset linux-clang -DKEST_CHECKED=OFF -DKEST_FUZZ=OFF -DKEST_WASM=OFF
+          cmake --build --preset linux-clang --target kest
+          KEST_BUILD=out/linux-clang python3 tools/build_site.py
 
   # The libFuzzer target over the source boundary, through the family's
   # tools/fuzz_target.sh, which prints neither the seed nor a finding's input.
@@ -88,7 +91,9 @@ jobs:
         with:
           persist-credentials: false
       - name: The target
-        run: make -j tools/fuzz-cover
+        run: |
+          cmake --preset linux-clang
+          cmake --build --preset linux-clang --target fuzz-cover
       - if: github.event_name != 'pull_request'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -105,7 +110,7 @@ jobs:
           # sanitizer's report, never the input, are in its report file.
           rm -rf out/fuzz-reports
           status=0
-          tools/fuzz_target.sh tools/fuzz-cover out/fuzz-corpus/fuzz-cover \
+          tools/fuzz_target.sh out/linux-clang/tools/fuzz-cover out/fuzz-corpus/fuzz-cover \
             out/fuzz-seeds -max_total_time="$SECONDS_EACH" -rss_limit_mb=4096 \
             -timeout=25 || status=$?
           cat out/fuzz-reports/*.txt 2>/dev/null || true
@@ -114,7 +119,7 @@ jobs:
         name: Minimize the corpus
         run: |
           mkdir -p out/fuzz-corpus/merged
-          tools/fuzz-cover -merge=1 out/fuzz-corpus/merged \
+          out/linux-clang/tools/fuzz-cover -merge=1 out/fuzz-corpus/merged \
             out/fuzz-corpus/fuzz-cover >out/fuzz-merge.log 2>&1
           rm -rf out/fuzz-corpus/fuzz-cover
           mv out/fuzz-corpus/merged out/fuzz-corpus/fuzz-cover
@@ -125,289 +130,86 @@ jobs:
           path: out/fuzz-corpus
           key: fuzz-corpus-${{ github.run_id }}
 
-  linux:
+  # Every cell builds with warnings as errors and runs its test preset: the
+  # Linux GCC cell the whole gate but what the Linux Clang cell runs, which is
+  # the C backend, the doors, WebAssembly and the fuzzers; arm64 the C backend,
+  # where every processor fuses a multiply and an add; every Unix cell the fast
+  # tests; and every cell the conformance trace every platform has to print
+  # byte for byte.
+  build:
     needs: changes
     if: needs.changes.outputs.code == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { preset: linux-gcc }
+          - { preset: linux-clang }
+          - { preset: linux-arm64, runner: ubuntu-24.04-arm }
+          - { preset: macos-clang, runner: macos-15 }
+          - { preset: windows-msvc, runner: windows-2025 }
+    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@bf59dbcd696369b51a9831145fb3b60f3bc71280 # v0.0.26
     permissions:
       contents: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-      - name: build
-        run: make -j
-      - name: fast
-        run: make fast
-      - name: bytes it was not written for
-        run: make fuzz
-      - name: conformance trace
-        run: sh tools/conformance.sh ./kest linux-x86-64.trace
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: trace-linux-x86-64
-          path: linux-x86-64.trace
-      # The same instrument at the same settings as the arm64 runner below.
-      # What is worth comparing between two machines is not a duration -- a
-      # hosted runner is somebody else's machine and says so -- but which of
-      # the four families moved and by how much against the others on the same
-      # box.
-      - name: what the four families cost here
-        run: |
-          make bench/measure bench/frame
-          SAMPLES=10 ROUNDS=20000 sh bench/families.sh \
-            | tee linux-x86-64.families
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: families-linux-x86-64
-          path: linux-x86-64.families
+    with:
+      preset: ${{ matrix.preset }}
+      runner: ${{ matrix.runner || 'ubuntu-24.04' }}
 
-  # ARM, on hardware rather than under emulation. C11 and no JIT is a
-  # deployment claim and not a performance one, and the only thing that settles
-  # what this language costs on another instruction set is running it there.
-  # What this job is for is both halves: that a trace taken here is the same
-  # bytes as the one taken on x86-64 -- which the `agree` job holds -- and what
-  # the four families cost, which nothing here can be argued into.
-  linux-arm64:
+  # The seeded fuzzer under the checking build on arm64, on main and at night
+  # rather than on a pull request: it takes ten minutes on that runner, and the
+  # same inputs run on every pull request in the Linux Clang cell.
+  build-main:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: github.event_name != 'pull_request' && needs.changes.outputs.code == 'true'
+    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@bf59dbcd696369b51a9831145fb3b60f3bc71280 # v0.0.26
     permissions:
       contents: read
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-      - name: build
-        run: make -j
-      - name: fast
-        run: make fast
-      - name: bytes it was not written for
-        run: make fuzz
-      # The C the other backend writes, held to the machine here too: every
-      # arm64 has FMA and GCC fuses a multiply and an add by default, which
-      # is the build the generated file has to keep two roundings in, and
-      # the gate on x86-64 can only ask for with `-mfma`. See D1230.
-      - name: the C the other backend writes
-        run: sh tools/check-c.sh examples/*.kest
-      - name: conformance trace
-        run: sh tools/conformance.sh ./kest linux-arm64.trace
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: trace-linux-arm64
-          path: linux-arm64.trace
-      - name: what the four families cost here
-        run: |
-          make bench/measure bench/frame
-          SAMPLES=10 ROUNDS=20000 sh bench/families.sh \
-            | tee linux-arm64.families
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: families-linux-arm64
-          path: linux-arm64.families
+    with:
+      preset: linux-arm64-fuzz
+      runner: ubuntu-24.04-arm
+      timeout: 30
 
-  macos:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    permissions:
-      contents: read
-    runs-on: macos-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-      - name: build
-        run: make -j
-      - name: fast
-        run: make fast
-      - name: conformance trace
-        run: sh tools/conformance.sh ./kest macos-arm64.trace
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: trace-macos-arm64
-          path: macos-arm64.trace
-      # The same three questions the other two platforms' archives are asked:
-      # the binary says what it is, a program it has never seen runs through
-      # it, and a host compiles against the header and the library in it.
-      # `shasum -a 256` rather than `sha256sum`, which macOS has not got; the
-      # Makefile asks which is there. See D1020.
-      - name: an archive, unpacked and run
-        run: |
-          make release
-          cd build
-          shasum -a 256 -c kest-*.tar.gz.sha256
-          mkdir out && tar xzf kest-*.tar.gz -C out
-          cd out/kest-*
-          export KEST_LIB=lib/kest/
-          ./bin/kest --version
-          ./bin/kest run "$GITHUB_WORKSPACE/examples/math.kest"
-          printf '%s\n' '#include "kest.h"' '#include <stdio.h>' \
-              'int main(void) {' \
-              '    if (kest_abi_version() != KEST_ABI_VERSION) { return 1; }' \
-              '    printf("a host built against the archive says %s, abi %u\\n",' \
-              '           kest_version(), kest_abi_version());' \
-              '    return 0;' \
-              '}' > host.c
-          cc -std=c11 -Wall -Wextra -Werror -Iinclude -o host host.c \
-              lib/libkest.a -lm
-          ./host
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: release-macos-arm64
-          path: build/kest-*.tar.gz*
-
-  # The same tree through a different compiler. Everything else on Linux is
-  # gcc, and a warning one compiler makes and the other does not is a thing
-  # this tree is held to having none of: `-Werror` is on in every build here,
-  # so a clang that sees something gcc does not stops this job. Focused rather
-  # than a second copy of the gate -- the build and `make fast` are where a
-  # compiler disagreement shows, and the rest of the gate is the same source
-  # running the same way. See D1020.
-  clang:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-      - name: build and fast, under clang
-        run: |
-          clang --version
-          make -j CC=clang
-          make fast CC=clang
-
-  threads:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-      - name: four machines of one build, under the thread sanitiser
-        run: |
-          make -j kest libkest.a
-          cat > /tmp/two.kest <<'KEST'
-          module two
-
-          fn work(n: i32) -> i32 no.alloc no.host deterministic {
-              let sum = 0
-              for i in 0..n {
-                  sum += i % 7
-              }
-              return sum
-          }
-          KEST
-          cat > /tmp/two.c <<'EOF'
-          // Four machines of one build, each on a thread of its own. They are
-          // started here rather than in the workers: starting writes the
-          // build's own stamp counter, so which thread starts a machine is the
-          // host's to decide and it is this one. What runs at once is the
-          // running. See D988.
-          //
-          // Through pthreads rather than C11's own, which is what the gate's
-          // threads check uses: the thread sanitiser does not see through
-          // `thrd_create` and dies in its own interceptor before anything of
-          // this language has run. The threads are the harness and not the
-          // language, so which of the two makes them is the harness's to pick.
-          #include <stdio.h>
-          #include <pthread.h>
-          #include "kest.h"
-          static void *turning(void *given) {
-              KestRuntime *rt = given;
-              KestValue frame[4] = {{0}};
-              frame[0].integer = 200000;
-              int32_t at = kest_entry(rt, "work");
-              if (at < 0 || !kest_call(rt, at, frame, 4)) {
-                  return (void *)1;
-              }
-              return frame[0].integer == 599994 ? NULL : (void *)1;
-          }
-          int main(void) {
-              KestBuild *build = kest_build("/tmp/two.kest", NULL, stderr,
-                                            KEST_FORM_TEXT, 0);
-              if (build == NULL) { return 1; }
-              KestRuntime *four[4];
-              pthread_t running[4];
-              for (int i = 0; i < 4; i++) {
-                  four[i] = kest_start(build, NULL, NULL);
-                  if (four[i] == NULL) {
-                      kest_build_report(build, stderr, KEST_FORM_TEXT);
-                      return 1;
-                  }
-              }
-              for (int i = 0; i < 4; i++) {
-                  if (pthread_create(&running[i], NULL, turning,
-                                     four[i]) != 0) {
-                      return 1;
-                  }
-              }
-              int wrong = 0;
-              for (int i = 0; i < 4; i++) {
-                  void *said = NULL;
-                  pthread_join(running[i], &said);
-                  wrong += said != NULL ? 1 : 0;
-              }
-              for (int i = 0; i < 4; i++) {
-                  kest_runtime_free(four[i]);
-              }
-              kest_build_free(build);
-              if (wrong != 0) {
-                  fprintf(stderr, "%d of four did not answer\n", wrong);
-                  return 1;
-              }
-              printf("four machines of one build ran at once and agreed\n");
-              return 0;
-          }
-          EOF
-          cc -std=c11 -O1 -g -fsanitize=thread -Iinclude -o /tmp/two /tmp/two.c \
-              $(ls src/*.c | grep -v main.c) -lm
-          /tmp/two
-
+  # The release archive on every platform, unpacked into a room of its own and
+  # used the way somebody who downloaded it would: the binary asked what it
+  # is, a program it has never seen run through it with nothing in the
+  # environment, and a host compiled against the header and the library in it.
   package:
     needs: changes
     if: needs.changes.outputs.code == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, macos-15, windows-2025]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
     permissions:
       contents: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - name: an archive, unpacked and run
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        if: runner.os == 'Windows'
+      - name: The archive
         run: |
-          make -j
-          make release
-          cd build
-          sha256sum -c kest-*.tar.gz.sha256
-          mkdir out && tar xzf kest-*.tar.gz -C out
-          cd out/kest-*
-          export KEST_LIB=lib/kest/
-          ./bin/kest --version
-          ./bin/kest run "$GITHUB_WORKSPACE/examples/math.kest"
-          # And the way somebody who unpacked it actually runs it: `bin` on
-          # the path, nothing installed, nothing in the environment, and
-          # standing somewhere that is not the archive. That is what the
-          # README says is all it takes, and it was not true until D1128.
+          cmake --preset release
+          cmake --build --preset release
+          # CMake's own cpack: Windows runners have a Chocolatey one first on the path.
+          "$(dirname "$(command -v cmake)")/cpack" --preset release
+      - name: Unpacked and used
+        run: |
+          mkdir -p "$RUNNER_TEMP/unpacked" "$RUNNER_TEMP/elsewhere"
+          cd "$RUNNER_TEMP/unpacked"
+          if [ "$RUNNER_OS" = Windows ]; then
+            unzip -q "$GITHUB_WORKSPACE"/out/release/package/kest-*.zip
+          else
+            tar xzf "$GITHUB_WORKSPACE"/out/release/package/kest-*.tar.gz
+          fi
+          cd kest-*
           unpacked=$PWD
-          (
-            cd "$RUNNER_TEMP"
-            PATH="$unpacked/bin:$PATH" KEST_LIB= \
-              kest run "$GITHUB_WORKSPACE/examples/math.kest"
-          )
-          # And a host built against the header and the library that are in
-          # the archive, which is the question an archive is for. See D1000.
+          cat VERSION
+          (cd "$RUNNER_TEMP/elsewhere" &&
+            PATH="$unpacked/bin:$PATH" kest run "$GITHUB_WORKSPACE/examples/math.kest")
           printf '%s\n' '#include "kest.h"' '#include <stdio.h>' \
               'int main(void) {' \
               '    if (kest_abi_version() != KEST_ABI_VERSION) { return 1; }' \
@@ -415,48 +217,25 @@ jobs:
               '           kest_version(), kest_abi_version());' \
               '    return 0;' \
               '}' > host.c
-          cc -std=c11 -Wall -Wextra -Werror -Iinclude -o host host.c \
-              lib/libkest.a -lm
-          ./host
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: release-linux-x86-64
-          path: build/kest-*.tar.gz*
+          if [ "$RUNNER_OS" = Windows ]; then
+            # Dashes rather than slashes: Git Bash reads a slash as a path.
+            cl -nologo -std:c11 -Iinclude host.c lib/kest.lib -Fe:host.exe
+            ./host.exe
+          else
+            cc -std=c11 -Wall -Wextra -Werror -Iinclude -o host host.c lib/libkest.a -lm
+            ./host
+          fi
 
-  # The whole gate on one runner, with a budget: one that runs past it fails.
-  check:
+  # An engine hosting Kest: raylib built from its own source, the hosts built
+  # against it, and the games played by their own players under a display
+  # nobody sees, which have to end where they always end.
+  games:
     needs: changes
     if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     permissions:
       contents: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-      # What `check-wasm.sh` builds the library as WebAssembly with: a linker
-      # for it and the C library WebAssembly's system interface has, beside
-      # the clang and the Node the image has. See D1255.
-      - name: a WebAssembly toolchain
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q lld wasi-libc \
-              "libclang-rt-$(clang --version | sed -n 's/.*clang version \([0-9]*\).*/\1/p' | head -1)-dev-wasm32"
-      - name: the whole gate
-        run: mkdir -p /home/runner/kest-tmp && TMPDIR=/home/runner/kest-tmp make check
-
-  # An engine hosting Kest: raylib built from its own source, the host built
-  # against it, and the game played by the program's own player under a
-  # display nobody sees, which has to end where it always ends and leave the
-  # screen it showed. See D1269.
-  tetris:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -464,31 +243,42 @@ jobs:
       - name: raylib, and a display nobody sees
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y -q xvfb libx11-dev libxrandr-dev \
+          sudo apt-get install -y -q ninja-build xvfb libx11-dev libxrandr-dev \
               libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
           git clone -q --depth 1 --branch 5.5 \
               https://github.com/raysan5/raylib.git "$RUNNER_TEMP/raylib"
           make -C "$RUNNER_TEMP/raylib/src" PLATFORM=PLATFORM_DESKTOP -j
-      - name: the game, played by an engine
+      - name: The games
         run: |
-          make -j
-          make tetris RAYLIB="$RUNNER_TEMP/raylib/src"
+          cmake --preset dev -DKEST_CHECKED=OFF -DKEST_RAYLIB="$RUNNER_TEMP/raylib/src"
+          cmake --build --preset dev --target tetris colony
+      - name: Tetris, played by an engine
+        run: |
           KEST_LIB=lib/ xvfb-run -a -s "-screen 0 800x700x24" \
-              examples/tetris/host --frames 1500 --shot tetromino.png | tee said
+              out/dev/examples/tetris/host --frames 1500 --shot tetromino.png | tee said
           grep -q "1500 frame(s), score 3$" said
           test -s tetromino.png
-      - name: the colony, its rules run both ways
+      - name: The colony, its rules run both ways
         run: |
-          make colony RAYLIB="$RUNNER_TEMP/raylib/src"
           for native in 0 1; do
             xvfb-run -a -s "-screen 0 1024x768x24" \
-                examples/colony/colony --frames 600 --native "$native" | tee said
+                out/dev/examples/colony/colony --frames 600 --native "$native" | tee said
             grep -q "^600 frames: people" said
           done
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: tetromino-under-raylib
-          path: tetromino.png
+      # Last, because it leaves the hosts unbuilt: a warning planted in each
+      # has to stop its build, so a host that warns cannot pass.
+      - name: A warning in a host fails its build
+        run: |
+          for host in tetris:examples/tetris/host.c colony:examples/colony/host/colony.c; do
+            target=${host%%:*} source=${host#*:}
+            printf '\nstatic int planted(void) { int unused; return 0; }\n' >>"$source"
+            if cmake --build --preset dev --target "$target" >built 2>&1; then
+              echo "a warning in $source did not stop the $target build" >&2
+              exit 1
+            fi
+            grep -q "unused" built
+            git checkout -- "$source"
+          done
 
   # And the same game as something a Windows player unzips and runs: raylib's
   # own build for MSVC, the library and the host compiled with the runtime
@@ -546,101 +336,11 @@ jobs:
           name: kest-tetris-windows-x86_64
           path: kest-tetris-windows-x86_64.zip
 
-  windows:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    permissions:
-      contents: read
-    runs-on: windows-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
-      - name: build
-        shell: cmd # zizmor: ignore[misfeature] a batch file runs where it was written to run
-        run: tools\build.bat
-      - name: examples
-        shell: bash
-        run: |
-          export KEST_LIB=lib/
-          sh tools/conformance.sh ./build/win/kest.exe windows-x86-64.trace
-          cat windows-x86-64.trace
-      - name: an archive, unpacked and run
-        shell: cmd # zizmor: ignore[misfeature] a batch file runs where it was written to run
-        run: tools\package.bat
-      # Unpacked into a room of its own and used the way somebody who
-      # downloaded it would: the binary asked what it is, a program it has
-      # never seen run through it, and a host compiled against the header and
-      # the library that are in the archive rather than the ones in this tree.
-      # An archive nobody unpacked is a directory listing. See D1000.
-      - name: what is in it, from a clean room
-        shell: pwsh
-        run: |
-          $zip = Get-ChildItem build\kest-*-windows-x86_64.zip
-          $said = Get-Content "$($zip.FullName).sha256"
-          $hash = (Get-FileHash -Algorithm SHA256 $zip.FullName).Hash.ToLower()
-          if (-not $said.StartsWith($hash)) {
-            throw "the checksum beside the archive is not the archive's"
-          }
-          Expand-Archive -Path $zip.FullName -DestinationPath out
-          $root = (Get-ChildItem out -Directory)[0].FullName
-          $env:KEST_LIB = "$root\lib\kest\"
-          & "$root\bin\kest.exe" --version
-          if ($LASTEXITCODE -ne 0) { throw "the archive's kest.exe would not run" }
-          Set-Content hello.kest @(
-            'import std.text', '',
-            'fn main() -> i32 {',
-            '    let said = text.repeat("ok", 2)',
-            '    return len(said) - 4',
-            '}')
-          & "$root\bin\kest.exe" run hello.kest
-          if ($LASTEXITCODE -ne 0) { throw "the archive would not run a program" }
-          Set-Content host.c @(
-            '#include "kest.h"', '#include <stdio.h>',
-            'int main(void) {',
-            '    if (kest_abi_version() != KEST_ABI_VERSION) { return 1; }',
-            '    printf("a host built against the archive says %s, abi %u\n",',
-            '           kest_version(), kest_abi_version());',
-            '    return 0;',
-            '}')
-          cl /nologo /std:c11 /I"$root\include" host.c "$root\lib\kest.lib" /Fe:host.exe
-          if ($LASTEXITCODE -ne 0) { throw "a host would not build against the archive" }
-          .\host.exe
-          if ($LASTEXITCODE -ne 0) { throw "a host built against the archive would not run" }
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: trace-windows-x86-64
-          path: windows-x86-64.trace
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: release-windows-x86-64
-          path: build/kest-*-windows-x86_64.zip*
-
-  agree:
-    needs: [linux, linux-arm64, windows, macos]
-    permissions: {}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with: { pattern: trace-*, merge-multiple: true }
-      - name: every platform says the same thing
-        run: |
-          diff -u linux-x86-64.trace windows-x86-64.trace \
-            && echo "linux and windows said the same thing"
-          diff -u linux-x86-64.trace macos-arm64.trace \
-            && echo "linux and macos said the same thing"
-          diff -u linux-x86-64.trace linux-arm64.trace \
-            && echo "the two instruction sets said the same thing"
-
   # The one check the ruleset requires: every job above passed, a job the
   # changes job skipped counting as passed.
   required:
     if: always()
-    needs: [changes, zizmor, site, fuzz, linux, linux-arm64, macos, clang,
-            threads, package, check, tetris, tetris-windows, windows, agree]
+    needs: [changes, zizmor, site, fuzz, build, build-main, package, games, tetris-windows]
     permissions: {}
     runs-on: ubuntu-latest
     timeout-minutes: 2

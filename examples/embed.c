@@ -1,7 +1,7 @@
 // A host that is not the command line. It compiles a file, makes a machine,
 // and keeps a world between frames by holding the handle the program gave it.
 //
-//   make embed && ./examples/embed
+//   cmake --build --preset dev && out/dev/examples/embed
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>

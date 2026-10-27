@@ -8,25 +8,27 @@ Kest is a statically typed language for the gameplay half of a game: rules, AI, 
 
 **In the browser.** The [playground](https://rawframe-project.github.io/kest/) runs the command line built as WebAssembly inside the page.
 
-**From source.** Kest is C11 with no dependency beyond the C library. On Linux and macOS:
+**From source.** Kest is C11 with no dependency beyond the C library; it builds with CMake 3.25 or newer. On Linux and macOS, with Ninja:
 
 ```sh
 git clone https://github.com/Rawframe-Project/kest.git
 cd kest
-make
-./kest run examples/math.kest
+cmake --preset dev
+cmake --build --preset dev
+out/dev/kest run examples/math.kest
 ```
 
-On Windows, run `tools\build.bat` from a Developer Command Prompt for Visual Studio; the command line is then `build\win\kest.exe`.
+On Windows, with Visual Studio, use the `windows-msvc` preset; the command line is then `out\windows-msvc\kest.exe`. Everything a build makes is under `out/<preset>`, next to a link to the standard library, so the command line there finds it.
 
 To install into a prefix, with the standard library where the command line looks for it:
 
 ```sh
-make PREFIX=/usr/local
-sudo make install PREFIX=/usr/local
+cmake -S . -B out/install -DCMAKE_INSTALL_PREFIX=/usr/local -DKEST_CHECKED=OFF
+cmake --build out/install
+sudo cmake --install out/install
 ```
 
-`make uninstall` with the same prefix removes exactly what was installed.
+`out/install/install_manifest.txt` lists every file the install put there.
 
 ## A first program
 

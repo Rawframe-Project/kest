@@ -4,7 +4,7 @@
 # middle, the tails and the worst; it is generic, and a generated file belongs
 # to one program, so the second half is built here rather than kept.
 #
-# It is not part of `make check`: a duration is not a pass or a fail. It is
+# It is not part of the gate: a duration is not a pass or a fail. It is
 # what to read when a number moved and what to read before saying a frame fits
 # in a budget. Everything `bench/measure` takes it takes.
 #
@@ -13,6 +13,10 @@
 # See D1124.
 set -eu
 
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+
 one=${1:-}
 if [ -z "$one" ]; then
     echo "usage: bench/tails.sh <file.kest> [options for bench/measure]" >&2
@@ -20,13 +24,13 @@ if [ -z "$one" ]; then
 fi
 shift
 cc=${CC:-cc}
-kest=${KEST:-./kest}
-if [ ! -x "$kest" ] || [ ! -f libkest.a ]; then
+kest=${KEST:-$build_dir/kest}
+if [ ! -x "$kest" ] || [ ! -f $build_dir/libkest.a ]; then
     echo "bench/tails.sh: the compiler and the library are not built" >&2
     exit 2
 fi
-if [ ! -x ./bench/measure ]; then
-    echo "bench/tails.sh: \`make bench/measure\` first" >&2
+if [ ! -x $build_dir/bench/measure ]; then
+    echo "bench/tails.sh: \`cmake --build out/dev\` first" >&2
     exit 2
 fi
 
@@ -51,14 +55,14 @@ if ! $cc -O2 -Iinclude -DKEST_NO_MAIN -c -o "$work"/built.o "$work"/built.c \
     exit 2
 fi
 if ! $cc -O2 -Iinclude -DKEST_MEASURE_BUILT -o "$work"/measure-built \
-        bench/measure.c "$work"/built.o libkest.a -lm 2>"$work"/why; then
+        bench/measure.c "$work"/built.o $build_dir/libkest.a -lm 2>"$work"/why; then
     echo "bench/tails.sh: the instrument would not link against it" >&2
     sed 's/^/    /' "$work"/why | head -5 >&2
     exit 2
 fi
 
 echo "== by the machine"
-./bench/measure "$one" "$@"
+$build_dir/bench/measure "$one" "$@"
 echo
 echo "== by the bodies the other backend wrote, which are $written"
 "$work"/measure-built "$one" "$@"

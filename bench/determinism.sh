@@ -6,9 +6,13 @@
 # whether one language answered the same everywhere. An engine that is not
 # given is left out. See D1274.
 #
-#   PLATFORM=linux-x86_64 KEST=./kest LUA=lua LUAJIT=luajit LUAU=luau \
+#   PLATFORM=linux-x86_64 KEST=out/dev/kest LUA=lua LUAJIT=luajit LUAU=luau \
 #       NODE=node OUT=answers.tsv sh bench/determinism.sh
 set -eu
+
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
 
 out=${OUT:-answers.tsv}
 platform=${PLATFORM:?say which platform this is}
@@ -18,7 +22,7 @@ said() {
     printf '%s\t%s\t%s\n' "$1" "$platform" "$2" >>"$out"
 }
 
-said Kest "$("${KEST:-./kest}" run bench/determinism/sim.kest | tr -d '\r')"
+said Kest "$("${KEST:-$build_dir/kest}" run bench/determinism/sim.kest | tr -d '\r')"
 if [ -n "${LUA:-}" ]; then
     said "Lua 5.4" "$("$LUA" bench/determinism/sim.lua | tr -d '\r')"
 fi

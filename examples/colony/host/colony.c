@@ -257,7 +257,7 @@ int main(int argc, char **argv) {
     }
     if (g.native && !kest_natives_here(kest_held_runtime(g.held))) {
         fprintf(stderr, "the compiled bodies were written from another "
-                        "program; `make` writes them again\n");
+                        "program; `cmake --build` writes them again\n");
         return 1;
     }
     KestValue begun[4];

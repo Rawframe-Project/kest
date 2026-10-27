@@ -9,12 +9,17 @@
 # and put back.
 set -u
 
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+case $build_dir in /*) ;; *) build_dir=$(pwd)/$build_dir ;; esac
+
 # A scratch of this run's own. Two of these run at once when the backstops put
 # one out of order while another is being asked, and fixed names in `/tmp` are
 # two runs writing to one file.
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
-kest=./kest
+kest=$build_dir/kest
 failed=0
 backup="$scratch"/fmt-backup
 

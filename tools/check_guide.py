@@ -7,7 +7,8 @@ program: `kest run` answers nought and prints exactly the text. A ```c block
 with a `main` in it is a whole host, and it compiles against include/kest.h and
 links against libkest.a.
 
-Run from the root of the tree after `make` and `make libkest.a`.
+Run from the root of the tree after a build (`cmake --build --preset dev`); KEST_BUILD
+names the build directory, out/dev by default.
 """
 
 import os
@@ -15,6 +16,10 @@ import re
 import subprocess
 import sys
 import tempfile
+
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+BUILD_DIR = os.path.abspath(os.environ.get('KEST_BUILD', 'out/dev'))
 
 FENCE = re.compile(r"^```([a-z]*)\n(.*?)^```\n", re.M | re.S)
 MODULE = re.compile(r"^module ([a-z][A-Za-z0-9_.]*)$", re.M)
@@ -47,12 +52,12 @@ def place(work, body):
 
 
 def kest(*words):
-    return subprocess.run(["./kest", *words], capture_output=True, text=True,
+    return subprocess.run([os.path.join(BUILD_DIR, 'kest'), *words], capture_output=True, text=True,
                           stdin=subprocess.DEVNULL, timeout=60)
 
 
 def main():
-    if not os.access("kest", os.X_OK) or not os.path.exists("libkest.a"):
+    if not os.access(os.path.join(BUILD_DIR, "kest"), os.X_OK) or not os.path.exists(os.path.join(BUILD_DIR, 'libkest.a')):
         print("guide: build `kest` and `libkest.a` first")
         return 1
     pages = sorted(os.path.join(root, name)
@@ -100,7 +105,7 @@ def main():
                     built = subprocess.run(
                         [os.environ.get("CC", "cc"), "-std=c11", "-Wall",
                          "-Wextra", "-Werror", "-Iinclude", source,
-                         "libkest.a", "-lm", "-o",
+                         os.path.join(BUILD_DIR, 'libkest.a'), "-lm", "-o",
                          os.path.join(work, "host")],
                         capture_output=True, text=True)
                     hosts += 1
