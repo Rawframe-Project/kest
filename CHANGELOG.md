@@ -2,6 +2,15 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## 0.0.1 (2026-10-27)
+
+
+### Fixed
+
+* **build:** limit a release binary's name to portable characters ([#14](https://github.com/Rawframe-Project/kest/issues/14)) ([8cef4d6](https://github.com/Rawframe-Project/kest/commit/8cef4d65bde2c8507c5c324f5107ecbe6ef22877)), closes [#13](https://github.com/Rawframe-Project/kest/issues/13)
+* keep a run of formatted appends inside its buffer ([#17](https://github.com/Rawframe-Project/kest/issues/17)) ([7f28428](https://github.com/Rawframe-Project/kest/commit/7f284282874fc13f37887053f6b6ce6281d8de17)), closes [#16](https://github.com/Rawframe-Project/kest/issues/16)
+* take no offset from a null pointer ([#6](https://github.com/Rawframe-Project/kest/issues/6)) ([b13166c](https://github.com/Rawframe-Project/kest/commit/b13166c27d9741f019f30c74fa08cfa2121c258a)), closes [#7](https://github.com/Rawframe-Project/kest/issues/7)
+
 ## 0.0.1
 
 The first release: a statically typed language for the gameplay half of a game, a bytecode machine an engine embeds through one C header, and a C backend for release builds.
