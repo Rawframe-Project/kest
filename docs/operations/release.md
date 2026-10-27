@@ -4,7 +4,7 @@ How a version is numbered, what a release contains, and how one is made.
 
 ## Versions
 
-The version is in `include/kest.h` (`KEST_VERSION_MAJOR`, `MINOR`, `PATCH` and `KEST_VERSION_STRING`), and `kest --version` prints it. release-please moves the four between their markers, and the version in `editors/vscode/package.json` with them; nothing else changes them. Before 1.0.0 a change that breaks a program or a host carries `!` in its pull request title and a `BREAKING CHANGE:` footer, and release-please makes it a minor release.
+The version is in `include/kest.h` (`KEST_VERSION_MAJOR`, `MINOR`, `PATCH` and `KEST_VERSION_STRING`), and `kest --version` prints it. release-please moves the four between their markers, and the version in `editors/vscode/package.json` with them; nothing else changes them. Before 1.0.0 a change that breaks a program or a host carries `!` in its pull request title and a `BREAKING CHANGE:` footer, and release-please makes it a minor release. The first release is 0.0.1, set by `initial-version` in `release-please-config.json`; without it release-please starts a package with no release at 1.0.0, and 1.0.0 is reached only on purpose, once the API is settled.
 
 Four numbers beside the version move on their own, each named in the changelog when it moves:
 

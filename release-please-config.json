@@ -54,6 +54,7 @@
   "packages": {
     ".": {
       "package-name": "kest",
+      "initial-version": "0.0.1",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         {
