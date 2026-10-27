@@ -1142,16 +1142,16 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
 
     for (int i = 0; i < count; i++) {
         KestArena *arena = kest_arena_new();
-        // Each file is its own arena, so each is given the whole of what this
-        // command may have rather than a share of it: what `--room` says is
-        // the most this command asks the machine for at once, and these do not
-        // overlap.
-        kest_arena_cap(arena, room);
         if (arena == NULL) {
             kest_diags_say_one(json ? stdout : stderr, json,
                                KEST_STARVED_CODE, KEST_STARVED_SAYS);
             return 1;
         }
+        // Each file is its own arena, so each is given the whole of what this
+        // command may have rather than a share of it: what `--room` says is
+        // the most this command asks the machine for at once, and these do not
+        // overlap.
+        kest_arena_cap(arena, room);
 
         KestDiags diags;
         kest_diags_init(&diags, arena);
@@ -1267,6 +1267,11 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
         if (read) {
             text = kest_format(&units.items[0].unit, &units.items[0].source,
                                arena, &length);
+            // Nothing but room makes the formatter answer nothing, and room
+            // is said the way every command says it.
+            if (text == NULL) {
+                kest_diags_starve(&diags);
+            }
         }
 
         // Read back before it is handed over. What `fmt` writes has to be the
@@ -1277,6 +1282,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
         // is the only thing that can tell. Twice over, because a form that is
         // not the form again is a formatter nobody can leave running on save.
         const char *unreadable = NULL;
+        bool starved_back = false;
         if (text != NULL) {
             KestSource again;
             KestDiags back;
@@ -1284,7 +1290,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
             KestUnit twice_over = {0};
             if (!kest_source_init(&again, arena, paths[i], text, length) ||
                 !kest_parse(arena, &again, &back, &twice_over)) {
-                unreadable = "ran out of memory reading it back";
+                starved_back = true;
             } else if (back.error_count > 0) {
                 unreadable = "does not parse";
             } else {
@@ -1292,13 +1298,19 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 const char *twice =
                     kest_format(&twice_over, &again, arena, &twice_length);
                 if (twice == NULL) {
-                    unreadable = "ran out of memory reading it back";
+                    starved_back = true;
                 } else if (twice_length != length ||
                            memcmp(twice, text, length) != 0) {
                     unreadable = "is not itself in the one form";
                 }
             }
-            if (unreadable != NULL) {
+            if (starved_back) {
+                // Running out of room reading it back is this machine's, not
+                // the formatter's mistake, and is said as every command says
+                // it.
+                kest_diags_starve(&diags);
+                text = NULL;
+            } else if (unreadable != NULL) {
                 // Whose mistake it is, said in the message and said whatever
                 // form the rest of this command is answering in: a file that
                 // does not parse is the program's mistake, and what the
@@ -1417,7 +1429,9 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
             // not parse, and a file that was never read at all. Saying the
             // first about the second sends a reader looking for a mistake in
             // a file that is not there.
-            if (loaded && unreadable == NULL) {
+            if (diags.starved) {
+                // Said above, in the words every command says it in.
+            } else if (loaded && unreadable == NULL) {
                 fprintf(stderr,
                         "kest: `%s` is not formatted, because what `fmt` "
                         "writes has to be the same program and this one did "
