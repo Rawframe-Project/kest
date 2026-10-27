@@ -46,4 +46,8 @@ const char *kest_emitc_done(KestEmitC *writing, const char *entry,
                             const char *from, const KestFile *carried,
                             uint32_t carried_count, const char *library);
 
+// What a writing holds outside the caller's arena, given back when the build
+// stops before `kest_emitc_done`, which gives it back itself.
+void kest_emitc_drop(KestEmitC *writing);
+
 #endif

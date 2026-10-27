@@ -2975,6 +2975,11 @@ KestEmitC *kest_emitc_new(KestArena *arena, const KestModule *module) {
     return c;
 }
 
+void kest_emitc_drop(KestEmitC *c) {
+    kest_arena_free(c->scratch);
+    c->scratch = NULL;
+}
+
 bool kest_emitc_body(void *writing, const KestIrBody *body) {
     KestEmitC *c = writing;
     if (c->count == c->room) {

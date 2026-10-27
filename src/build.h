@@ -143,13 +143,15 @@ const KestSpent *kest_build_spent(const KestBuild *build);
 // The backend is handed in by whoever asks for it rather than named here: a
 // build that names it is a build every host links, and a host that never
 // writes C carried eighty kilobytes of the writer for nothing. `emitc.h`'s
-// three doors, in that order.
+// four doors: the first three in that order, and the last in place of `done`
+// for a build that stops before it.
 typedef struct KestCWriter {
     KestEmitC *(*begin)(KestArena *arena, const KestModule *module);
     bool (*body)(void *writing, const KestIrBody *body);
     const char *(*done)(KestEmitC *writing, const char *entry,
                         const char *from, const KestFile *carried,
                         uint32_t carried_count, const char *library);
+    void (*drop)(KestEmitC *writing);
 } KestCWriter;
 void kest_build_writes_c(KestBuild *build, const KestCWriter *writer);
 // That C, or NULL for a build that was not asked or did not get that far. It

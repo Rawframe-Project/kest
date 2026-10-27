@@ -2064,12 +2064,15 @@ static int write_hostile(const char *path, uint64_t seed, bool json) {
     if (build == NULL) {
         return 1;
     }
-    FILE *file = fopen(path, "rb");
     KestArena *arena = kest_arena_new();
-    if (file == NULL || arena == NULL) {
-        if (file != NULL) {
-            fclose(file);
-        }
+    if (arena == NULL) {
+        kest_build_free(build);
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
+        return 1;
+    }
+    FILE *file = fopen(path, "rb");
+    if (file == NULL) {
         kest_arena_free(arena);
         kest_build_free(build);
         return refused_at_the_words(json, "K0701", "cannot read `%s`", path);
@@ -2187,7 +2190,8 @@ static int make_project(const char *name, bool json) {
     }
     KestArena *arena = kest_arena_new();
     if (arena == NULL) {
-        refused_at_the_words(json, "K0605", "out of memory");
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
         return 1;
     }
     char path[1024];
@@ -2257,7 +2261,8 @@ static int make_project(const char *name, bool json) {
 static int look_over(const char *executable, const char *where, bool json) {
     KestArena *arena = kest_arena_new();
     if (arena == NULL) {
-        refused_at_the_words(json, "K0605", "out of memory");
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
         return 1;
     }
     const char *library = kest_library_path(arena, executable);
@@ -2694,7 +2699,7 @@ static int run(const char *command, const char *executable, char **paths,
     // left to read.
     if (writing_c) {
         static const KestCWriter WRITES_C = {kest_emitc_new, kest_emitc_body,
-                                             kest_emitc_done};
+                                             kest_emitc_done, kest_emitc_drop};
         kest_build_writes_c(build, &WRITES_C);
     }
     if (releasing) {
@@ -3612,15 +3617,28 @@ int main(int argc, char **argv) {
     // The language server, which is this compiler answering an editor rather
     // than a person. It reads and writes one stream each and takes no files:
     // which file it is about is what the editor says.
+    // Each fails only when it has no memory to start in, and an editor shows
+    // what its server wrote to the error stream, so that is where it is said.
     if (strcmp(argv[1], "lsp") == 0) {
-        return kest_lsp_serve(kest_library_path(NULL, argv[0]), stdin, stdout);
+        int served =
+            kest_lsp_serve(kest_library_path(NULL, argv[0]), stdin, stdout);
+        if (served != 0) {
+            kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
+                               KEST_STARVED_SAYS);
+        }
+        return served;
     }
     // The debugger an editor drives. What the program writes goes to the
     // editor's console and what it reads is nothing, because both standard
     // streams are the protocol.
     if (strcmp(argv[1], "dap") == 0) {
-        return kest_dap_serve(kest_library_path(NULL, argv[0]), make_host,
-                              stdin, stdout);
+        int served = kest_dap_serve(kest_library_path(NULL, argv[0]),
+                                    make_host, stdin, stdout);
+        if (served != 0) {
+            kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
+                               KEST_STARVED_SAYS);
+        }
+        return served;
     }
 
     if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "-h") == 0 ||

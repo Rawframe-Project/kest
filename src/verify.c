@@ -2963,8 +2963,12 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
     if (module->count == 0) {
         return true;
     }
+    // Said rather than only answered: the build reads what was reported, and a
+    // proof that never started reported nothing, so a module nobody proved
+    // was handed on as one that had been.
     uint8_t *state = kest_arena_alloc(arena, module->count, 1);
     if (state == NULL) {
+        kest_diags_starve(diags);
         return false;
     }
 
