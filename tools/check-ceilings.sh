@@ -2132,7 +2132,9 @@ fi
 # `doctor` with the machine's word for a heap that was full, `hostile` blamed
 # the file, and a machine with nowhere for its bookkeeping told the host to
 # ask for less stack. A command with no memory says it has none, and nothing
-# else: no code but those three is an answer here.
+# else: no code but those three is an answer here. `new` makes its project in
+# a directory emptied before every run, since one that is already there is
+# refused for a reason of its own.
 arenas=0
 for aimed_at in "run examples/vectors.kest" "emit examples/boxes.kest" \
                 "check lib/std/text.kest" "run examples/queue.kest" \
@@ -2140,15 +2142,23 @@ for aimed_at in "run examples/vectors.kest" "emit examples/boxes.kest" \
                 "tick examples/events.kest 3" "call examples/vectors.kest steps" \
                 "profile examples/queue.kest" "test examples/flags.kest" \
                 "hostile examples/host.kest" "emit --c examples/boxes.kest" \
-                "doctor ." "lsp" "dap"; do
+                "doctor ." "lsp" "dap" "new $scratch/made/game"; do
     how=${aimed_at%% *}
     what=${aimed_at#"$how"}
     what=${what# }
+    if [ "$how" = new ]; then
+        rm -rf "$scratch"/made
+        mkdir "$scratch"/made
+    fi
     # shellcheck disable=SC2086
     whole=$($build_dir/kest-debug "$how" $what 2>&1 </dev/null)
     at_one=1
     past=0
     while [ $past -lt 3 ] && [ $at_one -le 64 ]; do
+        if [ "$how" = new ]; then
+            rm -rf "$scratch"/made
+            mkdir "$scratch"/made
+        fi
         # shellcheck disable=SC2086
         said=$(KEST_REFUSE_ARENA=$at_one $build_dir/kest-debug "$how" $what \
                2>&1 </dev/null)

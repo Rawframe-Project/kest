@@ -272,7 +272,14 @@ bool kest_build_emit(KestBuild *build) {
     // that out here beats finding it out in a frame.
     if (build->diags.error_count == 0) {
         at = kest_ir_ticked(build->now, build->now_context);
-        kest_module_prove(&build->module, build->arena, &build->diags);
+        // What was emitted is handed on only once it is proved. Every way the
+        // proof is refused says why; the one that said nothing was a proof
+        // with no room to start in, and a module nobody proved went on as
+        // one that had been.
+        if (!kest_module_prove(&build->module, build->arena, &build->diags) &&
+            build->diags.error_count == 0) {
+            kest_diags_starve(&build->diags);
+        }
         build->spent.finishing +=
             kest_ir_ticked(build->now, build->now_context) - at;
     }
