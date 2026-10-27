@@ -268,6 +268,40 @@ bool kest_doc(const KestUnitInfo *file, KestArena *arena,
     const char *about = itself.bytes == NULL ? "" : itself.bytes;
     const char *called = file->module[0] != '\0' ? file->module : source->path;
 
+    // Every piece of every declaration is made before a byte is written, so a
+    // file there was no room for says only that, rather than half an object
+    // with the refusal after it as a second one.
+    const char **writtens = KEST_ARENA_ARRAY(arena, const char *,
+                                             unit->count > 0 ? unit->count : 1);
+    const char **names = KEST_ARENA_ARRAY(arena, const char *,
+                                          unit->count > 0 ? unit->count : 1);
+    if (writtens == NULL || names == NULL) {
+        return false;
+    }
+    for (uint32_t i = 0; i < unit->count; i++) {
+        const KestDecl *decl = unit->items[i];
+        if (!declares(decl)) {
+            continue;
+        }
+        KestSpan written = written_part(source, decl);
+        writtens[i] = piece(arena, kest_span_text(source, written),
+                            written.length);
+        // A method is named with what it is called on, `Shelf.fill`.
+        Text name = {NULL, 0, 0, arena, false};
+        if (decl->kind == KEST_DECL_FN &&
+            decl->function.receiver.length > 0) {
+            const KestSpan *receiver = &decl->function.receiver;
+            text_add(&name, kest_span_text(source, *receiver),
+                     receiver->length);
+            text_add(&name, ".", 1);
+        }
+        text_add(&name, kest_span_text(source, decl->name), decl->name.length);
+        if (writtens[i] == NULL || name.failed || name.bytes == NULL) {
+            return false;
+        }
+        names[i] = name.bytes;
+    }
+
     if (json) {
         fputc('{', out);
         kest_diags_write_json(diags, out);
@@ -290,49 +324,20 @@ bool kest_doc(const KestUnitInfo *file, KestArena *arena,
         if (!declares(decl)) {
             continue;
         }
-        KestSpan written = written_part(source, decl);
-        const char *text = piece(arena, kest_span_text(source, written),
-                                 written.length);
-        const char *name = piece(arena, kest_span_text(source, decl->name),
-                                 decl->name.length);
-        if (text == NULL || name == NULL) {
-            return false;
-        }
-        const KestSpan *receiver = decl->kind == KEST_DECL_FN &&
-                                           decl->function.receiver.length > 0
-                                       ? &decl->function.receiver
-                                       : NULL;
         if (json) {
             fputs(listed ? ",{\"kind\":" : "{\"kind\":", out);
             kest_json_text(kind_word(decl->kind), out);
             fputs(",\"name\":", out);
-            if (receiver != NULL) {
-                Text joined = {NULL, 0, 0, arena, false};
-                text_add(&joined, kest_span_text(source, *receiver),
-                         receiver->length);
-                text_add(&joined, ".", 1);
-                text_add(&joined, name, strlen(name));
-                if (joined.failed) {
-                    return false;
-                }
-                kest_json_text(joined.bytes, out);
-            } else {
-                kest_json_text(name, out);
-            }
+            kest_json_text(names[i], out);
             fprintf(out, ",\"line\":%u,\"written\":",
                     line_of(source, decl->span.offset));
-            kest_json_text(text, out);
+            kest_json_text(writtens[i], out);
             fputs(",\"about\":", out);
             kest_json_text(abouts[i], out);
             fputc('}', out);
         } else {
-            if (receiver != NULL) {
-                fprintf(out, "\n## `%.*s.%s`\n", (int)receiver->length,
-                        kest_span_text(source, *receiver), name);
-            } else {
-                fprintf(out, "\n## `%s`\n", name);
-            }
-            fprintf(out, "\n```kest\n%s\n```\n", text);
+            fprintf(out, "\n## `%s`\n", names[i]);
+            fprintf(out, "\n```kest\n%s\n```\n", writtens[i]);
             if (abouts[i][0] != '\0') {
                 fprintf(out, "\n%s\n", abouts[i]);
             }
