@@ -4,7 +4,7 @@ module examples.twins.twin
 // reader writes it, and the one thing that can be wrong about a name and about
 // nothing else is that two modules wrote it: `examples/embed.kest` declares a
 // `Twin` as well, so a host asking for `Twin` is asking for one of two and the
-// machine says which two rather than picking. See D526.
+// machine says which two rather than picking.
 struct Twin {
     n: i32
 }

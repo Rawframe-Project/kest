@@ -3,7 +3,7 @@
 // second machine of the same build. The frame lends the host's run where it
 // stands, a crossing a body hands four numbers and the wall over and reads the
 // body back, and the program asks its host through `Host.add`. The floor, the
-// same frame in C, is said by this host too. See D1272.
+// same frame in C, is said by this host too.
 //
 //   kest [lib/]
 #include <stdbool.h>

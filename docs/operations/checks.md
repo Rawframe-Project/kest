@@ -44,6 +44,7 @@ Each check prints one summary line when it passes; anything else is a failure wi
 | --- | --- |
 | `changes` | decides whether anything beyond documentation changed; the jobs below it skip when nothing did. `docs/user` counts as code, since `check_guide.py` runs its programs |
 | `zizmor` | audits every workflow |
+| `docs` | the organization's documentation check, at the pinned `.github`: no em dash and no record numbers in any tracked file, comments included, plus the Markdown rules for the pages |
 | `site` | builds the documentation site with `tools/build_site.py`, in the CI image |
 | `fuzz` | the libFuzzer target through `tools/fuzz_target.sh`: a minute on a pull request, from the committed programs only; ten minutes on `main` and at night, from the kept corpus, which is then minimized and saved from `main` |
 | `build` | one cell per CMake preset through the organization's `cpp.yml`, warnings as errors, each running its test preset: `linux-gcc` every test but the C backend, the doors, fuzzing and WebAssembly, with ThreadSanitizer; `linux-clang` the fast tests, the C backend, the doors, fuzzing and WebAssembly; `linux-arm64` the fast tests, the regression programs and the C backend, where every processor fuses a multiply and an add; `macos-clang` the fast tests; `windows-msvc` the conformance trace |

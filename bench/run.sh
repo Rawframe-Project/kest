@@ -19,14 +19,14 @@
 # The comparators are found rather than built here: set `KEST_CPP`, `KEST_LUAU`
 # and `KEST_DAS` to say where each is, or leave them out and the row is left
 # out with them. Nothing is downloaded and nothing is built that is not this
-# tree's. See D980.
+# tree's.
 #
 # Two of the rows are of something built before it is run, because that is
 # what the thing is: this language's release engine is C the host's compiler
-# compiled (D1093), and daslang's `-exe` is its own compiler writing a
+# compiled, and daslang's `-exe` is its own compiler writing a
 # binary. Building is not in the duration -- it is not what either of them
 # does when a game runs -- and a row whose build failed is left out rather
-# than shown as a slow one. See D1108.
+# than shown as a slow one.
 set -eu
 
 # What the build made: the preset's build directory, out/dev unless
@@ -48,7 +48,7 @@ run_it() {
     # The second word is what ran it, said rather than read off the command,
     # because one binary run two ways is two rows and a reader has to be able
     # to tell which is which: `luau -O2` and `luau -O2 --codegen` are the same
-    # file. See D1090.
+    # file.
     name=$1
     ran_by=$2
     shift 2
@@ -68,7 +68,7 @@ run_it() {
     done
     # A row that did not run has no duration. What was timed was the failing,
     # and a number beside `(did not run)` is a number a reader compares with
-    # the rows that did. See D1116.
+    # the rows that did.
     if [ "$answer" = "(did not run)" ]; then
         printf '%-10s %-20s %6s     %s\n' "$name" "$ran_by" "--" "$answer"
         return
@@ -85,7 +85,7 @@ run_it() {
 #
 # What it is worth knowing: the ratio of the work is larger than the ratio of
 # the processes on every workload here, by 1.1 to 3.4 times on the machine this
-# was written on. See D1067.
+# was written on.
 nothing=$(mktemp -d)
 cat > "$nothing"/nothing.kest <<'KEST'
 module nothing
@@ -113,8 +113,7 @@ for one in kernel control graph words rules; do
     fi
     # Each comparator in the mode somebody shipping a game would use it in,
     # and both of the two it has: an interpreter and the thing it can turn
-    # into. A row that names only the file is a row that hides which. See
-    # D1090.
+    # into. A row that names only the file is a row that hides which.
     if [ -n "${KEST_LUAU:-}" ] && [ -f "bench/$one.lua" ]; then
         run_it "$one" "luau -O2" "$KEST_LUAU" -O2 "bench/$one.lua"
         run_it "$one" "luau -O2 --codegen" "$KEST_LUAU" -O2 --codegen \
@@ -134,20 +133,20 @@ for one in kernel control graph words rules; do
         # here does: `kest` reads and compiles the program on every run and so
         # does `luau`, and a row that reads a cache the row above it wrote is
         # not the same measurement. It also keeps a directory of somebody
-        # else's out of this tree. See D1118.
+        # else's out of this tree.
         run_it "$one" "daslang" "$KEST_DAS" -no-module-cache "bench/$one.das"
         # And for the same reason without the JIT's own cache, which is a
         # directory of compiled code written wherever it was run from -- this
         # tree -- and read by every run after the first, so that the best of
-        # five was four runs that compiled nothing. See D1161.
+        # five was four runs that compiled nothing.
         run_it "$one" "daslang -jit" "$KEST_DAS" -no-module-cache -jit \
             -jit-no-cache "bench/$one.das"
         # And the one its documentation points at, named as what it is: the
-        # compiler writing a binary rather than running the program. See
-        # D1090's rule about naming the mode.
+        # compiler writing a binary rather than running the program, because a
+        # row names the mode it measured.
         # What it writes is the name it was given with `.exe` after it, on
         # this system as on the one the suffix is for, so the binary is looked
-        # for under both. See D1161.
+        # for under both.
         if "$KEST_DAS" -no-module-cache -exe \
                 -output "$built/$one.das.bin" "bench/$one.das" \
                 >/dev/null 2>&1; then

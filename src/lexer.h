@@ -106,7 +106,7 @@ typedef struct {
 // size, so there is nothing to stream.
 // How many tokens the last array had room for, against how many were put in
 // it. A chunk says `room` beside `bytes` for the same reason: a reader with
-// both can see what was taken against what was wanted. See D783.
+// both can see what was taken against what was wanted.
 uint32_t kest_lex_room(void);
 
 KestToken *kest_lex_all(KestArena *arena, const KestSource *source,
@@ -121,7 +121,6 @@ KestToken *kest_lex_range(KestArena *arena, const KestSource *source,
 
 // Tokenises one region of the source the way the file around it is read: a
 // piece of a program read a second time, rather than the inside of a hole.
-// See D1264.
 KestToken *kest_lex_again(KestArena *arena, const KestSource *source,
                           KestDiags *diags, uint32_t start, uint32_t end,
                           uint32_t *count);
@@ -142,7 +141,7 @@ const char *kest_literal_text(KestArena *arena, const KestSource *source,
 // walks written text looking for what it is made of asks here rather than
 // stepping over one character: the brace after a `\u` is not a hole, and the
 // walk that read it as one made `"\u{645}"` a piece of text with the number
-// 1605 written into it. See D1056.
+// 1605 written into it.
 uint32_t kest_escape_width(const KestSource *source, uint32_t at);
 
 // What a number literal is worth, as a double. An `f32` is narrowed by
@@ -162,7 +161,7 @@ const char *kest_token_name(KestTokenKind kind);
 // The buffer is the caller's, so nothing here holds state between calls;
 // `KEST_TOKEN_NAME_ROOM` is room for the longest of them. Three places walked
 // the name taking the backticks out, in three files, and three walks over one
-// question are three answers the day any of them moves. See D771.
+// question are three answers the day any of them moves.
 #define KEST_TOKEN_NAME_ROOM 16
 const char *kest_token_bare(KestTokenKind kind, char *into, size_t room);
 
@@ -179,7 +178,7 @@ bool kest_lexer_ends_statement(KestTokenKind kind);
 const char *kest_nearest_keyword(const char *name, size_t length);
 
 // Every comment in a file, in the order they were written, and how many there
-// are — which is the answer whether or not there was room for them all. A
+// are -- which is the answer whether or not there was room for them all. A
 // comment is not a token and the lexer steps over one; this is the one place
 // that says where they were.
 uint32_t kest_comments(const KestSource *source, KestSpan *into,

@@ -7,7 +7,7 @@ typedef struct {
     const char *name;
     KestNative function;
     void *context;
-    // Whether the host said code nobody trusts may call it. See D1246.
+    // Whether the host said code nobody trusts may call it.
     bool open;
 } Binding;
 
@@ -132,7 +132,7 @@ bool kest_host_opened(const KestHost *host, const char *name) {
 KestNative kest_host_find(const KestHost *host, const char *name,
                           void **context) {
     // A list of no doors holds no door of that name, which is what a host that
-    // could not be made has. See D895.
+    // could not be made has.
     if (host == NULL || name == NULL) {
         return NULL;
     }
@@ -184,7 +184,7 @@ KestSlot kest_slot_of(uint8_t kind) {
     case KEST_L_HELD:
     // A reference is a number and reads like one. It is its own kind because
     // of what it is not: a machine word, which is what it said it was while a
-    // host was being told to read it through a pointer. See D715.
+    // host was being told to read it through a pointer.
     case KEST_L_REF:
         return KEST_S_INTEGER;
     }

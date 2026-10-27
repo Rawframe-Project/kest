@@ -26,11 +26,11 @@ typedef struct {
     // And the whole of it: `a.math` where the alias is `math`. Two modules
     // may share a last part and cannot share this, so this is what says which
     // of two `math` a name came from. `""` for a file that names no module,
-    // the same as the alias. See D1039.
+    // the same as the alias.
     const char *module;
     // Whether this file is the library's. `std` is the one name a program
     // cannot use, and which side of that a file is on decides where it is read
-    // from — so it is decided here, once, rather than by reading the module
+    // from -- so it is decided here, once, rather than by reading the module
     // line again wherever the answer is wanted. False for a file that names no
     // module, which cannot be the library's.
     bool from_library;
@@ -41,13 +41,13 @@ typedef struct {
     // And the whole module name each of those was written as, in step with
     // them. An alias says what a file may write in front of a name and this
     // says which module that alias meant, which is the difference between a
-    // program that may hold two `math` and one that may not. See D1039.
+    // program that may hold two `math` and one that may not.
     const char **import_paths;
     uint32_t import_count;
     // And which of them a name in this file was reached through, marked where
     // the reach is decided. An import nothing reaches is a module read,
     // parsed, checked and compiled for a file that never writes its name, and
-    // what that costs is the whole of it. See D725.
+    // what that costs is the whole of it.
     bool *import_reached;
 } KestUnitInfo;
 
@@ -56,25 +56,24 @@ typedef struct {
     uint32_t count;
     uint32_t capacity;
     // Where `std` was read from, kept because the question a checker asks of
-    // the library is about a module no file imported — which is a module that
+    // the library is about a module no file imported -- which is a module that
     // is not here at all, and so cannot be found by looking at what is. NULL
     // for a read that follows no imports, which has no library to speak of.
-    // See D734.
     const char *library;
     // Where the trees are, which is not where everything else is. A tree is
     // read by the checker and by the compiler and by nothing after them, so it
     // is given back when the last copy has been compiled. NULL for a read that
     // parses into whatever arena it was handed, which is what the commands
-    // that stop at a tree want. See D748.
+    // that stop at a tree want.
     KestArena *trees;
     // The files this read was handed, when it was handed them: then they are
     // every file there is, and nothing is read from a disk or looked for on
-    // one. NULL for a read of files where they are. See D1172.
+    // one. NULL for a read of files where they are.
     const KestFile *handed;
     uint32_t handed_count;
     // The manifest that said where imports resolve from, where one did, and
     // what it said: part of what a program was read from, which a release
-    // binary carries with the files. See D1172.
+    // binary carries with the files.
     const char *manifest_path;
     const char *manifest_text;
 } KestUnits;
@@ -92,8 +91,7 @@ typedef struct {
 bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
                     char **paths, int count, KestUnits *units);
 
-// What the loader still holds when a build is done, by what asked for it. See
-// D785.
+// What the loader still holds when a build is done, by what asked for it.
 void kest_units_hold(const KestUnits *units, uint32_t *files, uint32_t *lines,
                      uint32_t *paths, uint32_t *names);
 
@@ -102,7 +100,6 @@ void kest_units_hold(const KestUnits *units, uint32_t *files, uint32_t *lines,
 // about the program: a module nothing imports is in no program, so the only
 // way to know it could have been imported is to ask where it would come from.
 // False for a library that is nowhere, and for a name that could not be one.
-// See D734.
 bool kest_library_has(const char *library, const char *name, size_t length);
 
 // Where the standard library is: what `KEST_LIB` says, or `lib/` beside the
@@ -123,7 +120,7 @@ const char *kest_library_path(KestArena *arena, const char *program);
 // answering about the saved copies is answering about different files. There
 // is a set rather than one because a program is more than one file and an
 // editor holds more than one open. The text is the caller's and has to outlive
-// every read. See D977 and D1143.
+// every read.
 void kest_loader_overlay(const char *path, const char *text, size_t length);
 
 bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,

@@ -29,7 +29,7 @@ samples=${SAMPLES:-30}
 # fills every row of every family. Nothing it prints then is worth comparing
 # with anything; what it answers is whether the instrument is still attached to
 # what it measures. That is a question about rows rather than about durations,
-# which is why it can be a gate section at all. See D1057.
+# which is why it can be a gate section at all.
 if [ "${QUICKLY:-}" = 1 ]; then
     rounds=200
     samples=1
@@ -71,10 +71,10 @@ fi
 echo "cpu ${cpu:-not said by this machine}"
 echo "$(uname -srm)"
 # What the micro module is called is read out of the file rather than written
-# here. A chunk is compiled under the whole module name since D1039, so a name
-# written down beside this went stale the day that changed: every one of the
-# twenty-three bodies below printed `would not run` and the family said
-# nothing about why.
+# here. A chunk is compiled under the whole module name, so a name written
+# down beside this goes stale when that changes: every one of the twenty-three
+# bodies below would print `would not run` and the family would say nothing
+# about why.
 micro=$(sed -n 's/^module *//p' bench/micro.kest | head -1)
 
 "$measure" bench/micro.kest --entry "$micro.intMath" --arg 1 --samples 1 \

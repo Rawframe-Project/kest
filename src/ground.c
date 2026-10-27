@@ -3,7 +3,7 @@
 // For `KEST_CHECKED`, which is the one thing this file wants from the module
 // above it: whether this build is the one that checks its own work. Asking the
 // compiler again here would be two readings of one question that agree until
-// one of them moves. See D330.
+// one of them moves.
 #include "mem.h"
 
 #include <stdlib.h>
@@ -15,8 +15,8 @@
 // sanitised build is told instead: a plot is poisoned when it is taken, a
 // place is opened to what was asked for and no further, and a place given back
 // is closed again. Off the end of a thing is the read this project has got
-// wrong before, and this is what makes it visible -- the arena beside this one
-// has said it since D786, and what a program makes moved off the arena.
+// wrong before, and this is what makes it visible, as the arena beside this
+// one does.
 //
 // Opened to what was asked for and not a byte further, which is what makes a
 // read one element past the end of a value visible: a place is wider than the
@@ -49,7 +49,7 @@
 
 // The one place in this tree that asks the host for aligned memory. An address
 // says which place it is in by being masked, so the places have to sit at a
-// known boundary — and the two compilers do not spell that the same. ISO C has
+// known boundary -- and the two compilers do not spell that the same. ISO C has
 // `aligned_alloc` and the older of the two Windows libraries has never had it.
 #if defined(_WIN32)
 #include <malloc.h>
@@ -78,8 +78,8 @@
 #define BITMAP_WORDS (MOST_PLACES / 64u)
 
 // What this hands out, in bytes. Everything wider than the last of them gets a
-// plot to itself. The steps are close together where the values are — a piece
-// of text is tens of bytes and a run of numbers is hundreds — and double after
+// plot to itself. The steps are close together where the values are -- a piece
+// of text is tens of bytes and a run of numbers is hundreds -- and double after
 // that, because a program that asks for four kilobytes is not a program whose
 // memory is decided by the difference between four and six.
 static const uint32_t WIDTHS[] = {
@@ -118,7 +118,7 @@ typedef struct Plot {
     uint32_t taken;
     // How many of the places have ever been handed out. Below this a free
     // place is found in the bitmap, and at it a place is had for the first
-    // time — which is what keeps a fresh plot from reading a bitmap of
+    // time -- which is what keeps a fresh plot from reading a bitmap of
     // nothing to find the first place in it.
     uint32_t reached;
     // Where a search for a free place starts, so a plot that is filling up
@@ -176,7 +176,6 @@ static void holds_together(const KestGround *ground, const char *after);
 // own, multiplied by a sequence in which every run of six bits is different,
 // leaves which it was in the top six. Stepping a bit at a time was most of
 // what giving back and finding a place cost in a plot with a few places free.
-// See D1173.
 static uint32_t lowest_set(uint64_t word) {
     static const uint8_t AT[64] = {
         0,  1,  56, 2,  57, 49, 28, 3,  61, 58, 42, 50, 38, 29, 17, 4,
@@ -207,7 +206,7 @@ typedef struct Counts {
     // a program that is all short pieces of text and one that is all wide runs
     // have the same total and nothing else in common. Counted here rather than
     // worked out from the plots, because a plot says what is in it now and
-    // this is what was ever handed out. See D1032.
+    // this is what was ever handed out.
     uint64_t by_kind[4];
     uint64_t by_width[WIDTH_COUNT + 1];
 } Counts;
@@ -242,7 +241,7 @@ typedef struct KestGround {
     // at an allocation, a sweep or a plot -- a program does millions of
     // instructions between any two of those, and a counter there costs
     // nothing measurable where one at the top of the dispatch loop cost a
-    // third of the machine. See D979 for that one and D1007 for these.
+    // third of the machine.
     Counts counted;
 } KestGround;
 
@@ -887,7 +886,7 @@ void kest_ground_empty(KestGround *ground) {
     ground->taken = 0;
     // A ground with nothing on it has refused nobody. A host raises a ceiling
     // by what the last allocation asked for, and one raised by a number about
-    // a heap that has gone is raised for nothing. See D826.
+    // a heap that has gone is raised for nothing.
     ground->refused = 0;
     ground->refused_by_ceiling = false;
     for (uint32_t open = 0; open < ground->block_count; open++) {

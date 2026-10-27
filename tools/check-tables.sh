@@ -2,7 +2,7 @@
 # Three lists have to stay in step: the token names beside the token kinds, the
 # instruction names beside the opcodes, and the keywords the lexer holds beside
 # the ones the reference prints. Nothing in C says so, and two of them have
-# drifted once — a name printed for the wrong thing, and an operand read for an
+# drifted once -- a name printed for the wrong thing, and an operand read for an
 # instruction that has none, which walked off the end of the code. The third is
 # the list a reader is told is the whole of it.
 set -u
@@ -24,8 +24,8 @@ BUILD_DIR = os.path.abspath(os.environ.get('KEST_BUILD', 'out/dev'))
 
 failed = 0
 pythons = 0
-# How many conditions gate more than one complaint, which is the shape D877
-# is about: each has to be a guard rather than the first of the things under it.
+# How many conditions gate more than one complaint: each has to be a guard
+# rather than the first of the things under it.
 guards = 0
 shells = 0
 
@@ -55,7 +55,7 @@ def some(what, found):
 
 
 # What a value is made of, where that can be told from the words: a number, a
-# piece of text, a list, a set, a table. `None` where it cannot — what a
+# piece of text, a list, a set, a table. `None` where it cannot -- what a
 # function gives back is its own business, and two names for two answers of an
 # unknown kind is not something to complain about.
 MADE_BY = {"set": "set", "dict": "dict", "list": "list", "int": "int",
@@ -104,7 +104,7 @@ def made_of(node):
         if isinstance(node.func, ast.Name):
             # The door every list in these checks goes through hands back what
             # it was given, so what a name is made of is what went in. Without
-            # this, everything read through it claims nothing — which is how
+            # this, everything read through it claims nothing -- which is how
             # `named` came to be a list of checks and a piece of text in this
             # very file, with the check for that running and saying nothing.
             if node.func.id == "some" and len(node.args) > 1:
@@ -196,7 +196,7 @@ if raw_keywords != held:
 # -- so a door added without one is refused here rather than read as belonging
 # wherever it happens to sit. Six families and no seventh: nothing here is
 # research instrumentation that leaked into a permanent API, and nothing
-# answers a question another door already answers. See D1046.
+# answers a question another door already answers.
 #
 # `running` is what a host that compiles a program, binds what it asks for,
 # sizes a machine and calls it needs. `steering` is what it does to one while
@@ -226,7 +226,7 @@ FAMILY = {
  "kest_text":"running","kest_text_bytes":"running","kest_borrow":"running",
  "kest_lend_ends":"running","kest_array_length":"running","kest_native_failed":"running",
  # and the same, done for a host that keeps a world across frames and reloads
- # under it: made of the doors above and nothing else. See D1151.
+ # under it: made of the doors above and nothing else.
  "kest_held_new":"running","kest_held_free":"running","kest_held_runtime":"running",
  "kest_held_begin":"running","kest_held_call":"running","kest_held_run":"running",
  "kest_held_changed":"running","kest_held_reload":"running",
@@ -315,7 +315,7 @@ if one_licence != other_licence:
 # And a fourth list: the words the language server offers a reader who has
 # typed nothing. It had `flags` and `scratch` in it and nothing held it, so a
 # word added to the language was a word an editor stopped offering until
-# somebody noticed. See D1041.
+# somebody noticed.
 server_words = set(some("the words the language server offers", sorted(
     spelled(table('src/lsp.c',
                   r'const char \*const WORDS\[\] = \{(.*?)\n    \};')))))
@@ -326,7 +326,7 @@ server_words = set(some("the words the language server offers", sorted(
 # grammar has and the lexer does not is a word coloured as something a program
 # may not write, which it may. The grammar is read as JSON rather than with a
 # pattern, because it is JSON and a pattern over it is the thing that stops
-# matching. See D978.
+# matching.
 import json as grammar_json
 
 coloured = set()
@@ -363,10 +363,9 @@ for word in sorted(server_words - words):
 
 # What a check writes into its own scratch and then never looks at. A program
 # built and not run is a probe that says nothing, and what it looks like from
-# outside is a check with one more thing in it — which is the shape D534 found
-# in the sweeps, from the other end. The one that quotes the others is left
-# out, because what it writes are broken copies rather than work of its own.
-# See D535.
+# outside is a check with one more thing in it. The one that quotes the others
+# is left out, because what it writes are broken copies rather than work of its
+# own.
 for reading in sorted(glob.glob('tools/check-*.sh')):
     if reading.endswith('check-backstops.sh'):
         continue
@@ -395,12 +394,12 @@ for reading in sorted(glob.glob('tools/check-*.sh')):
 # header cannot name is one a host cannot ask about; one the header names and
 # the parser will not read is a door onto nothing. The namespace was spelled
 # with a dot so it could hold more of them, and this is what makes adding one a
-# thing that has to be done in all three places or not at all. See D857.
+# thing that has to be done in all three places or not at all.
 # Read from the one list the parser keeps rather than from the branches that
 # read it, and in both shapes: a promise is a `no` and a word or a word on its
 # own, and the third of them says what a body does rather than what it does
 # not. A reading that only knew the first shape would have called it no promise
-# at all. See D942.
+# at all.
 promise_words = some("the promises the parser reads", sorted(
     ("no." if after_no == "true" else "") + word
     for word, after_no in re.findall(
@@ -419,8 +418,8 @@ if sorted("KEST_PROMISE_" + word.replace(".", "_").upper()
 # The reasons there is no least, in the three places that know them: the header
 # a host reads, the one list of what each is called, and the reference. A reason
 # with no name of its own is a host told whatever the last one fell through to,
-# and a reason nobody is told about is one nobody writes a branch for — which is
-# what `nothing was asked` was four of until D566. `KEST_REACH_KNOWN` is on the
+# and a reason nobody is told about is one nobody writes a branch for, so each
+# reason has a name of its own. `KEST_REACH_KNOWN` is on the
 # header's list and on neither of the others on purpose: it is the answer a host
 # never reads, because the call that would have written it answered true.
 REASON_NAMES = table(
@@ -444,11 +443,12 @@ for word in sorted(set(w for w in reason_words
     failed = 1
 # The answers a host is given, and the hosts that read them. Each is a list with
 # nothing else in it, so a host that reads one with a `switch` and no `default`
-# is told by its own compiler when an answer is added — and a host that compares
-# against one value at a time is a host with a branch missing on the day the
-# machine says something else, which no compiler can see. The reference tells a
-# host writer that both hosts here read every one of them that way, so both are
-# held to it: a file that names any of an answer's values names all of them in a
+# is told by its own compiler when an answer is added -- and a host that
+# compares against one value at a time is a host with a branch missing on the
+# day the machine says something else, which no compiler can see. The reference
+# tells a host writer that both hosts here read every one of them that way, so
+# both are held to it: a file that names any of an answer's values names all of
+# them in a
 # `case`. Comparing against one beside that is a host saying which it expected,
 # which is a different thing from deciding what to do about each.
 ANSWERS = {"KestKept": "KEST_KEPT", "KestReach": "KEST_REACH",
@@ -508,7 +508,7 @@ for what, one, two in (("the compiler", checked, emitted),
         failed = 1
 
 # What the proof of a `no.alloc` promise knows about each of them. It has an
-# opinion per builtin — a reason it reaches the heap, or nothing — and a
+# opinion per builtin -- a reason it reaches the heap, or nothing -- and a
 # builtin it has never heard of is one it says nothing about: the promise is
 # then broken with no line to name, and what catches it is the proof that
 # reads the emitted code, which calls it a fault in the compiler when it is
@@ -605,10 +605,10 @@ if said_options != options:
             failed = 1
 
 # And the rest of what `help` says. The commands and the options in it are held
-# above to being answered; the sentences around them are promises too — what
-# `KEST_LIB` does, what an exit status carries, what `4,5,6` lends — and each is
-# a thing a reader will do on the strength of having read it. What holds one is
-# that something walks it, so every name `help` marks out is a name the check
+# above to being answered; the sentences around them are promises too -- what
+# `KEST_LIB` does, what an exit status carries, what `4,5,6` lends -- and each
+# is a thing a reader will do on the strength of having read it. What holds one
+# is that something walks it, so every name `help` marks out is a name the check
 # that runs the command line names as well. What is marked out is what is in
 # backticks and what is written in capitals, less the capitals that are this
 # file's own C rather than anything a reader sees.
@@ -641,8 +641,8 @@ for one in options:
 
 # The escapes, in the places they are said: what a run accepts, what a run names
 # when it meets one it does not know, and what the reference prints. The first
-# is asked by asking — every printable character is written after a backslash
-# and the answer says whether it is one — because reading the set out of the
+# is asked by asking -- every printable character is written after a backslash
+# and the answer says whether it is one -- because reading the set out of the
 # source is reading the same list a second time rather than a different one.
 #
 # Asked of a byte written on its own, because that is where all of them are
@@ -688,7 +688,7 @@ try:
     # shows them, and what a copy of a generic is compiled under.
     # `deterministic` was in none of them: what stood where the word should
     # have been written was a number grown after the memory it described had
-    # been handed out. See D1064.
+    # been handed out.
     shaped = os.path.join(work, 'shape.kest')
     for word in promise_words:
         open(shaped, 'w').write(
@@ -716,12 +716,12 @@ if accepted != names_back:
 # value of can be put in a hole: the checker's, which refuses a program that
 # asks for one that cannot, and the machine's, which writes the ones that can.
 # Each is held to naming every tag by there being no `default` in it, and
-# neither was held to the other — a tag moved from one side to the other in one
+# neither was held to the other -- a tag moved from one side to the other in one
 # of them compiles, and what a program gets then is `<no text>` where it asked
 # for a value, or a refusal for something the machine can write perfectly well.
 # Every `A - B` written anywhere in a piece of Python, as the pair of names it
 # takes apart. Only names, because a difference of two things that are written
-# out rather than named is not a list this file is holding to another. See D877.
+# out rather than named is not a list this file is holding to another.
 def taken_apart(node):
     pairs = set()
     for one in ast.walk(node):
@@ -740,7 +740,7 @@ def sides(path, opening):
         return None, None
     # Every run that ends in one of those and not only the last, because a
     # tag moved out of the list into a `case` of its own is a tag this used to
-    # go on counting on the side it left. See D541.
+    # go on counting on the side it left.
     silent = set(re.findall(r'KEST_T_(\w+)', ''.join(runs)))
     every = set(re.findall(r'case KEST_T_(\w+):', body))
     # What a type is when the checker has already said something about it. The
@@ -751,12 +751,12 @@ def sides(path, opening):
 
 
 # And the third switch of the same shape: which types compare. `hash` applies
-# to exactly what `==` applies to, and the reference says why — a type that
+# to exactly what `==` applies to, and the reference says why -- a type that
 # compares has one and a type that does not has neither. What parts this list
 # from the one above it is a single tag: an optional can be written and cannot
 # be compared, because the one way to ask an optional anything is to take what
 # it holds out. Held to being that one tag, so a kind that quietly moves in
-# either of them is a kind somebody has to have decided about. See D541.
+# either of them is a kind somebody has to have decided about.
 compares, does_not = sides('src/check.c',
                            r'static bool has_equality\([^)]*\) \{(.*?)\n\}')
 some("the types the checker compares", compares)
@@ -768,10 +768,9 @@ writes, cannot = sides('src/vm.c',
 # And the pair the machine keeps to itself. `missing_text` is the walk
 # `format_value` makes, asked first: a frame nothing has been called with is
 # noughts, and a nought where text goes is the absence of a piece rather than
-# an empty one. What makes the two one walk is which tags they go down into —
+# an empty one. What makes the two one walk is which tags they go down into --
 # a tag that carries something is one both have to follow, and a tag one of
-# them follows and the other does not is a null read where it is written. See
-# D543.
+# them follows and the other does not is a null read where it is written.
 # One arm is the labels written together and the lines under them. What ends an
 # arm is the next label rather than the `return` in it: an arm whose body is a
 # block returns from inside the block, and a walk that waits for a `return` at
@@ -825,11 +824,11 @@ if writes_down != asks_first:
         failed = 1
 
 # And the fourth of the same shape: what a hash is made out of, which the
-# machine asks of its stack and the folder asks of what it worked out — one walk
-# in the type layer since D671, which is why this is read there. The
+# machine asks of its stack and the folder asks of what it worked out: one walk
+# in the type layer, which is why this is read there. The
 # reference says `hash` applies to exactly what `==` applies to, because a type
-# that compares has one and a type that does not has neither — so the two lists
-# are the same list, said in two places. See D542.
+# that compares has one and a type that does not has neither -- so the two lists
+# are the same list, said in two places.
 hashes, unhashed = sides('src/types.c',
                          r'uint64_t kest_hash_value\([^)]*\) \{(.*?)\n\}')
 some("the types the machine hashes", hashes)
@@ -837,7 +836,7 @@ some("the types the machine hashes", hashes)
 # two values are compared, `hash_value` is the number standing for one, and
 # `has_equality` is what the checker lets near either: three lists of the same
 # tags, and any two of them disagreeing is two equal values with two hashes or
-# a comparison of something the checker refused. See D545.
+# a comparison of something the checker refused.
 equals, unequal = sides('src/vm.c',
                         r'static bool values_equal\([^)]*\) \{(.*?)\n\}')
 some("the types the machine compares", equals)
@@ -856,18 +855,17 @@ for what, does_none, takes in (("hash", "makes no hash of", hashes),
 
 some("the types the checker says can be written", says)
 some("the types the machine writes", writes)
-# Each of the three on its own. They used to sit behind one condition — that
-# what can be written and does not compare is exactly an optional — which is
+# Each of the three on its own. They used to sit behind one condition -- that
+# what can be written and does not compare is exactly an optional -- which is
 # only the first of them: the day a kind compared and could not be written, the
 # difference the other way was still exactly an optional and the guard held all
-# three shut. D874 gave a struct `==` without giving it a text and nothing here
-# said so. See D876.
+# three shut, so a kind that compared and had no text would go unsaid.
 # The two that are not on both lists, each with a reason. An optional can be
 # written and does not compare, because the one way to ask an optional anything
 # is to take what it holds out. A reference compares and cannot be written,
 # because what it says as text is what is behind it and what is behind it may be
 # gone -- it is an identity to compare and not a value to read. Anything else
-# on one list and not the other is a kind nobody decided about. See D876, D923.
+# on one list and not the other is a kind nobody decided about.
 COMPARES_WITHOUT_TEXT = {'REF'}
 WRITTEN_WITHOUT_EQUALITY = {'OPTIONAL'}
 if says is not None and compares is not None:
@@ -916,7 +914,7 @@ for where in sorted(puts):
 
 # And the order of it, which is the one thing about the gate that is not a
 # list. Everything below the build uses what the build made, and a check that
-# runs before it would be asking a binary that is not there — which for a probe
+# runs before it would be asking a binary that is not there -- which for a probe
 # that passes when a command fails is a pass. So the first thing in that file
 # that reaches for what was built comes after the line that says it was.
 gate = open('tools/check.sh').read().splitlines()
@@ -947,12 +945,12 @@ run = some("the checks ctest runs", sorted(set(
 # whichever it was written beside. Nothing here says what a check is, so this
 # does: it runs as a shell script, it stops on a name it never set, it writes
 # where nothing else writes, and it takes away what it wrote. The one about
-# `/tmp` is the one this project has already got wrong — two checks writing to
+# `/tmp` is the one this project has already got wrong -- two checks writing to
 # one fixed name is a gate that failed one run in six for no reason anybody
 # could see.
 # The name the sanitised build is told by, which is spelt once. One compiler
 # defines it and another answers a question about it, so a file that asks for
-# it directly is a file that has the checks under one and not under the other —
+# it directly is a file that has the checks under one and not under the other --
 # and the build with none of them in it runs everything and finds nothing. What
 # every other file asks for is `KEST_CHECKED`, which is that question answered
 # in one place.
@@ -982,7 +980,7 @@ for check in tools:
     # it is a fixed name it is asking about rather than one it writes to.
     if check != 'check-backstops.sh':
         # A name written into the file, quoted or bare. The one this project
-        # had was bare — a shell assignment, no quotes around it — and the
+        # had was bare -- a shell assignment, no quotes around it -- and the
         # pattern that only looked inside quotes read past it for as long as
         # it was there. Neither form matches the line below, because what is
         # written there is a pattern rather than a name.
@@ -1021,10 +1019,9 @@ for check in tools:
     # rather than with anything about what it was checking. What says two
     # things are two things is what they are made of: a number and a set are
     # not the same kind, and a name that is both is a name somebody reused.
-    # See D403.
     # Both ways a check carries Python: a heredoc, and a quoted string handed
     # to `python3 -c`. The second is nearly two thirds of it and was read by
-    # nothing — a shell string cannot hold the quote that ends it, so what is
+    # nothing -- a shell string cannot hold the quote that ends it, so what is
     # in one is Python written to avoid a character, which is exactly the kind
     # of writing a reader skims. It comes indented under the shell around it,
     # so the indent comes off before it is read.
@@ -1088,13 +1085,13 @@ for check in tools:
 
     # And a condition that is one of the things it guards. An `if` with more
     # than one complaint under it is a claim that when it is true, one of them
-    # has something to say — so a test that asks about `A - B` while the body
+    # has something to say -- so a test that asks about `A - B` while the body
     # complains about `B - A` is not a guard at all: the body's complaint is
     # behind a question that is not about it, and the day it has something to
     # say the test is false and nobody hears it. That is exactly what shut the
     # three sentences holding what compares to what can be written, for as long
     # as they existed, and the hole for one of them went on catching because
-    # the break it makes opens the guard by accident. See D877.
+    # the break it makes opens the guard by accident.
     for body in carried:
         try:
             tree = ast.parse(textwrap.dedent(body))
@@ -1128,9 +1125,9 @@ for where in sorted(glob.glob('tools/*.sh')):
     # half the ground the Python had. A name in a shell script is a place or
     # it is not: what has a `/` in it is somewhere, and a count, a word and
     # what a command answered are all text. That is the whole of what shell
-    # can be held to, and it is the half that went wrong — a directory's name
+    # can be held to, and it is the half that went wrong -- a directory's name
     # and the last thing a command said were one name, so every answer a sweep
-    # wrote went to a file nothing read and four holes were missed. See D438.
+    # wrote went to a file nothing read and four holes were missed.
     #
     # Every shell file here, not only the ten checks: the gate is shell too, and
     # the name that stood for two things was in one of each.
@@ -1217,9 +1214,9 @@ for where in sorted(glob.glob('tools/*.sh')):
     # And a piece of a shell this one is not. Every check here says `/bin/sh`
     # on its first line, and under that shell `$'\\r'` is those four characters
     # and nothing else: a sweep written that way looks for a byte no file has
-    # and can never say a word. It is not an error anywhere — the shell reads
+    # and can never say a word. It is not an error anywhere -- the shell reads
     # it, the check runs, and what it holds is nothing. `printf` writes the
-    # byte in every shell there is. See D465.
+    # byte in every shell there is.
     for number, line in without:
         if re.search(r"\$'", line):
             print("%s: line %u writes `$'...'`, which under `/bin/sh` is those "
@@ -1240,20 +1237,20 @@ some("the checks written in shell", shells)
 # hundred and thirty-nine things with a third of them named in no document and
 # in no check. What is left is what a program meets while it runs, which needs
 # a program that runs rather than one that is refused; the number below is what
-# says how many. See D415, D416 and D417.
+# says how many.
 # What nothing can be made to ask for, each written down where it was tried
 # rather than left as a number. A count is a thing that goes stale: two is what
 # it said the day it was written and nothing refused three.
 #
 # `K0705` is what a host is told when the very first allocation of a
-# build fails, and that succeeds whenever the process started at all — walked
+# build fails, and that succeeds whenever the process started at all -- walked
 # to the kilobyte where the C library can no longer be mapped and it never
 # appears; it is not dead, it is unreachable from here. `K0628` is what is left
 # when a name a command line asked for is in the program, takes no types, and
-# has no body in the module — which is the compiler having lost a chunk it
+# has no body in the module -- which is the compiler having lost a chunk it
 # made, and says so in the words a fault says. The one case that reached it was
 # a name the host answers, and the machine says that where the `extern` line
-# is. See D416, D417, D423, D428, D496 and D497.
+# is.
 NOT_REACHED = ("K0628", "K0705")
 # Every refusal this compiler can say, held to being asked for by something
 # that makes it happen and reads what it said. A message nobody has ever seen
@@ -1280,7 +1277,7 @@ by_a_check += open("examples/embed.c").read()
 # written there is being said whose mistake it is, which is a thing said about
 # a code rather than a check making one happen. Counting it would let a code be
 # asked for by the list that describes it, which is the shape this check has
-# been caught by three times over. See D791.
+# been caught by three times over.
 by_a_check = re.sub(r"HOSTS_OWN = \{.*?\n\}", "", by_a_check, flags=re.S)
 # Nor a code in a comment, which is a mention and not an asking -- the rule the
 # scan above this one has always kept and this one never did. `K0612` is named
@@ -1297,9 +1294,9 @@ not_asked = [code for code in reading if code not in by_a_check]
 # half that goes missing: a check that names a code names one this compiler
 # has. A code retired from the source leaves the check that asked for it
 # looking for words nothing says, and what a check looking for words nothing
-# says does is pass — the run it reads never has them. `K0507` was withdrawn
+# says does is pass -- the run it reads never has them. `K0507` was withdrawn
 # and its asking went with it because somebody remembered; nothing would have
-# said so. See D443.
+# said so.
 every_code = set(re.findall(r'"(K0[0-9][0-9][0-9])"',
                             "".join(open(where).read() for where in
                                     sorted(glob.glob("src/*.c") +
@@ -1333,7 +1330,7 @@ for asking_in in [where for where in sorted(glob.glob("tools/*.sh"))
 # `examples/embed.c`. A ceiling a careful host meets is a host worth copying
 # and the example host meets it -- never reading what a machine says is a
 # frame loop, not a bug. A host that binds memory it has given back is not a
-# host to copy, so the only place it is made is a hole. See D789.
+# host to copy, so the only place it is made is a hole.
 HOSTS_OWN = {
     "K0612": "a handle that is not the kind the instruction wanted, which the "
              "checker leaves no way to write and a host hands in through a "
@@ -1394,7 +1391,7 @@ for what, these in (("run by ctest", run),):
 # this library is written for numbers it is written twice over: a frame works
 # in `f32` and a number is written in `f64`, and widening by hand at every call
 # is the module not doing its half. Four functions were missing their other
-# half and nothing here could see it — what holds every library function to
+# half and nothing here could see it -- what holds every library function to
 # being reached holds the ones that are there, and a half nobody wrote is named
 # by nobody, so the check that finds a leftover cannot find a gap.
 #
@@ -1452,7 +1449,7 @@ for module in in_widths:
 # the mark leaves out, and two programs differing only in it mark alike. So every
 # field of the four shapes it walks is either folded or written down here beside
 # the reason it is not, which is the same rule this file holds the other complete
-# lists to. See D661.
+# lists to.
 LEFT_OUT = {
     ("KestValue", "real"): "the same bytes as the whole number beside it, "
                            "which is what a constant is folded through",
@@ -1485,22 +1482,22 @@ LEFT_OUT = {
                                   "about how the same program was written "
                                   "down rather than about what it means: two "
                                   "builds that differ only in it run the same "
-                                  "program (D1012)",
+                                  "program",
     ("KestChunk", "carried"): "which functions were carried into this body "
                               "rather than called, which the code the mark "
                               "folds already is: a body carrying another "
-                              "carries its instructions (D1156)",
+                              "carries its instructions",
     ("KestChunk", "carried_count"): "how many of those there are",
     ("KestChunk", "carried_room"): "room rather than what is in it",
     ("KestModule", "carrying_off"): "whether small bodies are carried to where "
                                     "they are called, which is how a program "
                                     "was written down rather than what it "
                                     "means and shows in the code the mark "
-                                    "folds (D1156)",
+                                    "folds",
     ("KestLayout", "walk"): "the steps moving a value takes, written out once "
                             "from the type the mark already folds and "
                             "something the machine reads rather than part of "
-                            "a shape (D1159)",
+                            "a shape",
     ("KestLayout", "by_the_type"): "whether what a host writes into this has "
                                    "to be read by its type, which is worked "
                                    "out from the type the mark already folds "
@@ -1510,13 +1507,13 @@ LEFT_OUT = {
                                  "be wrong, which is worked out from the "
                                  "pieces the mark already folds and is a "
                                  "thing about reading a value rather than "
-                                 "part of one (D1272)",
+                                 "part of one",
     ("KestChunk", "native"): "which engine runs this body, which is a thing "
                              "about how a program was built rather than part "
                              "of what it means: the same program with a body "
                              "compiled by the host's compiler and with it "
                              "interpreted is the same program, and what holds "
-                             "that is `check-c.sh` (D1094)",
+                             "that is `check-c.sh`",
     ("KestChunk", "as_value"): "whether anything names this function as a "
                                "value, which is read off the code that names "
                                "it and is a thing about the module rather "
@@ -1590,8 +1587,8 @@ if some("what a mark is folded from", [folds] if folds else []):
     # beside it: it starts at what it is handed and follows every field it
     # folds that is a shape of this compiler's own. A list written here would
     # be one more thing to keep in step, and the shape it would miss is the one
-    # reached through a field rather than named — which is what happened to
-    # `KestPiece`. See D662.
+    # reached through a field rather than named -- which is what happened to
+    # `KestPiece`.
     walked = [folds.group(1)]
     at = 0
     while at < len(walked):
@@ -1625,26 +1622,26 @@ if some("what a mark is folded from", [folds] if folds else []):
 
 # Which checks say a machine's numbers, and say so. Two of them do: what a run
 # costs in bytes and where a ladder refuses are this machine's, and everything
-# else here is about the tree — a reader of a failing gate needs to know which
+# else here is about the tree -- a reader of a failing gate needs to know which
 # of the two they are looking at before they suspect their own machine. The
 # words are in the last sentence each of them says, which is the one a reader
-# reads. See D689.
+# reads.
 # The gate's own lines are on the list too. Most of them count what is in the
-# tree — files, runs, examples, and a count of those is the same count anywhere
-# — and one says what a shape takes in memory, which is this machine's word
-# size as much as the program's shape. See D690.
+# tree -- files, runs, examples, and a count of those is the same count anywhere
+# -- and one says what a shape takes in memory, which is this machine's word
+# size as much as the program's shape.
 # A shape that holds more than one handle holds them in step, and a program that
-# writes one of them writes the shape. There is no refusal for that — a field is
-# readable anywhere and a handle handed out is written through — so what there is
-# instead is the module saying it where the shape is declared. Held over the
-# library and over the programs this project writes. See D694 and D695.
+# writes one of them writes the shape. There is no refusal for that -- a field
+# is readable anywhere and a handle handed out is written through -- so what
+# there is instead is the module saying it where the shape is declared. Held
+# over the library and over the programs this project writes.
 #
 # Asked of the compiler rather than read off the page. A generic shape is no
 # shape until something uses it, so `table.Table` is nowhere in its own file and
 # is four handles in every program that makes one; and what a field holds is the
 # type the checker resolved rather than the letters a program spelled. The file
 # that has to say the words is the one the shape is declared in, which the
-# compiler says as well. See D697.
+# compiler says as well.
 def shapes_of(program):
     """Every shape a program declares, as the compiler resolved them."""
     ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'check', '--json', program],
@@ -1658,13 +1655,13 @@ def shapes_of(program):
 
 
 # Every type whose meaning is more than its width, held to a layout that says
-# so. Six kinds have been split out of a wider one -- the tag (D708), the byte
-# an optional keeps (D714), a reference (D715), a truth (D839), text (D896) and
-# a set of named bits (D897) -- and every one of them was found by somebody
+# so. Six kinds have been split out of a wider one -- the tag, the byte
+# an optional keeps, a reference, a truth, text and
+# a set of named bits -- and every one of them was found by somebody
 # reading a layout and being unable to tell two types apart in it. This is that
 # reading done as a rule: what a host is handed says what a piece means and not
 # only how wide it is, so a flag set lays out as one and an enum begins with a
-# tag. See D897.
+# tag.
 MEANS_MORE = {"flags": ("flags8", "flags16", "flags32", "flags64"),
               "enum": ("tag",)}
 
@@ -1729,8 +1726,7 @@ for named in sorted(meaning):
 # already has -- so this is two answers held to each other and not a second
 # copy of the rule that makes them. A shape with nothing in it is one slot all
 # the same, and the walk that fills the pieces filled none of it: what a host
-# read was the first kind there is, out of a block the arena had zeroed. See
-# D898.
+# read was the first kind there is, out of a block the arena had zeroed.
 laid_together = 0
 for program in (sorted(glob.glob(os.path.join('lib', 'std', '*.kest'))) +
                 sorted(glob.glob(os.path.join('examples', '*.kest')))):
@@ -1738,8 +1734,8 @@ for program in (sorted(glob.glob(os.path.join('lib', 'std', '*.kest'))) +
     for shape in shapes_of(program):
         if shape['name'] not in pieces_of:
             continue
-        # One with no fields is one slot all the same, which is D807's answer
-        # and the one place a shape's pieces are not its fields'.
+        # One with no fields is one slot all the same, which is the one place a
+        # shape's pieces are not its fields'.
         flattened = [] if shape.get('fields') else ['nothing']
         for field in shape.get('fields') or []:
             if field['type'] not in pieces_of:
@@ -1763,7 +1759,7 @@ some("the shapes laid out beside their fields", laid_together)
 # what says that is right is that it is inside the block, on a boundary its own
 # width allows, and not over the piece before it. A host lays its own memory out
 # from these numbers, so an offset that is wrong is a field written over
-# another's and nothing anywhere to say so. See D899.
+# another's and nothing anywhere to say so.
 HOW_WIDE = {"i8": 1, "u8": 1, "bool": 1, "held": 1, "nothing": 1, "flags8": 1,
             "i16": 2, "u16": 2, "flags16": 2,
             "i32": 4, "u32": 4, "f32": 4, "tag": 4, "flags32": 4,
@@ -1775,7 +1771,7 @@ for program in (sorted(glob.glob(os.path.join('lib', 'std', '*.kest'))) +
     for one in laid_out_in(program):
         # What a case carries sits where its own case says, so the pieces of a
         # tagged value are not one run: the widest is described and the rest
-        # are read through the tag. See D708.
+        # are read through the tag.
         if one['tagged']:
             continue
         placed += 1
@@ -1802,8 +1798,8 @@ holds_what = {}
 # The library's own modules as well as the programs. A shape that is not generic
 # is a shape as soon as its module is read, and one the examples never use would
 # otherwise be seen by nothing here: `check-dead.sh` holds every library shape to
-# being named, and named is not made. A generic nothing makes is another matter —
-# it is no shape anywhere, so there is nothing to write through. See D698.
+# being named, and named is not made. A generic nothing makes is another matter
+# -- it is no shape anywhere, so there is nothing to write through.
 for program in (sorted(glob.glob(os.path.join('lib', 'std', '*.kest'))) +
                 sorted(glob.glob(os.path.join('examples', '*.kest'))) +
                 sorted(glob.glob(os.path.join('examples', '*', '*.kest')))):
@@ -1816,7 +1812,7 @@ some("the shapes this tree declares", declared_in)
 # A handle is a run of something or a store: the thing itself is somewhere else
 # and what the field holds is the way to it. A `ref` is a place in a store
 # rather than the store. A field that holds a shape that holds handles is one
-# too, which is why this goes round until it stops learning. See D697.
+# too, which is why this goes round until it stops learning.
 learning = True
 while learning:
     learning = False
@@ -1842,7 +1838,7 @@ for name in sorted(holding):
 # answered in two places -- the default width of a literal, whether a literal
 # fits, whether a type is the narrower float -- and each was found by reading
 # the two side by side. Nothing held them together, and two bodies with one
-# answer are two answers the day either moves. See D769.
+# answer are two answers the day either moves.
 #
 # A body under twenty characters once the comments and the spacing are out of
 # it is not read: `return NULL;` and `(void)runtime;` are what a signature
@@ -1852,10 +1848,10 @@ SAME_BODY = {}
 # And the four that are one shape with other names in them, each with what the
 # other name is for. A shape is weaker evidence than a body, so it is read only
 # of bodies over sixty characters, and these four are what is left above that
-# line. See D770.
+# line.
 SAME_SHAPE = {
     frozenset(("kest_entry_name", "kest_entry_wrote")):
-        "an accessor's own bounds, which D584 and D609 settled: a host walking "
+        "an accessor's own bounds: a host walking "
         "to the end is reading the end rather than asking about a function "
         "that is not there",
     frozenset(("kest_build_read_bytes", "kest_build_read_mark")):
@@ -1863,14 +1859,14 @@ SAME_SHAPE = {
     frozenset(("math_ceil", "math_floor", "math_sqrt")):
         "the library's three crossings, each taking one number and handing "
         "it to a different function of the C library: the three `std.math` "
-        "declares, because the rest of it is written in Kest (D1235)",
+        "declares, because the rest of it is written in Kest",
     frozenset(("place_room", "type_index_room")):
         "two of the three name indexes asking for room the same way: a table "
         "twice as big when it is half full, and every name put in again. They "
         "index different things -- where a declaration was written, and what "
         "a type is called -- and the third is written the same way beside "
         "them under the name `index_room`, which is the globals' own. Three "
-        "tables, one rule for growing them. See D1086",
+        "tables, one rule for growing them",
     frozenset(("is_numeric", "takes_what_follows")):
         "two questions about what kind of expression something is, each a "
         "list of the kinds it is true of: one is the kinds a number can be "
@@ -1889,7 +1885,7 @@ SAME_SHAPE = {
         "what a program is holding and what it has ever been handed, each the "
         "sum of the same question asked of the two places a running program's "
         "memory comes from, and each answering nought for a machine that did "
-        "not start, which D894 made the answer at every door. See D996",
+        "not start, which is the answer at every door",
 }
 
 # What a body's words are once the names in it are numbered by where they first
@@ -1984,18 +1980,18 @@ for body_path in sorted(glob.glob(os.path.join("src", "*.c"))):
 # compared for equality beside a `memcmp`: the length of a name that ends at a
 # nought, held against the length of a run that does not.
 #
-# Measured against the tree as it stood before D773: twenty-nine of the
-# thirty-one hand-written tests, and nothing that was not one. The two it
+# Measured against thirty-one copies written out by hand: it finds twenty-nine
+# of them, and nothing that was not one. The two it
 # cannot see bind the `strlen` to a local a line earlier, and both of those had
 # already been given a name -- `is_word` and `is_builtin` -- which is the form a
 # reader was going to notice anyway. `kest_under_module` is not caught and
 # should not be: `strlen(whole) > length + 1` asks whether one name begins with
-# another, which is a different question and stays written out. See D775.
+# another, which is a different question and stays written out.
 #
 # `kest_word_same` is now itself the other way of asking -- a byte at a time,
 # stopping at the first that differs or at the name's nought -- and is written
 # in the header so it is folded into whoever asks, so headers are read as well
-# and that shape is looked for beside the first. See D1276.
+# and that shape is looked for beside the first.
 WORD_BY_HAND = {
     "src/diag.h": "`kest_word_same` is the one place, and this is it",
 }
@@ -2031,11 +2027,9 @@ for word_path in WORD_BY_HAND:
 
 # Where a span becomes text is one place. `kest_span_text` says it, and a file
 # that adds an offset to a source's bytes for itself is a file that will still
-# be doing it the day a span starts counting from somewhere else -- which is
-# how D772 found the same arithmetic in seventeen places and left nineteen
-# more, because what found it was a grep and a grep only sees what it was
-# written to see. So the files that do it by hand are named here with why what
-# they hold is not a span. See D772.
+# be doing it the day a span starts counting from somewhere else, and a grep
+# only finds what it was written to see. So the files that do it by hand are
+# named here with why what they hold is not a span.
 SPAN_BY_HAND = {
     "src/diag.c": "`kest_span_text` is the one place, and this is it",
     "src/lexer.c": "the lexer is what makes spans, so while it is still "
@@ -2066,7 +2060,7 @@ for span_path in SPAN_BY_HAND:
 # one of two things and both are worth stopping for: something somebody meant
 # to use and did not -- `by_address` was the compiler knowing that a slot holds
 # where a value is, written down every time and never carried to the host that
-# needed it (D1081) -- or a leftover from a design that changed, which reads to
+# needed it -- or a leftover from a design that changed, which reads to
 # the next person as state that means something. Five of the six this first
 # found were leftovers and the sixth was a door that had never opened.
 #
@@ -2145,11 +2139,10 @@ for named in FROM_A_MACHINE:
 # Every door this compiler names in something it says, held to being one a host
 # can call. A refusal that sends a reader to a function is a claim about where
 # the answer is, and a name out of `src` is a name a host looks for in
-# `include/kest.h` and does not find — the documents have been held to this
-# since D659 and what the machine says never was. Read out of the strings
+# `include/kest.h` and does not find. The documents are held to this, and
+# so is what the machine says. Read out of the strings
 # rather than out of the file, because a name in a comment is for whoever is
 # reading the code and a name in a message is for whoever is reading a report.
-# See D833.
 doors_public = some("the doors the public header declares", set(re.findall(
     r'\b(kest_[a-z_0-9]+)\s*\(',
     re.sub(r'//[^\n]*', '', open(os.path.join("include", "kest.h")).read()))))

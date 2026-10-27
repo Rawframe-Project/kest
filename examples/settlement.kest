@@ -12,8 +12,8 @@ import std.sort
 // What it does: settlers eat, work, starve and are born; jobs are given out,
 // worked on and finished; and both point at each other, so the graph has cycles
 // in it and references that outlive what they named. A day is a tick. The host
-// drives it -- `onEvents` is one day an event, which is the shape D007 and
-// W11's bulk crossing say to write -- and `main` runs a scripted day with the
+// drives it -- `onEvents` is one day an event, which is the bulk crossing
+// a host is meant to write -- and `main` runs a scripted day with the
 // same bodies so that running it is running the thing itself.
 //
 // It is also the memory study. A world that is kept and worked on for a long
@@ -29,7 +29,7 @@ const JOBS: i32 = 2000
 // A settler and the job it holds. Each points at the other, which is the cycle
 // this language does not have to do anything about: nothing counts references
 // and nothing is told about a deletion, so a cycle is a shape rather than a
-// leak. What it costs is that a read is a lookup that can fail. See D014.
+// leak. What it costs is that a read is a lookup that can fail.
 struct Settler {
     name: text
     hunger: i32
@@ -61,7 +61,7 @@ struct World {
     // Two buffers the world keeps, so a day that counts and a day that writes
     // a line both reach no heap. `clear` keeps the room it took and `fit` is
     // the append that cannot grow, so filling either of these is a thing a
-    // body can promise about. See D940.
+    // body can promise about.
     hungry: [i32]
     said: [u8]
     day: i32
@@ -274,7 +274,7 @@ fn oneDay(w: World) -> World {
 }
 
 // The host's way in. One day an event, so a batch of events is a batch of days
-// and the crossing happens once rather than once a day. See D007.
+// and the crossing happens once rather than once a day.
 fn onEvents(events: [i32]) -> i32 no.host {
     let w = empty()
     settle(w, SETTLERS)
@@ -389,11 +389,11 @@ fn main() -> i32 {
         return 6
     }
     // And out to a file, read back, so that the one thing a program could not
-    // do before this sprint is a thing this program does. See D925.
+    // do before this sprint is a thing this program does.
     // Beside whatever is running this rather than in a named directory: a
     // path that begins with a slash is a path one of the two platforms this
     // is built for has not got, and this example ran everywhere except the
-    // one place nobody had run it. See D970.
+    // one place nobody had run it.
     let where = "kest-settlement-day.txt"
     if !save(w, where) {
         return 11

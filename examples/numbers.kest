@@ -6,8 +6,8 @@ import std.sort
 
 // What a number does at the end of its range, which is where a simulation
 // lives: a count that runs over, a narrowing that keeps what it has room for,
-// a divide by nought. Everything here is D018's rule — match C where C has an
-// answer, and answer where it has none — and every line of it is a rule the
+// a divide by nought. Everything here follows one rule (match C where C has
+// an answer, and answer where it has none), and every line of it is a rule the
 // reference states, run.
 
 // Worked out where it is written, with the same arithmetic that runs: `120 +
@@ -17,8 +17,7 @@ const NARROW: i8 = 120 + 10
 // The same arithmetic in the two places this compiler does it: a constant is
 // worked out where it is written, by the folder, and an expression the folder
 // cannot see through is worked out while running, by the machine. Two
-// implementations of one promise — D667 fixed one of them and nothing held
-// them to each other. See D668.
+// implementations of one promise, held to each other here.
 const HIGHEST: i64 = 9223372036854775807
 const SMALLEST: i64 = -9223372036854775807 - 1
 const OVER: i64 = HIGHEST * 3
@@ -30,7 +29,7 @@ const SHIFTED: i64 = HIGHEST << 3
 // nought left over, and a shift of a count past the width, which leaves
 // nothing but the sign a signed shift keeps shifting in. The first took the
 // compiler down on the machine it compiles on rather than being worked out,
-// and the second was refused where the machine answers. See D806.
+// and the second was refused where the machine answers.
 const FLIPPED_OVER: i64 = SMALLEST / -1
 const LEFT_OF_FLIPPED: i64 = SMALLEST % -1
 const SHIFTED_OUT: i64 = HIGHEST << 64
@@ -41,7 +40,7 @@ const WIDE_SHIFTED: u64 = WIDEST >> 64
 const NARROWED: i8 = NARROW * 3
 // And the conversions, which the folder does now for the same reason it does
 // the arithmetic: a narrowing is what a program writes when it means one, and
-// it meant the same thing everywhere except where it was worked out. See D669.
+// it meant the same thing everywhere except where it was worked out.
 const CUT: i32 = i32(HIGHEST)
 const BYTE: u8 = u8(HIGHEST)
 const ROUNDED: f32 = f32(1.0 / 3.0)
@@ -51,7 +50,7 @@ const STOPPED: i8 = i8(1000.0)
 // What a division leaves over, for a float. `/` and `%` go together and
 // answer the same way at every end of a width, which for a float means the
 // answer C has: the sign follows what is being divided, not what it is being
-// divided by. See D776.
+// divided by.
 const LEFT_OVER: f64 = 7.5 % 2.0
 const LEFT_UNDER: f64 = -7.5 % 2.0
 const LEFT_NARROW: f32 = 7.5 % 2.0
@@ -62,7 +61,6 @@ const LEFT_NARROW: f32 = 7.5 % 2.0
 // divide by nought has an answer and then refuses the one written down is
 // saying it in two voices. These are also the only way to write an infinity or
 // what is not a number, which the reference says a program gets by dividing.
-// See D805.
 const TOWARDS: f64 = 7.5 / 0.0
 const AWAY: f64 = -7.5 / 0.0
 const NEITHER: f64 = 0.0 / 0.0
@@ -139,7 +137,7 @@ fn main() -> i32 {
     // And the same division written the other way. `x /= y` and `x = x / y`
     // are two spellings of one thing and go down two paths in the compiler,
     // and for this one pair they used to answer differently: one past the top
-    // of the width was left sitting in an `i32` slot. See D867.
+    // of the width was left sitting in an `i32` slot.
     let shrinking: i32 = least32
     shrinking /= minus
     let shrinking8: i8 = least8
@@ -218,7 +216,7 @@ fn main() -> i32 {
     }
 
     // The usual order, over each width in turn. `sort.ascending` is one body
-    // that takes a type, so this is one copy per width — and the comparison in
+    // that takes a type, so this is one copy per width -- and the comparison in
     // each is the one that width does, which is the whole point of writing it
     // once.
     let bytes: [u8] = array()
@@ -296,8 +294,8 @@ fn main() -> i32 {
         return 39
     }
     // Both halves of a pair, asked the same thing. This module is written
-    // twice over — once for the width a frame works in and once for the width
-    // a number is written in — and four of those halves were not there at all:
+    // twice over -- once for the width a frame works in and once for the width
+    // a number is written in -- and four of those halves were not there at all:
     // a program counting in `i64` could take the smaller of two and not the
     // distance from nought, and a frame working in `f32` had to widen by hand
     // to ask for an angle, which is the module not doing its half.
@@ -373,8 +371,8 @@ fn main() -> i32 {
     }
 
     // Unsigned arithmetic asked for by itself. Every unsigned number in this
-    // file so far has been sorted, pushed, or compared — none has been
-    // divided, counted with, or written into text — so the instructions that
+    // file so far has been sorted, pushed, or compared -- none has been
+    // divided, counted with, or written into text -- so the instructions that
     // do the unsigned half of those three things had never run. Division is
     // the one that would give a different answer signed: the top bit of a
     // `u32` is a large number, not a negative one.
@@ -409,9 +407,9 @@ fn main() -> i32 {
 
     // A comparison kept rather than asked. Nearly every comparison in this
     // tree is the condition of an `if` or a `while`, and the compiler folds
-    // those into the jump — so the ten instructions that answer `true` or
+    // those into the jump -- so the ten instructions that answer `true` or
     // `false` and leave the answer on the stack had never been run by
-    // anything anybody wrote. See D430.
+    // anything anybody wrote.
     let below: bool = ten <= 0.0
     let above: bool = ten >= 0.0
     let apart: bool = ten != 0.0
@@ -419,7 +417,7 @@ fn main() -> i32 {
     let fewer: bool = many <= 4
     let more: bool = many >= 4
     let differs: bool = many != 4
-    // Through a call, because since D887 a name nothing writes holding a
+    // Through a call, because a name nothing writes holding a
     // comparison of two pieces of text written down is a truth the compiler
     // works out where it stands -- and a truth in the chunk is the three
     // instructions that compare text never being run by anything.
@@ -462,7 +460,7 @@ fn main() -> i32 {
     // machine has to do on purpose: adding past the top, multiplying past it,
     // and negating the smallest number there is, which is itself. A machine
     // doing these the way C does them signed is a machine whose answer is
-    // undefined, and a build told to look says so. See D667.
+    // undefined, and a build told to look says so.
     let highest: i64 = 9223372036854775807
     if highest + 1 != -9223372036854775807 - 1 {
         return 60
@@ -479,8 +477,8 @@ fn main() -> i32 {
         return 63
     }
 
-    // And the two of them against each other, which is the pair D668 is
-    // about: the same expression folded and run has to be the same number.
+    // And the two of them against each other: the same expression folded and
+    // run has to be the same number.
     if asRun(HIGHEST) * 3 != OVER {
         return 64
     }
@@ -495,9 +493,9 @@ fn main() -> i32 {
     }
     // The two ends of the whole numbers worked out twice. The least number
     // over minus one is one past the top of the width, so it wraps to itself
-    // and leaves nought — the same sentence the run-time check above makes
+    // and leaves nought -- the same sentence the run-time check above makes
     // about an `i32`, made here about the width where C traps rather than
-    // wrapping. See D806.
+    // wrapping.
     if FLIPPED_OVER != SMALLEST || asRun(SMALLEST) / -1 != FLIPPED_OVER {
         return 88
     }
@@ -549,9 +547,9 @@ fn main() -> i32 {
     }
     // And every one of those ends worked out twice: once where it is written
     // and once while running. Not a number is held by being unequal to
-    // itself, and an infinity by being past what a float can hold — there is
+    // itself, and an infinity by being past what a float can hold -- there is
     // no way to write either down, so there is nothing to compare them to but
-    // arithmetic. See D805.
+    // arithmetic.
     if TOWARDS <= 1.7976931348623157e308 || realAsRun(7.5) / 0.0 != TOWARDS {
         return 76
     }
@@ -631,7 +629,7 @@ fn main() -> i32 {
     }
     // Below, on and above five, in every form a comparison is made one
     // instruction in: 35 is `<`, `<=` and `!=`; 26 is `<=`, `>=` and `==`;
-    // 44 is `>`, `>=` and `!=`. See D1211.
+    // 44 is `>`, `>=` and `!=`.
     for v in 4..7 {
         let want = if v == 4 -> 35 else -> if v == 5 -> 26 else -> 44
         if againstLocal(v) != want {
@@ -661,7 +659,7 @@ fn main() -> i32 {
     }
     // A walk of four turns, written out once a turn: every question about
     // the count has its answer where it is asked, and what is not settled
-    // by it is still asked. See D1231.
+    // by it is still asked.
     if turnsWrittenOut(5) != 21110 {
         return 103
     }
@@ -670,7 +668,7 @@ fn main() -> i32 {
     }
     // Two whole numbers leave over what a whole number's `%` does, with the
     // sign of the one divided -- a nought from below is the nought below --
-    // up to the last whole number a float holds exactly. See D1288.
+    // up to the last whole number a float holds exactly.
     if realAsRun(-7.0) % 3.0 != -1.0 || realAsRun(7.0) % -3.0 != 1.0 {
         return 105
     }
@@ -729,7 +727,7 @@ fn weighedInPlace(xs: [i32]) -> i32 {
 // worked out on the stack against one, two values, and each turned round by
 // a `continue` after it, at below, on and above. A comparison fused as its
 // neighbour differs from the one written only where the two sides are equal,
-// which is what a program made at random rarely lands on. See D1211.
+// which is what a program made at random rarely lands on.
 fn againstLocal(v: i32) -> i32 no.alloc {
     let bits = 0
     if v < 5 {
@@ -869,9 +867,9 @@ fn realAgainst(v: f64) -> i32 no.alloc {
     return bits
 }
 
-// And the same way out of a turn for a float, which D1205 does not turn round
-// -- a NaN is neither side of five -- but asks the other way: the jumps taken
-// when the comparison holds, against a constant. See D1212.
+// And the same way out of a turn for a float, which the compiler does not
+// turn round -- a NaN is neither side of five -- but asks the other way: the
+// jumps taken when the comparison holds, against a constant.
 fn realPassedOver(v: f64) -> i32 no.alloc {
     let bits = 0
     let asked = 0
@@ -932,7 +930,7 @@ fn turnsAcrossTheMiddle(from: u64) -> i32 no.alloc {
 // Three locals side by side read in one instruction, the last two of them a
 // run and where in it: what is read out of the run is at the second and third
 // slots, and reading the first two as the run and the index is reading a
-// number as an array. See D1213.
+// number as an array.
 fn besideAnIndex(k: i32, xs: [i32], i: i32) -> i32 no.alloc {
     return k + xs[i]
 }
@@ -942,7 +940,7 @@ fn besideAnIndex(k: i32, xs: [i32], i: i32) -> i32 no.alloc {
 // the count and a half that is not, the other way round, a settled truth
 // handed on as a value and one settled by either half, a `continue` in the
 // first turn and a `break` in the third: each of them answers into its own
-// place of the number. See D1231.
+// place of the number.
 fn turnsWrittenOut(x: i32) -> i32 no.alloc {
     let total = 0
     for way in 0..4 {

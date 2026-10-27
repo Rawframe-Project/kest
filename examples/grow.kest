@@ -16,8 +16,8 @@ fn collect(count: i32) -> [Sample] {
     // Room for what is coming, said to an array that already exists. A loop
     // that pushes without asking ends with room for the next power of two,
     // and one that asks first takes one block and fills it. What it does not
-    // change is what is in it or how many there are — `len` is nought here
-    // before and after. See D912.
+    // change is what is in it or how many there are -- `len` is nought here
+    // before and after.
     room(samples, count)
     for i in 0..count {
         push(samples, Sample(i, f32(i) * 0.5))

@@ -7,7 +7,7 @@ import std.io
 // named. A `store<T>` hands out a `ref<T>` and can delete what it holds.
 // Nothing is notified of a deletion and nothing counts references, so a cycle
 // is not a problem to have. What that costs is that every read is a lookup
-// which can fail, and D014 is why that trade was taken.
+// which can fail.
 
 struct Npc {
     name: text
@@ -66,7 +66,7 @@ fn decay(world: store<Npc>, amount: i32) -> i32 no.alloc {
 // A walk over a store looks for the next live slot rather than counting to a
 // limit, so a slot that dies ahead of the cursor is looked at, found dead and
 // stepped over, and one that dies behind it changes nothing because the walk
-// does not go back. Four go in and three are seen. See D504.
+// does not go back. Four go in and three are seen.
 fn cull(world: store<Npc>, ahead: ref<Npc>, behind: ref<Npc>) -> i32 no.alloc {
     let seen = 0
     for r in world {
@@ -102,7 +102,7 @@ fn reinforce(world: store<Npc>, after: text) -> i32 {
 fn main() -> i32 {
     // A reference is an identity, so two of them compare. It is the one handle
     // that does, and the question it answers is the one a program asks: the
-    // same character, and still that character. See D923.
+    // same character, and still that character.
     let named: store<Npc> = store()
     let sameOne = add(named, Npc("one", none, none))
     let sameTwo = add(named, Npc("two", none, none))
@@ -179,7 +179,7 @@ fn main() -> i32 {
     }
     // The hard half of what a reference is worth: the smith's slot is free
     // now, so the next one added takes it back. A reference is a slot and a
-    // generation, so the old one still reads nothing — a slot map without the
+    // generation, so the old one still reads nothing -- a slot map without the
     // second number would answer with whoever moved in.
     let cooper = add(world, Npc("cooper", none, none))
     if get(world, smith) != none {
@@ -208,7 +208,7 @@ fn main() -> i32 {
     }
 
     // A store with nothing left in it walks nothing, and filling it again
-    // hands back the same slots with new counts — so every reference from
+    // hands back the same slots with new counts -- so every reference from
     // before is still stale, which is the thing that would be easiest to lose
     // by making a walk cheaper.
     let empty: store<Npc> = store()
@@ -260,7 +260,7 @@ fn main() -> i32 {
     // second taken back last: what goes in next takes that one, so a walk in
     // slot order reads the newest first. A store that runs out of taken-back
     // slots reaches for the end instead, and a store with nothing left in it
-    // goes back to reaching nothing — which is why one is kept alive here.
+    // goes back to reaching nothing -- which is why one is kept alive here.
     let order: store<Npc> = store()
     let oldest = add(order, Npc("1", none, none))
     let newer = add(order, Npc("2", none, none))

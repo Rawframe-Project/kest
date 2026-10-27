@@ -7,7 +7,7 @@ import std.sort
 // Luau's own `bench/tests/life.lua` in Kest: a glider, an explosion and a fish
 // on a forty by twenty board that wraps round, a thousand generations. A board
 // is rows of cells counted from one, as the Lua one is, so the arithmetic on
-// where a neighbour is is the same arithmetic. See D1267.
+// where a neighbour is is the same arithmetic.
 
 struct Shape {
     cells: [i32]

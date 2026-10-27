@@ -8,7 +8,7 @@ import std.vec
 // value's type was declared in, or the language's, taken in that order when
 // the first thing it takes could be the value. Nothing is declared inside a
 // type, so a chain reads left to right and every link is a function anybody
-// could call the other way round. See D1256.
+// could call the other way round.
 
 struct Pot {
     level: i32

@@ -10,13 +10,13 @@ import std.hash
 // A table written down before the program runs. Values worked out where they
 // are written live in the chunk, so a run of them is one copy rather than one
 // instruction each, and one of them read at an index worked out while it runs
-// is read out of the chunk rather than copied into slots first (D430).
+// is read out of the chunk rather than copied into slots first.
 const TIERS: [i32; 4] = [0, 90, 250, 1200]
 
 // Worked out where they are written, both of them: how many are in a run of a
 // size the type says, and the number standing for a value, which this language
 // promises does not move. A program may have a table of hashes before it starts
-// rather than building one every time it does. See D670.
+// rather than building one every time it does.
 const HOW_MANY: i32 = len(TIERS)
 const SWORD: u64 = hash("sword")
 
@@ -28,15 +28,15 @@ struct Item {
 // One number for a whole item, which `hash` does not give: what a struct hashes
 // to is which of its fields decide, and that is the program's to say. What
 // folds them is `std.hash`, so that two programs folding the same fields get
-// the same number — the fold is the one this compiler uses for a program made
-// of several files. See D666.
+// the same number -- the fold is the one this compiler uses for a program made
+// of several files.
 fn mark(item: Item) -> u64 no.alloc {
     return hash.join(hash.join(hash.start, hash(item.id)), hash(item.price))
 }
 
 // What the folder stops at, which is what makes a pair a pair: it works out
 // numbers, truths, text and what this language promises about them, and a call
-// is where a program starts. See D668.
+// is where a program starts.
 fn spoken(t: text) -> text no.alloc {
     return t
 }
@@ -61,8 +61,8 @@ fn priceOf(items: [Item], id: i32) -> i32 {
 // one of a run, standing where an optional is wanted. What the run holds has
 // no tag in it, so the field is read at its own width and the tag goes on
 // afterwards -- reading it at the width of the optional it is about to become
-// took the field and the slot after it. It is the mistake D809 found in one
-// of a run, in the other place a value is read from an address. See D1055.
+// would take the field and the slot after it. It is the same mistake as for one
+// of a run, in the other place a value is read from an address.
 fn priceAt(items: [Item], at: i32) -> i32? no.alloc {
     if at < 0 || at >= len(items) {
         return none
@@ -106,7 +106,7 @@ fn main() -> i32 {
     }
 
     // What a fold answers is the same number everywhere and every time, which
-    // is what makes it worth writing one down. See D664.
+    // is what makes it worth writing one down.
     if mark(Item(1, 90)) != 8162023171451696525 {
         return 8
     }
@@ -115,7 +115,7 @@ fn main() -> i32 {
     }
 
     // And the two halves of each: worked out where it is written, and asked
-    // while running. See D668 for why a pair is written this way.
+    // while running, so the folder and the machine are held to each other.
     if HOW_MANY != len(TIERS) || HOW_MANY != 4 {
         return 10
     }
@@ -129,7 +129,7 @@ fn main() -> i32 {
     // hashed a name of five letters hashed them again on every frame that
     // went past. It is a number in the chunk now, and what says it is the
     // right number is the half beside it, which came from a call the folder
-    // cannot see through. See D886.
+    // cannot see through.
     if hash("sword") != hash(spoken("sword")) {
         return 12
     }
@@ -140,8 +140,7 @@ fn main() -> i32 {
     // And the same run written in a body rather than above it. Where a value
     // is written decided whether it was a value or work: this one was four
     // pushes and a store on every call, and the one above it was read where
-    // it stood. It is the same table either way and says the same thing. See
-    // D887.
+    // it stood. It is the same table either way and says the same thing.
     let tiers: [i32; 4] = [0, 90, 250, 1200]
     if tiers[2] != TIERS[2] || tiers[tier] != TIERS[tier] {
         return 14
@@ -150,7 +149,7 @@ fn main() -> i32 {
     // A field of one of a run, widened to an optional where it is given back.
     // The slot after `price` is the next item's `id`, so reading it two slots
     // wide answered with a number that was right and a tag that was whatever
-    // stood beside it. See D1055.
+    // stood beside it.
     if let price = priceAt(stock, 1) {
         if price != 90 {
             return 15

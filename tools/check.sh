@@ -1,8 +1,8 @@
 #!/bin/sh
 # Everything, in one command, because "everything passes" said by hand is a
 # claim and this is a command. Twice a column has been quietly missing from a
-# sweep run by hand — once a command that does not exist, once one that was
-# never added — and both times the sweep said it had passed.
+# sweep run by hand -- once a command that does not exist, once one that was
+# never added -- and both times the sweep said it had passed.
 #
 # Nothing here takes a list of files. A list is the thing that goes stale.
 set -u
@@ -60,8 +60,8 @@ workloads=$(find bench -name '*.kest' | sort)
 
 # And what those lists are, because everything below is a sweep over them: a
 # list that came back empty is every check in this file passing without reading
-# a file. There is no number here to hold them to — a count is the thing that
-# goes stale — but there is a floor, and the floor is one.
+# a file. There is no number here to hold them to -- a count is the thing that
+# goes stale -- but there is a floor, and the floor is one.
 if [ -z "$sources" ] || [ -z "$instruments" ] || [ -z "$workloads" ]; then
     printf 'check: nothing was found to check; this is not a tree with a\n'
     printf '       language in it\n'
@@ -128,9 +128,9 @@ for file in $sources; do
             # things nothing else can see: an arena that has lost track of
             # its own blocks, and the one read in this language that does not
             # ask where it is reading. Neither shows up as a sanitiser
-            # report — the byte past the end of a piece of text is a byte the
-            # arena handed out for something else — so a run of each and a
-            # comparison is what there is. See D409.
+            # report -- the byte past the end of a piece of text is a byte the
+            # arena handed out for something else -- so a run of each and a
+            # comparison is what there is.
             checked_said=$($build_dir/kest-debug run "$file" 2>&1 </dev/null)
             checked_status=$?
             if [ "$checked_said" != "$out" ] ||
@@ -144,7 +144,7 @@ for file in $sources; do
             # first allocation after it gives the handle's memory away, and
             # the sanitised build says so where the program reads it. A store
             # made one instruction after another was one of those for as long
-            # as nothing walked there (D1163). Two examples grow worlds of
+            # as nothing walked there. Two examples grow worlds of
             # tens of thousands of things, and a walk at every one of those
             # is a walk of all of them each time, so they are left out and
             # said.
@@ -223,7 +223,7 @@ rm -f "$inside"
 # A nought inside text. It is a character like any other and text carries how
 # long it is, so what this asks is that it goes through and is counted: three
 # bytes written, three bytes long, and the nought still the second of them.
-# Nothing else in the tree writes one. See D971.
+# Nothing else in the tree writes one.
 nought="$scratch"/check-nought.kest
 printf 'fn main() -> i32 {\n    let s = "a\\0b"\n    return len(s) - 3\n}\n' \
     > "$nought"
@@ -257,7 +257,7 @@ case "$said" in
 esac
 # And the same byte after eight that are plain, which the check steps over at
 # once rather than one at a time: what it steps over has to be what it would
-# have passed, and where it stops has to be where the byte is. See D1169.
+# have passed, and where it stops has to be where the byte is.
 cat > "$gathered" <<'EOF'
 fn main() -> i32 {
     let a: [u8] = array(20, u8(104))
@@ -295,7 +295,7 @@ rm -f "$held"
 
 # A host asking what came back before anything came back. `kest_gave_text`
 # says what is in a frame, and a frame nothing has been called with is
-# noughts — a nought where text goes is not an empty piece of text but the
+# noughts -- a nought where text goes is not an empty piece of text but the
 # absence of one, and reading it as text is a crash rather than a message.
 # The one host in this tree calls first, so this is where the other way round
 # is asked.
@@ -314,7 +314,7 @@ fn first() -> Word {
 // number where one was wanted has somewhere for the machine to find out. The
 // slot holding a function is a number saying which; a number a host wrote by
 // hand says whichever it says, and `kest_call` knows how wide a frame must be
-// and not what is in it. See D530.
+// and not what is in it.
 fn twice(n: i32) -> i32 no.alloc {
     return n + n
 }
@@ -368,12 +368,12 @@ int main(int argc, char **argv) {
     }
     // And which refusal that was, rather than only that there was one. A host
     // gets `-1` and a report, and the report is the half that says what to do
-    // about it. See D426.
+    // about it.
     kest_report(runtime, stdout, KEST_FORM_TEXT);
     // And a function value that is not a function. Everything else a host
     // hands over has a width the machine can check; this is a number saying
     // which function, and the only place it can be wrong is where it is
-    // called through. See D530.
+    // called through.
     KestValue wrong[2] = {{0}};
     wrong[0].integer = 999999;
     wrong[1].integer = 1;
@@ -393,7 +393,7 @@ int main(int argc, char **argv) {
     // And how many functions a name is, counted by walking until the walk
     // ends. A walk that stops short ends the way one that finishes does, so
     // the only thing that can say it stopped short is somebody else's count
-    // of the same thing. See D435.
+    // of the same thing.
     if (argc > 2) {
         KestBuild *both = kest_build(argv[2], NULL, stderr, KEST_FORM_TEXT, 0);
         KestRuntime *walking = both == NULL ? NULL
@@ -438,8 +438,7 @@ rm -f "$asking" "$asking.c" "$asking.kest"
 # handout number is taken from one count for the whole process and is never
 # handed out twice: another machine's reference, a machine that has been freed,
 # and this store's own place from before it was given back are all a number
-# this place was never stamped with. See D1033 for what a count of
-# worlds could not promise.
+# this place was never stamped with.
 identity="$scratch"/check-identity
 cat > "$identity.kest" <<'EOF'
 struct Thing {
@@ -595,7 +594,7 @@ int main(int argc, char **argv) {
        again -- and this is that said as the property rather than as the place
        it broke, so it holds whatever the representation becomes. Each machine
        is made, asked for its first reference and freed. A tenth of a second.
-       See D1033. */
+ */
     long many = 70000;
     int64_t *seen = malloc(sizeof *seen * (size_t)many);
     if (seen == NULL) {
@@ -717,10 +716,10 @@ rm -f "$deferred"
 # And the other half of what `defer` is, which the reference now says in full:
 # it runs on every way out the program itself takes, and a fault is not one of
 # those. The ways out a program takes are written down as a program that runs
-# and answers nought — `examples/borrow.kest` covers fallthrough, `return`,
-# `break`, `continue` and the reverse order of several in one block — and the
+# and answers nought -- `examples/borrow.kest` covers fallthrough, `return`,
+# `break`, `continue` and the reverse order of several in one block -- and the
 # two that cannot be, because a program that faults cannot be an example, are
-# here. See D1040.
+# here.
 # One body reaches both of them: the array holds a nought at nought, so an
 # index inside it divides by nought and an index outside it is refused before
 # the division is reached.
@@ -774,7 +773,7 @@ done
 # so the `return` a program used to write after it -- a line the machine can
 # never reach -- is not written any more. The one with a `break` in it is
 # refused, and `check-commands.sh` asks for that; what is asked here is that
-# the one without runs and answers. See D1080.
+# the one without runs and answers.
 forever="$scratch"/forever.kest
 cat > "$forever" <<'EOF'
 module forever
@@ -832,7 +831,7 @@ body that ends"
 # stop; a program that would has to be given the number of steps it takes and
 # not one fewer; and work an instruction does that is not a step has to be
 # charged for, which is the part a budget that only counted steps could not see
-# at all. See D921 and D950.
+# at all.
 cat >"$scratch"/spin.kest <<'KEST'
 module spin
 
@@ -909,7 +908,7 @@ charged for"
 # holds is read-only once it is built, and the one field of it a machine writes
 # is the count of what is standing on it. Asked rather than asserted: two
 # threads, one build, a machine each, and then a machine cancelled from the
-# thread that is not running it. See D952.
+# thread that is not running it.
 threads="$scratch"/threads
 cat > "$threads".kest <<'KEST'
 module threading
@@ -1048,7 +1047,7 @@ int main(int argc, char **argv) {
     // sum is the number one machine gives for the whole of it -- so a host
     // may shard a frame and get the same answer, and `deterministic` survives
     // being cut into pieces. There is no shared memory: what each machine has
-    // is its own, and the merge is the host adding four numbers. See D988.
+    // is its own, and the merge is the host adding four numbers.
     Worker shards[4];
     thrd_t running_them[4];
     for (int i = 0; i < 4; i++) {
@@ -1156,7 +1155,7 @@ fi
 # `thrd_create`: a C11 thread that does nothing at all dies under it on the
 # machine this was written on, before any of this library is reached. What is
 # being watched is the library and not which door a host opened a thread
-# with. See D1053.
+# with.
 races="$scratch"/races
 cat > "$races".kest <<'KEST'
 module racing
@@ -1226,7 +1225,7 @@ static void *turning(void *given) {
 // time as three others doing the same on one build. What is shared is the
 // build's count of how many machines are standing on it -- an atomic, added to
 // with `relaxed` and taken from with `release`, read by `kest_build_free` with
-// `acquire` (D952) -- and this is the run that watches it. See D1071.
+// `acquire` -- and this is the run that watches it.
 typedef struct {
     KestBuild *build;
     int64_t rounds;
@@ -1392,7 +1391,7 @@ not answer what the others did"
     else
         say "races" "four machines of one build, each with a world of its \
 own, ran at once under a build that watches threads, and answered what one \
-machine answers for the whole of it — and four more were started, run and \
+machine answers for the whole of it -- and four more were started, run and \
 freed on four threads at once, which is the other half of what the reference \
 says a host may do"
     fi
@@ -1406,9 +1405,9 @@ rm -f "$races" "$races".c "$races".kest "$scratch"/watching \
 # out: the program is the build's, so a breakpoint written for one machine is
 # an instruction every machine of that build runs into. Written in place is
 # what makes a breakpoint cost a machine nobody is debugging nothing at all
-# (D991), and the price is this. The host writes the byte through the first
+#, and the price is this. The host writes the byte through the first
 # machine and calls the second, which stops in a body no debugger was ever
-# pointed at. See D1077.
+# pointed at.
 sharing="$scratch"/sharing
 cat > "$sharing".kest <<'KEST'
 module sharing
@@ -1518,13 +1517,13 @@ rm -f "$sharing" "$sharing".c "$sharing".kest
 # where the slots had got to when the host last called in -- the bottom of the
 # stack -- reached nothing, and gave the frames' memory back. The host below
 # stops a machine with an array under the stop, asks for all five of those
-# doors, and then lets it carry on and add the array up. See D1078.
+# doors, and then lets it carry on and add the array up.
 stopped="$scratch"/stopped
 cat > "$stopped".kest <<'KEST'
 module stopping
 
 // A remainder can stop a program, so `inner` is called rather than carried
-// into `work` (D1156) and the breakpoint at its start is where a call stops.
+// into `work` and the breakpoint at its start is where a call stops.
 fn inner(n: i32) -> i32 no.alloc {
     return n % 7 + 1
 }
@@ -1647,8 +1646,7 @@ rm -f "$stopped" "$stopped".c "$stopped".kest
 # cheaper than the second -- it is not, and it never will be -- but that a
 # world with two hundred things in it costs what two hundred things cost
 # however long it is driven, which is what a program that abandons memory it
-# replaced cannot do. Before D996 the first of them needed more room the longer
-# it ran and ran out of sixty-four megabytes in ten thousand rounds.
+# replaced cannot do.
 #
 # Read as the most the machine ever held at once rather than as what it is
 # holding at the end: what it is holding at the end is wherever the last walk
@@ -1701,17 +1699,17 @@ say "memory" "the round that replaces what a thing holds runs ten thousand \
 times in four megabytes, where it used to run out of sixty-four"
 
 # Every word this language keeps, written where a name belongs. It has to be
-# refused there — the parse wants a name and a keyword is not one — and what
+# refused there -- the parse wants a name and a keyword is not one -- and what
 # this holds is that it is refused *in a moment*. One of them was not: a
 # keyword where a field name goes was refused without being eaten, the loop
 # round it recovered to where a statement could begin, which is where it
 # already was, and the parse asked the same question for ever, keeping one more
 # copy of the answer each time until the host had none left to give. Six lines
-# took the machine down and nothing here would have said so. See D841.
+# took the machine down and nothing here would have said so.
 #
 # Ten places rather than the one, because the loop that stood still is a shape
-# there are several of — the fields of a record, the cases of an enum, the
-# statements of a block — and every word rather than the one, because which
+# there are several of -- the fields of a record, the cases of an enum, the
+# statements of a block -- and every word rather than the one, because which
 # words a recovery stops at is a list somebody will add to.
 keyword_places="field parameter local function record case flag generic
                 arm walk"
@@ -1778,7 +1776,7 @@ say "keywords" "every one of the $(printf '%s\n' $keywords | grep -c .) word(s) 
 # Counted rather than compared name by name, and the count is the comparison: a
 # function that promises it here is proved to keep it, so it is never one of the
 # refused, and the refused are therefore always among the ones promising
-# nothing. Equal counts is then equal lists. See D854 and D855.
+# nothing. Equal counts is then equal lists.
 #
 # Both promises, because the older of the two was written on eighty-six
 # signatures by somebody and asked for by nothing: a promise written wherever it
@@ -1801,7 +1799,6 @@ for promise in no.alloc no.host deterministic; do
     # any of them. So the promise comes off whatever was refused and the
     # question is asked again, until asking it again finds nobody -- which is
     # the same propagation the contract proof does, done from outside.
-    # See D1052.
     refused=0
     while true; do
         said=$(KEST_LIB="$promised" $build_dir/kest check "$promised"/std/*.kest 2>&1 \
@@ -1835,9 +1832,9 @@ $((without - refused)) could promise it and do not"
     # a promise is written at entry points, and a callee in the same unit is
     # judged by its body. Every function of the library is an entry point
     # because another unit calls it; in an example the entry points are what a
-    # host enters, which is `main` and the two handlers — so that is what is
+    # host enters, which is `main` and the two handlers -- so that is what is
     # asked, and the rest of an example is left to be read rather than
-    # decorated. See D856.
+    # decorated.
     #
     # Copied under its own name, because a file that says `module
     # examples.game` is found by the path its module spells and a copy under
@@ -1855,7 +1852,7 @@ $((without - refused)) could promise it and do not"
     # Each file's own doors refused and not those of a file it imports: a
     # program that imports another example is checked with it, and that
     # one's `main` would be counted once for each file that reaches it. What
-    # says whose door it is, is the name the refusal gives it. See D1269.
+    # says whose door it is, is the name the refusal gives it.
     entered=0
     for one in $(find "$scratch"/side/examples -name '*.kest' | sort); do
         entered=$((entered + $($build_dir/kest check --json "$one" 2>/dev/null \
@@ -1892,12 +1889,12 @@ $doors of the doors a host enters in the examples, against $without and \
 $at_the_door the compiler refuses it to"
 done
 rm -rf "$promised"
-say "promises" "every function that can keep a promise says so — \
+say "promises" "every function that can keep a promise says so -- \
 ${promise_kept#, }"
 
 # And nothing in the tree has anything to say about itself. Four of the
-# warnings this compiler gives are about a name nothing reaches — an extern,
-# a function, a constant, a shape — and a project that says those to everybody
+# warnings this compiler gives are about a name nothing reaches -- an extern,
+# a function, a constant, a shape -- and a project that says those to everybody
 # else and carries them itself is a project nobody should believe. The sweep
 # was three lines of shell run by hand before each of them was written; this is
 # where it lives now.
@@ -1921,7 +1918,7 @@ say "warnings" "$quiet file(s) have nothing to say about themselves"
 
 # Every example says which of its checks failed by the number it answers with,
 # so every example answers one. A `main` that gives nothing back is a shape the
-# language has anyway, and it exits nought — which nothing above can say now
+# language has anyway, and it exits nought -- which nothing above can say now
 # that no example is written that way.
 gives_nothing="$scratch"/quiet-main.kest
 cat > "$gives_nothing" <<'EOF'
@@ -1936,8 +1933,8 @@ if ! $build_dir/kest run "$gives_nothing" >/dev/null 2>&1; then
 fi
 rm -f "$gives_nothing"
 
-# What a file calls itself has to be where it is. An import is a path — `import
-# game.world` is `game/world.kest` beside the file that wrote it — so a file
+# What a file calls itself has to be where it is. An import is a path -- `import
+# game.world` is `game/world.kest` beside the file that wrote it -- so a file
 # whose `module` line does not match its own path is a file nothing can import,
 # and nothing else would ever say so.
 for file in $sources $instruments; do
@@ -1974,7 +1971,7 @@ fi
 # churning references, an inventory, rules under a promise, a save read back,
 # two modules whose names end in one word, and text a person reads. Running its
 # files one at a time is what the sweeps above do; this is the other question,
-# which is whether the project is a project. See D1066.
+# which is whether the project is a project.
 tree=$(pwd)
 if ! (cd "$tree"/examples/slice && "$build_dir"/kest build) >"$scratch"/check-why 2>&1; then
     complain "project" "\`kest build\` does not work in examples/slice"
@@ -1987,8 +1984,8 @@ if ! (cd "$tree"/examples/slice && "$build_dir"/kest test tests/rounds.kest) \
 fi
 # And without naming one, which is what the manifest's `tests` line is for: a
 # project is a thing to be inside rather than a thing to name at every command.
-# The line was read and nothing asked for it until D1082, so `kest test` in a
-# project ran nothing and said so as though that were a pass.
+# A line that is read and never asked for would leave `kest test` in a project
+# running nothing and saying so as though that were a pass.
 if ! (cd "$tree"/examples/slice && "$build_dir"/kest test) \
         >"$scratch"/check-why 2>&1; then
     complain "project" "\`kest test\` with nothing named does not run what \
@@ -2033,13 +2030,13 @@ say "project" "\`lib/std\` reads as one project rather than as files, and \
 named, with a project that says where its tests are and has none there \
 refused rather than passed"
 
-# The two layouts, put beside each other. D016 says a value on the stack is a
-# run of eight-byte slots and the same value in memory is what a C compiler
-# would give it, and says what that costs is "waste that nothing has measured".
-# This measures it, and holds the one thing about the pair that has to be true:
-# a piece is widened into a slot when it is read out of memory, so nothing can
-# be wider in memory than it is on the stack. A type with a sixteen-byte field
-# would be, and there is no widening it into eight. See D553.
+# The two layouts, put beside each other. A value on the stack is a run of
+# eight-byte slots and the same value in memory is what a C compiler would give
+# it, and the difference is waste. This measures it, and holds the one thing
+# about the pair that has to be true: a piece is widened into a slot when it is
+# read out of memory, so nothing can be wider in memory than it is on the stack.
+# A type with a sixteen-byte field would be, and there is no widening it into
+# eight.
 python3 - $sources <<'LAYOUTS' > "$scratch"/layouts 2>&1
 import json
 import os
@@ -2074,8 +2071,8 @@ for path in sys.argv[1:]:
         bytes_of += one['bytes']
         # And what the same shape would be if a slot held whatever fitted in
         # it. It is not what this machine does and the number is here so that
-        # the next person to argue about it argues with a number: D554 says no
-        # to packing and says what it would cost.
+        # the next person to argue about it argues with a number: a slot holds
+        # one value, and this is what packing would save.
         packed += (one['bytes'] + 7) // 8
         gap = one['slots'] * 8 - one['bytes']
         if widest is None or gap > widest[1]:
@@ -2087,11 +2084,11 @@ if shapes == 0 or widest is None:
 # comes back beside it is how many are written the same as one already laid
 # out, which is not the same as how many are the same type: two `T` standing
 # for two things in two copies of one generic are two types that print alike.
-# See D779, D780. Two
+# Two
 # that differ only in that read as one without it -- every `[T]` is one word
 # whatever `T` is -- so a reader counting what a module holds counts wrongly,
 # and the machine that packs a value across the boundary reads the very field
-# the list left out. See D779.
+# the list left out.
 told = 0
 twice = 0
 for path in sys.argv[1:]:
@@ -2115,7 +2112,7 @@ if told == 0:
 # What a shape takes in memory is this machine's: a handle is eight bytes where
 # a pointer is eight bytes and something else elsewhere, and the slots beside it
 # are the language's. So the line says whose the numbers are, the way the two
-# checks that measure a machine do. See D690.
+# checks that measure a machine do.
 print("%u shape(s) take %u slots of stack and %u bytes of memory, %u slots if "
       "a slot held whatever fitted, and the widest gap is `%s` at %u slots "
       "against %u bytes, and %u layout(s) each saying which type they are of, "
@@ -2133,9 +2130,8 @@ fi
 # A file under `lib` has no `main`. The library is a library: what is in it is
 # named by whoever imports it, and a `main` there is a program this would run
 # as though it were an example and count among the ones that ran. Nothing else
-# says so — the reference's table of what runs each rule covers `examples` and
+# says so -- the reference's table of what runs each rule covers `examples` and
 # not `lib`, which is right, because a library module runs no rule of its own.
-# See D548.
 for file in $(find lib -name '*.kest' | sort); do
     if grep -q '^fn main(' "$file"; then
         complain "project" "$file has a \`main\`, and a file in the library \
@@ -2160,7 +2156,7 @@ allocation reads whole each time"
 #
 # Both the answer and everything written, because a program that answers nought
 # either way and prints something else the second time is a program one of the
-# two got wrong. See D1009 and D1013.
+# two got wrong.
 plainly=0
 for file in $sources; do
     if ! grep -q '^fn main(' "$file"; then
@@ -2174,7 +2170,7 @@ for file in $sources; do
     # half of the same test: `KEST_PLAIN` holds the lowering's fusions and
     # `KEST_NOOPT` holds what the optimizer does to a body before the lowering
     # reads it. A pass that changes what a program answers is a pass that is
-    # wrong, whatever it saved. See D1025.
+    # wrong, whatever it saved.
     bare_said=$(KEST_NOOPT=1 $build_dir/kest run "$file" 2>&1 </dev/null)
     bare_was=$?
     case "$fused_said" in
@@ -2233,7 +2229,7 @@ fi
 # measurement answers with is whether it did the work: every entity alive in
 # every step of every round, counted, and compared with what that comes to. An
 # instrument that stopped measuring would go on printing a number, and a
-# smaller number reads like a faster machine. See D549.
+# smaller number reads like a faster machine.
 for file in $instruments; do
     if ! $build_dir/kest check "$file" >/dev/null 2>"$scratch"/check-why; then
         complain "instruments" "$file does not resolve"
@@ -2251,8 +2247,8 @@ for file in $instruments; do
     # two numbers read a week apart are two measurements of the same thing only
     # if they were taken over the same work. The numbers in the line come from
     # the constants by interpolation, so what this holds is that they are the
-    # right constants — `best of 10000 over 7` is a line somebody swapped, and
-    # it reads like a measurement. See D579.
+    # right constants -- `best of 10000 over 7` is a line somebody swapped, and
+    # it reads like a measurement.
     rounds=$(sed -n 's/^const ROUNDS: i32 = \([0-9]*\)$/\1/p' "$file")
     # What it was over, under whichever name that scale has: one instrument
     # counts entities, one counts calls and one counts reads, and what the rule
@@ -2275,9 +2271,9 @@ done
 # And the third of that line, which is the instrument deciding what to say
 # about its own number: under a quarter of spread it says nothing, over it says
 # the machine was somebody else's. Nothing here can make a machine busy and
-# nothing needs to — the clock is the host's, so a host of this gate's own is
+# nothing needs to -- the clock is the host's, so a host of this gate's own is
 # what makes an instrument say it. What is held is both ways round: a clock
-# that ticks evenly and one that loses a round. See D580.
+# that ticks evenly and one that loses a round.
 cat > "$scratch"/steady.c <<'HOST'
 #include <math.h>
 #include <stdio.h>
@@ -2286,7 +2282,7 @@ cat > "$scratch"/steady.c <<'HOST'
 #include "kest.h"
 
 /* What each round is to look as if it took, in the order they are run. The
-   instrument asks the clock twice a round — once before and once after — so
+   instrument asks the clock twice a round -- once before and once after -- so
    this hands back a total that grows by the round's own number at the second
    of them, and what the instrument reads as a duration is the difference. */
 static long long tock;
@@ -2337,7 +2333,7 @@ int main(int argc, char **argv) {
     /* What this host provides against what the program asks for, both ways
        round. A name the program wants and this host has not got is what
        `kest_start` refuses for, by name; a name this host binds that nothing
-       asks for is the other way round and nothing refuses it at all — it is a
+       asks for is the other way round and nothing refuses it at all -- it is a
        host written for a program that has changed since, which goes on
        building and goes on running. So it is read here, where the two lists
        are both in front of somebody. */
@@ -2356,8 +2352,8 @@ int main(int argc, char **argv) {
             return 2;
         }
     }
-    /* And the other way round — a name this host binds that nothing asks for —
-       is asked outside, where every instrument is in front of somebody at
+    /* And the other way round -- a name this host binds that nothing asks
+       for -- is asked outside, where every instrument is in front of somebody at
        once. One of them asks for two of these and the other for three, so
        there is no number here that is right for both. */
     KestHost *host = kest_host_new();
@@ -2391,7 +2387,7 @@ if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude \
 else
     # And the other half of the rule the host inside keeps. It refuses an
     # instrument that asks for a name it has not got; a name it binds that no
-    # instrument asks for is the same mistake the other way round — a host
+    # instrument asks for is the same mistake the other way round -- a host
     # written for a program that has changed since, which goes on building and
     # goes on running. Asked of the whole list at once, because one instrument
     # asks for two of them and the other for three, and asked of what a program
@@ -2436,7 +2432,7 @@ fi
 # cannot measure a call into itself, so what measures one is C. It is built with
 # everything else at the top, where everything this gate reaches for is built;
 # what is read here is whether it did its work and what shape its line is. The
-# number is for the `time` target, like the other two. See D859.
+# number is for the `time` target, like the other two.
 inward_said=""
 if ! inward_said=$($build_dir/tools/inward 2>"$scratch"/check-why </dev/null); then
     complain "instruments" "the host that measures a call in says it did not \
@@ -2459,13 +2455,13 @@ say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved, run, sa
 
 # The four families of workload, at the smallest scale that still fills every
 # row. Nothing here is a duration and nothing here is about speed: what it
-# holds is that the instrument is still attached to the thing it measures. It
-# was not. `bench/families.sh` calls twenty-three micro bodies by name, and
-# D1039 made a chunk compile under the whole module name, so every one of them
-# printed `would not run` under a heading and a family with numbers in it --
-# which reads like a table. `bench` is not in the gate because a duration is
-# not a pass or a fail, and that is the reason nothing said a word. A row that
-# is a number is a pass or a fail. See D1057.
+# holds is that the instrument is still attached to the thing it measures.
+# `bench/families.sh` calls twenty-three micro bodies by name, and a body that
+# is no longer under that name prints `would not run` under a heading and a
+# family with numbers in it -- which reads like a table. `bench` is not in the
+# gate because a duration is not a pass or a fail, so nothing else would say a
+# word. A row that
+# is a number is a pass or a fail.
 if ! QUICKLY=1 sh bench/families.sh >"$scratch"/families 2>&1; then
     complain "benches" "the four families would not run"
     sed 's/^/    /' "$scratch"/families | tail -6
@@ -2483,7 +2479,7 @@ fi
 # The smallest host runs on the program it was written for, and refuses a
 # program that asks for a name it has not got rather than binding whatever it
 # is handed. A host writer copies this one, so it is held to working and to
-# saying no. See D624.
+# saying no.
 least_wrong=0
 if ! $build_dir/examples/least >"$scratch"/least-said 2>&1; then
     complain "least" "the smallest host did not run"
@@ -2509,7 +2505,7 @@ fi
 # And what a frame of it costs. The program the smallest host runs has a run of
 # calls that comes back round, so it has no worst chain to add up: a frame is at
 # most the widest body and the host says how many frames there are, so the slots
-# follow from the frames. See D815.
+# follow from the frames.
 if ! grep -q "has no least, and is" "$scratch"/least-said ||
    ! grep -q "on its own is" "$scratch"/least-said ||
    ! grep -q "called back in from" "$scratch"/least-said ||
@@ -2525,7 +2521,7 @@ fi
 # answer back, and one that hands a number where this host reads text. What an
 # extern takes is written in the program and what a host function does with it
 # is written in the host: they are two files, and a host that binds on the name
-# alone finds out at the first call, in a frame — the second of these reads the
+# alone finds out at the first call, in a frame -- the second of these reads the
 # number as a pointer and is the one a machine cannot catch.
 mkdir "$scratch"/least
 cat > "$scratch"/least/answering.kest <<'KEST'
@@ -2548,7 +2544,7 @@ fn main() -> i32 {
 }
 KEST
 # And what a call answers, which a host reads the same way whatever it is: a
-# number, or text, or an answer the language has no text of its own for — and
+# number, or text, or an answer the language has no text of its own for -- and
 # the last of those says so rather than being written wrongly.
 if ! $build_dir/examples/least examples/least.kest motto >"$scratch"/least-text 2>&1 ||
    ! grep -q "whatever it is" "$scratch"/least-text; then
@@ -2557,7 +2553,7 @@ not a number"
     sed 's/^/    /' "$scratch"/least-text | head -4
     least_wrong=1
 fi
-# A shape is written the way a program writes one since D876, so this is the
+# A shape is written the way a program writes one, so this is the
 # host reading one back rather than being refused it.
 if ! $build_dir/examples/least examples/least.kest pair >"$scratch"/least-shape 2>&1 ||
    ! grep -q "gave back Pair(1, 2)" "$scratch"/least-shape; then
@@ -2739,7 +2735,7 @@ for file in $sources; do
     at=$((at + 1))
     sanitise_one "$file" > "$swept/$(printf %04d $at)" 2>&1 &
     if [ $((at % 8)) -eq 0 ]; then
-        # `jobs` says nothing in a script — job control is off — so what
+        # `jobs` says nothing in a script -- job control is off -- so what
         # holds the number down is counting them: eight are started and
         # waited for, and then eight more.
         wait
@@ -2805,7 +2801,7 @@ say "nothing" "three checks handed no files"
 # host that does the whole protocol. What is held is not that every edit
 # reloads -- most of them must not -- but that every one of them ends with a
 # world: either the new program's, or the one the host was already holding,
-# and never half of either. See D985.
+# and never half of either.
 #
 # One sentence, because what went wrong is written into it.
 mkdir -p "$scratch"/reloading
@@ -2815,7 +2811,7 @@ reload_wrong=""
 # too: "the world is the one it was" is a sentence about which program the
 # frames after it ran, and the only way to hold it is to run them and look. A
 # host that published its candidate before it found out it could not use it
-# says the same sentence and ends somewhere else. See D1127.
+# says the same sentence and ends somewhere else.
 unmoved=$($build_dir/examples/engine examples/engine.kest examples/engine.kest 2>&1 |
     sed -n 's/^a reload kept the ring, and .*first body is at //p')
 if [ -z "$unmoved" ]; then
@@ -3000,7 +2996,7 @@ else
     # And the same walk over a room with a built thing in it, because a walk
     # that found nothing and a walk that looked at nothing print the same
     # nothing. This is the gate's own guard, which is what a check written
-    # here has instead of a hole. See D999.
+    # here has instead of a hole.
     mkdir -p "$scratch"/tree/tools
     cp $build_dir/kest "$scratch"/tree/tools/left-behind
     printf 'module places\n' > "$scratch"/tree/"extern fn"
@@ -3023,8 +3019,7 @@ fi
 # many times each instruction ran; and for the instructions whose width is
 # fixed the two have to agree exactly. A counter added at a new movement and
 # forgotten at an old one is what this catches, and a program written here
-# rather than taken from the tree so that the arithmetic is one line. See
-# D1023.
+# rather than taken from the tree so that the arithmetic is one line.
 cat > "$scratch"/moved.kest <<'MOVED'
 module moved
 
@@ -3071,7 +3066,6 @@ else:
     slots = 8
     # The fused ones read a local and a constant where they are, and the
     # ones that write a local write one: each is the pair it was made of.
-    # See D1155.
     weighs_local = sum(count for name, count in ran.items()
                        if name.startswith("jump.")
                        and name.endswith(".k"))
@@ -3079,13 +3073,13 @@ else:
                      if name.startswith("jump.false.")
                      and name.endswith(".c"))
     # And an element weighed where it is, which is `index.ll` and one of
-    # those. See D1178.
+    # those.
     weighs_element = sum(count for name, count in ran.items()
                          if name.startswith("jump.false.")
                          and name.endswith(".e"))
     moves_self = ran.get("add.k.self", 0) + ran.get("sub.k.self", 0)
     # And the arithmetic with a constant on its right, on a local or on what
-    # is on the stack. See D1168.
+    # is on the stack.
     works_local = sum(ran.get(name, 0) for name in (
         "mod.i.k", "div.i.k", "add.i.narrow.k", "sub.i.narrow.k",
         "mul.i.narrow.k"))

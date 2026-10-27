@@ -48,10 +48,10 @@ typedef struct {
     // compiler with none left goes on and says what a half-built program
     // suggests: a name nobody declared where a table could not be grown, a
     // type that cannot be told where a copy could not be made. Which of the
-    // two it is cannot be known when it is said — an arena that refuses once
-    // may be coped with and the build finish, and then nothing was wrong — so
+    // two it is cannot be known when it is said -- an arena that refuses once
+    // may be coped with and the build finish, and then nothing was wrong -- so
     // it is marked here and read at the end, where whether the run starved is
-    // known. See D880.
+    // known.
     bool after_the_room;
     KestNote notes[KEST_MOST_PLACES];
     uint8_t note_count;
@@ -69,8 +69,8 @@ struct KestSource {
     size_t length;
     // A number that moves when the bytes move: FNV-1a over them, which is what
     // the language hashes text with. What it is for is a host asking whether
-    // this is the same file it read before — a size is not an answer to that,
-    // because two edits that keep the length look the same. See D658.
+    // this is the same file it read before -- a size is not an answer to that,
+    // because two edits that keep the length look the same.
     uint64_t mark;
     uint32_t *line_offsets;
     uint32_t line_count;
@@ -91,37 +91,37 @@ typedef struct {
     bool muted;
     // Whether something could not be said for want of memory. A diagnostic is
     // written into the arena, so a run with none of it left records nothing,
-    // says nothing, and answers with a count of nought — which every caller
+    // says nothing, and answers with a count of nought -- which every caller
     // reads as nothing having gone wrong. One bit is what a run can still
-    // record when it can record nothing else. See D319.
+    // record when it can record nothing else.
     bool starved;
     // The most a machine keeps of what nobody has asked for, and how many it
     // did not keep. Nought is everything, which is what compiling does: a
     // program with five hundred things wrong with it has five hundred things
     // wrong with it, and the run that found them ends. A machine does not end
-    // — a program refused every frame is refused every frame — so what it
+    // -- a program refused every frame is refused every frame -- so what it
     // holds for a host that never asks is capped at the size the list is made
-    // at, and what it did not keep is counted and said. See D618.
+    // at, and what it did not keep is counted and said.
     uint32_t most;
     uint32_t not_said;
     // Whether the last thing offered was not kept. A suggestion and a note go
     // on the last one recorded, and one offered after a refusal that was not
-    // kept would go on somebody else's. See D618.
+    // kept would go on somebody else's.
     bool held_back;
     // And what it was trying to say when it ran out, written here rather than
     // in the arena it ran out of. A run stopped by a ceiling used to answer
-    // `there was not enough memory to finish` — true of the message it could
+    // `there was not enough memory to finish` -- true of the message it could
     // not write, and not what happened to the program. The code and the words
     // are the ones the stage was about to say, cut where they stop fitting,
     // because a sentence half said is more than no sentence at all. Empty
-    // until something is lost. See D848.
+    // until something is lost.
     char last_code[8];
     char last_words[192];
     // How much compiling has done, and how much it was given to do: nought
     // given is no ceiling. Bytes bound what compiling holds and not how long
     // it takes, so this counts what it does -- a token read, a node made, an
     // expression checked, an instruction written, a step proved -- and stops
-    // it at the same place on every machine. See D1248.
+    // it at the same place on every machine.
     uint64_t work_done;
     uint64_t work_given;
     bool worked_out;
@@ -136,7 +136,7 @@ typedef struct {
 //
 // `KEST_MARK_START` is where a fold begins, `kest_mark_bytes` folds a run of
 // them and `kest_mark_number` folds a number low byte first, whatever order
-// this machine keeps its bytes in. See D663.
+// this machine keeps its bytes in.
 #define KEST_MARK_START 0xcbf29ce484222325ULL
 
 uint64_t kest_mark_bytes(uint64_t mark, const void *bytes, size_t length);
@@ -160,12 +160,12 @@ uint32_t kest_word_distance(const char *a, size_t a_len, const char *b,
 // come from different places: a name the compiler knows ends at a nought, and
 // a word a program wrote is an offset and a length into the source with no
 // terminator anywhere near it. Asking the question is what everything from the
-// lexer to the machine does with those two once it has them. See D773.
+// lexer to the machine does with those two once it has them.
 //
 // Byte by byte rather than a length and then the bytes, and written here so it
 // is folded into whoever asks: nearly every question asked of this is a no,
 // a no is nearly always the first byte, and measuring the whole of a name and
-// then making a call were most of the cost of asking. See D1276.
+// then making a call were most of the cost of asking.
 static inline bool kest_word_same(const char *word, const char *bytes,
                                   size_t length) {
     for (size_t i = 0; i < length; i++) {
@@ -184,7 +184,7 @@ void kest_source_locate(const KestSource *source, uint32_t offset,
 // the span's end: every caller already knows the length and reads that many
 // bytes. Four stages worked this out for themselves before this was written,
 // which is four places that would have had to be found again had a span ever
-// started counting from somewhere else. See D772.
+// started counting from somewhere else.
 const char *kest_span_text(const KestSource *source, KestSpan span);
 
 void kest_diags_init(KestDiags *diags, KestArena *arena);
@@ -227,12 +227,12 @@ void kest_diags_suggestv(KestDiags *diags, const char *format, va_list args);
 // got wrong rather than what a program did, and a reader who cannot tell the
 // two apart goes looking in their own file: the sentence that says which is
 // worth being one sentence, in one place, whichever half of the compiler
-// noticed. `why` is what was expected, without a full stop. See D410.
+// noticed. `why` is what was expected, without a full stop.
 void kest_diags_fault(KestDiags *diags, const char *why);
 
 // And what the halves of this compiler say when one of them meets what the
 // other allowed: the same refusal in the same words, said in one place because
-// there are three of them now — the walk that writes a body, the backend that
+// there are three of them now -- the walk that writes a body, the backend that
 // reads one, and the proof over what was emitted. `what` is what was found,
 // without a full stop and without the clause that follows it.
 void kest_diags_disagree(KestDiags *diags, KestSpan span, const char *what, ...)
@@ -255,7 +255,7 @@ void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
 // a sentence about the whole of it -- which copy of a generic a body's
 // sentences are about is not the ninth thing a reader wants, it is what the
 // other eight are about -- and nothing reaches back to add one more place. The
-// note it displaces is counted, the same as one that never fitted. See D762.
+// note it displaces is counted, the same as one that never fitted.
 void kest_diags_note_at(KestDiags *diags, uint32_t which,
                         const KestSource *source, KestSpan span,
                         const char *format, ...) KEST_SAYS(5, 6);
@@ -271,24 +271,24 @@ void kest_diags_note_at(KestDiags *diags, uint32_t which,
     "there was not enough memory to finish, or to say more about it"
 
 // And the same run stopped by a ceiling rather than by the machine. The bit
-// recorded is the one above — running out is running out — and what is said
+// recorded is the one above -- running out is running out -- and what is said
 // about it is not: a ceiling is a number somebody chose and can choose again,
 // and a machine with nothing left is an afternoon spent somewhere else. The
 // numbers go with it for the reason the heap's own do, which is that a run
 // that missed by eight bytes and one that missed by a gigabyte read alike
-// otherwise. See D843.
+// otherwise.
 #define KEST_CRAMPED_CODE "K0658"
 #define KEST_CRAMPED_SAYS                                                      \
     "this has taken %zu of the %zu bytes it was given, and wanted %zu more"
 // And the same ceiling met before there is anywhere to write a diagnostic
-// down, which is a build that could not be opened at all. Two doors reach it —
-// the command line and the one a host compiles through — and a sentence
-// written in two places is a sentence that comes apart. See D844.
+// down, which is a build that could not be opened at all. Two doors reach it --
+// the command line and the one a host compiles through -- and a sentence
+// written in two places is a sentence that comes apart.
 #define KEST_CRAMPED_START                                                     \
     "this was given %zu bytes, which is not enough to begin reading a program"
 
 // And the same run stopped by how much it was given to do rather than by how
-// much memory. See D1248.
+// much memory.
 #define KEST_WORKED_CODE "K0666"
 #define KEST_WORKED_SAYS                                                       \
     "compiling this took all %llu units of work it was given"
@@ -296,7 +296,7 @@ void kest_diags_note_at(KestDiags *diags, uint32_t which,
 // Counts `units` of what compiling does, and answers false once a ceiling on it
 // is passed -- having said so, and having taken the room of every stage after
 // it, so every stage stops the way it stops when memory runs out. A run with
-// no ceiling counts and never stops. See D1248.
+// no ceiling counts and never stops.
 bool kest_diags_worked_out(KestDiags *diags);
 static inline bool kest_diags_work(KestDiags *diags, uint64_t units) {
     if (diags == NULL) {
@@ -317,7 +317,7 @@ void kest_diags_starve(KestDiags *diags);
 
 // A file that is nobody's, for what is said to be read back: `tmpfile`, and
 // nothing where WebAssembly's system interface has none. Every caller says
-// what it cannot do without one. See D1255.
+// what it cannot do without one.
 FILE *kest_scratch_file(void);
 
 // One diagnostic from something that has no arena to make one in: a build that

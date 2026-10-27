@@ -6,7 +6,7 @@ import std.io
 // through a reference takes, and how long a read through an index takes.
 //
 // A `store<T>` hands out a `ref<T>` and can delete what it holds, so every read
-// through one asks whether what was handed out is still there — the place is
+// through one asks whether what was handed out is still there -- the place is
 // still a place after the thing in it is gone, and a reference carries the
 // stamp its place was handed out with. An index into an array asks whether the
 // place exists and nothing else. The first is what a program that keeps a world
@@ -46,7 +46,7 @@ fn throughReferences(world: store<Thing>, where: [ref<Thing>]) -> i32 no.alloc n
 // And the walk with nothing in it, which is what the other two are measured
 // against: a loop that counts and adds and reads nothing at all. Every number
 // this instrument prints carries a hop of a loop, and a hop of a loop is not a
-// read — so what a read costs is what is left when this is taken away.
+// read -- so what a read costs is what is left when this is taken away.
 fn throughNothing(count: i32) -> i32 no.alloc no.host {
     let sum = 0
     for i in 0..count {
@@ -136,7 +136,7 @@ fn main() -> i32 {
     let hereSpread = (worstCounted - counted) * 100 / counted
     let spread = if thereSpread > hereSpread -> thereSpread else -> hereSpread
     let steady = if spread <= 25 -> ""
-        else -> " — the machine was somebody else's"
+        else -> " -- the machine was somebody else's"
     io.print("{nothing} ns for a hop of the loop, {here} ns with an index read and {there} ns with a read through a reference, which is {safety} ns more, best of {ROUNDS} over {READS} reads, spread {spread}%{steady}")
 
     // And what the work adds up to, which is a number and not a duration: an

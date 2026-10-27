@@ -17,7 +17,7 @@
  *
  * Every frame is timed on its own and every sample is kept, so what it answers
  * with is the middle, the tails and the worst -- which for a frame budget is
- * the number that matters. See D1004 for why, and D1006 for what it found. */
+ * the number that matters. */
 
 #if !defined(_WIN32)
 #define _POSIX_C_SOURCE 200809L
@@ -120,7 +120,7 @@ static void fill(Body *world, uint32_t many) {
 /* One frame, the run lent where it stands, timed and kept. Written once
    because it is run twice: by the machine, and by the same program with the
    bodies the other backend wrote bound to it. What a frame costs is the
-   question a game asks, and it has two answers now. See D1123. */
+   question a game asks, and it has two answers now. */
 static bool lending(KestRuntime *runtime, int32_t stepping, Body *world,
                     uint32_t many, long long frames, long long *took,
                     const char *what, double *answered) {
@@ -181,7 +181,7 @@ static bool crossing_each(KestRuntime *runtime, int32_t once, Body *world,
 
 /* What the other backend wrote for this program, bound to a machine of its
    own. A generated file exports one function and this is the whole of what a
-   host does with it (D1111): make a machine for the same program, hand it
+   host does with it: make a machine for the same program, hand it
    over, and the bodies in the file are the ones that machine runs. */
 bool kest_natives_here(KestRuntime *runtime);
 
@@ -309,7 +309,7 @@ int main(int argc, char **argv) {
        rather than anything this project wrote. A run whose control is quiet
        is a run whose tails are the engine's; a run whose control is not says
        so here rather than leaving a reader to believe a worst frame that
-       belongs to somebody else's build. See D1123. */
+       belongs to somebody else's build. */
     long long floor_middle = took[0];
     long long floor_worst = took[0];
     for (long long f = 0; f < frames; f++) {
@@ -330,7 +330,7 @@ int main(int argc, char **argv) {
     /* What each of the two crossed, which the timings above cannot say: a
        boundary is a count of crossings and a count of bytes, and two ways of
        doing one frame's work differ in both. The host knows all of it exactly
-       because the host is what writes the slots. See D1029.
+       because the host is what writes the slots.
 
        `bytes crossing` is the host's own memory the frame worked on, which is
        the same for both because the work is the same. `bytes marshalled` is
@@ -354,7 +354,7 @@ int main(int argc, char **argv) {
        machine of the same build, with the bodies the C backend wrote bound to
        it. Same world, same clock, same host -- the only difference is which
        of the two engines is answering, which is what makes these rows a
-       comparison rather than two measurements. See D1123. */
+       comparison rather than two measurements. */
     KestHost *again = kest_host_new();
     if (again == NULL || !kest_host_bind(again, "Io.write", io_write, stderr)) {
         fprintf(stderr, "frame: the host could not be made twice\n");

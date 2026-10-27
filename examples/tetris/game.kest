@@ -7,7 +7,7 @@ import examples.tetromino
 // tells it which keys went down and came up, and draws what the program asks
 // it to. Drawing is two doors -- a box of a colour at a place on the board, and
 // a line of text -- and what the host does with them is the host's: this one is
-// raylib. What LÖVE's `love.draw` was, is `draw` here. See D1269.
+// raylib. What LÖVE's `love.draw` was, is `draw` here.
 
 extern fn Screen.box(x: i32, y: i32, color: i32) no.alloc
 extern fn Screen.say(line: text, x: i32, y: i32) no.alloc

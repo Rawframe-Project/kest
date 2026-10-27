@@ -7,19 +7,18 @@
 
 // A source-level debugger. Breakpoints are written into the code and taken out
 // again, so a machine nobody is debugging pays nothing at all: there is no test
-// in the dispatch loop, because one measured a third of the machine. See D991.
+// in the dispatch loop, because one measured a third of the machine.
 //
 // Two things talk to a person through it: `kest debug`, which is words on two
 // streams, and `kest dap`, which is an editor's debug protocol. What stops,
-// steps and reads is here once, and each of those is how it is asked. See
-// D1182.
+// steps and reads is here once, and each of those is how it is asked.
 
 #define KEST_MOST_BREAKPOINTS 64
 
 // One byte written over, and what was there. A breakpoint costs the machine
 // nothing because it *is* the machine: the byte the debugger wrote is the one
 // instruction nothing compiles to, and putting the old one back is how the
-// machine carries on. See D991.
+// machine carries on.
 typedef struct {
     int32_t entry;
     uint32_t at;

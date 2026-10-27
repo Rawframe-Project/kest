@@ -13,12 +13,11 @@
 // writes a new name into a live thing every round abandons the old one, and an
 // arena abandons it forever. Two hundred things over ten thousand rounds is
 // two hundred megabytes of names nothing can reach, and a world with two
-// hundred things in it is not a world that needs two hundred megabytes. See
-// D996.
+// hundred things in it is not a world that needs two hundred megabytes.
 //
 // So this is a heap with places in it that can be had again. What decides
-// which is a walk from what the machine can still reach — the machine's slots
-// and the worlds it holds — rather than a count kept on each value, because a
+// which is a walk from what the machine can still reach -- the machine's slots
+// and the worlds it holds -- rather than a count kept on each value, because a
 // count on each value is a cost paid by every program on every copy for the
 // sake of the ones that churn, and because what a slot holds is not always the
 // start of the thing it names: a piece of text cut out of another names a
@@ -48,7 +47,7 @@ typedef enum {
 // of them is at an allocation, a sweep or a plot rather than at an
 // instruction, so they are always counted: a program runs millions of
 // instructions between any two, where a counter at the top of the dispatch
-// loop cost a third of the machine (D979). See D1007.
+// loop cost a third of the machine.
 typedef struct {
     // Places handed out, what was asked for, and what the places they came
     // from are worth: `asked` against `given` is what the ladder of widths
@@ -77,7 +76,7 @@ void kest_ground_counted(const KestGround *ground, KestGroundCounts *into);
 // holding and cannot hand back. That is the one fragmentation figure a heap of
 // this shape has, and it is asked for here rather than worked out from a plot
 // size written down somewhere, because a plot holding one wide thing is as
-// wide as that thing. See D1027.
+// wide as that thing.
 typedef struct {
     uint64_t plots;
     // What the host gave for them, and what is in places that are handed out.
@@ -102,7 +101,7 @@ void kest_ground_plots(const KestGround *ground, KestGroundPlots *into);
 // A total says how much a program asks for and this says what it asks for,
 // which is a different question: a program that is all short pieces of text
 // and one that is all wide runs have the same total and nothing else in
-// common. See D1032.
+// common.
 uint32_t kest_ground_widths(const KestGround *ground, uint32_t *widths,
                             uint64_t *taken, uint32_t many, uint64_t *kinds);
 
@@ -117,14 +116,14 @@ void *kest_ground_take(KestGround *ground, size_t bytes,
                        KestGroundKind kind);
 
 // What the place an address is in holds, and PLAIN for an address this did not
-// hand out — which is safe to read as nothing to follow, because it is.
+// hand out -- which is safe to read as nothing to follow, because it is.
 KestGroundKind kest_ground_kind(const KestGround *ground, const void *at);
 
 // Makes the last thing this handed out bigger where the place it is in has the
 // room, which is what a run of bytes growing one element at a time wants: a
 // place of two hundred and fifty-six bytes holds a hundred and twenty-eight
 // before it has to move. Answers where it is now, which is where it was when
-// the place had the room, and NULL when it did not — and then the caller does
+// the place had the room, and NULL when it did not -- and then the caller does
 // what it did before: takes a new one and copies.
 void *kest_ground_grow(KestGround *ground, void *was, size_t had, size_t want);
 
@@ -142,12 +141,12 @@ bool kest_ground_holds(const KestGround *ground, const void *at);
 // Marks the thing an address is in, whether it is the start of it or a place
 // inside it, and says where that thing starts and what kind it is. Answers
 // whether it was not marked already: false for an address this did not hand
-// out, and false for one already marked — so a walk that follows what it marks
+// out, and false for one already marked -- so a walk that follows what it marks
 // terminates on a ring without keeping a list of where it has been.
 //
 // One lookup rather than three. A walk asks all three of those about every
 // address it follows, and each of them was a hash of the same address and a
-// probe of the same table. See D1008.
+// probe of the same table.
 bool kest_ground_reached(KestGround *ground, const void *at, void **start,
                          KestGroundKind *kind);
 
@@ -172,8 +171,8 @@ void kest_ground_unmark(KestGround *ground);
 // A block of working memory, which is the other way a place is given back: a
 // `scratch { }` block opens one, everything the block takes is remembered
 // against it, and closing it gives all of it back at once. Nothing in the
-// block may outlive it — the checker refuses a block that grows what does, see
-// D972 — so this is the same promise the arena's mark and rewind made, kept
+// block may outlive it (the checker refuses a block that grows what does), so
+// this is the same promise the arena's mark and rewind made, kept
 // against a heap that is not a stack.
 //
 // Answers false when there is no room to remember what a block takes, which is

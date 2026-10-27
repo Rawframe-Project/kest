@@ -14,15 +14,15 @@ struct Npc {
 }
 
 // What the host sends in. The byte layout of an enum is what a C tagged union
-// is — a four byte tag at nought and the payload after it at its own
-// alignment (D026) — so the host lends an array of them and nothing is copied
-// at the boundary (D016). `embed.c` beside this declares the same shape in C.
+// is -- a four byte tag at nought and the payload after it at its own
+// alignment -- so the host lends an array of them and nothing is copied
+// at the boundary. `embed.c` beside this declares the same shape in C.
 // The case that used to carry a name carries which name instead. A lend is
 // the host's memory, and a pointer in it is one the machine did not put there
-// and cannot take back when the lend ends — so a shape holding text, a handle
+// and cannot take back when the lend ends -- so a shape holding text, a handle
 // or a reference is refused at the lend rather than read out of one and kept.
 // The name itself crosses over a frame, where `kest_text` makes it the
-// machine's. See D434.
+// machine's.
 enum Event {
     Idle
     Moved(f32, f32)
@@ -31,7 +31,7 @@ enum Event {
 }
 
 // A struct with a run inside it, which is what a host lends when its own type
-// has an array in it. `[f32; 3]` is three where it stands (D064), so this is
+// has an array in it. `[f32; 3]` is three where it stands, so this is
 // twelve bytes and the host's `struct { float at[3]; }` is the same twelve.
 // A run on its own cannot be lent: a lend names a type and only a declared
 // one has a name, which is what this struct is for.
@@ -41,8 +41,8 @@ struct Point {
 
 // A run of structs inside a struct, which is the other half of the same
 // shape: `struct Cell { int32_t at; float weight; }` and three of them inside
-// a row. What that comes to in bytes is what D120 got wrong, and what a host
-// lending one would have read as the wrong thing.
+// a row. What that comes to in bytes is measured after what it holds, or a
+// host lending one would read the wrong thing.
 struct Cell {
     at: i32
     weight: f32
@@ -54,18 +54,18 @@ struct Row {
 }
 
 // The widths a C header is full of, and the padding between them. A layout is
-// what a host is told about a shape — where each field sits and what is there
-// — and until this was written nothing in this tree laid out an `i16`, a
+// what a host is told about a shape -- where each field sits and what is there
+// -- and until this was written nothing in this tree laid out an `i16`, a
 // `u16` or a `u32` at all, so three of the twelve kinds a layout can carry had
-// never been held to what a C compiler does (D431). Two bytes, two bytes,
+// never been held to what a C compiler does. Two bytes, two bytes,
 // four, one, and three of nothing after it is twelve; a host that gets that
 // wrong reads the next tile's fields.
-// The shape D016 works out by hand: a `u16` and a `bool` is four bytes aligned
+// A shape worked out by hand: a `u16` and a `bool` is four bytes aligned
 // to two. Every other shape this host lends is made of numbers, and a `bool` is
-// the one field whose width a reader has to be told rather than count — one
+// the one field whose width a reader has to be told rather than count -- one
 // byte here and `_Bool` there, with the padding after it decided by the `u16`
-// in front. It was the one shape in the decision that nothing crossed with.
-// See D552.
+// in front. It is the one shape of these that nothing else crosses with, so
+// it is held here on its own.
 struct Flagged {
     kind: u16
     on: bool
@@ -129,9 +129,9 @@ fn heaviest(rows: [Row]) -> i32 no.alloc {
 }
 
 // The same walk, giving the cell back rather than a number worked out of it.
-// Two slots that are not the same member — an `i32` in one and an `f32` in the
-// next — which is the result a host cannot read by remembering how it read the
-// last one. See D560.
+// Two slots that are not the same member -- an `i32` in one and an `f32` in the
+// next -- which is the result a host cannot read by remembering how it read the
+// last one.
 fn heaviestCell(rows: [Row], which: i32) -> Cell no.alloc {
     let best = rows[which].cells[0]
     for c in rows[which].cells {
@@ -145,7 +145,7 @@ fn heaviestCell(rows: [Row], which: i32) -> Cell no.alloc {
 // A value crossing rather than a borrowed one: the host writes the three
 // floats into the frame and the program gets a `Point`. In a frame a value is
 // one slot a scalar and a float is a double, whatever it is in memory, which
-// is the other half of D016's two layouts.
+// is the other half of the two layouts.
 fn lengthOf(p: Point) -> f32 no.alloc {
     let sum = 0.0
     for one in p.at {
@@ -154,7 +154,7 @@ fn lengthOf(p: Point) -> f32 no.alloc {
     return sum
 }
 
-// A run of a written length is laid out where it stands (D064), so building
+// A run of a written length is laid out where it stands, so building
 // one inside a promise to touch no heap is allowed: these three floats are the
 // struct's own twelve bytes, and the compiler emits no instruction that could
 // allocate them. The kind that can grow is the kind that reaches the heap.
@@ -184,7 +184,7 @@ fn between(a: Point, b: Point) -> f32 no.alloc {
 // hand over plainly: there is no `pick` to call, only a copy of it per set of
 // types anything asked for. A host walks the copies with `kest_entry_of` and
 // asks each what it takes, the same way it tells two functions of one name
-// apart — the difference is that these two were written once. See D435.
+// apart -- the difference is that these two were written once.
 fn pick<T>(a: T, b: T, first: bool) -> T no.alloc {
     if first {
         return a
@@ -210,11 +210,11 @@ fn spread(points: [Point]) -> f32 no.alloc {
 
 // The same question `spread` answers, asked one value at a time: the widest or
 // the narrowest of one point's coordinates, with the host keeping the running
-// answer between crossings itself. D007 measured what the two ways in cost —
-// a batch crosses once and is walked in place, a value crosses per value —
-// and what it does not say is that they answer the same, which is the thing a
-// host writer is choosing between. `examples/embed.c` asks both of the same
-// four points and holds the answers to each other.
+// answer between crossings itself. A batch crosses once and is walked in
+// place, a value crosses per value, and what that does not say is that they
+// answer the same, which is the thing a host writer is choosing between.
+// `examples/embed.c` asks both of the same four points and holds the answers to
+// each other.
 fn reach(p: Point, most: bool) -> f32 no.alloc {
     let answer = p.at[0]
     for one in p.at {
@@ -255,7 +255,7 @@ fn silence(events: [Event], at: i32) -> bool no.alloc {
 // the tag into the first and what the case carries into the ones after it.
 // Which member of a slot each of those is depends on the tag, so a host writing
 // one asks `kest_case_of` what the case carries rather than remembering. The
-// array above is the same shape crossing the other way. See D702.
+// array above is the same shape crossing the other way.
 fn damageOf(e: Event) -> i32 no.alloc {
     return match e {
         Idle -> 0
@@ -266,10 +266,10 @@ fn damageOf(e: Event) -> i32 no.alloc {
 }
 
 // And a value with a tag in it going the other way: back. The answer lands in
-// the slots the arguments were in — the tag in the first and what the case
-// carries after it — so a host reading one reads the tag before it reads
+// the slots the arguments were in -- the tag in the first and what the case
+// carries after it -- so a host reading one reads the tag before it reads
 // anything else, because which member of a slot the rest are is the tag's to
-// say. Nothing in this tree gave one back until this did. See D705.
+// say. Nothing in this tree gave one back until this did.
 fn worst(events: [Event]) -> Event no.alloc {
     let worst = Event.Idle
     let most = 0
@@ -382,14 +382,14 @@ fn joinedPieces(count: i32) -> i32 {
 // having said what its bytes mean. Text is UTF-8 and a run of bytes is
 // whatever it holds, so this is where the two meet: what comes back is text if
 // what the host lent is UTF-8 throughout, and a refusal if it is not. A nought
-// is a character and goes through. See D971.
+// is a character and goes through.
 fn readable(raw: [u8]) -> i32 {
     return len(text(raw))
 }
 
 // The same bytes kept rather than counted. What a program makes out of a lend
-// is the program's own — the bytes are copied onto the heap where everything
-// else it holds lives — so it outlives the lend and says the same thing after
+// is the program's own -- the bytes are copied onto the heap where everything
+// else it holds lives -- so it outlives the lend and says the same thing after
 // the host has taken its block back and written something else into it.
 fn copied(raw: [u8]) -> text {
     return text(raw)
@@ -399,7 +399,7 @@ fn copied(raw: [u8]) -> text {
 // arrives from a socket or a file, and the other side of that sentence is a
 // program that reads what it wants out of them: a `u8` at a time, widened and
 // shifted into the number it stands for. Nothing here allocates, so a host
-// lending its buffer and a program reading it are one crossing and no copies —
+// lending its buffer and a program reading it are one crossing and no copies --
 // which is the choice `embed.c` makes beside the one that copies.
 //
 // Four bytes a record, least significant first, which is what a wire form says
@@ -470,7 +470,7 @@ fn under() -> text {
 // Text the file was written with, given back as it stands. What a program
 // makes goes on the heap and what a program was written with is in the build,
 // and a host handed either of them has one pointer and nothing to tell it
-// which — until it asks. See D563.
+// which -- until it asks.
 fn asWritten() -> text {
     return "written into the file this came from"
 }
@@ -485,16 +485,16 @@ fn atOnce(many: i32) -> i32 {
 }
 
 // A nought written into what the host lent. A lend is the host's memory and a
-// program reads and writes it — the byte is a byte like any other in a run of
-// them, whatever it would mean in a piece of text — so what this writes is
+// program reads and writes it -- the byte is a byte like any other in a run of
+// them, whatever it would mean in a piece of text -- so what this writes is
 // what the host reads back out of its own array.
 fn blank(raw: [u8], at: i32) -> i32 {
     raw[at] = 0
     return len(raw)
 }
 
-// A reference a host keeps between calls. A reference is a number — which slot
-// and how many times that slot has been used — so one to something the program
+// A reference a host keeps between calls. A reference is a number -- which slot
+// and how many times that slot has been used -- so one to something the program
 // has dropped names a slot holding somebody else, and the count is what tells
 // them apart. A host may hold one for as long as it likes and find out at the
 // next call that what it named is gone.
@@ -534,7 +534,7 @@ fn named(what: text) -> i32 no.alloc {
 // An array the program made, handed back to the host. What a host does with
 // one is read it and hand it over again; what it may not do is end it as
 // though it were a lend, because the machine is holding it and the host never
-// lent anything. See D441.
+// lent anything.
 fn ownArray() -> [u8] {
     let raw: [u8] = array()
     push(raw, 7)
@@ -563,7 +563,7 @@ fn emptied(raw: [u8]) -> i32 {
 }
 
 // What a store does with the room of something dropped, which is hand it out
-// again (D014). This empties and fills one as many times as the host asks, and
+// again. This empties and fills one as many times as the host asks, and
 // a store that kept the room would want a megabyte long before it was done.
 fn churn(rounds: i32) -> i32 {
     let world: store<Npc> = store()
@@ -585,7 +585,7 @@ fn churn(rounds: i32) -> i32 {
 // declares a `Twin` as well, and both are held in arrays, so both have a
 // layout and a host asking for `Twin` has asked for one of two. What it has to
 // write instead is the whole name, which is the one thing that tells them
-// apart. See D526.
+// apart.
 struct Twin {
     n: i32
 }
@@ -611,44 +611,44 @@ fn spawn(world: store<Npc>, health: i32) -> i32 {
 // It walks, reads, writes and removes, and allocates nothing.
 // The host decides what a step costs, and its answer may come back through
 // this program: `embed.c` binds this and calls `rule` from inside it, which
-// is a host calling in from inside a call it was called from (D072). The
+// is a host calling in from inside a call it was called from. The
 // promise is the host's to keep, because an extern is judged by what it
 // declares.
 extern fn Engine.decide(health: i32) -> i32 no.alloc
 
 // Text the other way: a host hands a piece of it over, and what comes back is
-// the machine's own — a host that handed a pointer of its own would be
+// the machine's own -- a host that handed a pointer of its own would be
 // promising to keep it as long as this program holds it. Which host is running
 // this is the one thing a program cannot work out for itself.
 extern fn Engine.name() -> text
 
 // A crossing that hands the host a shape rather than a number. What the host
-// reads is the frame the machine laid the value out in — three `f32` in three
-// slots — and what says which is the layout `kest_extern_layout` gives, piece
+// reads is the frame the machine laid the value out in -- three `f32` in three
+// slots -- and what says which is the layout `kest_extern_layout` gives, piece
 // by piece. A host that checked only how many bytes the argument is would bind
 // a function that reads the same width with the fields in another order and
-// find out at the first call. See D699.
+// find out at the first call.
 extern fn Engine.rank(p: Point) -> i32 no.alloc
 
 // A crossing handed a value with a tag in it, which is the other end of
 // `damageOf`: there the host writes the tag and what the case carries into a
 // frame, here the machine writes them and the host reads them. Either way the
-// slots after the tag are the tag's to explain, and what a host reading one has
-// to go on is `kest_case_of` over the layout the crossing says it takes. See
-// D704.
+// slots after the tag are the tag's to explain, and what a host
+// reading one has to go on is `kest_case_of` over the layout the
+// crossing says it takes.
 extern fn Engine.hurt(e: Event) -> i32 no.alloc
 
 // And one answered with rather than handed over: a crossing that gives back a
 // shape with a piece of text in a field. What a crossing answers with is read
 // the way what a host hands in is read, one field in, because the two are one
-// walk at the two ends of one call. See D719.
+// walk at the two ends of one call.
 extern fn Engine.who() -> Npc
 
 // And one answered with a number kept narrower than the slot it comes back in.
 // A slot holds a double and an `f32` holds less, so this is the one crossing
 // where a host can answer with a number the program's own arithmetic cannot
-// make — and the walk that reads what came back is where it is caught. See
-// D838.
+// make -- and the walk that reads what came back is where it is caught,
+// before the program counts with it.
 extern fn Engine.weigh() -> f32 no.alloc
 
 fn whoIs() -> i32 {
@@ -662,18 +662,18 @@ fn weighed() -> i32 {
 
 // A shape with a piece of text in it, handed over by value. The door reads an
 // argument by what it is rather than by what its first piece is, so the text
-// inside this one is read the same as a piece of text handed over on its own —
+// inside this one is read the same as a piece of text handed over on its own --
 // and until it was, a host filling this wrote a pointer of its own into the
-// first slot and the program read it as text the machine owned. See D718.
+// first slot and the program read it as text the machine owned.
 fn greets(who: Npc) -> i32 no.alloc {
     return len(who.name) + who.health
 }
 
 // An enum whose cases carry nothing, which is a tag and nothing else: one slot,
-// four bytes, and — before a tag said what it was — exactly an `i32` in a
+// four bytes, and -- before a tag said what it was -- exactly an `i32` in a
 // layout. This is the shape the argument for saying so is really about, and the
 // one it did not show: a tag beside a number read the same as a number beside a
-// tag, so a host with the two the other way round agreed with itself. See D713.
+// tag, so a host with the two the other way round agreed with itself.
 enum Footing {
     Still
     Rushing
@@ -691,8 +691,8 @@ fn footed(how: Footing, n: i32) -> i32 no.alloc {
 // The other thing in this language whose bytes mean something only when a flag
 // beside them says so: an optional is a value and a byte after it, and an empty
 // one is that byte set to nought. What is in the value then is written as well
-// as the byte — the same rule a case that carries nothing is written by — so two
-// empty ones are the same bytes and a host comparing them says so. See D712.
+// as the byte -- the same rule a case that carries nothing is written by -- so
+// two empty ones are the same bytes and a host comparing them says so.
 struct Mark {
     at: i32?
     n: i32
@@ -712,7 +712,7 @@ fn marked(marks: [Mark]) -> i32 no.alloc {
 // it is putting in each slot rather than where its own fields are: the value,
 // the byte that says whether the value is there, and the number. Those three
 // are what a number, a `bool` and a number are as well, and the middle one is
-// the only thing telling the two apart. See D714.
+// the only thing telling the two apart.
 fn marking(one: Mark) -> i32 no.alloc {
     if let at = one.at {
         return at + one.n
@@ -735,7 +735,7 @@ fn unmark(marks: [Mark], at: i32) no.alloc {
 // not the first slot: the number comes first here, so the tag is the second of
 // four and the cases are the `Event`'s rather than this shape's. A layout says
 // it holds a tag either way and the two mean different things, which is what
-// reading them alike got wrong. See D707 and D709.
+// reading them alike got wrong.
 struct Blamed {
     cost: i32
     what: Event
@@ -747,9 +747,9 @@ fn blamedBy(one: Blamed) -> i32 no.alloc {
 
 // And the one direction left: a crossing that answers a value with a tag in it.
 // The host writes the tag and the program reads every slot after it as whatever
-// that tag says, so a tag the enum has no case for is a payload nobody wrote —
+// that tag says, so a tag the enum has no case for is a payload nobody wrote --
 // and there is nowhere to ask about it beforehand, because the tag is decided
-// inside the call. The machine reads it the moment the host answers. See D706.
+// inside the call. The machine reads it the moment the host answers.
 extern fn Engine.blame(cost: i32) -> Event no.alloc
 
 fn blamed(cost: i32) -> i32 no.alloc {
@@ -779,7 +779,7 @@ fn ranked(p: Point) -> i32 no.alloc {
 // arithmetic, and a refusal down there is one a host reads the way in to: the
 // message shows what a diagnostic holds and says how many are under the last
 // of them. Nothing else in this program is deep enough to ask for that, and
-// what nobody has seen is what nobody knows is there. See D620.
+// what nobody has seen is what nobody knows is there.
 fn tickShare(among: i32) -> i32 no.alloc {
     return 60 / among
 }
@@ -899,7 +899,7 @@ fn main() -> i32 {
     // The call the second proof cannot follow, made by the program itself so
     // that there is something for it to follow to: what a call through a value
     // may enter is what this file ever names as one, which here is `doubled`.
-    // The host hands in `grows` and finds out from the machine. See D834.
+    // The host hands in `grows` and finds out from the machine.
     if apply(doubled, 2) != 4 {
         return 6
     }
@@ -911,10 +911,10 @@ fn main() -> i32 {
 // A promise through a call the second proof cannot follow. Which function
 // `apply` enters is not known until it runs, so what holds it is the type:
 // only a value that promises `no.alloc` goes where one is wanted. A host
-// filling that slot writes a number, and a number carries no promise — so the
+// filling that slot writes a number, and a number carries no promise -- so the
 // machine asks the chunk it is about to enter and refuses if it does not
 // promise. `grows` is the one it refuses, handed in by a host that read the
-// index and wrote it. See D834.
+// index and wrote it.
 fn apply(f: fn(i32) -> i32 no.alloc, n: i32) -> i32 no.alloc {
     return f(n)
 }
@@ -933,7 +933,7 @@ fn grows(n: i32) -> i32 {
 // what a host has to have an answer for: every row's tag is stamped, then the
 // weights are written up to `upto`, and an `upto` past the end stops there.
 // What the host is left holding is the first pass whole and part of the
-// second. See D1133.
+// second.
 fn halfWritten(rows: [Row], upto: i32) -> i32 no.alloc {
     for i in 0..len(rows) {
         rows[i].tag = 7
@@ -945,10 +945,10 @@ fn halfWritten(rows: [Row], upto: i32) -> i32 no.alloc {
 }
 
 // The narrowest shape a case has -- a tag and one number, eight bytes -- is
-// moved by a path of its own in the machine, so the rule `silence` is held to
-// is held here as well, both ways: what a case that carries nothing leaves in
-// the host's bytes, and what it leaves in the slots a host reads back. See
-// D711 and D1197.
+// moved by a path of its own in the machine, so the rule `silence` is
+// held to is held here as well, both ways: what a case that carries
+// nothing leaves in the host's bytes, and what it leaves in the slots a
+// host reads back.
 enum Hurt {
     Unhurt
     Cut(i32)

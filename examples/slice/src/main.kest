@@ -24,7 +24,6 @@ import src.world
 // modules whose names end in one word.
 //
 // It answers with which of its checks failed, the way every example here does.
-// See D1062, D1063 and D1064, each of which it found.
 
 const ROUNDS: i32 = 24
 const PEOPLE: i32 = 40

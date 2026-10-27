@@ -3,7 +3,7 @@
 // is over the program's own tables, and a crossing a body and the program
 // asking its host are the same calls every Lua takes. Built twice, with the
 // native tier (`-DNATIVE`) and without, so what each adds to an executable is
-// said apart. See D1272.
+// said apart.
 //
 //   luau <engine name> bench/hosts/bodies.lua [--native]
 //       [--churn bench/hosts/churn.lua]

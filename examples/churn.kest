@@ -20,7 +20,7 @@ import std.text
 // The two shapes are written side by side on purpose. One round writes a new
 // name and a new run of tags for every thing, which is what anybody writes
 // first; the other writes into what the thing already holds, which is what
-// D940's `fit` is for. They do the same work and they do not cost the same
+// `fit` is for. They do the same work and they do not cost the same
 // thing, and this is where that is a number rather than an argument.
 
 const THINGS: i32 = 200
@@ -66,7 +66,7 @@ fn build(many: i32) -> store<Thing> {
     for i in 0..many {
         // Room rather than length: `clear` keeps what `array(n, v)` took, so
         // what the thing holds is a buffer with nothing in it and room for
-        // what a round writes. See D940.
+        // what a round writes.
         let said: [u8] = array(NAME, u8(32))
         clear(said)
         let marks: [Tag] = array()
@@ -170,7 +170,7 @@ fn bursting(world: store<Thing>, round: i32) -> i32 {
 // And the same round written to reuse what the thing already holds: the name is
 // written into the run of bytes it keeps and the tags are written where they
 // are. It promises `no.alloc`, which is the whole of the difference said in a
-// way the compiler proves. See D940.
+// way the compiler proves.
 fn reusing(world: store<Thing>, round: i32) -> i32 no.alloc no.host {
     let touched = 0
     for r in world {
@@ -193,7 +193,7 @@ fn reusing(world: store<Thing>, round: i32) -> i32 no.alloc no.host {
 // working memory and goes back when the block ends; what it keeps is the bytes
 // it copied into the buffer the thing already had. That is what a world with
 // changing text wants, and it is the one of these three that neither abandons
-// what it replaced nor gives up on writing a name. See D966 and D967.
+// what it replaced nor gives up on writing a name.
 fn keeping(world: store<Thing>, round: i32) -> i32 {
     let touched = 0
     for r in world {
@@ -216,11 +216,11 @@ fn keeping(world: store<Thing>, round: i32) -> i32 {
 // thing up in a table it was handed. Everything it calls promises `no.alloc`,
 // which is what says none of them can grow what they were handed: a call that
 // promised nothing would be refused here, because what it grew would be grown
-// in the block's memory and given back when the block ends. See D1075. The name it looks with came out of the
-// world and is not the block's, so nothing here hands the block's own memory
-// to anything — and this was refused until D1073, because an `if let` binding
-// was read as making what it bound. Every frame in a persistent-world language
-// that keeps a count per thing is this shape, and it could not be written.
+// in the block's memory and given back when the block ends. The name it looks
+// with came out of the world and is not the block's, so nothing here hands the
+// block's own memory to anything: an `if let` binding does not make what it
+// binds. Every frame in a persistent-world language that keeps a count per
+// thing is this shape.
 fn counting(world: store<Thing>, counts: table.Table<text, i32>) -> i32 {
     let seen = 0
     for r in world {
@@ -392,8 +392,7 @@ fn main() -> i32 {
     }
 
     // And the frame that walks a world inside a block and looks each thing up
-    // in a table. What it answers is not the point; that it compiles is, and
-    // it did not until D1073.
+    // in a table. What it answers is not the point; that it compiles is.
     let counts: table.Table<text, i32> = table.empty()
     for i in 0..THINGS {
         table.set(counts, "thing {i} at 0", i + 1)

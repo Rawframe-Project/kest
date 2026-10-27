@@ -23,9 +23,9 @@ struct KestLower {
     uint32_t *at;
     // Whether anything branches to each operation. Two instructions written
     // one after the other can be made into one, and that moves where the
-    // second of them starts — so a jump landing between them would land inside
+    // second of them starts -- so a jump landing between them would land inside
     // an instruction. Nothing at a place something points at may be taken back
-    // into what comes after it. See D871.
+    // into what comes after it.
     bool *landed_on;
     // The branches written and not yet filled in: where the two bytes are, and
     // which operation they lead to.
@@ -40,7 +40,7 @@ struct KestLower {
     // What was written before the last instruction, most recent last, so
     // that taking back two in a row -- an argument read in place and then an
     // element read into the frame -- still knows what is in front of both.
-    // A body starts with none. See D1167.
+    // A body starts with none.
     uint8_t earlier_op[4];
     uint32_t earlier_at[4];
     uint8_t earlier;
@@ -50,14 +50,14 @@ struct KestLower {
     // What bodies carried into this one at their calls need of the frame: the
     // slots one of them takes, above the body's own, and how much deeper the
     // stack may go. Every carried body is done with before the next begins,
-    // so the slots are the widest one's rather than all of them. See D1156.
+    // so the slots are the widest one's rather than all of them.
     uint16_t carried_slots;
     uint16_t carried_stack;
     uint16_t carried_slack;
     // Which row of the table of what a carried body may hold each instruction
     // is, one more than the row and nought for none: whether a body may be
     // carried is asked at every call to it, one instruction of it at a time,
-    // and a walk down the table each was a tenth of lowering. See D1284.
+    // and a walk down the table each was a tenth of lowering.
     uint8_t carried_row[256];
 };
 
@@ -74,7 +74,7 @@ static void refuse(Lower *lower, KestSpan span, const char *code,
 
 // An operation with no instruction behind it. Reaching one means the body and
 // this backend disagree about what a program is, which is this project's
-// mistake and not the program's — so it says so, in the words the other half
+// mistake and not the program's -- so it says so, in the words the other half
 // of the compiler uses for the same kind of news.
 static void fault(Lower *lower, KestSpan span, const char *what) {
     kest_diags_disagree(lower->program->diags, span, "%s", what);
@@ -121,8 +121,7 @@ static void take_back(Lower *lower) {
 // Whether the last thing written was `op` with one operand, nothing pointing
 // between, and what the operand is. A load of one slot and a constant of one
 // value are the two this is asked about: a run of slots cannot be the first
-// half of a pair, because what follows it is not where it ends. See D961 and
-// D1155.
+// half of a pair, because what follows it is not where it ends.
 static bool one_operand_before(const Lower *lower, uint8_t op,
                                uint16_t *operand) {
     if (lower->last_op != op || lower->last_at < lower->pointed_at ||
@@ -152,9 +151,9 @@ static uint16_t load_before(const Lower *lower, uint16_t *slot) {
 
 // Two loads of slots that sit next to each other are one load of both. A struct
 // built out of locals is written as a load for each field, and the machine
-// already has an instruction that takes a run of slots in one go — `load.n`,
-// which a wide value is loaded with — so this is a dispatch off every field
-// past the first and no instruction the machine did not have. See D871.
+// already has an instruction that takes a run of slots in one go -- `load.n`,
+// which a wide value is loaded with -- so this is a dispatch off every field
+// past the first and no instruction the machine did not have.
 static void emit_load(Lower *lower, uint16_t slot, uint16_t size,
                       KestSpan origin) {
     uint16_t before = 0;
@@ -167,7 +166,7 @@ static void emit_load(Lower *lower, uint16_t slot, uint16_t size,
     }
     // And two that do not sit next to each other are still two pushes, which
     // is one instruction with two operands. The pair is a tenth of what the
-    // frame step runs. See D961.
+    // frame step runs.
     uint16_t first = 0;
     if (size == 1 && one_operand_before(lower, KEST_OP_LOAD, &first)) {
         take_back(lower);
@@ -190,8 +189,8 @@ static bool local_and_constant_before(const Lower *lower, uint16_t *slot,
 // Whether the last thing written was an index of a run whose element is this
 // many slots wide, and which layout it read. An index pushes a struct onto the
 // stack and the store after it copies it off again, and the store cannot begin
-// until the index has finished: that is the dependency D1011 says is worth
-// taking into one instruction. Three bytes, the same shape every other
+// until the index has finished: that is a dependency worth taking into one
+// instruction. Three bytes, the same shape every other
 // peephole here reads.
 static bool index_before(const Lower *lower, uint16_t size, uint16_t *layout) {
     if (lower->last_op != KEST_OP_INDEX || lower->last_at < lower->pointed_at ||
@@ -211,7 +210,7 @@ static bool index_before(const Lower *lower, uint16_t size, uint16_t *layout) {
 // Whether the last thing written was the address of one of an array. A read of
 // a field through that address is the same read the machine can do from the
 // array and the index, in one instruction and one bounds check rather than
-// two dispatches and an address round trip. See D1044.
+// two dispatches and an address round trip.
 static bool elem_addr_before(const Lower *lower) {
     return lower->last_op == KEST_OP_ELEM_ADDR &&
            lower->last_at >= lower->pointed_at &&
@@ -222,7 +221,7 @@ static bool elem_addr_before(const Lower *lower) {
 // arithmetic is the instruction before. Four of them: the two that carry a
 // width and the two that do not, which is what the pair counts say the
 // programs here run. The width is read back out of the bytes so that the
-// fused instruction carries it too. See D1014.
+// fused instruction carries it too.
 static uint8_t arithmetic_before(const Lower *lower, uint16_t *kind) {
     if (lower->last_at < lower->pointed_at) {
         return 0;
@@ -255,7 +254,7 @@ static bool two_locals_before(const Lower *lower, uint16_t *first,
                               uint16_t *second);
 
 // Whether the last thing written was `index.ll` of an element this many slots
-// wide, and what it read. The store after it takes it whole. See D1281.
+// wide, and what it read. The store after it takes it whole.
 static bool index_ll_before(const Lower *lower, uint16_t size, uint16_t *holds,
                             uint16_t *at, uint16_t *layout) {
     if (lower->last_op != KEST_OP_INDEX_LL ||
@@ -296,7 +295,7 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
     if (size != 1 && fusing() && index_before(lower, size, &layout)) {
         take_back(lower);
         // And the run and the index it was read by, where both are locals
-        // nothing points between: every `let one = world[at]`. See D1167.
+        // nothing points between: every `let one = world[at]`.
         uint16_t holds = 0;
         uint16_t at = 0;
         if (two_locals_before(lower, &holds, &at)) {
@@ -324,7 +323,7 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
     if (made != 0) {
         take_back(lower);
         // And the local and the constant it was made of, when the local is
-        // the one being written: `x += k` as one instruction. See D1155.
+        // the one being written: `x += k` as one instruction.
         uint16_t read = 0;
         uint16_t which = 0;
         if ((made == KEST_OP_ADD_I_NARROW_TO ||
@@ -344,7 +343,7 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
             return;
         }
         // And a float sum of two locals nothing points between, read where
-        // they are. See D1166.
+        // they are.
         uint16_t first = 0;
         uint16_t second = 0;
         if ((made == KEST_OP_ADD_F_TO || made == KEST_OP_SUB_F_TO) &&
@@ -370,7 +369,7 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
     }
     // A local moved by a constant and written back where it was read: made as
     // the arithmetic on a local first, and one instruction with the store.
-    // The operands are the same three. See D1155 and D1168.
+    // The operands are the same three.
     if (size == 1 && fusing() &&
         (lower->last_op == KEST_OP_ADD_I_NARROW_K ||
          lower->last_op == KEST_OP_SUB_I_NARROW_K) &&
@@ -395,7 +394,7 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
     uint16_t constant = 0;
     if (size == 1 && fusing() &&
         one_operand_before(lower, KEST_OP_CONST, &constant)) {
-        // The constant is never on the stack now. See D1155.
+        // The constant is never on the stack now.
         if (lower->chunk->fused_slots < 1) {
             lower->chunk->fused_slots = 1;
         }
@@ -416,8 +415,7 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
 // turn them off and it is here rather than on the command line: what it is for
 // is compiling the same program twice and requiring the same answer, which is
 // how a transformation is held to being one that keeps a program's meaning.
-// D1009 says every optimization is held that way and D1011 is the first one
-// that was.
+// Every optimization is held that way.
 //
 // A plainer program runs the same operations in the same order; what differs
 // is how many instructions they are written as. Nothing a reader sees changes
@@ -432,9 +430,9 @@ static bool fusing(void) {
 }
 
 // A run of values the chunk holds, and the instruction that reads it. A local
-// and then a constant is the commonest pair this machine runs — every `x + 1`,
-// every `i < n` against a written number — and it is one instruction with two
-// operands. See D961.
+// and then a constant is the commonest pair this machine runs -- every `x + 1`,
+// every `i < n` against a written number -- and it is one instruction with two
+// operands.
 static void emit_constant(Lower *lower, uint16_t first, uint16_t count,
                           KestSpan origin) {
     const KestIrBody *body = lower->body;
@@ -470,8 +468,8 @@ static void emit_constant(Lower *lower, uint16_t first, uint16_t count,
 
 // The arithmetic a cut arrives behind, when it is the instruction just before
 // it. Each of the three is one byte and carries nothing after it, so it is the
-// last instruction when it is the last byte — the same thing that lets a jump
-// take back the comparison before it. See D868.
+// last instruction when it is the last byte -- the same thing that lets a jump
+// take back the comparison before it.
 static uint8_t fused_with_narrow(uint8_t arithmetic) {
     switch (arithmetic) {
     case KEST_OP_ADD_I:
@@ -486,7 +484,7 @@ static uint8_t fused_with_narrow(uint8_t arithmetic) {
 }
 
 // The same arithmetic with a constant for its right side, and a local for its
-// left or what is on the stack. See D1168.
+// left or what is on the stack.
 static uint8_t by_a_constant(uint8_t narrowed, bool of_a_local) {
     if (narrowed == KEST_OP_ADD_I_NARROW) {
         return of_a_local ? KEST_OP_ADD_I_NARROW_K : KEST_OP_ADD_I_NARROW_C;
@@ -537,8 +535,8 @@ static uint8_t fused_with_jump(uint8_t compare, bool asking_true) {
 }
 
 // Which instruction compares, by what is being compared. One row an operation,
-// because the question is the same four every time — a piece of text, a float,
-// an unsigned number, or the plain one — and it was written out six times.
+// because the question is the same four every time -- a piece of text, a float,
+// an unsigned number, or the plain one -- and it was written out six times.
 // `==` and `!=` over a run of slots are the exception and are answered where
 // they are written: both sides are a run rather than one.
 static const struct {
@@ -719,13 +717,12 @@ static uint8_t asks(Lower *lower, bool when_true) {
 // is before it is a `load.k` or a `const` nothing points between: a local
 // weighed against a constant, or what is on the stack. One row a comparison;
 // a float one has the first and not the second, and has it both ways round.
-// See D1154, D1155 and D1165.
 static const struct {
     uint8_t jump;
     uint8_t local;
     uint8_t top;
     // And weighing an element a run and an index read where they are, when
-    // what is before the constant is that read. See D1178.
+    // what is before the constant is that read.
     uint8_t element;
 } WEIGHED[] = {
     {KEST_OP_JUMP_FALSE_LT_I, KEST_OP_JUMP_FALSE_LT_K, KEST_OP_JUMP_FALSE_LT_C,
@@ -806,8 +803,7 @@ static bool local_and_constant_before(const Lower *lower, uint16_t *slot,
 // into those slots where a call would have handed them over, and every
 // `return` a jump to the end, which is the same three bytes -- so the jumps
 // inside it land where they landed. What `rules` measured by writing three of
-// them out by hand was 8.8 per cent, and D1070's reasons for not doing this
-// are each answered by what may be carried: see D1156.
+// them out by hand was 8.8 per cent.
 //
 // What a carried body may hold is what cannot be refused, loop or call:
 // arithmetic that wraps, comparisons, constants, locals and jumps forward.
@@ -818,7 +814,7 @@ static bool local_and_constant_before(const Lower *lower, uint16_t *slot,
 // how to move, and a body with one in it is called as it always was.
 // A distance is how far forward a jump lands, counted from the end of the
 // jump, which is the one number the carrying can change: what a body ends
-// with is left out of it. See D1156.
+// with is left out of it.
 typedef enum { NO_OPERAND, A_SLOT, A_CONSTANT, A_NUMBER, A_DISTANCE } Operand;
 
 static const struct {
@@ -970,10 +966,10 @@ static const Operand *carried_operands(const Lower *lower, uint8_t op) {
 // The most bytes of code a carried body may be. A body is carried to every
 // place it is called from, so what a program grows by is this times the
 // calls; what a call costs is paid once a call whatever the body's size, so
-// past a few dozen instructions there is nothing left to buy. See D1156. A
+// past a few dozen instructions there is nothing left to buy. A
 // rule deciding between five states is forty instructions in 185 bytes, and
 // carried it is eight per cent of `bench/control`, so the few dozen is forty
-// or so rather than thirty. See D1175.
+// or so rather than thirty.
 #define MOST_CARRIED 256
 
 // Whether the function at `index` may be carried to a call of it from the
@@ -987,7 +983,7 @@ static uint16_t operand_at(const uint8_t *code, uint32_t at);
 // a call inside it and a hundred instructions of the library's walked a step
 // at a time; the machine answers the same bits in one. Off with the other
 // fusions, and for a build that is going to be profiled, which counts calls
-// as they were written. See D1279.
+// as they were written.
 static uint8_t answered_here(const Lower *lower, uint16_t index) {
     if (!fusing() || lower->module->carrying_off ||
         index >= lower->module->count) {
@@ -1026,7 +1022,7 @@ static bool may_carry(const Lower *lower, uint16_t index) {
         // And the row held to the instruction's own width, so that a row
         // written wrong is a body called as it always was rather than one
         // carried a byte out: `f2i` was written with no operand the first
-        // time, and the body it was in answered another case. See D1156.
+        // time, and the body it was in answered another case.
         uint32_t said = 1;
         for (int o = 0; o < 3 && operands[o] != NO_OPERAND; o++) {
             said += 2;
@@ -1037,7 +1033,7 @@ static bool may_carry(const Lower *lower, uint16_t index) {
         at += said;
     }
     // And every jump in it landing where an instruction starts. A carried
-    // body is laid out again before it is written (D1196), and where a jump
+    // body is laid out again before it is written, and where a jump
     // lands is found by where its instruction moved to: one landing inside an
     // instruction lands nowhere that moved, and was carried as a jump off the
     // end of the code rather than the body run as the machine would run it.
@@ -1167,7 +1163,7 @@ static bool runs_hold(const KestChunk *callee, uint16_t stored,
 
 // Whether the operation at `at` writes what is on the stack into one slot,
 // and which. A carried body whose answer goes there writes a constant it
-// answers with there itself. See D1196.
+// answers with there itself.
 static bool puts_one_slot(const KestIrBody *body, uint32_t at,
                           uint16_t *slot) {
     if (at >= body->op_count || body->ops[at].kind != KEST_IR_PUT ||
@@ -1258,7 +1254,6 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
     // end and the write. Which returns those are is decided before anything
     // is written, because it moves every instruction after them and the
     // body's jumps are distances. Nothing in a carried body jumps backwards.
-    // See D1196.
     bool lands[MOST_CARRIED + 1] = {false};
     bool fused[MOST_CARRIED + 1] = {false};
     uint16_t moved_to[MOST_CARRIED + 1] = {0};
@@ -1373,7 +1368,7 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
 }
 
 // Whether the last thing written was `load2`, or `load.n` of two, nothing
-// points between, and the two slots it read. See D1155 and D1166.
+// points between, and the two slots it read.
 static bool two_locals_before(const Lower *lower, uint16_t *first,
                               uint16_t *second) {
     if ((lower->last_op != KEST_OP_LOAD2 && lower->last_op != KEST_OP_LOADN) ||
@@ -1386,7 +1381,7 @@ static bool two_locals_before(const Lower *lower, uint16_t *first,
     *second = (uint16_t)(at[3] | ((uint16_t)at[4] << 8));
     // Two locals side by side are loaded as a run of two, which is the same
     // two values: what the second operand says there is how many, and the
-    // second is the slot after the first. See D1166.
+    // second is the slot after the first.
     if (lower->last_op == KEST_OP_LOADN) {
         if (*second != 2) {
             return false;
@@ -1425,10 +1420,9 @@ static void read_place(Lower *lower, const KestIrOp *op) {
             uint16_t at = 0;
             // An element of any width: one of more than a slot that is
             // stored next is taken into the store as `index.to.ll` there,
-            // which is what this used to stand aside for (D1155), and one
+            // which is what this used to stand aside for, and one
             // that is not -- a piece of text handed to a call, as every
-            // comparison a sort makes is -- was `load2` and `index`. See
-            // D1281.
+            // comparison a sort makes is -- was `load2` and `index`.
             if (fusing() && place->layout < lower->module->layout_count &&
                 two_locals_before(lower, &holds, &at)) {
                 // The two slots `load2` pushed are never on the stack now.
@@ -1443,7 +1437,7 @@ static void read_place(Lower *lower, const KestIrOp *op) {
                 return;
             }
             // And by a local alone, where the run is what came before it:
-            // the second half of every `cells[y][x]`. See D1281.
+            // the second half of every `cells[y][x]`.
             if (fusing() && place->layout < lower->module->layout_count &&
                 lower->module->layouts[place->layout].slots == 1 &&
                 one_operand_before(lower, KEST_OP_LOAD, &at)) {
@@ -1494,8 +1488,7 @@ static void write_place(Lower *lower, const KestIrOp *op) {
         // And the same the other way round: a run of slots pushed and then
         // packed into the element. The push and the pack are the same slots.
         // One slot as well as many: `state[at] = next` is a whole number
-        // read out of a local and written, which is the same pair. See
-        // D1185.
+        // read out of a local and written, which is the same pair.
         uint16_t from = 0;
         if (fusing() && place->layout < lower->module->layout_count &&
             load_before(lower, &from) ==
@@ -1503,7 +1496,7 @@ static void write_place(Lower *lower, const KestIrOp *op) {
             take_back(lower);
             uint16_t wide = lower->module->layouts[place->layout].slots;
             // And the run and the index, where both are locals nothing
-            // points between: every `world[at] = one`. See D1167.
+            // points between: every `world[at] = one`.
             uint16_t holds = 0;
             uint16_t at = 0;
             if (two_locals_before(lower, &holds, &at)) {
@@ -1660,7 +1653,7 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         }
         // A division by a constant, of a local or of what is on the stack.
         // What it refuses it still refuses: the machine asks of the constant
-        // what it asked of the operand. See D1168.
+        // what it asked of the operand.
         if (fusing() && (does == KEST_OP_MOD_I || does == KEST_OP_DIV_I)) {
             uint16_t slot = 0;
             uint16_t which = 0;
@@ -1699,7 +1692,7 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
             if (does != KEST_OP_NARROW) {
                 take_back(lower);
                 // And the constant the arithmetic had for its right side, of
-                // a local or of what is on the stack. See D1168.
+                // a local or of what is on the stack.
                 uint16_t slot = 0;
                 uint16_t which = 0;
                 if (local_and_constant_before(lower, &slot, &which)) {
@@ -1744,12 +1737,11 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         // A slot holds an `f64` as the sixty-four bits it is, so an `f64` and
         // its bits are the same slot read two ways and there is nothing to
         // do. An `f32` is held widened, so it is narrowed and read as its
-        // thirty-two bits, and the other way. See D1171.
+        // thirty-two bits, and the other way.
         //
         // And the way to the bits is always an instruction, whatever the
         // width, because what is not a number is one such value there: the
         // sign and the payload the processor gave it are the processor's.
-        // See D1238.
         if (op->imm[0] == 0) {
             emit(lower, KEST_OP_FLOAT_BITS, span);
             emit_u16(lower, kest_is_narrow(op->type) ? 32 : 64, span);
@@ -1786,8 +1778,7 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
     case KEST_IR_HASH:
         // A reference is one slot and goes through the walk that knows what a
         // value is made of, because only part of it may be hashed: the place
-        // is the program's and the number above it is the process's. See
-        // D1054.
+        // is the program's and the number above it is the process's.
         if (kest_is_a_run(op->type) ||
             (op->type != NULL && op->type->tag == KEST_T_REF)) {
             emit(lower, KEST_OP_HASH_VALUE, span);
@@ -1868,7 +1859,7 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         return;
     // A whole piece of text onto a run of bytes. No layout goes with it: the
     // element is a byte and the stride is one, which is the whole reason this
-    // can be one move instead of a loop. See D1068.
+    // can be one move instead of a loop.
     case KEST_IR_APPEND_TEXT:
         emit(lower, KEST_OP_PUSH_TEXT, span);
         emit_u16(lower, op->imm[0], span);
@@ -1994,7 +1985,7 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         uint8_t against = fusing() ? weighed(jump, true) : 0;
         uint16_t slot = 0;
         uint16_t which = 0;
-        // Two locals: every `while i < n`, and every `<=`. See D1281.
+        // Two locals: every `while i < n`, and every `<=`.
         uint8_t locals = !fusing()                          ? 0
                          : jump == KEST_OP_JUMP_FALSE_LT_I ? KEST_OP_JUMP_FALSE_LT_LL
                          : jump == KEST_OP_JUMP_FALSE_LE_I ? KEST_OP_JUMP_FALSE_LE_LL
@@ -2011,7 +2002,7 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
                    local_and_constant_before(lower, &slot, &which)) {
             // The two values `load.k` pushed are never on the stack now, so
             // the compiler's reckoning may be two more than this body goes:
-            // said as slack, the way D1012 says it, rather than taken off a
+            // said as slack rather than taken off a
             // number whose deepest moment may be somewhere else.
             if (lower->chunk->fused_slots < 2) {
                 lower->chunk->fused_slots = 2;
@@ -2139,7 +2130,7 @@ static bool lower_body(Lower *lower, const KestIrBody *body, KestChunk *chunk) {
             lower->landed_on[op->target] = true;
         }
         // And past the write a carried body's answer goes to, which is where
-        // one of its returns can land. See D1196.
+        // one of its returns can land.
         uint16_t slot = 0;
         if (op->kind == KEST_IR_CALL && i + 2 < body->op_count &&
             may_carry(lower, op->imm[0]) &&
@@ -2169,7 +2160,7 @@ static bool lower_body(Lower *lower, const KestIrBody *body, KestChunk *chunk) {
     // What the bodies carried here need of the frame: their slots above this
     // body's own, and their stack said as slack beside the reckoning, because
     // where a carried body runs is below the deepest moment of this one or
-    // above it and nothing here says which. See D1156.
+    // above it and nothing here says which.
     chunk->slot_count = (uint16_t)(body->slot_count + lower->carried_slots);
     chunk->stack_needed = (uint16_t)(body->stack_needed + lower->carried_stack);
     if (lower->carried_slack > chunk->fused_slots) {
@@ -2214,15 +2205,13 @@ bool kest_lower_body(void *reading, const KestIrBody *body) {
     KestChunk *into = lower->module->functions[lower->next++];
     // What the optimizer took out before this read the body, which the
     // compiler's reckoning of how deep the stack goes still counts. It sits
-    // beside what this file's own fusions save and is held the same way. See
-    // D1012 and D1025.
+    // beside what this file's own fusions save and is held the same way.
     if (body->took_slots > into->fused_slots) {
         into->fused_slots = body->took_slots;
     }
     // What the body called its slots, carried through so a stopped machine can
-    // say `hungry` rather than `slot 4`. The IR has kept them since D962
-    // because the escape pass wanted them; this is the second reader. See
-    // D991.
+    // say `hungry` rather than `slot 4`. The IR keeps them for the escape
+    // pass; this is the second reader.
     for (uint32_t i = 0; i < body->name_count; i++) {
         const KestIrName *one = &body->names[i];
         kest_chunk_names(lower->module, into, one->name, one->slot,

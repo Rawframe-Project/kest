@@ -21,8 +21,7 @@
 // which of the two ways of reading a file notices that is a thing about the
 // disk: one filesystem says a directory is nought bytes and the next says nine
 // quintillion, so one goes down the stream and the other down the sized read.
-// Both ask here, so there is one answer rather than one for each way in. See
-// D865.
+// Both ask here, so there is one answer rather than one for each way in.
 static bool read_failed(FILE *file) {
     return ferror(file) != 0;
 }
@@ -63,7 +62,7 @@ static char *read_stream(KestArena *arena, FILE *file, size_t *length) {
 // one file -- checking the file being typed in reads everything it imports, and
 // an import that is itself open and unsaved has to be read as the person can
 // see it rather than as it was last saved. Set and cleared by whoever is
-// driving; nothing else in this tree ever sets one. See D977 and D1143.
+// driving; nothing else in this tree ever sets one.
 typedef struct {
     const char *path;
     const char *text;
@@ -173,12 +172,12 @@ static char *read_file(KestArena *arena, const KestUnits *units,
     rewind(file);
     // Not a mistake: a stream that cannot say how long it is is read to the end
     // instead of being refused for not knowing. `LONG_MAX` is the same answer
-    // said the other way round — a directory on one filesystem here measures
+    // said the other way round -- a directory on one filesystem here measures
     // nought and on the next measures nine quintillion, and nothing has that
     // many bytes in it. Asking the arena for them is how the second was caught
     // before this: not by the read failing but by an allocation nobody could
     // ever have made, which is the right answer for the wrong reason and a
-    // different reason on every disk. See D865.
+    // different reason on every disk.
     if (size < 0 || size == LONG_MAX) {
         char *text = read_stream(arena, file, length);
         fclose(file);
@@ -192,8 +191,9 @@ static char *read_file(KestArena *arena, const KestUnits *units,
     }
     size_t read = fread(text, 1, (size_t)size, file);
     // A read that failed is not a file this read. A directory opens and refuses
-    // to be read, and reading nought bytes of it fails at nothing — so one more
-    // byte than there is said to be is asked for, whatever that number was.
+    // to be read, and reading nought bytes of it fails at nothing -- so one
+    // more byte than there is said to be is asked for, whatever that number
+    // was.
     //
     // Always, rather than only when a file measured nought. How many bytes
     // there are to read is what the filesystem says a directory is, and that is
@@ -203,7 +203,7 @@ static char *read_file(KestArena *arena, const KestUnits *units,
     // compiler said `this file declares nothing` about a directory on one disk
     // and `cannot read` on another, and the hole written to catch that caught
     // it on one disk only. Asking past the end is the same question on both: a
-    // file gives end-of-file and a directory gives an error. See D865.
+    // file gives end-of-file and a directory gives an error.
     fgetc(file);
     bool broke = read_failed(file);
     fclose(file);
@@ -216,12 +216,12 @@ static char *read_file(KestArena *arena, const KestUnits *units,
 }
 
 // What a byte in a path means. A separator is the one thing about a path that
-// belongs to the platform rather than to the program, and D953 said a port
-// changes this and nothing else in this file. This is that port: on Windows a
+// belongs to the platform rather than to the program, so a port changes this
+// and nothing else in this file. This is that port: on Windows a
 // path is separated by either byte and a name may hold neither, so both are
 // read; everywhere else a backslash is a character a filename may have and
 // reading it as a separator would cut a name in half. What is *written* is
-// always `/`, which every platform this builds on accepts. See D970.
+// always `/`, which every platform this builds on accepts.
 #if defined(_WIN32)
 #define KEST_PATH_SEPARATOR(c) ((c) == '/' || (c) == '\\')
 #else
@@ -250,7 +250,7 @@ static const char *directory_of(KestArena *arena, const char *path) {
         kest_arena_strndup(arena, path, (size_t)(slash - path) + 1);
     // No room for the directory is the same answer as there being none: what
     // is written round it is a path, and a path built onto nothing is a path
-    // that will not be read. See D510.
+    // that will not be read.
     return kept == NULL ? "" : kept;
 }
 
@@ -312,7 +312,7 @@ static const char *last_segment(KestArena *arena, const char *dotted,
     }
     const char *kept = kest_arena_strndup(arena, dotted + start, length - start);
     // An alias nobody could write is an alias nothing matches, which is what a
-    // file that named no module already has. See D510.
+    // file that named no module already has.
     return kept == NULL ? "" : kept;
 }
 
@@ -335,7 +335,7 @@ static KestUnitInfo *reserve(KestArena *arena, KestUnits *units) {
 // The same file spelled two ways is the same file. A command line names
 // `lib/std/random.kest` and an import of it resolves to `./lib/std/random.kest`
 // from the library root, and reading both would declare everything in it
-// twice — which is what happened, and what it said was that the file disagreed
+// twice -- which is what happened, and what it said was that the file disagreed
 // with itself.
 //
 // Only the spellings that arise from putting paths together: a leading `./`, a
@@ -398,9 +398,10 @@ static bool already_loaded(const KestUnits *units, const char *path) {
 // was read and the shape kept for each of them; `lines` is where every line of
 // every file begins, four bytes a line, held so that a message can say `12:7`
 // without counting newlines from the top; `paths` and `names` are the text it
-// kept that is not the files themselves — where each came from, what each calls
-// itself, and what each imports. The source text is not counted here, because
-// `read` already says it file by file. See D785.
+// kept that is not the files themselves -- where each came from, what each
+// calls itself, and what each imports. The source text is not counted here,
+// because
+// `read` already says it file by file.
 void kest_units_hold(const KestUnits *units, uint32_t *files, uint32_t *lines,
                      uint32_t *paths, uint32_t *names) {
     *files = (uint32_t)(units->capacity * sizeof(KestUnitInfo));
@@ -435,7 +436,7 @@ static bool is_library(const char *dotted, size_t length) {
 // The roots a project says its modules are under, and where the manifest that
 // said so is. A file's own root -- worked out from what it calls itself and
 // where it is -- is the first place an import is looked for, and these are the
-// rest. See D1049.
+// rest.
 typedef struct {
     const char *sources[KEST_MOST_SOURCES];
     uint32_t count;
@@ -612,7 +613,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
             } else if (roots != NULL && roots->count > 0) {
                 // A project says where its modules are, so what a reader
                 // needs is the list that was looked under rather than the one
-                // path that happened to be tried first. See D1049.
+                // path that happened to be tried first.
                 char under[512];
                 size_t written = 0;
                 for (uint32_t r = 0; r < roots->count && written + 1 < sizeof
@@ -654,7 +655,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         // stage above reads is a count of files and a count of errors, and no
         // files with nothing wrong is a program with nothing in it: a build
         // given a ceiling under what reading it costs came back nought and
-        // said nothing at all. See D843.
+        // said nothing at all.
         kest_diags_starve(diags);
         return false;
     }
@@ -673,7 +674,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     // The tree goes where the trees go, and what it costs is charged here
     // rather than when they are given back: a ceiling refuses against what a
     // build asked for, and a build that asked while reading its fourth file
-    // has to be refused at the fourth file. See D748.
+    // has to be refused at the fourth file.
     KestArena *into = units->trees == NULL ? arena : units->trees;
     size_t was = units->trees == NULL ? 0 : kest_arena_used(units->trees);
     size_t was_held = units->trees == NULL ? 0 : kest_arena_held(units->trees);
@@ -701,11 +702,11 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         // is the one thing `kest_parse` answers no for. It used to be the
         // build's own arena that ran out and the stage above that said so;
         // the trees have an arena of their own now, and nothing above it is
-        // watching one. See D748.
+        // watching one.
         //
         // And the refusal comes back with it, because the ceiling that stopped
         // this one is written on the arena above and the refusal happened
-        // below it. See D843.
+        // below it.
         kest_arena_also_refused(arena, units->trees);
         kest_diags_starve(diags);
         return false;
@@ -813,7 +814,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         // the project is written wrongly. A module found under two of them is
         // two modules of one name -- which is the thing a vendored copy is
         // most likely to be -- so it is refused rather than taken from
-        // whichever was looked in first. See D1049.
+        // whichever was looked in first.
         if (!library_import && roots != NULL && roots->count > 0) {
             const char *found = NULL;
             const char *twice = NULL;
@@ -894,7 +895,7 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
     // A library named without a separator at its end is the same directory as
     // one named with it, and every import is that and a module's path run
     // together. `KEST_LIB` has always been read that way; a host handing the
-    // same words to `kest_build` was looked for in `libstd`. See D1145.
+    // same words to `kest_build` was looked for in `libstd`.
     size_t named = library == NULL ? 0 : strlen(library);
     if (named > 0 && !KEST_PATH_SEPARATOR(library[named - 1])) {
         char *ended = kest_arena_alloc(arena, named + 2, 1);
@@ -913,7 +914,7 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
     if (units->trees == NULL) {
         // Said, because nothing after this asks: a build that read nothing
         // has nothing wrong with it, and a run of it answered nought having
-        // run nothing at all. See D1251.
+        // run nothing at all.
         kest_diags_starve(diags);
         return false;
     }
@@ -983,7 +984,7 @@ bool kest_library_has(const char *library, const char *name, size_t length) {
 // somebody happened to be standing in -- which is how an unpacked archive
 // with its `bin` on the path could not find the library sitting next to it,
 // while the same binary named with a path could. The walk is the one the
-// shell already did, in libc and nothing else. See D1128.
+// shell already did, in libc and nothing else.
 #if defined(_WIN32)
 #define KEST_PATH_LIST_SEPARATOR ';'
 #else
@@ -1068,7 +1069,7 @@ const char *kest_library_path(KestArena *arena, const char *program) {
     }
     // The same answer the caller with no arena gets, and the same promise: one
     // at a time. A copy is what an arena is for and not what this needs to be
-    // right. See D510.
+    // right.
     const char *kept = kest_arena_strndup(arena, scratch, strlen(scratch));
     return kept == NULL ? scratch : kept;
 }

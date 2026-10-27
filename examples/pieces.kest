@@ -80,7 +80,7 @@ fn main() -> i32 {
     // empty piece, and a subject ending with a separator has an empty piece
     // after it. Held by joining the pieces back rather than by counting them,
     // because a count is a second thing to keep in step and this is the rule
-    // itself. See D892.
+    // itself.
     let ends: [text] = ["", ",", "a,b,", ",a,b", "a,,b", "a", ",,,"]
     for one in ends {
         if text.join(text.split(one, ","), ",") != one {
@@ -97,7 +97,7 @@ fn main() -> i32 {
     // A run of bytes takes a whole piece of text, because text is its bytes
     // and the two are the same bytes. Every other kind of run takes one of
     // what it holds: a run of text given a piece of text takes that piece as
-    // one element, which is the thing a bulk copy must not do. See D1068.
+    // one element, which is the thing a bulk copy must not do.
     let built: [u8] = array()
     push(built, "one")
     push(built, ' ')

@@ -32,10 +32,9 @@ static Open nothing_open = {NULL, NULL, no_text, 0};
 //
 // There is more than one file because an editor holds more than one open and
 // addresses every message to the one it means. The file being typed in is not
-// always the one opened last, and a server that kept a single file wrote a
-// change to one into another: before D1143, opening A, opening B and then
-// typing in A published A's mistakes against B's name and left A looking
-// clean.
+// always the one opened last, and a server that kept a single file would write
+// a change to one into another: opening A, opening B and then typing in A
+// would publish A's mistakes against B's name and leave A looking clean.
 //
 // There is one build, because building is what every answer is made of and
 // building every open file at once is work nobody asked for. `built` says
@@ -806,7 +805,7 @@ static void handle(Server *server, const KestJson *message) {
     // Every message from here on is about the file its uri names. Choosing
     // once, before the dispatch below, is what makes that true of all of them
     // at once rather than of whichever handlers remembered to ask. A uri
-    // nothing was opened for is answered rather than guessed at. See D1143.
+    // nothing was opened for is answered rather than guessed at.
     if (method_starts(method, "textDocument/")) {
         if (!pointed_at(server, params)) {
             if (id != NULL) {

@@ -17,9 +17,9 @@
 #include <string.h>
 
 // Whether instructions hand over through a table of label addresses, which is
-// GCC's and clang's and not the standard's. See D1181. Not on WebAssembly,
+// GCC's and clang's and not the standard's. Not on WebAssembly,
 // which has no jump to an address: clang makes the table one more `switch`
-// around the real one, and the machine ran a third slower for it. See D1255.
+// around the real one, and the machine ran a third slower for it.
 #if defined(__GNUC__) && !KEST_CHECKED && !defined(__wasm__)
 #define KEST_THREADED 1
 #else
@@ -40,13 +40,13 @@
 // An array is a length and a run of elements laid out the way the host lays
 // them out: an array of `f32` is four bytes an element. The block is separate
 // from the header so that it can one day be the host's own. What frees it is
-// not decided; see D012.
+// not decided.
 // What a handle is. A host holds these as opaque values and can hand one back
 // where another was wanted, which nothing at the boundary can see: the machine
-// carries no types and D046 says why. So the handle says what it is.
+// carries no types. So the handle says what it is.
 // How many places in stores a machine can tell apart. A reference carries the
 // stamp its slot was handed out with and a stamp is a `u32`, so this is where
-// they run out — four thousand million of them, after which a stamp handed out
+// they run out -- four thousand million of them, after which a stamp handed out
 // again would make a reference from the first occupant read as the newest one,
 // which is the one thing a reference is for.
 // What a reference is made of: which handout it is, and which place. Forty
@@ -57,7 +57,7 @@
 // comes round. The sixty-five thousand and thirty-seventh machine was told it
 // was the first, and a reference made in the first world, which was still
 // standing, resolved in the new one and answered its object. Two live worlds
-// accepting one authority. See D1033.
+// accepting one authority.
 //
 // So there is no world here any more. A handout number is taken from one count
 // for the whole process and is never handed out twice, which makes it say
@@ -73,7 +73,7 @@
 // `deterministic` program answers.
 #define REF_SERIAL_BITS 40
 // Read from `types.h`, because the type layer hashes a reference by its place
-// and has to take one apart the same way this does. See D1054.
+// and has to take one apart the same way this does.
 #define REF_INDEX_BITS KEST_REF_PLACE_BITS
 // The ceilings a program runs into. `check-ceilings.sh` lowers one of these in
 // a copy of this tree to watch the refusal happen, so they are their own
@@ -112,14 +112,14 @@ typedef struct {
     // The type is the build's own and there is one of each, so this is a
     // pointer comparison at the one door a handle can arrive through. NULL for
     // a handle made before anything knew, which is refused rather than
-    // trusted. See D927.
+    // trusted.
     const KestType *of;
 } Array;
 
 // The same shape, said again where anything outside this file can read it,
 // and held to being the same shape by the compiler rather than by a rule
 // somebody remembers. A generated file reads a run of elements through
-// `KestRun` (D1112); a field that moved here and not there is every such file
+// `KestRun`; a field that moved here and not there is every such file
 // reading memory that means something else.
 _Static_assert(sizeof(Array) == sizeof(KestRun),
                "a run of elements is one shape, and the header says another");
@@ -136,13 +136,13 @@ _Static_assert(KEST_IS_ARRAY == KEST_RUN_IS,
 
 // What reading a value out of memory turned up, which is one thing: a tag that
 // is no case of its own enum. Every other piece of a value means what its width
-// says, and a tag means which of several things the pieces beside it are — so a
-// number with no case behind it is a value nothing can read, and the `match`
+// says, and a tag means which of several things the pieces beside it are -- so
+// a number with no case behind it is a value nothing can read, and the `match`
 // that meets it has no arm to take.
 //
 // It is read where the reading happens rather than where the memory arrives,
 // because a lend is memory the host goes on writing to: anything held at the
-// lend is a promise about a moment that has passed. See D710.
+// lend is a promise about a moment that has passed.
 typedef struct {
     const KestType *type;
     int32_t tag;
@@ -163,13 +163,13 @@ static void pack(unsigned char *to, const KestLayout *layout,
 // say it once -- and so that a scalar moved on its own does not have to build
 // a layout of one piece and walk it. Building one was nine per cent of
 // `bench/rules.kest`, whose elements carry tagged unions and so are moved by
-// their type rather than by a flat list of pieces. See D1028.
+// their type rather than by a flat list of pieces.
 //
 // And written into every place that reads one, where the compiler can be
 // told to: left to itself it made this one function the whole machine
 // called, so every element read in every instruction went through one call
 // and one switch, and which case came next was a guess about the whole
-// program rather than about the instruction reading it. See D1193.
+// program rather than about the instruction reading it.
 #if defined(__GNUC__)
 #define WHERE_IT_IS_READ __attribute__((always_inline))
 #else
@@ -205,8 +205,8 @@ static inline WHERE_IT_IS_READ void read_piece(KestValue *out, uint8_t kind,
     }
     // The byte an optional keeps after its value is one byte, read the way any
     // other byte is. Its kind is what it is for and not what it is, and what
-    // it is is this. See D714. A truth is the third of them, and the same
-    // byte. See D839.
+    // it is is this. A truth is the third of them, and the same
+    // byte.
     case KEST_L_U8:
     case KEST_L_FLAGS8:
     case KEST_L_BOOL:
@@ -302,7 +302,6 @@ static inline void write_piece(unsigned char *at, uint8_t kind,
 // copy: a copy of the whole run is a call, and a wide read of slots written
 // one at a time a moment before waits for every one of those writes to land,
 // which took a run of four `f64` from a tenth fewer cycles to a sixth more.
-// See D1177.
 #define READ_RUN(type, member, count)                                           \
     for (uint32_t k = 0; k < (uint32_t)(count); k++) {                        \
         type v;                                                                \
@@ -394,7 +393,7 @@ static void walk_in(KestValue *out, const KestMoving *walk, uint32_t first,
             to[0].integer = tag;
             // A tag and one slot of what a case carries is the commonest
             // shape there is, and a loop of one the compiler made into a
-            // call to `memset`. See D1197.
+            // call to `memset`.
             if (step->slots == 2) {
                 to[1].integer = 0;
             } else {
@@ -409,7 +408,7 @@ static void walk_in(KestValue *out, const KestMoving *walk, uint32_t first,
                 // last step is the commonest place for one, and there the
                 // walk goes on into the case rather than calling itself for
                 // it. A case's steps are written after the value's, so the
-                // step before them is one this walk has. See D1227.
+                // step before them is one this walk has.
                 if (i + 1 == end) {
                     i = run->first - 1;
                     end = run->first + run->count;
@@ -508,7 +507,7 @@ static void walk_out(unsigned char *to_bytes, const KestMoving *walk,
         case KEST_MOVE_CASES: {
             int32_t tag = (int32_t)from[0].integer;
             // The same shape the other way: eight bytes, said as eight so
-            // that it is a store rather than a call. See D1197.
+            // that it is a store rather than a call.
             if (step->size == 8) {
                 memset(at, 0, 8);
             } else {
@@ -560,12 +559,11 @@ static void walk_out(unsigned char *to_bytes, const KestMoving *walk,
 // Every value is moved by the walk its layout was written out as: every run of
 // scalars where it sits, and for a tag, the tag and then the steps of the case
 // it names. What a case does not carry is nought in the slots and nought in
-// the bytes, so one value is one run of each whatever was there before. See
-// D711, D1159 and D1177.
+// the bytes, so one value is one run of each whatever was there before.
 //
 // One piece with no tag in it is most of what a program moves -- a number, a
 // handle, a piece of text -- and is moved here rather than through a call and
-// a walk of one. See D1154.
+// a walk of one.
 static void unpack(KestValue *out, const KestLayout *layout,
                    const unsigned char *from, TagRead *told) {
     if (layout->count == 1 && !layout->tagged) {
@@ -588,19 +586,18 @@ static void pack(unsigned char *to, const KestLayout *layout,
 
 // A slot map. Removing marks the slot dead and steps its generation, so a
 // reference handed out before is recognised as stale rather than followed.
-// Nothing is notified and nothing is counted; see D014.
+// Nothing is notified and nothing is counted.
 typedef struct {
     uint32_t what;
     KestValue *elements;
     // What each place was stamped with the last time it was handed out, which
     // is a number no other place in this process has ever been stamped with.
-    // See D1033.
     uint64_t *serials;
     // Which slots are live, a bit each rather than a byte each. A walk of a
     // store is a walk of this, and what it costs is what it has to read: at a
     // byte a slot, a store that had held a million and holds eight read a
     // megabyte to find them. At a bit a slot it reads sixteen kilobytes, and a
-    // word of nothing is one test rather than sixty-four. See D954.
+    // word of nothing is one test rather than sixty-four.
     uint64_t *live;
     uint32_t *free_slots;
     uint32_t free_count;
@@ -619,8 +616,7 @@ typedef struct {
     const KestType *of;
     // And how it is laid out, kept rather than looked up: a walk of what a
     // world can still reach reads every live place in it, and looking the
-    // layout up would be a search of the module for every one of them. See
-    // D996.
+    // layout up would be a search of the module for every one of them.
     const KestLayout *holds;
 } Store;
 
@@ -633,7 +629,7 @@ typedef struct {
 // the one answer both engines give. The first byte is looked for with the C
 // library's own search and the rest compared where it lands, which is what
 // the byte-at-a-time walk it replaced spent most of `bench/words.kest` doing
-// by hand. See D1169.
+// by hand.
 static int64_t found_at(const char *bytes, int64_t length, const char *needle,
                         int64_t needle_length, int64_t from) {
     if (needle_length == 0) {
@@ -656,7 +652,7 @@ static int64_t found_at(const char *bytes, int64_t length, const char *needle,
 }
 
 // What a piece of text is: bytes and how many. It is two slots wherever a
-// value lives, and this is the pair read out of them. See D964.
+// value lives, and this is the pair read out of them.
 typedef struct {
     const char *bytes;
     uint32_t length;
@@ -668,7 +664,7 @@ typedef struct {
 // answer: a 64-bit division is 40 to 90 cycles on an Intel core of Haswell's
 // age and a 32-bit one about 25, and `bench/control` does three a turn. The
 // host's compiler writes the same thing for a divisor it can see, which is
-// why the other backend never paid it. See D1278.
+// why the other backend never paid it.
 static inline int64_t divided(int64_t left, int64_t right, bool quotient) {
     if (((uint64_t)left | (uint64_t)right) <= UINT32_MAX) {
         uint32_t narrow_left = (uint32_t)left;
@@ -690,7 +686,7 @@ static Said said(const KestValue *slots) {
 // number written out once and kept here until it is copied, so a number in a
 // piece of text costs the text it is in and no text of its own. The pieces
 // are in the order they are written, a number in one slot and text in two.
-// The machine and the compiled bodies both join through these. See D1277.
+// The machine and the compiled bodies both join through these.
 typedef struct {
     char digits[KEST_NUMBERED_MOST][KEST_WHOLE_ROOM];
     uint8_t written[KEST_NUMBERED_MOST];
@@ -744,13 +740,13 @@ typedef struct {
     // Where in the source this frame's own call is written, for a frame whose
     // body is compiled C and so has no instruction to read one off. Nought
     // for every frame the machine made, which reads it from where the
-    // instruction pointer has got to. See D1098.
+    // instruction pointer has got to.
     uint32_t said_at;
 #if KEST_CHECKED
     // How deep the operand stack is to be at this frame's next instruction,
     // plus one, as the verifier's table says the last one left it: nought
     // before the first. It sits in what the three above leave over, so a
-    // frame is no bigger for it. See D1239.
+    // frame is no bigger for it.
     uint32_t expect;
 #endif
 } Frame;
@@ -764,7 +760,7 @@ typedef struct {
 // The same shape, said again where a generated file can read it, and held to
 // being the same shape by the compiler rather than by a rule somebody
 // remembers. A body the host's compiler compiled writes one of these itself
-// (D1122); a field that moved here and not there is every such file writing
+//; a field that moved here and not there is every such file writing
 // into memory that means something else.
 _Static_assert(sizeof(Frame) == sizeof(KestCall),
                "a call is one shape, and the header says another");
@@ -778,8 +774,8 @@ struct KestRuntime {
     // What this machine is made of, in an arena of its own: the stack, the
     // frames, the table of what the host provides, and this struct. It goes
     // when the machine goes, rather than sitting on the build's arena until
-    // the build does — a host that starts a machine, frees it and starts
-    // another was paying for every one of them. See D574.
+    // the build does -- a host that starts a machine, frees it and starts
+    // another was paying for every one of them.
     KestArena *own;
     // Everything a call needs, kept between calls, so the host can call in
     // more than once and what the program allocated is still there.
@@ -798,12 +794,11 @@ struct KestRuntime {
     // And where what a program makes stands: text, arrays and worlds, in
     // places that are given back when nothing can reach them. An arena could
     // not give one back without giving all of them back, which is what made a
-    // world that replaces a name every round grow without bound. See D996.
+    // world that replaces a name every round grow without bound.
     KestGround *ground;
     // What the host has told this machine to keep whatever the program can
     // reach. A handle the host holds and does not hand back in is one the
     // walk cannot see, and a walk that cannot see it gives its memory away.
-    // See D996.
     KestValue *held_by_host;
     uint32_t held_count;
     uint32_t held_room;
@@ -820,7 +815,7 @@ struct KestRuntime {
     // so a program holding almost nothing does not walk on every allocation.
     // The block of handout numbers this machine has claimed and how far into
     // it it has got. One write to the count the process shares buys a
-    // thousand of them. See D1053.
+    // thousand of them.
     uint64_t handout_next;
     uint64_t handout_upto;
     size_t walk_at;
@@ -828,11 +823,11 @@ struct KestRuntime {
     // been taken. It is how a handle held somewhere a walk does not read is
     // found: under it, the first allocation after such a handle is made
     // gives the handle's memory away, and the program reads something else
-    // where it was. `KEST_WALK_EVERY` asks for it. See D1163.
+    // where it was. `KEST_WALK_EVERY` asks for it.
     bool walk_every;
     // How many times what it is holding may be handed out before that is
     // worth a walk. One by default, which is the shortest pause; a host that
-    // is not budgeting a frame says otherwise. See D1045.
+    // is not budgeting a frame says otherwise.
     uint32_t walk_after;
     // The most this machine was ever holding at once, which is what says a
     // world has settled where the number above says only what it holds now.
@@ -848,10 +843,10 @@ struct KestRuntime {
     // What the machine has just made and has not yet written anywhere a walk
     // can read. Making a store is four runs and a header, and until the last
     // of them is there the first four are named by nothing but a local
-    // variable of this C — which a walk cannot read, and a sweep after one
+    // variable of this C -- which a walk cannot read, and a sweep after one
     // would hand back memory the machine is in the middle of using. Six is
     // the deepest any of them goes: a store's four runs, its header, and the
-    // elements of an array in front of its header. See D996.
+    // elements of an array in front of its header.
     const void *in_hand[6];
     uint32_t hands;
     // What the host allowed the heap, kept so a reset gets the same ceiling
@@ -863,18 +858,18 @@ struct KestRuntime {
     // at every bit set and never reaches nought in any run a person waits for,
     // so one comparison serves both. A host that cancels writes nought into it
     // from wherever it is, which is why the two are told apart by the flag
-    // beside them rather than by the counter. See D921.
+    // beside them rather than by the counter.
     uint64_t fuel_left;
     uint64_t fuel_given;
     bool fuel_bounded;
     // Started for code nobody trusts: only opened doors, and nothing the other
-    // backend wrote is entered. See D1246.
+    // backend wrote is entered.
     bool untrusted;
     // Where a debugger stopped this machine, or NULL. A machine that stopped
     // is not finished and is not broken: its frames, its stack and its heap
     // are where they were, and `kest_resume` carries on from the instruction
     // the breakpoint was written over. Nothing in the hot path reads it: it is
-    // written by the one instruction nothing compiles to. See D991.
+    // written by the one instruction nothing compiles to.
     const uint8_t *stopped_at;
     // Where the call a host made put its arguments, kept so that a run which
     // stopped and carried on can hand back what came out of it: the copy out
@@ -890,11 +885,11 @@ struct KestRuntime {
     //
     // This is cross-thread and is not claimed to be safe from a signal
     // handler: `atomic_int` is only lock-free in practice and the standard
-    // does not promise a handler may touch it. See D929.
+    // does not promise a handler may touch it.
     atomic_int cancel_asked;
     // And what a bound function said when it could not do what it was asked.
     // NULL when the last crossing worked, which is every crossing that does
-    // not call `kest_native_failed`. See D937.
+    // not call `kest_native_failed`.
     const char *native_failed;
     // The frames live in the arena rather than on the host's stack, so the
     // depth limit is Kest's own number and not whatever the host allows.
@@ -904,17 +899,17 @@ struct KestRuntime {
     uint32_t call_depth;
 #if KEST_CHECKED
     // The deepest this machine ever got, in slots and in frames, which only
-    // the build that checks itself counts. D812 asked the same of one body;
-    // this asks it of the run, which is what a host is sized by. See D813.
+    // the build that checks itself counts. The same is asked of each body;
+    // this asks it of the run, which is what a host is sized by.
     uint32_t went_slots;
     uint32_t went_frames;
     // And whether the program had a least at all. One that does is sized by
     // what it needs and one that does not by what a frame of it costs, and
-    // the room left over means a different thing in each. See D815.
+    // the room left over means a different thing in each.
     bool had_least;
     // What the machine ran, one count for each instruction there is. The other
-    // readings here are high-water marks — how far a run reached — and this is
-    // the other question: what it did on the way. A static count of what a
+    // readings here are high-water marks -- how far a run reached -- and this
+    // is the other question: what it did on the way. A static count of what a
     // program is written with says nothing about a loop, and a loop is what
     // this language is for. Counted only by the build that checks itself, so
     // the release build's numbers are still the release build's.
@@ -923,18 +918,18 @@ struct KestRuntime {
     // twelve hundred bytes, and a machine is two thousand. `examples/embed.c`
     // holds a machine to being smaller than a walk of the program it runs, and
     // it refused one carrying these before anybody had asked to read them.
-    // Nought here is a machine that is not counting. See D870.
+    // Nought here is a machine that is not counting.
     uint64_t *ran_checked;
     // What the machine moved, in bytes, counted where it moves it. The
     // instruction histogram beside this says how many times something ran;
     // what a run of it moved depends on its operands and on a layout, so it
     // is counted rather than worked out from the name. Same build, same
-    // reason: a counter at every movement in a release machine is what D979
-    // measured at a third of it, and a third is nothing beside a sanitiser.
+    // reason: a counter at every movement in a release machine costs a third
+    // of it, and a third is nothing beside a sanitiser.
     //
     // Each of these is bytes that were actually copied from somewhere to
     // somewhere. Nothing counts a pointer being moved, a stack pointer being
-    // stepped, or a length being read. See D1023.
+    // stepped, or a length being read.
     uint64_t moved_loaded;
     uint64_t moved_stored;
     uint64_t moved_held;
@@ -952,16 +947,16 @@ struct KestRuntime {
     // And which instruction followed which, so that a pair worth one
     // instruction can be told from a pair that never happens. Kept beside the
     // counts above and under the same environment variable, in the build that
-    // checks itself. See D1010.
+    // checks itself.
     uint64_t *pairs_checked;
     uint8_t last_checked;
     // And how many questions this build asked of its own compiler on the way:
     // every number an instruction carries is read by something that asks
-    // whether it could be that number (D900 to D906), and this is how many
+    // whether it could be that number, and this is how many
     // times that happened. A count rather than a duration, so what it says is
     // what the build that checks itself does rather than how fast this machine
     // did it. Counted only where somebody has asked to read it, the same as
-    // the line above. See D907.
+    // the line above.
     uint64_t guarded;
 #endif
     // What a run did, counted when a caller asked and not otherwise. Every
@@ -970,22 +965,22 @@ struct KestRuntime {
     // run nobody asked is one test of a pointer that is nothing, at the top of
     // the loop and at the four places something happens worth counting. It is
     // counts and not durations: a machine counts what it did and a clock is
-    // the host's. See D979.
+    // the host's.
     uint64_t *entered;
     uint32_t entered_room;
     uint64_t crossings;
     // What the memory under the program did, which a host reads through
     // `kest_telemetry`. Each of these is at an allocation, a walk, a lend or a
     // copy rather than at an instruction, so counting them always costs
-    // nothing a run can see. See D1007.
+    // nothing a run can see.
     //
     // The clock is the host's, because this library is ISO C and there is no
-    // monotonic clock in it (D935). A host that gives one gets what a walk
+    // monotonic clock in it. A host that gives one gets what a walk
     // took; a host that gives none gets nought there and everything else.
     uint64_t (*clock)(void *);
     void *clock_context;
     // And who is told what each walk cost, which is the distribution the
-    // numbers below cannot give: they are a total and a worst. See D1027.
+    // numbers below cannot give: they are a total and a worst.
     void (*collected)(const KestPause *pause, void *context);
     void *collected_context;
     uint64_t walked;
@@ -1010,7 +1005,7 @@ struct KestRuntime {
     // Where the machine is while a host function it called is running. A host
     // may call back in from there, and what it starts has to stand above what
     // is already on the stack rather than on top of it. NULL when nothing of
-    // the program's is running. See D072.
+    // the program's is running.
     KestValue *running_top;
     uint32_t running_frames;
     // Which instruction the machine was running when it last asked a door
@@ -1018,25 +1013,23 @@ struct KestRuntime {
     // inside it is reported where the machine would have reported it, and
     // working that out is a walk over the body: this is the machine saying
     // where it is in one store, and the walk happening only if the door
-    // refuses. See D1117.
+    // refuses.
     const uint8_t *asked_at;
     // Where the operand stack had got to when a debugger stopped the machine.
     // One machine stops in one place, so it is the machine's rather than
     // every frame's: it is written at one instruction and read at one, and a
-    // frame is a thing there are a thousand of. See D991 and D1098.
+    // frame is a thing there are a thousand of.
     KestValue *stopped_top;
     // Headers of lends the host has ended, kept to be lent again. A host that
     // lends a batch a frame and ends it at the end of the frame would
     // otherwise leave a header on the heap every frame, which is a frame
     // budget that grows for a program that does the same thing every time.
     // The link is the block pointer, which an ended lend has no use for.
-    // See D241.
     Array *spare_lends;
     // Where a host asked the heap to be put back to, newest last, and the
     // number each was handed out under. A mark is a place in this list and the
     // number that says which time it was: a host that keeps one past a rewind
     // holds a number nothing answers to rather than a place that has moved.
-    // See D957.
     KestMark scratch[KEST_SCRATCH_DEEP];
     uint32_t scratch_given[KEST_SCRATCH_DEEP];
     uint32_t scratch_count;
@@ -1044,7 +1037,7 @@ struct KestRuntime {
     // And the program's own, which is a different question with the same
     // answer: a `scratch { }` block marks the heap and puts it back. They are
     // kept apart from the host's because the host's are refused while a
-    // program is running, which is exactly when these are open. See D966.
+    // program is running, which is exactly when these are open.
     // Taken from this machine's own room the first time a program opens one,
     // so a program with no `scratch { }` in it pays nothing for the door.
     KestMark *kept;
@@ -1052,10 +1045,10 @@ struct KestRuntime {
     uint32_t kept_room;
     // Every lend the host has not ended, so that ending one ends every handle
     // over that block: a host lending the same memory twice has two handles
-    // and one block, and it is the block it takes back. See D283.
+    // and one block, and it is the block it takes back.
     // How many places this machine has handed out. It is a count and not an
     // authority: what makes a reference this machine's is the handout number
-    // in it, which comes from the process rather than from here. See D1033.
+    // in it, which comes from the process rather than from here.
     uint64_t stamps;
     // The build's count of what is standing on it, which this machine is one
     // of until it is freed.
@@ -1067,34 +1060,34 @@ struct KestRuntime {
     // what `kest_needs_from` answers and a host sizes a stack from. Held
     // against what the machine turns out to be there. False when the program
     // reaches itself or calls through a value, and then there was no number
-    // to give a host and none to hold. See D234.
+    // to give a host and none to hold.
     // Which of the names a machine can explain it has explained already. What
     // a host asked for and cannot call is a statement about the program, which
-    // does not change while a machine lives — it is not something that
-    // happened — and saying it again cost 634 bytes an asking, which a host
+    // does not change while a machine lives -- it is not something that
+    // happened -- and saying it again cost 634 bytes an asking, which a host
     // polling for a name it might have pays every frame. One byte a name, and
-    // the program's own count of them. See D608.
+    // the program's own count of them.
     uint8_t *said_extern;
     uint8_t *said_copy;
     // And which of the program's layouts it has said something about. A
-    // refusal about a lend that is about the program — how wide the program
+    // refusal about a lend that is about the program -- how wide the program
     // lays a type out, that two of a name are in it, that one holds the
-    // machine's own — says the same thing every time it is asked, and a host
+    // machine's own -- says the same thing every time it is asked, and a host
     // lending in a frame asks it every frame. One byte a layout, which is
-    // what a lend names. See D616.
+    // what a lend names.
     uint8_t *said_layout;
     // Where this machine's own room stood when it had been built, and when
     // what it said was last read. What a host has been told is the host's,
     // and the words it was told go back to the machine that wrote them: a
     // program refused every frame says the same sentence every frame, and a
     // machine that kept all of them would hold a frame's words for as long as
-    // it ran. See D617.
+    // it ran.
     KestMark after_said;
     // And whether a host has been told what an index that is no function is.
     // The number in it is how many functions the program has, which does not
     // change; `kest_entry_name` answers the same question for nothing. One
     // bit, because there is one sentence and it is about the program rather
-    // than about an index. See D615.
+    // than about an index.
     bool said_no_frame;
     bool host_measured;
     uint32_t host_slots;
@@ -1104,7 +1097,7 @@ struct KestRuntime {
     // function the call it refused is in, because the two being different is
     // the difference between a walk that measured the wrong chunk and one that
     // measured the right chunk wrongly. It is a name in the module, which
-    // outlives this machine. See D606.
+    // outlives this machine.
     const char *host_where;
 };
 
@@ -1116,14 +1109,14 @@ typedef struct KestRuntime Vm;
 // the quarter it was: `bench/words` holds a fifth of one and walked it every
 // quarter, which was a tenth of what it ran, and a game's heap is megabytes
 // before its first frame. A host that sets a ceiling is walked for at the
-// ceiling whatever this says. See D1277.
+// ceiling whatever this says.
 #define WALK_FLOOR (1024u * 1024u)
 
 // What sits in front of the elements of an array, so that a walk that met
 // those elements without meeting the header can still read them. An address of
 // an element is a thing a program holds -- that is what `KEST_OP_ELEM_ADDR`
 // makes -- and a walk that could not follow one would give away what the
-// elements name. See D996.
+// elements name.
 typedef struct {
     const KestLayout *layout;
     // How many elements there is room for, not how many there are: what is
@@ -1164,7 +1157,7 @@ static void hands_off(Vm *rt, uint32_t was) {
 // cannot be told which hold addresses, and what it does instead is ask the
 // ground about each. An eight-byte number that happens to name a place keeps
 // that place, which costs memory and cannot cost correctness: nothing is
-// moved, so a number read as an address is never written through. See D996.
+// moved, so a number read as an address is never written through.
 static void follow_loosely(Vm *rt, const KestValue *from, const KestValue *to) {
     for (const KestValue *at = from; at < to; at++) {
         follow(rt, at->object);
@@ -1180,7 +1173,7 @@ static void follow_packed(Vm *rt, const unsigned char *bytes,
     if (head->loose || head->layout == NULL) {
         // An address is as wide as the machine's, which is less than the
         // word it is kept in where a pointer is four bytes: copying eight into
-        // one wrote past it on WebAssembly. See D1255.
+        // one wrote past it on WebAssembly.
         for (size_t at = 0; at + 8 <= span; at += 8) {
             void *what;
             memcpy(&what, bytes + at, sizeof what);
@@ -1204,7 +1197,7 @@ static void follow_packed(Vm *rt, const unsigned char *bytes,
 }
 
 // One place in a world, which is slots rather than packed bytes: a piece of
-// text is one piece of a layout and two of these. See D964.
+// text is one piece of a layout and two of these.
 static void follow_slots(Vm *rt, const KestValue *entry,
                          const KestLayout *layout, uint16_t slots) {
     if (layout == NULL || layout->tagged) {
@@ -1251,7 +1244,7 @@ static void follow(Vm *rt, const void *at) {
     // collection costs and this is what marking is: for every address a walk
     // follows, whether it is on this heap, where the thing it is in starts,
     // and what kind of thing that is -- which were three hashes of the same
-    // address and three probes of the same table. See D1008.
+    // address and three probes of the same table.
     void *start = NULL;
     KestGroundKind kind = KEST_GROUND_PLAIN;
     if (!kest_ground_reached(rt->ground, at, &start, &kind)) {
@@ -1319,7 +1312,7 @@ static KestValue *the_edge(Vm *rt, KestValue *reach) {
 // What can still be reached, and then what cannot given back. Nothing is
 // moved: a value stays where it was made, which is what lets a walk read a
 // slot it cannot be sure is an address and lets a program hold the address of
-// an element or of a piece of text cut out of another. See D996.
+// an element or of a piece of text cut out of another.
 static bool gather(Vm *rt, KestValue *reach) {
     if (rt->ground == NULL || kest_ground_open_count(rt->ground) != 0) {
         return false;
@@ -1377,7 +1370,7 @@ static bool gather(Vm *rt, KestValue *reach) {
     if (rt->collected != NULL) {
         // Asked of the heap here rather than kept running, because a walk is
         // where it is worth a walk of the plots: there are tens of them and
-        // millions of allocations. See D1027.
+        // millions of allocations.
         KestGroundPlots plots;
         kest_ground_plots(rt->ground, &plots);
         KestPause pause;
@@ -1401,7 +1394,6 @@ static bool gather(Vm *rt, KestValue *reach) {
 // holds it in its own memory, which no walk of this machine's can read, so it
 // is kept until the heap goes -- which is exactly how long it lasted before
 // there was a walk at all, and exactly what `kest_still_holds` says about it.
-// See D996.
 // Whether this machine handed the address out, which is now two questions: the
 // arena still holds what lasts as long as the machine, and the ground holds
 // what a program makes. A host asking whether what it kept is still the
@@ -1529,12 +1521,12 @@ static const char *written_shape(KestArena *arena, const KestType *type) {
 // declaration the host has come apart from, which is the half of the
 // disagreement the host cannot see.
 // Whether this host has already been told something about this layout. What a
-// refusal about a lend says of the program — how wide it lays a type out, that
-// two of a name are in it, that one of them holds the machine's own — is true
+// refusal about a lend says of the program -- how wide it lays a type out, that
+// two of a name are in it, that one of them holds the machine's own -- is true
 // of the program and says the same thing every time it is asked. A host that
 // lends in a frame asks every frame, and what saying it again cost was 749
 // bytes an asking, on the arena the build's diagnostics are written in and
-// never handed back. See D616.
+// never handed back.
 //
 // A layout the module does not hold is not one of these: it is said, because
 // nothing here knows what it is about.
@@ -1575,7 +1567,7 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
     // Nothing to copy is not the same as nothing to say. What comes back for
     // it is an empty piece of text, which is also what comes back for a host
     // that handed over an empty one on purpose, so the two read alike and
-    // only this says which. See D436.
+    // only this says which.
     if (bytes == NULL) {
         KestSpan nowhere = {0, 0};
         kest_diags_in(runtime->diags, NULL);
@@ -1593,10 +1585,10 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
     // in: a host that handed a pointer of its own would be promising to keep
     // it as long as the program holds it, and a program holds a piece of text
     // for as long as it likes.
-    // Text is UTF-8. A nought is a byte it may hold, since D971, and a byte
+    // Text is UTF-8. A nought is a byte it may hold, and a byte
     // that begins no character is not: a host that hands over bytes of its own
     // is the boundary where that is worth one walk, because everything the
-    // machine makes out of text that was already whole is whole. See D971.
+    // machine makes out of text that was already whole is whole.
     uint32_t bad = 0;
     if (!kest_utf8_whole(bytes, length, &bad)) {
         KestSpan nowhere = {0, 0};
@@ -1631,11 +1623,11 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
 
 // A lend that could not be written down. What it costs is a header and a place
 // in the list of what is lent, both on the machine's heap, so a host that lends
-// without ending pays for every one of them until the heap goes — and the heap
+// without ending pays for every one of them until the heap goes -- and the heap
 // that runs out here is the one the host itself gave. Nothing about the value
 // says which of the reasons in this function it was: a `NULL` for a name that
 // is not there and a `NULL` for a heap with nothing left were the same answer,
-// and only one of them is about the program. See D350.
+// and only one of them is about the program.
 static void no_room_to_lend(KestRuntime *runtime) {
     KestSpan nowhere = {0, 0};
     kest_diags_in(runtime->diags, NULL);
@@ -1664,7 +1656,7 @@ static void no_room_to_lend(KestRuntime *runtime) {
 // answers the same way now: the answer a real machine gives when it has
 // nothing, which is what `kest_frame_slots` and `kest_entry_name` already
 // said. There is nowhere to say more, because a report belongs to a machine
-// and there is none. See D894.
+// and there is none.
 KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                       const char *element, size_t size) {
     KestValue value = {0};
@@ -1676,7 +1668,7 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // count of nought rather than an address of nothing. What used to happen
     // was that the program got an array of four bytes at no address and read
     // it: the machine cannot tell a bad address from a good one, and this is
-    // the one address it can. See D357.
+    // the one address it can.
     KestSpan missing = {0, 0};
     if (data == NULL && length > 0) {
         kest_diags_in(runtime->diags, NULL);
@@ -1743,7 +1735,7 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // And what is inside it, which is the one thing about a lend that no
     // number can say. The bytes are the host's: a pointer in them is one the
     // machine did not put there, cannot vouch for, and cannot take back when
-    // the lend ends — so a program reading it would be holding the host's
+    // the lend ends -- so a program reading it would be holding the host's
     // memory after the host had moved on. `text` of a lent run is the one
     // place a lend stops being free, and this is what keeps it the one.
     const KestType *own = NULL;
@@ -1785,13 +1777,13 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     }
 
     // Whose memory it is. A lend is the host's block, read where it sits and
-    // written where it sits — so a host that hands back an address the machine
+    // written where it sits -- so a host that hands back an address the machine
     // gave it is handing the machine its own memory as something a program may
     // write to. The one that arrives that way is text: a program that is given
     // a piece of it holds a pointer into the heap or into the build, and a host
     // that lends those bytes as a run of numbers has made the one thing this
     // language says cannot be written into a thing that can. A literal rewritten
-    // that way stays rewritten for every machine the build starts. See D720.
+    // that way stays rewritten for every machine the build starts.
     if (data != NULL && (ours(runtime, data) ||
                          kest_arena_holds(runtime->module->arena, data))) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0653", nowhere,
@@ -1828,8 +1820,8 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // to, and it is asked first for exactly that reason: a count no `i32`
     // holds is wrong whatever the host owns, and one lend that got two
     // different answers in two builds would be a message a reader could not
-    // repeat. See D358. `len` gives back an `i32`, so a lend longer than one holds is a lend
-    // whose end the program cannot see, and every loop over it walks off
+    // repeat. `len` gives back an `i32`, so a lend longer than one holds is a
+    // lend whose end the program cannot see, and every loop over it walks off
     // memory that is really there into memory that is not.
     if (length > MAX_COUNTED) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", nowhere,
@@ -1848,8 +1840,8 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // build that ships: the memory is the host's and its end is not written
     // down anywhere the library can read. The sanitised build can ask, because
     // it is told where every block a host has ends, and a lend that runs past
-    // one is the mistake this crossing is shaped around — every loop over it
-    // walks off memory that is really there into memory that is not. See D286.
+    // one is the mistake this crossing is shaped around -- every loop over it
+    // walks off memory that is really there into memory that is not.
 #if KEST_CHECKED
     if (length > 0 &&
         __asan_region_is_poisoned(data, (size_t)length * stride) != NULL) {
@@ -1932,7 +1924,7 @@ static size_t put_text(char *out, size_t room, const char *text) {
 
 // A string is written as a string, quotes and escapes and all, because what
 // is being written is the source and not the content. A hole holding text on
-// its own is the content, which is the exception D035 names.
+// its own is the content, and that is the one exception.
 static size_t put_quoted(char *out, size_t room, const char *text,
                         size_t length) {
     size_t used = 0;
@@ -2025,7 +2017,7 @@ static size_t format_value(char *out, size_t room, const KestType *type,
         return put_text(out, room, buffer);
     case KEST_T_TEXT:
         // How long it is is the slot beside it, not a measurement: a nought
-        // is a byte text may hold since D971 and measuring stops at one.
+        // is a byte text may hold and measuring stops at one.
         return put_quoted(out, room, slots[0].text,
                           (size_t)slots[1].integer);
     case KEST_T_FLAGS:
@@ -2062,11 +2054,11 @@ static size_t format_value(char *out, size_t room, const KestType *type,
         return used;
     }
     // A struct written the way a program writes one: its name, and its fields
-    // in the order they were declared. That is not a format chosen here — it
+    // in the order they were declared. That is not a format chosen here -- it
     // is the one the language already prints a case with a payload in, which
     // is the same shape for the same reason. A text inside is quoted, as it is
     // inside a case, because the bytes on their own do not say where one field
-    // ends. See D876.
+    // ends.
     case KEST_T_STRUCT: {
         size_t used = put_text(out, room, kest_type_written(type));
         used += put_text(out + (used < room ? used : room),
@@ -2131,9 +2123,9 @@ static size_t format_value(char *out, size_t room, const KestType *type,
 }
 
 // Two values of one type are equal when everything that makes them up is. This
-// is reached for the two things that are values laid out flat — an enum and a
-// struct — and what either of them carries is compared the way the same types
-// are compared on their own. See D874.
+// is reached for the two things that are values laid out flat -- an enum and a
+// struct -- and what either of them carries is compared the way the same types
+// are compared on their own.
 static bool values_equal(const KestType *type, const KestValue *a,
                          const KestValue *b) {
     switch (type->tag) {
@@ -2142,7 +2134,7 @@ static bool values_equal(const KestType *type, const KestValue *a,
     // A reference is a place and a stamp packed into one whole number, and the
     // stamp is the build's own counter, so the number is the handout. Two
     // references are equal when they are the same handout, which is the same
-    // entity and still the entity it was. See D923.
+    // entity and still the entity it was.
     case KEST_T_REF:
         return a[0].integer == b[0].integer;
     case KEST_T_TEXT:
@@ -2194,7 +2186,7 @@ static bool values_equal(const KestType *type, const KestValue *a,
     // reason `hash_value` beside it gives: what reaches this is decided by
     // `has_equality`, the two lists are held to being one another, and a tag
     // added to the language would otherwise compare by slot nought without
-    // anybody deciding it should. See D545.
+    // anybody deciding it should.
     case KEST_T_ERROR:
     case KEST_T_VOID:
     case KEST_T_OPTIONAL:
@@ -2228,21 +2220,21 @@ static bool values_equal(const KestType *type, const KestValue *a,
     } while (0)
 
 // Reading a value out of memory, and what that turned up. A tag is the one
-// piece of a value whose number has to mean something — the pieces beside it
-// are whatever it says they are — so a number with no case behind it is read
+// piece of a value whose number has to mean something -- the pieces beside it
+// are whatever it says they are -- so a number with no case behind it is read
 // here and nowhere else: the `match` that meets it has no arm to take, and
-// what it would do instead is take an arm belonging to another case. See D710.
+// what it would do instead is take an arm belonging to another case.
 #define READ_INTO(where, layout, from)                                         \
     do {                                                                       \
         TagRead told = {NULL, 0, false};                                       \
         MOVED(moved_unpacked, (layout)->size);                                 \
         /* One piece with no tag in it is most of what a program reads out */ \
         /* of a run -- a number, a handle, a piece of text -- and is read   */ \
-        /* here rather than through a call and a walk of one. See D1154.    */ \
+        /* here rather than through a call and a walk of one.    */ \
         if ((layout)->count == 1 && !(layout)->tagged) {                       \
             /* And an `i32`, which is what a count, a timer and an index   */ \
             /* are, before the switch rather than as one of its cases.     */ \
-            /* See D1193.                                                  */ \
+            /*                                                  */ \
             if ((layout)->pieces[0].kind == KEST_L_I32) {                      \
                 int32_t read_i32;                                              \
                 memcpy(&read_i32, (from) + (layout)->pieces[0].offset, 4);     \
@@ -2275,7 +2267,7 @@ static bool values_equal(const KestType *type, const KestValue *a,
 // it finds: a frame from a chunk, a native from a table, a walk from a
 // layout's pieces. Past the end of any of those is a pointer rather than the
 // nought a constant would be, which is the one place inside this machine where
-// a number one out is read as an address. See D905.
+// a number one out is read as an address.
 #if KEST_CHECKED
 #define OF_THE_MODULE(which, many, what)                                       \
     do {                                                                       \
@@ -2378,7 +2370,7 @@ static void mark_live(Store *store, uint32_t index, bool live) {
 // go dead, so a walk of one looks rather than counts -- and it looks a word at
 // a time, so a run of dead slots is skipped sixty-four at a time rather than
 // one at a time. The order is the order the slots are in, which is what the
-// simulation profile promises a walk of a store is. See D954.
+// simulation profile promises a walk of a store is.
 static int64_t live_from(const Store *store, int64_t from) {
     uint32_t at = from < 0 ? 0 : (uint32_t)from;
     while (at < store->used) {
@@ -2408,11 +2400,11 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
 // The same, handed the arguments already gathered. What says something about a
 // frame a host filled and what says something about the frame it wrote back
 // into are one walk with two sayings, and the second of them ends up here with
-// a `va_list` in its hand. See D719.
+// a `va_list` in its hand.
 // Where an instruction was written, which is what a refusal about it points
 // at. A body the host's compiler compiled has no instruction and does have
 // the offset the resolved form carried, so everything that reports takes one
-// of these rather than the two it used to. See D1099.
+// of these rather than the two it used to.
 static KestSpan where_it_is(const Frame *frame, const uint8_t *instruction) {
     uint32_t offset = (uint32_t)(instruction - frame->chunk->code);
     KestSpan span = {kest_chunk_origin(frame->chunk, offset), 1};
@@ -2422,7 +2414,7 @@ static KestSpan where_it_is(const Frame *frame, const uint8_t *instruction) {
 // Where a door was asked from, which is a source offset from a body the
 // host's compiler compiled and a word saying `the machine` from the machine.
 // The second is turned into the first here, on the way to a message and
-// nowhere else. See D1117.
+// nowhere else.
 static KestSpan where_asked(const KestRuntime *rt, uint32_t where) {
     if (where != KEST_WHERE_RUNNING) {
         KestSpan said = {where, 1};
@@ -2438,8 +2430,7 @@ static KestSpan where_asked(const KestRuntime *rt, uint32_t where) {
 // The same, where the place is already known rather than worked out from an
 // instruction. A body the host's compiler compiled has no instruction to point
 // at and does have the source offset the resolved form carried, so it comes in
-// here and is reported exactly where the machine would have reported it. See
-// D1094.
+// here and is reported exactly where the machine would have reported it.
 static void said_at(Vm *vm, const KestSource *source, KestSpan span,
                     const char *code, const char *format, va_list args) {
     kest_diags_in(vm->diags, source);
@@ -2464,7 +2455,7 @@ static void said_at(Vm *vm, const KestSource *source, KestSpan span,
         // A frame a compiled body made has no instruction to point at and
         // says where its call is instead; nought there and no instruction is
         // the front of the body, which is where a caller nobody can place
-        // belongs. See D1122.
+        // belongs.
         uint32_t at = caller->ip == NULL || chunk->code == NULL
                           ? 0
                           : (uint32_t)(caller->ip - chunk->code);
@@ -2576,20 +2567,20 @@ static void no_room_growing(Vm *vm, const Frame *frame,
 
 // And what it would have needed, said where it ran out. A host picks the two
 // numbers a machine is started with, and the only thing that says whether it
-// picked well is the program — so the refusal carries the answer rather than
+// picked well is the program -- so the refusal carries the answer rather than
 // sending a reader to `kest emit` for it: a number to ask for, or the reason
 // there is not one. Worked out here rather than kept anywhere, because this
-// happens once, on the way out. See D569.
+// happens once, on the way out.
 static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
     uint32_t slots = 0;
     uint32_t deep = 0;
     KestReason why = {KEST_REACH_UNASKED, NULL};
     // The working out is memory, and the memory it takes is the program's:
     // a host that carries on after a refusal would be paying for this one out
-    // of the heap it gave the program. So it is borrowed and put back — after
+    // of the heap it gave the program. So it is borrowed and put back -- after
     // the words are written, because what a diagnostic is written into is the
     // build's arena and what a reason names is the program's own name for a
-    // function, and neither is what this hands back. See D571.
+    // function, and neither is what this hands back.
     KestMark before = kest_arena_mark(rt->heap);
     if (kest_module_needs(rt->module, rt->heap, -1, &slots, &deep, NULL, NULL,
                           NULL, &why)) {
@@ -2600,8 +2591,8 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
         // And what the call a host made needs on its own, at the declaration
         // of the function it called. The number above is the worst of
         // everything the program defines, so a host sized for the functions it
-        // calls is being told to go back to saying nothing — and what it wants
-        // is the one it asked for, which is this. See D622.
+        // calls is being told to go back to saying nothing -- and what it wants
+        // is the one it asked for, which is this.
         const KestChunk *one =
             called >= 0 && (uint32_t)called < rt->module->count
                 ? rt->module->functions[called]
@@ -2623,8 +2614,8 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
     // machine that has spent its heap and then run off its stack: both at
     // once, and the second of them is what this was for. Said as what it is,
     // because `there is no number to ask for` would be this machine's trouble
-    // written down as the program's — the number is there and this run cannot
-    // reach it. See D570.
+    // written down as the program's -- the number is there and this run cannot
+    // reach it.
     if (why.reach == KEST_REACH_NO_ROOM) {
         kest_diags_suggest(vm->diags,
                            "what this program needs cannot be worked out with "
@@ -2638,20 +2629,20 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
     // going to find out here, and this is where it does.
     // And what there is instead of a number, which is a bound: this machine
     // was sized from one, so a host reading a refusal is told the shape of it
-    // — so much a frame and so much whatever the frames — rather than being
+    // -- so much a frame and so much whatever the frames -- rather than being
     // left to guess what the next size up costs. One saying and not two,
     // because a diagnostic holds one and the second would take the first's
-    // place. See D820.
+    // place.
     uint32_t widest = 0;
     uint32_t in_a_turn = 0;
     uint32_t off_the_turns = 0;
     // Over what the call a host made reaches rather than over everything the
     // file defines. A host sizing a machine for one name asks `kest_bound_of`
     // about that name, so a refusal that answers about the whole program is
-    // answering a question the host did not ask — and the arithmetic it hands
+    // answering a question the host did not ask -- and the arithmetic it hands
     // back is arithmetic about bodies the host never calls. Nought or less
     // where there is no call to name, which is a machine that could not be
-    // made rather than one that ran out. See D821.
+    // made rather than one that ran out.
     kest_module_cycles(rt->module, rt->heap, called, false, &widest,
                        &in_a_turn, &off_the_turns);
     bool by_turns =
@@ -2688,10 +2679,9 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
 //
 // It is the one piece of mutable state this library keeps outside a machine,
 // and it is here rather than on the build because two machines of two builds
-// are two machines: a count on the build is what let a reference made in one
-// of them read an object in the other, which is D936, and a count masked to
-// sixteen bits is what let a reference made in one live world read an object
-// in another, which is D1033.
+// are two machines: a count on the build would let a reference made in one
+// of them read an object in the other, and a count masked to sixteen bits
+// would let a reference made in one live world read an object in another.
 // A block at a time, because the one shared thing in this library is the one
 // thing that stops it scaling. A machine that does almost nothing but make
 // places in a world ran no faster on eight threads than on one, and the whole
@@ -2701,7 +2691,7 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
 // them out to itself after that. The numbers a machine claims and does not
 // use are never handed out again, which costs nothing: the ceiling is a
 // million million and a process would have to make a million million machines
-// to feel it. See D1053.
+// to feel it.
 #define HANDOUT_BLOCK 1024ull
 
 static uint64_t claim_handouts(void) {
@@ -2726,7 +2716,7 @@ static int64_t pack_ref(uint64_t serial, uint32_t index) {
 // The slot a reference names, or NULL when what it named is gone.
 // Which place a reference names. Read through this and nowhere else: the parts
 // a reference is made of are this file's own and a second place that knew the
-// widths is a second place to change. See D934.
+// widths is a second place to change.
 static uint32_t ref_place(int64_t handle) {
     return (uint32_t)((uint64_t)handle & REF_INDEX_MASK);
 }
@@ -2737,7 +2727,7 @@ static KestValue *resolve_ref(Store *store, int64_t handle) {
     // One question rather than two. A handout number is the whole of the
     // authority: another machine's reference, another store's, and this
     // store's own from before the place was given back are all a number this
-    // place was never stamped with. See D1033.
+    // place was never stamped with.
     if (index >= store->used || !is_live(store, index) ||
         store->serials[index] != serial) {
         return NULL;
@@ -2887,14 +2877,13 @@ static bool grow_store(Vm *rt, KestValue *reach, Store *store) {
 // The words are written out twice rather than made out of one sentence and a
 // verb, because a code and the message it is raised with are a literal and the
 // literal after it everywhere else in this tree, and a check reads them that
-// way. One walk, two sayings, and each says its own. See D719.
+// way. One walk, two sayings, and each says its own.
 typedef struct {
     bool at_a_crossing;
     const Frame *frame;
     // What the machine was running when it asked, or nothing for a body the
     // host's compiler compiled: that one has no instructions at all and does
     // have the source offset the resolved form carried, which is `where`.
-    // See D1108.
     const uint8_t *instruction;
     uint32_t where;
 } Saying;
@@ -2927,7 +2916,7 @@ static void crossing_failed(KestRuntime *runtime, const Saying *saying,
 // instruction, and reaching past the other end of a body: what follows the
 // constants in the array is room the arena handed out and nobody wrote, so a
 // run one long is a value read out of memory that is nought by luck rather
-// than by anybody's decision. See D904.
+// than by anybody's decision.
 static bool own_constants(Vm *vm, const Frame *frame,
                           const uint8_t *instruction, uint32_t past) {
     vm->guarded++;
@@ -2949,7 +2938,7 @@ static bool own_constants(Vm *vm, const Frame *frame,
 // it -- inside the body, where the guards where a frame changes hands cannot
 // see. The named slots are what a body was given and the operand stack is
 // above them, so a read that runs past the names is a read of what the body
-// was in the middle of working out. See D903.
+// was in the middle of working out.
 static bool own_slots(Vm *vm, const Frame *frame, const uint8_t *instruction,
                       uint32_t first, uint32_t past) {
     vm->guarded++;
@@ -2968,15 +2957,15 @@ static bool own_slots(Vm *vm, const Frame *frame, const uint8_t *instruction,
 
 // Whether a number a host wrote fits the width the piece it sits in says. A
 // slot is sixty-four bits and a piece may be eight, and a number as wide as
-// the slot cannot be wrong — so only the narrow ones are asked, off the piece
-// and not off the type. See D836.
+// the slot cannot be wrong -- so only the narrow ones are asked, off the piece
+// and not off the type.
 static bool fits_the_piece(uint8_t kind, KestValue given_as) {
     int64_t given = given_as.integer;
     switch (kind) {
     // A slot holds a double and an `f32` holds less, so a host writing one no
     // `f32` can hold is the same door at a different width: what comes out is
     // an `f32` the program's own `f32` literals do not equal. Not a number is
-    // not a number at either width, so it is let through. See D838.
+    // not a number at either width, so it is let through.
     case KEST_L_F32:
         return given_as.real != given_as.real ||
                (double)(float)given_as.real == given_as.real;
@@ -2988,7 +2977,7 @@ static bool fits_the_piece(uint8_t kind, KestValue given_as) {
         return given >= INT32_MIN && given <= INT32_MAX;
     case KEST_L_U8:
         return given >= 0 && given <= UINT8_MAX;
-    // A truth holds one of two, and a slot holds sixty-four bits. See D839.
+    // A truth holds one of two, and a slot holds sixty-four bits.
     case KEST_L_BOOL:
         return given == 0 || given == 1;
     case KEST_L_U16:
@@ -3003,7 +2992,7 @@ static bool fits_the_piece(uint8_t kind, KestValue given_as) {
 
 // Whether every piece of a value fits the width it is kept at, without saying
 // which did not: the question the walk below answers in words, asked first
-// where it can be asked flat. A piece of text is two slots. See D1292.
+// where it can be asked flat. A piece of text is two slots.
 static bool pieces_fit(const KestLayout *layout, const KestValue *frame) {
     uint16_t slot = 0;
     for (uint16_t p = 0; p < layout->count; p++) {
@@ -3073,7 +3062,7 @@ static void narrower_than_that(KestRuntime *runtime, const char *name,
 // filling a `struct Npc { name: text, health: i32 }` wrote a pointer of its own
 // into the first slot and the program read it as text the machine owned. What
 // makes that readable is walking the type the way its slots are laid out, which
-// is the same walk `describe` makes and `enum_at` counts. See D718.
+// is the same walk `describe` makes and `enum_at` counts.
 //
 // `at` is where in the frame this value starts, and it comes back where the
 // next one does.
@@ -3163,10 +3152,9 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         //
         // And nothing at all in a slot that takes text, which is what a host
         // that zeroed a frame and called anyway hands over. Text in this
-        // language is never nothing — an empty piece of it is a piece of it —
+        // language is never nothing -- an empty piece of it is a piece of it --
         // so a slot holding no address is a host that has not filled the
         // frame, and the program reads it at the first thing it does with it.
-        // See D629.
         if (frame[*at].text == NULL) {
             if (saying->at_a_crossing) {
                 crossing_failed(runtime, saying, "K0652",
@@ -3205,7 +3193,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                "over");
             return false;
         }
-        // Two slots: what it is made of, and how many bytes that is. See D964.
+        // Two slots: what it is made of, and how many bytes that is.
         *at += 2;
         return true;
     }
@@ -3214,7 +3202,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         // one above and was caught in a different place: the machine reads the
         // four bytes at the front of a handle at the instruction that uses it
         // and says `K0612` there, which points at the program for something
-        // the host did. Said at the door, it names the slot. See D630.
+        // the host did. Said at the door, it names the slot.
         if (frame[*at].object == NULL) {
             if (saying->at_a_crossing) {
                 crossing_failed(runtime, saying, "K0652",
@@ -3255,11 +3243,10 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         }
         // And which of the two kinds of handle it is. Both headers begin with
         // what they are, so a handle can be asked that without knowing what it
-        // was meant to be — and until it was asked here, a store handed where
+        // was meant to be -- and until it was asked here, a store handed where
         // an array was wanted got as far as the instruction that walked it,
         // which said `K0612` about the program for something the host did.
-        // Said at the door, it names the slot and what was in it. See D630 and
-        // D716.
+        // Said at the door, it names the slot and what was in it.
         if (!KEST_HANDLE_IS(frame[*at].object, type->tag == KEST_T_ARRAY
                                                    ? KEST_IS_ARRAY
                                                    : KEST_IS_STORE)) {
@@ -3318,7 +3305,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         // the machine unpacked whatever was there by the callee's layout. A
         // type is the build's own and there is one of each, so this is a
         // pointer against a pointer at the one door a handle can arrive
-        // through. See D927.
+        // through.
         const KestType *holds =
             KEST_HANDLE_IS(frame[*at].object, KEST_IS_ARRAY)
                 ? ((const Array *)frame[*at].object)->of
@@ -3354,16 +3341,15 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
     // And a number, against the width the program keeps it at. The walk above
     // is for the slots that hold something this machine made; this is the slot
     // that holds what the host wrote, and a slot is sixty-four bits where a
-    // `u8` is eight. D836 weighed the arguments that are only numbers, in the
-    // loop that decides whether to walk at all — this is the other two ways
+    // `u8` is eight. The arguments that are only numbers are weighed in the
+    // loop that decides whether to walk at all; this is the other two ways
     // in: a number inside a shape that has text or a handle somewhere else in
-    // it, and a number a host answers a crossing with. See D837.
+    // it, and a number a host answers a crossing with.
     // A set of bits, against the bits its names cover. A set is not the whole
     // number it is kept in: which bit a name stands for is where it was
     // written, so a bit nothing named is a value the program cannot make and
-    // its own text does not say — `State` with every bit set writes itself as
+    // its own text does not say -- `State` with every bit set writes itself as
     // the two it has names for, and compares unequal to what it just wrote.
-    // See D840.
     if (type->tag == KEST_T_FLAGS) {
         uint64_t named = type->case_count >= 64
                              ? ~(uint64_t)0
@@ -3442,7 +3428,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
 // machine and be read every instruction: nothing tells the compiler that moving
 // slots is not writing it, so it becomes a load and a store per instruction and
 // costs a third of everything -- which is the same reason `ip`, this body's
-// slots and its constants are held in locals (D869, D872). So the loop holds a
+// slots and its constants are held in locals. So the loop holds a
 // slice in a register and comes here when it runs out. A thousand instructions
 // is under two microseconds, which is what a host asking a program to stop
 // waits for, and the cold half then costs a thousandth of nothing.
@@ -3452,7 +3438,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
 // asked for: a unit for every this many bytes or elements. It is a divisor
 // rather than a rate so that work and steps are counted in one currency, and
 // it is here rather than inside the loop because a host spends at the same
-// rate through `kest_fuel_spend`. See D950.
+// rate through `kest_fuel_spend`.
 #define FUEL_PER_UNIT 64u
 
 // The next slice, or nought for a run that is over. Nought means one of two
@@ -3472,7 +3458,7 @@ static uint64_t take_fuel(KestRuntime *rt) {
 }
 
 // What a run that stopped says. Two reasons, neither of them a mistake in the
-// program: a budget that is spent, and a host that asked. See D921.
+// program: a budget that is spent, and a host that asked.
 static bool stopped_here(Vm *vmp, KestRuntime *rt, Frame *frame,
                          const uint8_t *instruction) {
     if (atomic_load_explicit(&rt->cancel_asked, memory_order_relaxed) != 0) {
@@ -3502,13 +3488,13 @@ static uint16_t read_u16(const uint8_t **ip) {
 // body making the call promised. Answers the chunk to enter, or nothing with
 // the code, the sentence and the note that goes under it -- so that the
 // machine and a body the host's compiler compiled refuse the same call with
-// the same words rather than with two copies of them. See D1107.
+// the same words rather than with two copies of them.
 //
 // A program cannot get here with the wrong shape: the shape is the type and
 // the type is checked. What can is a host, which writes a number into the
-// slot and a number is only in range or not (D835). The promise is asked here
+// slot and a number is only in range or not. The promise is asked here
 // because which chunk this enters is not known until it runs, which is the
-// one call the proof over the emitted code cannot see through (D058, D853).
+// one call the proof over the emitted code cannot see through.
 static const KestChunk *the_function(const KestModule *module,
                                      const KestChunk *mine, int64_t which,
                                      uint16_t handed, uint16_t coming_back,
@@ -3539,7 +3525,7 @@ static const KestChunk *the_function(const KestModule *module,
     // Either promise, and the one that is broken is the one said: a body
     // promising both and entering one that promises neither is two things
     // wrong with one call, and a reader told the first fixes it and is told
-    // the second. See D853.
+    // the second.
     const char *broken = mine->no_alloc && !callee->no_alloc ? "no.alloc"
                          : mine->no_host && !callee->no_host ? "no.host"
                                                              : NULL;
@@ -3555,7 +3541,7 @@ static const KestChunk *the_function(const KestModule *module,
 }
 
 // A walk over text read past its end, said away from the loop that reads a
-// byte a turn, so the loop is the one compare. See D1245.
+// byte a turn, so the loop is the one compare.
 #if defined(__GNUC__)
 __attribute__((cold, noinline))
 #endif
@@ -3571,7 +3557,7 @@ static bool walked_past(Vm *vmp, Frame *frame, const uint8_t *instruction,
 
 // `entry` of -1 is a machine carrying on from where a debugger stopped it:
 // the frames are where they were, and the instruction and the operand stack
-// come out of the frame the stop wrote them into. See D991.
+// come out of the frame the stop wrote them into.
 static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      uint16_t *returned) {
     bool carrying_on = entry < 0;
@@ -3596,7 +3582,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // two refusals inside a run carry: a host that picked the numbers is
         // told the ones to ask for rather than left to find them. This is the
         // door a host meets first, so it is the one most likely to be met by a
-        // host that has not asked at all. See D571.
+        // host that has not asked at all.
         what_it_needed(vmp, rt, entry);
         return false;
     }
@@ -3620,7 +3606,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // and nothing else: there are no instructions to walk. It is entered
         // the same way a call enters one -- the frame is pushed, the
         // arguments are where the caller left them, and the answer goes back
-        // over them. See D1094.
+        // over them.
         if (chunk->native != NULL && !rt->untrusted) {
             KestValue *was_top = rt->running_top;
             rt->running_top = floor + chunk->slot_count + chunk->stack_needed;
@@ -3639,22 +3625,22 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     // pointer that is a load and a store each time: nothing tells the compiler
     // that a `memcpy` into the stack cannot be writing the frame it is reading
     // the position out of. A local is a register, and the frame is written back
-    // at the three places anything else looks at it — under a call, before a
-    // host runs, and on the way back out of one. See D869.
+    // at the three places anything else looks at it -- under a call, before a
+    // host runs, and on the way back out of one.
     const uint8_t *ip = frame->ip;
     // And where this body's slots are, held for the same reason. `load`,
     // `store` and the instruction a walk turns on all read it, which is three
     // of the four instructions a hop of a `for` is made of. Nothing writes it
     // between a call and the return that undoes the call, so it goes back into
-    // the frame at those two places and nowhere else. See D869.
+    // the frame at those two places and nowhere else.
     KestValue *mine = frame->base;
     // And where this body's constants are. Every number, every piece of text
     // and every shape written into a program is read from here, and a frame
-    // step an entity reads eight of them — each one a load of `frame->chunk`
+    // step an entity reads eight of them -- each one a load of `frame->chunk`
     // and then a load of what it points at, because nothing tells the compiler
     // that moving slots cannot be writing the frame. The chunk a body is
     // running does not change while it runs, so this changes where the body
-    // does. See D872.
+    // does.
     const KestValue *constants = frame->chunk->constants;
     // And what is left of this run's budget, held here for the same reason as
     // the three above and given back at the one place this returns having
@@ -3664,7 +3650,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     // Asked before anything runs. A body with no jump in it and no call has no
     // step to spend, so a machine somebody had asked to stop ran it to the end
     // and answered as though nobody had -- which is the one case a host that
-    // cancels most wants refused. See D929.
+    // cancels most wants refused.
     if (slice == 0) {
         frame->ip = ip;
         return stopped_here(vmp, rt, frame, ip);
@@ -3675,7 +3661,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 // deeper -- and a check at each of them costs the loop nothing, where the same
 // check on every instruction cost a sixth of everything. What it does not bound
 // is a long body with no loop in it, which is bounded by the program's own
-// size. See D921.
+// size.
 #define SPEND()                                                                \
     do {                                                                       \
         if (slice == 0) {                                                      \
@@ -3696,7 +3682,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 //
 // Charged where the amount is known, which for a piece of text this had to
 // read is after reading it: a budget may go over by one instruction's work and
-// not by more, and the alternative is measuring everything twice. See D950.
+// not by more, and the alternative is measuring everything twice.
 #define SPEND_WORK(work)                                                       \
     do {                                                                       \
         if (rt->fuel_bounded) {                                                \
@@ -3716,7 +3702,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 // How one instruction hands over to the next. Where the host's compiler can
 // take the address of a label, each jumps from its own end through a table;
 // everywhere else, and in the build that checks itself, which counts every
-// instruction at the top of the loop, it is the end of the switch. See D1181.
+// instruction at the top of the loop, it is the end of the switch.
 #if KEST_THREADED
 #define THREADED(op) thread_##op:
 #define NEXT                                                                   \
@@ -3731,7 +3717,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 // Through a function rather than a comma expression, because a comma inside a
 // subscript is a thing one of the two compilers this is built with warns
 // about wherever it appears -- and `module->layout_types[READ_U16()]` is
-// exactly that. What it does is the same either way. See D970.
+// exactly that. What it does is the same either way.
 #define READ_U16() read_u16(&ip)
 
     // One macro per storage class rather than thirty near-identical cases.
@@ -3741,10 +3727,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 // comparing them costs: it stops at the first byte that differs, so two long
 // ones that differ early are cheap and two long ones that are the same are
 // not. Counted rather than left to `strcmp`, because what is charged for has
-// to be what was done. See D950.
+// to be what was done.
 // A piece of text off the stack and a piece of text onto it. Text is two slots
 // -- what it is made of, and how many bytes that is -- so its length is part
-// of it rather than something to go and count. See D964.
+// of it rather than something to go and count.
 #define TEXT_OFF() (top -= 2, said(top))
 #define TEXT_ON(from, many)                                                    \
     do {                                                                       \
@@ -3753,11 +3739,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     } while (0)
 
 // Two pieces of text put in order, which is one answer the machine and the
-// folder share rather than two (D668, D1103). How far it had to read is what
+// folder share rather than two. How far it had to read is what
 // comparing them costs and is charged for here: it stops at the first byte
 // that differs, so two long ones that differ early are cheap and two long
 // ones that are the same are not. Counted rather than left to `memcmp`,
-// because what is charged for has to be what was done. See D950.
+// because what is charged for has to be what was done.
 #define TEXT_ORDER(test)                                                       \
     do {                                                                       \
         Said right = TEXT_OFF();                                               \
@@ -3771,7 +3757,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     } while (0)
 
 // Bytes moved, counted in the build that counts instructions and nowhere
-// else. See D1023.
+// else.
 #if KEST_CHECKED
 #define MOVED(what, bytes)                                                     \
     do {                                                                       \
@@ -3795,7 +3781,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     // the one place at the top of the loop, so the host's compiler holds the
     // frame and the constants in registers rather than a table address, and
     // each jump is predicted from where it is. GCC and clang only; the switch
-    // below is the whole of it everywhere else. See D1181.
+    // below is the whole of it everywhere else.
     static const void *const threaded[256] = {
         [KEST_OP_CONST] = &&thread_KEST_OP_CONST,
         [KEST_OP_CONST_RUN] = &&thread_KEST_OP_CONST_RUN,
@@ -4039,17 +4025,16 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // The compiler's count of the operand stack, held by the machine that
         // moves it. A body is given its named slots and this many above them,
         // and the machine is the only thing that knows how far it actually
-        // went — so the two are put together here, in the build that checks
-        // itself, once per instruction. D808 to D810 held that count while it
-        // was being made; this holds it against what it was made for. See
-        // D811.
+        // went -- so the two are put together here, in the build that checks
+        // itself, once per instruction, which holds that count against what it
+        // was made for.
         // How deep this body has actually been, which is the other half of
         // the question below: that one says a body went further than it was
         // given, and this says whether it ever went that far at all. Room
         // asked for and never used is memory a host is told to find for
         // nothing, and `needs_of` carries it up every chain of calls. The
         // chunk is the compiler's and the machine does not change it, so the
-        // const is put aside for the one number written back. See D812.
+        // const is put aside for the one number written back.
         {
             uint32_t at = (uint32_t)(top - mine -
                                      frame->chunk->slot_count);
@@ -4060,7 +4045,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // And the same of the whole machine rather than of one body: how
             // far up its stack it ever reached and how many frames were
             // standing at once. That pair is what a host is asked to find
-            // room for. See D813.
+            // room for.
             uint32_t all = (uint32_t)(top - rt->stack);
             if (all > rt->went_slots) {
                 rt->went_slots = all;
@@ -4074,7 +4059,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // finds. The verifier walks every path with that table before
         // anything runs, so a row of it that is wrong is a program proved
         // with the wrong numbers, and every program run in this build is a
-        // test of every row it reaches. See D1239.
+        // test of every row it reaches.
         {
             uint32_t now = (uint32_t)(top - mine - frame->chunk->slot_count);
             if (frame->expect != 0 && now != frame->expect - 1) {
@@ -4171,7 +4156,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // The two pairs this machine runs most of, each as one instruction.
         // They do what the two they replace did, in the order they did it:
         // what is saved is a dispatch and a read of the next opcode, which
-        // over a frame step is a quarter of everything. See D961.
+        // over a frame step is a quarter of everything.
         case KEST_OP_LOAD2: THREADED(KEST_OP_LOAD2) {
             uint16_t first = READ_U16();
             uint16_t second = READ_U16();
@@ -4222,9 +4207,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
 #endif
             // Written out rather than handed to `memcpy`. Most runs are two or
-            // three slots — a struct of a few fields, or the fields of one
-            // loaded one after another — and a call that decides how to copy
-            // anything costs more than moving three of them. See D871.
+            // three slots -- a struct of a few fields, or the fields of one
+            // loaded one after another -- and a call that decides how to copy
+            // anything costs more than moving three of them.
             MOVED(moved_loaded, (uint64_t)count * sizeof(KestValue));
             for (uint16_t i = 0; i < count; i++) {
                 top[i] = mine[slot + i];
@@ -4316,7 +4301,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // to the top of the stack. The making itself is the door a body
             // the host's compiler compiled goes through, so the two engines
             // make an array the same way and say the same thing when they
-            // cannot. See D1099.
+            // cannot.
             frame->ip = ip;
             rt->asked_at = instruction;
             KestValue *was_top = rt->running_top;
@@ -4347,7 +4332,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // array by `array(n, v)`, and this is the same sentence said to
             // one that is already there. A store keeps four runs rather than
             // one, so what it makes room in is four blocks at once, which is
-            // `room_for`'s to know. See D913.
+            // `room_for`'s to know.
             if (KEST_HANDLE_IS(given, KEST_IS_STORE)) {
                 Store *store = given;
                 if (wanted > MAX_COUNTED) {
@@ -4405,7 +4390,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             KestValue handle = *--top;
             // The growing itself is the door a body the host's compiler
             // compiled goes through, so an array grows one way and says one
-            // thing when it cannot. See D1099.
+            // thing when it cannot.
             frame->ip = ip;
             rt->asked_at = instruction;
             KestValue *was_pushing = rt->running_top;
@@ -4420,7 +4405,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         // The same append with the growth taken out. Where `push` would double
         // the block this answers false and writes nothing, so a body that was
-        // given room can fill it under a promise to reach no heap. See D940.
+        // given room can fill it under a promise to reach no heap.
         case KEST_OP_FIT: THREADED(KEST_OP_FIT) {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
@@ -4448,11 +4433,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             NEXT;
         }
         // A whole piece of text onto a run of bytes. Text is its bytes
-        // (D021), so this is the loop a program had to write taken into one
+        //, so this is the loop a program had to write taken into one
         // move: the same growth `push` does, once for the whole piece rather
         // than once a byte, and a `memcpy`. Building text a byte at a time was
-        // eighty per cent of the instructions `bench/words.kest` ran. See
-        // D1068.
+        // eighty per cent of the instructions `bench/words.kest` ran.
         case KEST_OP_PUSH_TEXT: THREADED(KEST_OP_PUSH_TEXT) {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
@@ -4506,7 +4490,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         // The same with the growth taken out, which is what a body under a
         // promise can do: all of it fits or none of it goes in, because a
-        // piece half written is a piece nobody can take back. See D940.
+        // piece half written is a piece nobody can take back.
         case KEST_OP_FIT_TEXT: THREADED(KEST_OP_FIT_TEXT) {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
@@ -4550,7 +4534,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             NEXT;
         }
         // `load2` and `index` as one. The run and the index are read out of
-        // the slots they are in rather than pushed to be popped. See D1155.
+        // the slots they are in rather than pushed to be popped.
         case KEST_OP_INDEX_LL: THREADED(KEST_OP_INDEX_LL) {
             uint16_t holds = READ_U16();
             uint16_t at = READ_U16();
@@ -4575,7 +4559,6 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         // `load` and `index` as one: the run is on the stack, where the
         // index before it left it, and the index is read out of its slot.
-        // See D1281.
         case KEST_OP_INDEX_L: THREADED(KEST_OP_INDEX_L) {
             uint16_t at = READ_U16();
             uint16_t of_which = READ_U16();
@@ -4598,7 +4581,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         // The two above, each with the move at the other end taken into it.
         // `index` unpacks a struct onto the stack and the store that follows
-        // copies it off again; this writes it where it is going. See D1012.
+        // copies it off again; this writes it where it is going.
         case KEST_OP_INDEX_TO: THREADED(KEST_OP_INDEX_TO) {
             uint16_t of_which = READ_U16();
             uint16_t slot = READ_U16();
@@ -4734,7 +4717,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top += layout->slots;
             // And the taking away, which is the door a body the host's
             // compiler compiled goes through: one answer about what a run of
-            // elements does when one is taken out of the middle. See D1099.
+            // elements does when one is taken out of the middle.
             frame->ip = ip;
             rt->asked_at = instruction;
             if (!kest_array_remove(rt, handle, index,
@@ -4766,7 +4749,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // One of an array at a byte into it, with the array and the index
         // taken away: what `elem.addr` and the `load.at` after it did in two.
         // Reading a field of an element is what a frame does most, and it was
-        // the one read of a place that cost two dispatches. See D1044.
+        // the one read of a place that cost two dispatches.
         case KEST_OP_ELEM_AT: THREADED(KEST_OP_ELEM_AT) {
             uint16_t offset = READ_U16();
             uint16_t of_which = READ_U16();
@@ -4843,7 +4826,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // again; `store.elem` takes them. Between the two the program may do
         // anything at all, including growing that very array -- which used to
         // move the block while an address into it sat on the stack, and the
-        // write then went into memory nothing would read again. See D931.
+        // write then went into memory nothing would read again.
         case KEST_OP_LOAD_ELEM: THREADED(KEST_OP_LOAD_ELEM) {
             uint16_t offset = READ_U16();
             uint16_t of_which = READ_U16();
@@ -4891,7 +4874,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // has built above it since -- this one included, which holds the
             // store made the instruction before -- is above that. So the
             // walk is told where the stack is now, the way the array doors
-            // are. Found by walking at every allocation. See D1163.
+            // are. Found by walking at every allocation.
             KestValue *was_top = rt->running_top;
             rt->running_top = top;
             bool made = kest_store_new(rt, holds, room, KEST_WHERE_RUNNING,
@@ -4916,7 +4899,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // made array named by nothing and give it away -- leaving the
             // copy to put a handle to a place something else now has into the
             // store. `set` at a position and `push` both read to above the
-            // value for this reason; this one did not. See D1005.
+            // value for this reason; this one did not.
             KestValue *reach = value + stride;
 
             uint32_t index;
@@ -4930,14 +4913,14 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     return false;
                 }
                 // What a store that has to grow copies, charged before it
-                // does: four runs of what it holds. See D950.
+                // does: four runs of what it holds.
                 if (store->used == store->capacity) {
                     SPEND_WORK((uint64_t)store->used);
                 }
                 if (store->used == store->capacity &&
                     !grow_store(rt, reach, store)) {
-                    // A store grows by four runs at once — what it holds, what
-                    // each has counted, which are live and which are free —
+                    // A store grows by four runs at once -- what it holds, what
+                    // each has counted, which are live and which are free --
                     // so what it was reaching for is wider than one of them.
                     no_room_growing(vmp, frame, instruction, rt, "a store",
                                     store->used,
@@ -4958,7 +4941,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // carries any more; a store that has never written this number is
             // a store the reference did not come from; and a machine made
             // after another one cannot be handed the first one's numbers,
-            // which is what a count of worlds could not promise. See D1033.
+            // which is what a count of worlds could not promise.
             uint64_t handout = next_handout(rt);
             if (handout > MOST_STAMPS) {
                 fail(vmp, frame, instruction, "K0630",
@@ -5080,8 +5063,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_TEXT_FLAGS: THREADED(KEST_OP_TEXT_FLAGS)
         case KEST_OP_TEXT_VALUE: THREADED(KEST_OP_TEXT_VALUE) {
             // Written the way it is built. Every other value's text is the
-            // source that makes it and these are no different; D035 says so
-            // for a set of bits and D036 for the cases of an enum.
+            // source that makes it, and a set of bits and the cases of an enum
+            // are no different.
             const KestType *type = module->layout_types[READ_U16()];
             uint16_t held = type->slots;
             top -= held;
@@ -5218,7 +5201,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             // Text is UTF-8 and a run of bytes is whatever it holds, so this
             // is the door where the two meet and the one place the walk is
-            // paid for. A nought is fine: it is a character. See D971.
+            // paid for. A nought is fine: it is a character.
             uint32_t bad = 0;
             if (!kest_utf8_whole((const char *)bytes->bytes, bytes->length,
                                  &bad)) {
@@ -5244,14 +5227,14 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             } else if (instruction[0] == KEST_OP_HASH_F &&
                        top[-1].real != top[-1].real) {
                 // And every value that is not a number is one value, for the
-                // reason `float.bits` gives. See D1238.
+                // reason `float.bits` gives.
                 bits = UINT64_C(0x7FF8000000000000);
             }
             top[-1].integer = (int64_t)kest_mix(bits);
             NEXT;
         }
         case KEST_OP_HASH_T: THREADED(KEST_OP_HASH_T) {
-            // FNV-1a over the bytes, because text is its bytes (D021) and two
+            // FNV-1a over the bytes, because text is its bytes and two
             // pieces that compare equal are the same bytes.
             Said text = TEXT_OFF();
             uint64_t bits = 0xcbf29ce484222325ULL;
@@ -5282,7 +5265,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         case KEST_OP_TEXT_LEN: THREADED(KEST_OP_TEXT_LEN) {
             // A read rather than a walk: how many bytes there are is part of
-            // what a piece of text is. See D964.
+            // what a piece of text is.
             Said text = TEXT_OFF();
             (top++)->integer = (int64_t)text.length;
             NEXT;
@@ -5293,8 +5276,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // How many bytes there are is part of the value, so a byte at a
             // place is a comparison and a read rather than a walk. What this
             // used to cost was the walk to the place, which is what made
-            // reading the first byte of a line cost the whole line. See D372
-            // and D964.
+            // reading the first byte of a line cost the whole line.
             if (index < 0 || (uint64_t)index >= text.length) {
                 fail(vmp, frame, instruction, "K0604",
                      "index %lld is outside text of %u bytes",
@@ -5320,9 +5302,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             Said text = TEXT_OFF();
             // A cut is a place inside what it was cut from and how many bytes
             // of it: nothing is copied and nothing reaches the heap, which is
-            // what makes a walk over text free. It cost a copy when a piece of
-            // text was a pointer that had to end in a nought, and that is what
-            // D955 could not pay for. See D964.
+            // what makes a walk over text free. Text that had to end in a
+            // nought would cost a copy here.
             if (from < 0 || count < 0 ||
                 (uint64_t)from + (uint64_t)count > text.length) {
                 fail(vmp, frame, instruction, "K0604",
@@ -5383,7 +5364,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             int64_t found = found_at(haystack.bytes, haystack.length,
                                      needle.bytes, needle.length, from);
             // What it read is as far as it had to go: to the end of what it
-            // found, or to the end of the text. See D1169.
+            // found, or to the end of the text.
             uint64_t read =
                 (uint64_t)((found < 0 ? (int64_t)haystack.length
                                       : found + (int64_t)needle.length) -
@@ -5430,7 +5411,6 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // one the day a program in the library multiplied two large numbers on
         // purpose. The bits are the same either way on every machine this
         // targets; what changes is that the machine is now doing what it says.
-        // See D667.
         case KEST_OP_ADD_I: THREADED(KEST_OP_ADD_I)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer +
                                         (uint64_t)right.integer));
@@ -5444,7 +5424,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                                         (uint64_t)right.integer));
             NEXT;
 // What every whole-number division says about a nought, said in one place:
-// the operand forms and the constant forms are one refusal. See D1170.
+// the operand forms and the constant forms are one refusal.
 #define BY_NOUGHT()                                                            \
     do {                                                                       \
         fail(vmp, frame, instruction, "K0601", "division by zero");            \
@@ -5470,7 +5450,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
 // Whole-number arithmetic with a constant on its right, written out one case
 // an instruction so that each is the arithmetic and nothing deciding which it
-// is: `LEFT` is the left side, `DOES` what is made of it. See D1168.
+// is: `LEFT` is the left side, `DOES` what is made of it.
 #define BY_CONSTANT(LEFT, DOES)                                                \
     do {                                                                       \
         uint16_t which = READ_U16();                                           \
@@ -5588,7 +5568,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top[-1].integer = ~top[-1].integer;
             NEXT;
         // A shift is done in a slot and narrowed after, the same way every
-        // other arithmetic is (D018). A count past the width of the slot has
+        // other arithmetic is. A count past the width of the slot has
         // no meaning in C, so it is answered here rather than left to the
         // machine: everything shifts out.
         case KEST_OP_SHL: THREADED(KEST_OP_SHL) {
@@ -5628,7 +5608,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         case KEST_OP_NEG_I: THREADED(KEST_OP_NEG_I)
             // The smallest number negated is itself, which is what wrapping
-            // says and what negating it signed would be undefined. See D667.
+            // says and what negating it signed would be undefined.
             top[-1].integer = (int64_t)(0 - (uint64_t)top[-1].integer);
             NEXT;
         case KEST_OP_I2F: THREADED(KEST_OP_I2F)
@@ -5644,7 +5624,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // the processor that made it put in its sign and its payload: x86
         // makes `inf - inf` with the sign set and arm64 without it, and a
         // program that could read the difference would answer differently on
-        // the two. See D1238.
+        // the two.
         case KEST_OP_FLOAT_BITS: THREADED(KEST_OP_FLOAT_BITS) {
             uint16_t width = READ_U16();
             if (width == 32) {
@@ -5668,8 +5648,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         case KEST_OP_F2I: THREADED(KEST_OP_F2I)
             // Where a number outside the width stops, which the type layer
-            // works out for a constant as well: one answer, in one place. See
-            // D669.
+            // works out for a constant as well: one answer, in one place.
             top[-1].integer = kest_real_to_int(READ_U16(), top[-1].real);
             NEXT;
         case KEST_OP_NARROW: THREADED(KEST_OP_NARROW)
@@ -5682,7 +5661,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // The same cut, arriving with the arithmetic that needed it. Written
         // out rather than falling through a shared macro because the whole
         // point of them is that there is one dispatch and one read of the
-        // width between the operands and the answer. See D868.
+        // width between the operands and the answer.
         case KEST_OP_ADD_I_NARROW: THREADED(KEST_OP_ADD_I_NARROW)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer +
                                         (uint64_t)right.integer));
@@ -5702,7 +5681,6 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // The same four with the store they were feeding taken in. What goes
         // is the push and the pop between them, which is a dependency through
         // memory rather than two instructions standing beside each other.
-        // See D1014.
         case KEST_OP_ADD_I_NARROW_TO: THREADED(KEST_OP_ADD_I_NARROW_TO) {
             uint16_t kind = READ_U16();
             uint16_t slot = READ_U16();
@@ -5719,7 +5697,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                                 (uint64_t)right.integer));
             NEXT;
         }
-        // A constant written into a local. See D1155.
+        // A constant written into a local.
         case KEST_OP_STORE_K: THREADED(KEST_OP_STORE_K) {
             uint16_t slot = READ_U16();
             uint16_t which = READ_U16();
@@ -5729,11 +5707,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             mine[slot] = constants[which];
             NEXT;
         }
-        // A local moved by a constant where it is. See D1155.
+        // A local moved by a constant where it is.
         // One case for both ways round, which is measured rather than
         // preferred: the two written apart made `rules` five per cent slower
         // in cycles for fewer instructions, where the compiler put the rest
-        // of the loop. See D1168.
+        // of the loop.
         case KEST_OP_ADD_K_SELF: THREADED(KEST_OP_ADD_K_SELF)
         case KEST_OP_SUB_K_SELF: THREADED(KEST_OP_SUB_K_SELF) {
             uint8_t which_way = *instruction;
@@ -5780,7 +5758,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             mine[slot].real = left.real + right.real;
             NEXT;
         }
-// Two float locals made into a third, one case each way round. See D1166.
+// Two float locals made into a third, one case each way round.
 #define TWO_LOCALS(OP)                                                         \
     do {                                                                       \
         uint16_t slot = READ_U16();                                            \
@@ -5828,7 +5806,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_MOD_F: THREADED(KEST_OP_MOD_F)
             // Nought on the right is not stopped here the way it is for a
             // whole number: the answer is what is not a number, which is what
-            // `/` already gives beside it. See D776.
+            // `/` already gives beside it.
             BINARY_I(real, kest_left_over(left.real, right.real));
             NEXT;
         case KEST_OP_NEG_F: THREADED(KEST_OP_NEG_F)
@@ -5981,7 +5959,6 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 
 // A local against a constant, and the jump. What `load.k` would have put on
 // the stack is read where it is, so nothing is pushed and nothing is popped.
-// See D1154.
 #define JUMP_UNLESS_K(test)                                                    \
     do {                                                                       \
         uint16_t slot = READ_U16();                                            \
@@ -5997,7 +5974,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }                                                                      \
     } while (0)
 
-// What is on the stack against a constant, and the jump. See D1155.
+// What is on the stack against a constant, and the jump.
 #define JUMP_UNLESS_C(test)                                                    \
     do {                                                                       \
         uint16_t which = READ_U16();                                           \
@@ -6013,7 +5990,6 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 
 // An element weighed against a constant, and the jump: what `index.ll`
 // reads and `jump.false.*.c` weighs, with nothing on the stack between.
-// See D1178.
 #define JUMP_UNLESS_E(test)                                                    \
     do {                                                                       \
         uint16_t holds = READ_U16();                                           \
@@ -6078,7 +6054,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             JUMP_UNLESS_C(left != right);
             NEXT;
 // A float local against a constant and the jump, taken when the answer is
-// `taken`: the float jumps are written both ways round. See D1165.
+// `taken`: the float jumps are written both ways round.
 #define JUMP_ON_FK(taken, test)                                                \
     do {                                                                       \
         uint16_t slot = READ_U16();                                            \
@@ -6148,7 +6124,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_JUMP_FALSE_NE_K: THREADED(KEST_OP_JUMP_FALSE_NE_K)
             JUMP_UNLESS_K(left != right);
             NEXT;
-        // Two locals, each read where it is. See D1281.
+        // Two locals, each read where it is.
 #define JUMP_UNLESS_LL(test)                                                   \
     do {                                                                       \
         uint16_t first = READ_U16();                                           \
@@ -6282,7 +6258,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // Counted on as the unsigned number it is: a walk of `u64`s goes
             // past the top of the signed range, and one more than that as a
             // signed number is not a wrapped number but no number C
-            // promises anything about. See D1212.
+            // promises anything about.
             uint64_t next = (uint64_t)mine[slot].integer + 1u;
             mine[slot].integer = (int64_t)next;
             if (next < (uint64_t)mine[limit].integer) {
@@ -6295,7 +6271,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_SCRATCH: THREADED(KEST_OP_SCRATCH) {
             uint16_t where = READ_U16();
             // The door both engines go through, so working memory is opened
-            // one way and says one thing when it cannot be. See D1119.
+            // one way and says one thing when it cannot be.
             frame->ip = ip;
             rt->asked_at = instruction;
             int64_t opened = 0;
@@ -6338,10 +6314,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // checker's and this is the compiler's arithmetic: a count one
             // slot out puts the callee's names over the caller's, and every
             // slot it reads is somebody else's while the program keeps
-            // running. `call.value` has been held to the first of these since
-            // D058, because that is the call the promise's second proof cannot
-            // see through; this is the one it can, and nothing weighed it.
-            // See D901.
+            // running. `call.value` is held to the first of these, because that
+            // is the call the promise's second proof cannot see through; this
+            // is the one it can.
             rt->guarded++;
             if (argument_slots != callee->param_slots ||
                 base < mine + frame->chunk->slot_count) {
@@ -6363,7 +6338,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // draws from the other side. Turned inward: the slots the caller
             // pushed, held to the kinds the callee declares. A value with a
             // tag in it is left out, because what its slots hold is the tag's
-            // to say and the pieces of one are not a run. See D902.
+            // to say and the pieces of one are not a run.
             {
                 uint32_t slot = 0;
                 rt->guarded++;
@@ -6401,7 +6376,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 // With the number, because `out of stack` on its own tells
                 // a reader nothing about how much there was: the two ways to
                 // answer it are fewer frames and a host that asks for more,
-                // and both need the number. See D523.
+                // and both need the number.
                 fail(vmp, frame, instruction, "K0602",
                      "this call wants more than the %u slots of stack there "
                      "are", rt->stack_slots);
@@ -6411,7 +6386,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 
             // Where the caller is, written back before the callee stands on
             // top of it: a fault inside the callee reads it to say where the
-            // call was written, and a `return` comes back to it. See D869.
+            // call was written, and a `return` comes back to it.
             frame->ip = ip;
             // A body the host's compiler compiled runs here instead of the
             // instructions under it. Everything around the call is the same:
@@ -6419,7 +6394,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // writes its answer where a `return` would, and a frame is pushed
             // for it so that what is deep in a run, what a fault says it was
             // called from, and what a machine says it needs are all still
-            // true of it. See D1094.
+            // true of it.
             if (callee->native != NULL && !rt->untrusted) {
                 frame = &rt->frames[rt->frame_count++];
                 FRESH(frame);
@@ -6465,8 +6440,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t coming_back = READ_U16();
             int64_t which = (--top)->integer;
             // The three questions in front of this call, asked in the one
-            // place a body the host's compiler compiled asks them too. See
-            // D1107.
+            // place a body the host's compiler compiled asks them too.
             const char *code = NULL;
             char said[160];
             const char *suggest = NULL;
@@ -6495,7 +6469,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             KestValue *base = top - argument_slots;
             if (base + callee->slot_count + callee->stack_needed > rt->limit) {
                 // The same sentence in front of the other call instruction,
-                // which is the pair D440 is about. See D523.
+                // so the two read alike.
                 fail(vmp, frame, instruction, "K0602",
                      "this call wants more than the %u slots of stack there "
                      "are", rt->stack_slots);
@@ -6525,7 +6499,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             KestValue *base = top - argument_slots;
             // A host may call back in, and what it calls stands on frames
             // this one is under: where this frame is has to be in the frame
-            // before the host runs. See D869.
+            // before the host runs.
             frame->ip = ip;
             rt->asked_at = instruction;
             // And the budget, which is held in a register while this body
@@ -6535,11 +6509,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // hundred steps took all three hundred and the call inside it was
             // refused after fifty. Put back here and taken again below, so
             // the number a reentrant call reads is the number that is left.
-            // See D929. A machine with no budget has nothing to put back,
+            // A machine with no budget has nothing to put back,
             // and the slice is only how soon it looks for a host asking it
             // to stop, which is the same thousand instructions either side
             // of a crossing: taking another after every one was a call a
-            // crossing. See D1285.
+            // crossing.
             if (rt->fuel_bounded) {
                 rt->fuel_left += slice;
                 slice = 0;
@@ -6547,7 +6521,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // And the crossing itself, which is the door a body the host's
             // compiler compiled goes through as well: everything the boundary
             // asks is asked in one place, and both engines cross the same
-            // way. See D1108.
+            // way.
             if (!kest_call_host(rt, index, base, argument_slots, result_slots,
                                 KEST_WHERE_RUNNING)) {
                 return false;
@@ -6559,7 +6533,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // A breakpoint. The machine stops where it is: the frame keeps the
         // instruction the byte was written over and where the operand stack
         // had got to, so `kest_resume` picks both up and carries on. Nothing
-        // is unwound and nothing is said -- a stop is not a refusal. See D991.
+        // is unwound and nothing is said -- a stop is not a refusal.
         case KEST_OP_STOP: THREADED(KEST_OP_STOP) {
             // Unless the run this is in is one the host made from inside a
             // call of its own. A stop keeps the frames where they are so that
@@ -6568,7 +6542,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // host's, and by the time a host could ask, that function has
             // returned. So it is a refusal, said where it happened, rather
             // than a stop that leaves the call the host is in the middle of
-            // answering a number that is nothing. See D1079.
+            // answering a number that is nothing.
             if (rt->running_top != NULL) {
                 fail(vmp, frame, instruction, "K0708",
                      "this machine cannot stop in a call the host made back "
@@ -6598,9 +6572,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // whose every statement after the leak worked at the wrong depth,
             // and nothing was wrong enough to be noticed: `return` moves the
             // result to the bottom of the frame either way, so the caller is
-            // handed the right answer out of a body that lost count. D809 held
-            // this while it was being made and the machine never asked. See
-            // D900.
+            // handed the right answer out of a body that lost count, so the
+            // machine asks.
             rt->guarded++;
             if (top - count != mine + frame->chunk->slot_count) {
                 fail(vmp, frame, instruction, "K0655",
@@ -6615,11 +6588,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             // And what is in what it hands back. A chunk says what it gives
             // the same way it says what it takes -- a layout, a piece a slot
-            // -- and D902 held the slots a call hands over to the callee's.
+            // -- and the slots a call hands over are held to the callee's.
             // This is the other end of the same journey, and the last of the
             // four things the boundary asks a host that the machine did not
-            // ask itself. A value with a tag in it is left out for D899's
-            // reason. See D906.
+            // ask itself. A value with a tag in it is left out, because what a
+            // case carries sits where its own case says and is not a run.
             if (frame->chunk->returns_value && count > 0) {
                 rt->guarded++;
                 const KestLayout *given =
@@ -6698,7 +6671,6 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 // it stands, and a block put back only by the code that opened it is a block
 // nothing puts back then. A diagnostic is written in the machine's own room
 // rather than on this heap, so there is nothing here to take away with it.
-// See D617 and D966.
 static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     uint16_t *returned) {
     uint32_t held = rt->kept_count;
@@ -6707,14 +6679,14 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     // the middle of a body, so neither goes back on its own -- and a run a
     // host made from inside a call of its own has a run under it that carries
     // on afterwards. Frames left over from a run that failed are frames the
-    // one underneath then returns through. See D1079.
+    // one underneath then returns through.
     uint32_t began = rt->running_frames;
     uint32_t hands = rt->hands;
     rt->stopped_at = NULL;
     bool went = run_body(rt, entry, arg_slots, returned);
     // A machine a debugger stopped is not a machine that finished: what a
     // `scratch { }` opened is still open, because the body that opened it has
-    // not got to the end of it. See D991.
+    // not got to the end of it.
     if (rt->stopped_at != NULL) {
         return went;
     }
@@ -6740,7 +6712,7 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
                               const KestWalk *walked, bool untrusted) {
     // The machine's own arena, made by whoever asked for the machine: the
     // report is in it and the report is written before there is a machine to
-    // hold it, so the two cannot be made in that order here. See D1071.
+    // hold it, so the two cannot be made in that order here.
     if (own == NULL) {
         kest_diags_starve(diags);
         return NULL;
@@ -6765,9 +6737,9 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
     // and hands over: what it needs, where it calls into the host and which
     // function that is. A machine used to walk it here, in its own room and
     // handed back after, so a host that makes a machine a frame did the same
-    // walk every frame — 1596 bytes of scratch for `examples/embed.kest`
+    // walk every frame -- 1596 bytes of scratch for `examples/embed.kest`
     // against the 600 a machine is made of. The module does not change after
-    // it is compiled, so neither does the answer. See D607.
+    // it is compiled, so neither does the answer.
     rt->host_measured = walked->measured;
     rt->host_slots = walked->host_slots;
     rt->host_frames = walked->host_frames;
@@ -6777,11 +6749,11 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
 
     // And what a host that says nothing gets, which is what the program asked
     // for: the worst any function needs, plus the worst call back in from
-    // inside a host function — a machine does not know which function a host
+    // inside a host function -- a machine does not know which function a host
     // will call, and a host that binds one may be called from inside it. A
     // program with no deepest call has no number to give, and then the usual
     // ones are what there is. Half a megabyte of stack for a program that
-    // wants sixteen slots is what saying nothing used to cost. See D575.
+    // wants sixteen slots is what saying nothing used to cost.
     uint32_t wants_frames = MAX_FRAMES;
     if (rt->host_measured && reached + rt->host_slots > 0) {
         wants_frames = deep + rt->host_frames;
@@ -6795,9 +6767,9 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
     rt->had_least = rt->host_measured && reached + rt->host_slots > 0;
     // Room for the counts, taken only where somebody has asked to read them:
     // no room, no counting, and a machine nobody asked stays the size it was.
-    // Nothing is said about a machine that could not have it — what fails is
+    // Nothing is said about a machine that could not have it -- what fails is
     // the reading, and the reading was somebody's question rather than the
-    // program's. See D870.
+    // program's.
     if (getenv("KEST_DEEP") != NULL) {
         rt->ran_checked = KEST_ARENA_ARRAY(own, uint64_t, KEST_OP_RETURN + 1);
         rt->pairs_checked =
@@ -6811,12 +6783,12 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
     } else if (walked->widest > 0) {
         // A program with no least still has a ceiling on frames, and a frame
         // is at most the widest body this program has. So the slots are that
-        // many a frame rather than the usual number — which is what a program
+        // many a frame rather than the usual number -- which is what a program
         // that reaches itself used to be given whatever its shape, and what a
         // host that names a small depth was being charged sixty-five thousand
         // slots for. The usual number when even this is more, because that is
         // what it was before and no worse. The frames are settled first,
-        // because the slots are worked out from them. See D815.
+        // because the slots are worked out from them.
         uint64_t a_frame_each = (uint64_t)walked->widest * rt->call_depth;
         // And the same chain read the other way round: the frames that go
         // round cost the widest body that does, and the ones that do not can
@@ -6825,7 +6797,7 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
         // turn's width for every frame. Neither bound is the other's: a
         // program whose loop is its widest body is smaller by the first, and
         // one whose loop is narrow and whose bodies are many is smaller by
-        // the second. Both are true, so the smaller is. See D816.
+        // the second. Both are true, so the smaller is.
         uint64_t a_turn_each =
             (uint64_t)walked->off_the_turns +
             (uint64_t)walked->in_a_turn * rt->call_depth;
@@ -6906,7 +6878,6 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
     // that two runtimes shared. What made it safe to move is the world number
     // below: a place is told apart from a place in another machine by which
     // world it is in, so the count no longer has to be unique across them.
-    // See D934 and D936.
     rt->stamps = 0;
     (void)stamped;
     // And what says this machine is standing on the build, counted where the
@@ -6933,7 +6904,7 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
         } else if (untrusted &&
                    !kest_host_opened(host, module->externs[i].name)) {
             // Bound, and not for this: the host keeps doors for code it
-            // wrote that code nobody trusts is not handed. See D1246.
+            // wrote that code nobody trusts is not handed.
             kest_diags_in(diags, module->externs[i].source);
             kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0663",
                            module->externs[i].span,
@@ -6947,7 +6918,7 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
     }
     if (unbound) {
         // Both of them, because a machine that never started is a machine
-        // nobody can free: what it took is the machine's own since D574, and
+        // nobody can free: what it took is the machine's own, and
         // the last door out is the one that has to put it back.
         kest_ground_free(rt->ground);
         kest_arena_free(rt->heap);
@@ -6959,15 +6930,13 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
     atomic_fetch_add_explicit(rt->standing, 1u, memory_order_relaxed);
     // What this machine says has been written in its own room since it was
     // asked for: `kest_start` makes the arena and the report together, because
-    // the report is the first thing in it (D1071). What used to stand here was
-    // a line moving the report out of the build's arena at this point, which
-    // is what D574 and D617 needed when a machine's words began life in the
-    // build's. There is nothing to move now — and a machine that never starts
-    // still gives its words to the build, because `kest_diags_absorb` copies
-    // them there and the arena goes back. See D1074.
+    // the report is the first thing in it, so there is nothing to move out
+    // of the build's arena here. A machine that never starts still gives its
+    // words to the build, because `kest_diags_absorb` copies them there and
+    // the arena goes back.
     //
     // And what it keeps of what nobody asks for. A machine does not end, so
-    // this is the one list in this project with a ceiling. See D618.
+    // this is the one list in this project with a ceiling.
     diags->most = KEST_MOST_UNREAD;
     rt->after_said = kest_arena_mark(own);
     return rt;
@@ -6975,7 +6944,7 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
 
 // Whether the program is in the middle of running, which it is exactly when a
 // function the host bound is on the stack. Anything that would take the heap
-// or the machine out from under it is refused there. See D073.
+// or the machine out from under it is refused there.
 static bool is_running(const KestRuntime *runtime) {
     return runtime != NULL && runtime->running_top != NULL;
 }
@@ -6983,7 +6952,7 @@ static bool is_running(const KestRuntime *runtime) {
 // And whether a debugger has it stopped, which is the middle of a call with
 // nothing of the host's on the machine's stack to show it. The question above
 // answers no for one of these, and what the frames are standing on is the heap
-// all the same. See D1078.
+// all the same.
 static bool is_stopped(const KestRuntime *runtime) {
     return runtime != NULL && runtime->stopped_at != NULL;
 }
@@ -7013,7 +6982,7 @@ bool kest_runtime_free(KestRuntime *runtime) {
     // The build that checks itself is the only one that counts it, and it says
     // so only when asked, because a machine that wrote this every time would
     // be a machine whose answer differs from the one the release build gives.
-    // Read by `tools/check-costs.sh`. See D812.
+    // Read by `tools/check-costs.sh`.
     if (runtime->module != NULL && getenv("KEST_DEEP") != NULL) {
         for (uint32_t i = 0; i < runtime->module->count; i++) {
             const KestChunk *one = runtime->module->functions[i];
@@ -7032,12 +7001,12 @@ bool kest_runtime_free(KestRuntime *runtime) {
         // And what it ran on the way, the ones it ran at all and in the order
         // the machine holds them, because an order chosen here would be a
         // second thing to keep in step with the list. Whoever reads this can
-        // sort it. See D870.
+        // sort it.
         fprintf(stderr, "guards %llu reentered %llu\n",
                 (unsigned long long)runtime->guarded,
                 (unsigned long long)runtime->reentered);
         // What the heap handed out, split by the width it was cut from and by
-        // what the place holds, which a total cannot say. See D1032.
+        // what the place holds, which a total cannot say.
         {
             uint32_t widths[32];
             uint64_t taken[32];
@@ -7057,8 +7026,7 @@ bool kest_runtime_free(KestRuntime *runtime) {
         }
         // And the bytes it moved, beside the instructions it ran. Each of
         // these is memory copied from somewhere to somewhere; a stack pointer
-        // stepped or a length read is not movement and is not here. See
-        // D1023.
+        // stepped or a length read is not movement and is not here.
         fprintf(stderr,
                 "moved loaded %llu stored %llu held %llu unpacked %llu "
                 "packed %llu shifted %llu payload %llu text %llu "
@@ -7144,7 +7112,7 @@ void kest_fuel_spend(KestRuntime *runtime, uint64_t work) {
     }
     // The same rate the machine charges itself at, so a host and a program are
     // spending one currency: a unit for the crossing, and one for every
-    // sixty-four bytes or elements of what the door did. See D951.
+    // sixty-four bytes or elements of what the door did.
     uint64_t owed = 1 + work / FUEL_PER_UNIT;
     runtime->fuel_left = runtime->fuel_left > owed ? runtime->fuel_left - owed
                                                   : 0;
@@ -7297,8 +7265,8 @@ int64_t kest_came_from(const KestRuntime *runtime, int32_t entry,
         (uint32_t)entry >= runtime->module->count) {
         return -1;
     }
-    // Through the one walk that knows where an instruction starts, which is
-    // what D751 leaves behind: one origin an instruction and not one a byte,
+    // Through the one walk that knows where an instruction starts, because
+    // there is one origin an instruction and not one a byte,
     // so finding the one that covers an offset is a walk of the code.
     return (int64_t)kest_chunk_origin(runtime->module->functions[entry], at);
 }
@@ -7339,7 +7307,7 @@ int64_t kest_next_at(const KestRuntime *runtime, int32_t entry, uint32_t at) {
     // the width read through one is the start of somewhere in the middle of
     // the next instruction. Nothing compiles to that byte, so a body that has
     // it here has a breakpoint here, and the host that wrote it has the byte
-    // it wrote over. See D991.
+    // it wrote over.
     if (at >= chunk->code_count || chunk->code[at] == (uint8_t)KEST_OP_STOP) {
         return -1;
     }
@@ -7409,7 +7377,7 @@ const char *kest_frame_name(const KestRuntime *runtime, uint32_t deep,
 // What the proof says one slot of a frame holds where the frame stands. A
 // local a body has not written yet holds what the frame before it left, which
 // may be an address, and a host that reads it as text reads the machine's
-// memory wherever that says. See D1291.
+// memory wherever that says.
 static KestProved frame_proved(const KestRuntime *runtime, uint32_t deep,
                                uint16_t slot) {
     if (runtime == NULL || deep >= runtime->frame_count) {
@@ -7483,7 +7451,6 @@ bool kest_count(KestRuntime *runtime, bool on) {
     // Counting the instructions any other way is a test at the top of the
     // dispatch loop, which measured a third of the machine -- and a profiler
     // that makes a program a third slower is measuring a different program.
-    // See D979.
     if (!runtime->fuel_bounded) {
         runtime->fuel_bounded = true;
         runtime->fuel_given = UINT64_MAX;
@@ -7535,7 +7502,6 @@ size_t kest_heap_used(const KestRuntime *runtime) {
     // and neither of those is the program's -- the arena under it took blocks
     // of sixty-four kilobytes and charged nobody for the block. A plot nothing
     // is in goes back to the host, so this settles where a world settles.
-    // See D996.
     return kest_arena_used(runtime->heap) + kest_ground_used(runtime->ground);
 }
 
@@ -7579,7 +7545,7 @@ bool kest_heap_allow(KestRuntime *runtime, size_t bytes) {
     // moved while it stands there is a promise changed after it was made.
     // Nothing is taken away by this door -- a ceiling is a number -- so what it
     // would cost is the resumed call meeting a wall the call it is in the
-    // middle of never had. See D1078.
+    // middle of never had.
     if (is_stopped(runtime)) {
         KestSpan nowhere = {0, 0};
         kest_diags_in(runtime->diags, NULL);
@@ -7621,7 +7587,7 @@ static bool between_calls(KestRuntime *runtime, const char *doing) {
     // in and that is the bottom of the stack. It gave the frames' memory back
     // and the machine read it on the way out of the breakpoint. A stop is in
     // the middle of a call, so every door that says between calls says it
-    // here. See D1078.
+    // here.
     if (is_stopped(runtime)) {
         KestSpan nowhere = {0, 0};
         kest_diags_in(runtime->diags, NULL);
@@ -7647,7 +7613,7 @@ uint32_t kest_scratch_mark(KestRuntime *runtime) {
     // Anything lent is a header on the heap and a place in a list beside it,
     // both of which a rewind would take. A host that ends its lends first has
     // nothing here to lose; one that does not is told rather than finding out
-    // at the next read. See D957.
+    // at the next read.
     if (runtime->lent_count > 0) {
         KestSpan nowhere = {0, 0};
         kest_diags_in(runtime->diags, NULL);
@@ -7709,7 +7675,7 @@ bool kest_scratch_rewind(KestRuntime *runtime, uint32_t mark) {
         // program's is running, so what is still wanted is what the host said
         // it keeps and what it was handed, and everything else goes. A host
         // that marks round a query gets the query's memory back, which is
-        // what a mark was for. See D996.
+        // what a mark was for.
         gather(runtime, NULL);
         // The ones above it go with it, which is what nesting is, and so does
         // what the machine itself keeps on the heap: the list of what is lent
@@ -7799,14 +7765,13 @@ void kest_report(KestRuntime *runtime, FILE *out, KestForm form) {
         kest_diags_render(&tail, out);
     }
     runtime->starve_said = runtime->starve_said || starving;
-    // And back where it stood. What a host has been told is the host's — it
-    // is written wherever the host asked for it — and the room the words were
+    // And back where it stood. What a host has been told is the host's -- it
+    // is written wherever the host asked for it -- and the room the words were
     // in is this machine's. A program refused every frame says the same
     // sentence every frame, and a machine that kept every one of them would
     // hold a frame's words for as long as it ran: 625 bytes a call, measured
     // on a program whose heap is full. What is handed back is exactly what
     // was said, because nothing else is written here between two readings.
-    // See D617.
     runtime->diags->items = NULL;
     runtime->diags->count = 0;
     runtime->diags->capacity = 0;
@@ -7856,8 +7821,8 @@ static bool explain_entry(KestRuntime *runtime, const char *name) {
     runtime->said_copy[copies[0]] = 1;
     // The names themselves, all four of them, in the arena. This was a
     // hundred and ninety-two bytes and stopped where they ran out, so a host
-    // asking about a generic — whose copies are compiled under names with
-    // their types written into them — was given a list that ended mid-name
+    // asking about a generic -- whose copies are compiled under names with
+    // their types written into them -- was given a list that ended mid-name
     // and said nothing about it.
     uint32_t shown = count < 4 ? count : 4;
     size_t room = 1;
@@ -7884,7 +7849,7 @@ static bool explain_entry(KestRuntime *runtime, const char *name) {
     // of the places. Copies of a generic are all written in the one place, so
     // that is one place said once; two functions of a name are two, and the
     // difference is a thing a host writer can see rather than work out. This
-    // said nothing about where anything was. See D613.
+    // said nothing about where anything was.
     const KestChunk *first = module->functions[copies[0]];
     kest_diags_in(runtime->diags, first->source);
     kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0615",
@@ -7992,12 +7957,12 @@ static const KestChunk *frame_of(KestRuntime *runtime, int32_t entry,
 // give: nought arguments, nought slots in, nothing past the last one, nothing
 // given back. So an index that is no function reads as a function that takes
 // and gives nothing, which is what `kest_frame_slots` says out loud and what
-// these said in silence. `frame_of` is the one place that says it. See D436.
+// these said in silence. `frame_of` is the one place that says it.
 const char *kest_entry_name(KestRuntime *runtime, int32_t entry) {
     // Its own bounds rather than `frame_of`'s: that one says what went wrong,
     // and a walk of everything a program defines ends at the end. A machine
     // that complained there is what every host walking the list would be told
-    // for reading it to the end. See D584 and D609.
+    // for reading it to the end.
     if (runtime == NULL || entry < 0 ||
         (uint32_t)entry >= runtime->module->count) {
         return NULL;
@@ -8024,7 +7989,7 @@ bool kest_entry_promises(KestRuntime *runtime, int32_t entry,
     }
     // Written out rather than left to a `default`, so a promise added to the
     // language stops this compiling until somebody says what a host reads for
-    // it. See D857.
+    // it.
     switch (which) {
     case KEST_PROMISE_NO_ALLOC:
         return runtime->module->functions[entry]->no_alloc;
@@ -8052,7 +8017,7 @@ uint32_t kest_frame_at(KestRuntime *runtime, int32_t entry, uint32_t which) {
     uint32_t at = 0;
     for (uint32_t i = 0; i < which && i < chunk->takes_count; i++) {
         // How wide the argument is, which is not how many pieces it has: a
-        // piece of text is one piece and two slots. See D964.
+        // piece of text is one piece and two slots.
         at += runtime->module->layouts[chunk->takes[i]].slots;
     }
     return at;
@@ -8090,8 +8055,8 @@ static bool missing_text(const KestType *type, const KestValue *slots) {
         }
         return false;
     }
-    // The two that are written since D876 and so have to be asked about since
-    // D876: a host hands a struct in and a field of it may be a text nobody
+    // The two that are written and so have to be asked about: a host hands
+    // a struct in and a field of it may be a text nobody
     // wrote, and writing that is a read through nothing.
     case KEST_T_STRUCT:
         for (uint32_t m = 0; m < type->member_count; m++) {
@@ -8179,7 +8144,7 @@ int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
     //
     // A frame that is not there at all is the same news, and it is what a host
     // that could not make one hands over. `kest_call` and `kest_takes_text`
-    // both refuse it; this one read slot zero. See D511.
+    // both refuse it; this one read slot zero.
     if (frame == NULL || missing_text(type, frame)) {
         KestSpan nowhere = {0, 0};
         kest_diags_in(runtime->diags, NULL);
@@ -8193,7 +8158,7 @@ int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
     }
 
     // Text on its own is what it holds rather than the source that spells it,
-    // which is the exception D035 names: a hole holding one writes the
+    // which is the one exception: a hole holding one writes the
     // content, and this is the same question asked from outside.
     size_t needed = type->tag == KEST_T_TEXT
                         ? (size_t)frame[1].integer
@@ -8253,7 +8218,7 @@ static bool frame_agrees(KestRuntime *runtime, const KestChunk *chunk,
         // a host judged against one of the two and sent to the larger reads
         // the number it just used. `hoard` takes nothing and gives one slot,
         // so a host that said one was told to go and ask a door that says
-        // one. See D832.
+        // one.
         kest_diags_suggest(runtime->diags, "%s", ask);
         return false;
     }
@@ -8294,7 +8259,7 @@ static const KestChunk *frame_of(KestRuntime *runtime, int32_t entry,
     // nothing to read them from. This was the sentence below, which is about
     // an index and says nothing about what is wrong here: the index may be a
     // function and often is. It is said every time, because it is about this
-    // call rather than about the program. See D615.
+    // call rather than about the program.
     if (kinds == NULL && count > 0) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634", nowhere,
                        "this host says what %u slot%s hold and handed nothing "
@@ -8309,14 +8274,13 @@ static const KestChunk *frame_of(KestRuntime *runtime, int32_t entry,
         // How many there are, the way the walk of what a program asks the
         // host for says it (`K0648`): two walks past the end, and one of them
         // said how far the list went and the other left a host to find out.
-        // A host walking what a program defines reads the same number. See
-        // D614.
+        // A host walking what a program defines reads the same number.
         //
         // Once, like the other statements about a program a host can ask for
         // twice: how many functions there are does not change while a machine
         // runs, and saying it again cost 648 bytes an asking to a host that
         // asked this instead of `kest_entry_name`, which answers the same
-        // question for nothing and says nothing. See D608 and D615.
+        // question for nothing and says nothing.
         if (!runtime->said_no_frame) {
             runtime->said_no_frame = true;
             kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634",
@@ -8429,7 +8393,7 @@ KestKept kest_kept_where(const KestRuntime *runtime, KestValue kept) {
     }
     // The two places a value the host was handed can live, which are the two
     // a call in asks about: what a program made while running, and what the
-    // file it came from wrote. Text and handles are the same pointer here —
+    // file it came from wrote. Text and handles are the same pointer here --
     // what is being asked about is the memory and not what is written in it.
     if (ours(runtime, kept.object)) {
         // A lend is a header of the machine's in front of a block that is not,
@@ -8465,7 +8429,7 @@ uint32_t kest_array_length(const KestRuntime *runtime, KestValue array,
     // A handle is a pointer and nothing in it says whose: the same question
     // every other door asks of one, which is whether this machine's heap
     // handed it out. A number a host wrote into a slot is not an array however
-    // much it looks like one. See D630.
+    // much it looks like one.
     if (runtime == NULL || array.object == NULL ||
         !ours(runtime, array.object)) {
         return 0;
@@ -8486,9 +8450,9 @@ bool kest_keeps(KestRuntime *runtime, KestValue kept) {
     }
     if (!kest_ground_holds(runtime->ground, kept.object)) {
         // Not the machine's to keep: a pointer of the host's own, or one from
-        // a heap that has gone. Saying so is not an error — a host that says
+        // a heap that has gone. Saying so is not an error -- a host that says
         // this about everything it holds is a host that is right about all of
-        // it — and there is nothing to remember.
+        // it -- and there is nothing to remember.
         return true;
     }
     for (uint32_t i = 0; i < runtime->held_count; i++) {
@@ -8625,8 +8589,8 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     // host does when a bound function calls back into the program. It is the
     // one thing at this boundary nothing counted: the crossings the machine
     // keeps are the ones going out. Counted where the rest of what a run did
-    // is counted, and for the reason D979 gives -- a release build pays for
-    // nothing nobody reads. See D1032.
+    // is counted, and for the same reason: a release build pays for
+    // nothing nobody reads.
     if (runtime->running_top != NULL) {
         runtime->reentered++;
     }
@@ -8687,22 +8651,21 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     // handle or a tag. A handle is a pointer and the machine reads four bytes
     // at the front of it to know what it is; any four bytes can be those four.
     // What cannot be faked is having come out of this machine's heap, which is
-    // what a walk of the blocks answers — once per call rather than once per
+    // what a walk of the blocks answers -- once per call rather than once per
     // instruction, at the crossing where a pointer from outside can arrive at
     // all.
     //
     // Whether an argument holds any of those is a walk of its pieces rather
     // than of its type: a word is text or a handle, a tag is a tag, and every
     // other kind is a number in a slot, which is whatever the host put there.
-    // Most arguments are numbers, and they cost the walk that says so. See
-    // D718.
+    // Most arguments are numbers, and they cost the walk that says so.
     uint32_t at = 0;
     for (uint32_t which = 0; which < chunk->takes_count; which++) {
         const KestLayout *layout =
             &runtime->module->layouts[chunk->takes[which]];
         // Read off the layout rather than off its pieces: what has to be
         // walked is a thing about the type, and the type does not change
-        // between calls. See D840.
+        // between calls.
         if (layout->any_value) {
             at += layout->slots;
             continue;
@@ -8713,9 +8676,9 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
             // writing 300 into one is the one way a value this language
             // cannot make gets into a program. Read off the piece rather than
             // out of the type, because the type is what the walk above costs
-            // and this is the case it was skipping. See D836.
+            // and this is the case it was skipping.
             // A piece is not a slot: a piece of text is one piece and two,
-            // so the walk counts the slots as it goes. See D964.
+            // so the walk counts the slots as it goes.
             uint16_t slot = 0;
             for (uint16_t p = 0; p < layout->count; p++) {
                 if (!fits_the_piece(layout->pieces[p].kind,
@@ -8747,7 +8710,7 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     // said there was no room -- a refusal handed back after the memory it was
     // protecting had already been written over. The arithmetic is the same as
     // the one below it, and it is here because a check after a write is not a
-    // check. See D928.
+    // check.
     if (runtime->running_frames >= runtime->call_depth ||
         floor + chunk->slot_count + chunk->stack_needed > runtime->limit) {
         kest_diags_in(runtime->diags, NULL);
@@ -8889,7 +8852,8 @@ bool kest_native_crowded(KestRuntime *rt, uint32_t which, uint32_t where,
 // Entering a body the host's compiler compiled from another one, for whoever
 // cannot write the sequence out: a call through a function value, and a shim
 // handing a body to the machine. A call from one compiled body to another
-// writes it out rather than calling this, which is what D1122 is about.
+// writes it out rather than calling this, because the host's compiler
+// cannot keep a counter in a register or inline across a call.
 static bool kest_native_room(KestRuntime *runtime, KestValue *base,
                              uint32_t which, uint32_t where, uint32_t *was) {
     KestLedger led;
@@ -8920,7 +8884,7 @@ static bool kest_native_room(KestRuntime *runtime, KestValue *base,
     // frames: what a fault says it was called from, how deep a host is told a
     // run is, and what a machine says it needs. This is the sequence a body
     // the host's compiler compiled writes for itself, written once here for
-    // whoever cannot inline it. See D1122.
+    // whoever cannot inline it.
     led.calls[at].chunk = led.chunks[which];
     led.calls[at].ip = NULL;
     led.calls[at].base = base;
@@ -8966,7 +8930,6 @@ bool kest_call_body(KestRuntime *rt, uint32_t which, KestValue *base,
 // being called from against what it was measured for, whether what it bound
 // is still there, whether it did what it was asked, whether it kept a promise
 // made on its behalf, and what it wrote back. Seven questions, asked once.
-// See D1108.
 bool kest_run_at(KestRuntime *rt, int64_t index, uint32_t count,
                  uint32_t where) {
     if (rt == NULL) {
@@ -8998,7 +8961,7 @@ bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
     // instruction pointer just past this crossing already, and a frame
     // saying nought is read from there, so the walk that turns an instruction
     // into a place is left to the one crossing in millions that fails: it was
-    // a sixth of what every crossing cost. See D1094 and D1272.
+    // a sixth of what every crossing cost.
     frame->said_at = where == KEST_WHERE_RUNNING ? 0 : where;
     // Read only where the machine holds itself to the declaration, which is
     // the build that checks itself. Named here so that a release build does
@@ -9013,7 +8976,6 @@ bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
     // for each argument and one for the answer, and how many slots those come
     // to is the number the compiler wrote here. A host is held to this from
     // its own side by `kest_frame_fills`; nothing held the machine to it.
-    // See D901.
     {
         uint32_t wanted = 0;
         for (uint16_t which = 0; which < module->externs[index].takes_count;
@@ -9053,7 +9015,7 @@ bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
         // in leaves it there and the first frame stands on it; a body the
         // host's compiler compiled cannot, because entering one raises
         // `running_top` to the top of its frame so that the collector reaches
-        // what it is holding. The frame says it either way. See D1108.
+        // what it is holding. The frame says it either way.
         const KestValue *bottom =
             rt->frame_count > rt->running_frames
                 ? rt->frames[rt->running_frames].base
@@ -9094,7 +9056,7 @@ bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
     // the build that is told where every block a host has ends. One byte of
     // it, because the machine is not told how big a context is and does not
     // need to be: a frame that has gone and a block that has been freed are
-    // both gone at their first byte. See D722.
+    // both gone at their first byte.
     if (rt->contexts[index] != NULL &&
         __asan_region_is_poisoned(rt->contexts[index], 1) != NULL) {
         rt->running_top = was_top;
@@ -9113,7 +9075,7 @@ bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
     rt->natives[index](base, rt, rt->contexts[index]);
     // Whether the host could do what it was asked. It is asked first, because
     // everything below reads what the door wrote and a door that failed wrote
-    // nothing worth reading. See D937.
+    // nothing worth reading.
     if (rt->native_failed != NULL) {
         const char *said = rt->native_failed;
         rt->native_failed = NULL;
@@ -9147,10 +9109,10 @@ bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
     // way a host can be wrong here, there is nowhere to ask about it
     // beforehand: the tag is decided inside the call. This is the one moment
     // it can be said, which is what makes it the machine's to say, the same
-    // as the promise above. See D706.
+    // as the promise above.
     // A number sixty-four bits wide is one whatever the host wrote, so there
     // is nothing in it to walk: the walk below was a sixth of what a crossing
-    // answering one cost. See D1272.
+    // answering one cost.
     const KestType *gives =
         module->externs[index].gives_value
             ? module->layouts[module->externs[index].gives].type
@@ -9163,9 +9125,8 @@ bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
         // Everything in what came back, read the way the door reads what a
         // host hands in: the same walk, over the one value a crossing answers
         // with, saying what a crossing did rather than what a function takes.
-        // It used to read the top of that value and no further, so a host
-        // answering with a shape that had a piece of text in a field was
-        // where the door was before D718. See D719.
+        // Reading only the top of that value would let a host answer with a
+        // shape that had a piece of text nobody wrote in a field.
         // Most answers are a few numbers, and a type walk over a shape of
         // four of them was the dearest part of a crossing that answers one: a
         // host's engine asking 14,000 of them for one player's action. So a
@@ -9173,7 +9134,6 @@ bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
         // weighed by its pieces, which is a flat loop over what the layout
         // already holds. A piece that does not fit is handed to the walk, so
         // what is refused and what it is told are the walk's, word for word.
-        // See D1292.
         if (!answers->by_the_type && pieces_fit(answers, base)) {
             return true;
         }
@@ -9243,8 +9203,8 @@ static void kest_native_left(KestRuntime *runtime, uint32_t was) {
 // instruction as well: `push` is one answer, and two would be two the day
 // either moved. What a caller hands over is where its own operands are, which
 // is on the machine's stack -- a body that can reach the heap lives there
-// (D1098) -- so nothing here has to be told what to keep alive: the walk that
-// a collection starts with reaches it already. See D1099.
+// -- so nothing here has to be told what to keep alive: the walk that
+// a collection starts with reaches it already.
 //
 // `where` is where in the source the operation is, and a refusal says so at
 // that line whichever engine ran it.
@@ -9373,7 +9333,7 @@ bool kest_array_new(KestRuntime *rt, uint16_t layout, int64_t count,
 // not make longer or shorter: what a host lends is as long as the host said,
 // and growing one would move the elements somewhere the host does not know
 // about. Said in the one place because eight doors ask it, and eight copies
-// of a sentence are eight sentences the day one of them moves. See D668.
+// of a sentence are eight sentences the day one of them moves.
 static bool it_is_lent(KestRuntime *rt, const Array *array, uint32_t where,
                        bool growing) {
     if (!array->borrowed) {
@@ -9426,7 +9386,7 @@ bool kest_array_push(KestRuntime *rt, KestValue handle, uint16_t layout,
         }
         if (grown != was) {
             // What the copy cost, charged where a budget counts work. Only
-            // the push that could not grow where it stood pays it. See D950.
+            // the push that could not grow where it stood pays it.
             kest_fuel_spend(rt, array->length);
         }
         // The handle is the header, and the header is what moved nothing, so
@@ -9577,7 +9537,7 @@ bool kest_array_written(KestRuntime *rt, uint16_t layout, uint16_t count,
 
 // One more on the end when the room is already there, and nothing when it is
 // not: the same append with the growth taken out, which is what a body under
-// a promise to reach no heap may do (D940). Answers whether it went in.
+// a promise to reach no heap may do. Answers whether it went in.
 bool kest_array_fit(KestRuntime *rt, KestValue handle, uint16_t layout,
                     const KestValue *value, uint32_t where, int64_t *put) {
     if (rt == NULL || rt->module == NULL ||
@@ -9605,8 +9565,8 @@ bool kest_array_fit(KestRuntime *rt, KestValue handle, uint16_t layout,
 }
 
 // A whole piece of text onto a run of bytes, growing for it. Text is its
-// bytes (D021), so this is the loop a program had to write taken into one
-// move. See D1068.
+// bytes, so this is the loop a program had to write taken into one
+// move.
 bool kest_array_push_text(KestRuntime *rt, KestValue handle, uint16_t layout,
                           const char *bytes, int64_t length, uint32_t where) {
     if (rt == NULL || rt->module == NULL ||
@@ -9716,7 +9676,7 @@ bool kest_array_remove(KestRuntime *rt, KestValue handle, int64_t index,
 // taken from, counted, walked. Each is what the instruction of that name
 // does, and the instruction calls it. A store keeps what it holds as slots
 // rather than as packed bytes, so none of these walks a layout: what moves is
-// a run of slots the width the shape is. See D1102.
+// a run of slots the width the shape is.
 
 bool kest_store_new(KestRuntime *rt, uint16_t layout, int64_t room,
                     uint32_t where, KestValue *into) {
@@ -9793,8 +9753,7 @@ bool kest_store_add(KestRuntime *rt, KestValue handle, uint16_t stride,
         }
     }
     // The next handout number there is, taken from the count for the whole
-    // process so that no two places anywhere are ever stamped the same. See
-    // D1033.
+    // process so that no two places anywhere are ever stamped the same.
     uint64_t handout = next_handout(rt);
     if (handout > MOST_STAMPS) {
         stopped_saying(rt, where, "K0630",
@@ -10189,7 +10148,7 @@ bool kest_text_from(KestRuntime *rt, KestValue handle, uint32_t where,
     }
     // Text is UTF-8 and a run of bytes is whatever it holds, so this is the
     // door where the two meet and the one place the walk is paid for. A
-    // nought is fine: it is a character. See D971.
+    // nought is fine: it is a character.
     uint32_t bad = 0;
     if (!kest_utf8_whole((const char *)bytes->bytes, many, &bad)) {
         return stopped_saying(rt, where, "K0604",
@@ -10294,7 +10253,7 @@ void kest_collect_after(KestRuntime *runtime, uint32_t times) {
     }
     // Nought and one are the same thing: a walk after being handed what it
     // holds. It takes effect at the next sweep, because what it multiplies is
-    // what that sweep leaves standing. See D1045.
+    // what that sweep leaves standing.
     runtime->walk_after = times == 0 ? 1 : times;
 }
 

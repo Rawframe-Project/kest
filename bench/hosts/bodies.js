@@ -3,7 +3,7 @@
 // own run of doubles, handed over as an `ArrayBuffer` on the host's memory and
 // read through a `Float64Array`, which is how an embedder lends QuickJS its
 // memory without copying it. A crossing a body answers the four numbers in an
-// array, because a function here gives back one value. See D1272.
+// array, because a function here gives back one value.
 
 function moved(b, at, wall) {
     let x = b[at] + b[at + 2];

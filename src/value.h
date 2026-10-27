@@ -26,7 +26,7 @@ typedef enum {
     // quarter of everything it runs -- a push is the cheapest thing the
     // machine does and it is most of what it does, so the dispatch is the
     // cost. Neither is a new thing the machine can do: each is the two
-    // instructions it replaces, written as one. See D961.
+    // instructions it replaces, written as one.
     KEST_OP_LOAD2,   // u16 slot, u16 slot
     KEST_OP_LOADK,   // u16 slot, u16 constant
     // Keeps one member of the struct on top of the stack and drops the rest.
@@ -47,13 +47,13 @@ typedef enum {
     // An append that never grows. `push` may double a block and so can never
     // be inside a `no.alloc` promise; this refuses where that one would grow,
     // which is what lets a body fill a buffer it was given room for without
-    // reaching the heap. See D940.
+    // reaching the heap.
     KEST_OP_FIT,
     // The same two given a whole piece of text rather than one byte. Text is
-    // its bytes (D021), so a run of bytes and a piece of text are the same
+    // its bytes, so a run of bytes and a piece of text are the same
     // bytes and the piece goes on the end whole. What that is worth is the
     // loop it takes the place of: building text a byte at a time was eighty
-    // per cent of the instructions `bench/words.kest` runs. See D1068.
+    // per cent of the instructions `bench/words.kest` runs.
     KEST_OP_PUSH_TEXT,
     KEST_OP_FIT_TEXT,
     // Room for that many without changing what is in it or how many there
@@ -61,16 +61,14 @@ typedef enum {
     // which is what a program does when it knows how many are coming -- and
     // there was nothing that did it to one it already had. A table's keys and
     // its values are arrays it cannot replace, so being told how many pairs
-    // are coming bought half of what it buys an array. See D912.
+    // are coming bought half of what it buys an array.
     KEST_OP_ROOM,       // u16 layout
     KEST_OP_INDEX,      // u16 layout
     // An element read out of a run a local holds, by an index a local holds:
     // `load2` and then `index` was two dispatches for every `xs[i]` in a loop.
-    // See D1155.
     KEST_OP_INDEX_LL,   // u16 run's slot, u16 index's slot, u16 layout
     // And by an index a local holds out of a run on the stack, which is
     // what the second half of `cells[y][x]` is: `load` and then `index`.
-    // See D1281.
     KEST_OP_INDEX_L,    // u16 index's slot, u16 layout
     KEST_OP_POP_LAST,   // u16 layout, leaves an optional
     KEST_OP_TAKE,       // u16 layout, shifts what is after it down
@@ -82,7 +80,7 @@ typedef enum {
     // One of an array, at a byte into it: the array and the index taken away
     // and the piece pushed. `elem.addr` and the `load.at` after it, which is
     // what reading a field of an element was written as and what a frame
-    // reads most. See D1044.
+    // reads most.
     KEST_OP_ELEM_AT,  // u16 offset, u16 layout
     // That many of something, laid out where it stands. The index is worked
     // out while running, so these take a base and a stride rather than the
@@ -128,13 +126,13 @@ typedef enum {
     // The text of a value laid out flat: an enum, a struct, that many of
     // something where it stands, or an optional holding one of those. Named
     // for what it walks rather than for the first thing that needed it, the
-    // way the three beside it were in D874. See D876.
+    // way the three beside it are.
     KEST_OP_TEXT_VALUE,
     KEST_OP_CONCAT,     // u16 count
     // u16 count, u16 which: the same, where each piece whose bit is set in
     // `which` is a signed whole number in one slot rather than text in two,
     // written into what is joined rather than into a text of its own first.
-    // Sixteen pieces at the most. See D1277.
+    // Sixteen pieces at the most.
     KEST_OP_CONCAT_I,
     // A number standing for a value, over exactly what `==` applies to.
     KEST_OP_HASH_I,
@@ -142,9 +140,9 @@ typedef enum {
     KEST_OP_HASH_T,
     // u16 layout. Over a value laid out flat and everything in it: an enum's
     // tag and whatever its case carries, or a struct's fields. Named for what
-    // they walk rather than for the first thing that needed them — a value is
+    // they walk rather than for the first thing that needed them -- a value is
     // a value, and what says whether it can be compared at all is whether
-    // everything in it can. See D874.
+    // everything in it can.
     KEST_OP_HASH_VALUE,
     KEST_OP_EQ_VALUE,
     KEST_OP_NE_VALUE,
@@ -155,7 +153,7 @@ typedef enum {
     KEST_OP_NEW_STORE,  // u16 stride, u16 layout of a place
     // A place in an array, kept as what it is made of rather than as an
     // address. The address is worked out where it is used, so nothing that
-    // happens in between can move the block out from under it. See D931.
+    // happens in between can move the block out from under it.
     KEST_OP_LOAD_ELEM,  // u16 offset, u16 layout; reads, leaves the place
     KEST_OP_STORE_ELEM, // u16 offset, u16 layout; writes, takes the place
     // An element read straight into the frame, and one written straight out of
@@ -164,18 +162,17 @@ typedef enum {
     // the other way round -- four slots pushed and four popped for every four
     // that had to move at all. These move them once.
     //
-    // A dependency rather than a push, which is what D1011 says to fuse: the
+    // A dependency rather than a push, which is what is worth fusing: the
     // store reads exactly what the index just wrote, through memory, and
-    // neither instruction can start until the other has finished. See D1012.
+    // neither instruction can start until the other has finished.
     KEST_OP_INDEX_TO,   // u16 layout, u16 slot; takes the place, writes slots
     KEST_OP_ELEM_FROM,  // u16 offset, u16 layout, u16 slot; takes the place
     // Arithmetic that writes where the answer is going. `sum += one.x` is an
     // addition that pushes and a store that pops what it pushed: the same
-    // dependency through memory D1012 took out of an element move, and the
+    // dependency through memory as in an element move, and the
     // commonest pair the seven programs run after that one. Four of them
     // rather than one with the arithmetic as an operand, because the one that
-    // read its kind out of an operand is the one that bought nothing (D1011).
-    // See D1014.
+    // read its kind out of an operand is the one that bought nothing.
     KEST_OP_ADD_I_NARROW_TO, // u16 scalar kind, u16 slot
     KEST_OP_SUB_I_NARROW_TO, // u16 scalar kind, u16 slot
     KEST_OP_ADD_F_TO,        // u16 slot
@@ -225,10 +222,10 @@ typedef enum {
     // The three that arrive with a cut behind them, in one instruction. Every
     // `+`, `-` and `*` on a whole number narrower than a slot is one of these
     // followed by a `narrow`, which is two dispatches for one piece of
-    // arithmetic — 484 of the 572 cuts every example and library module makes
+    // arithmetic -- 484 of the 572 cuts every example and library module makes
     // between them. The width stays an operand rather than becoming six
     // instructions each: what a dispatch costs is the branch, not the two
-    // bytes read after it. See D868.
+    // bytes read after it.
     KEST_OP_ADD_I_NARROW,   // u16 scalar kind
     KEST_OP_SUB_I_NARROW,   // u16 scalar kind
     KEST_OP_MUL_I_NARROW,   // u16 scalar kind
@@ -256,7 +253,7 @@ typedef enum {
     KEST_OP_NEG_F32,
     // The sine and the cosine of the number on top, answered the way
     // `std.fdlibm` answers them, bit for bit, where a call to either was
-    // written. See D1279.
+    // written.
     KEST_OP_SIN_F,
     KEST_OP_COS_F,
 
@@ -329,12 +326,12 @@ typedef enum {
     // instruction: `load.k` and then one of the six above was two dispatches
     // for `if one.hp > 20` and every flag test, which are what a rule is made
     // of. Whole numbers only, and only where the jump is taken when the
-    // answer is no. See D1154.
+    // answer is no.
     // A local moved by a constant in place: `load.k`, the arithmetic and the
     // store it was written into, which is every `count += 1` and every timer
-    // that runs down. The cut is the kind's, as in the two above. See D1155.
+    // that runs down. The cut is the kind's, as in the two above.
     // A constant written into a local: `const` and `store`, which is every
-    // `let x = 0` and every reset a rule makes. See D1155.
+    // `let x = 0` and every reset a rule makes.
     KEST_OP_STORE_K, // u16 slot, u16 constant
     KEST_OP_ADD_K_SELF, // u16 kind, u16 slot, u16 constant
     KEST_OP_SUB_K_SELF, // u16 kind, u16 slot, u16 constant
@@ -345,12 +342,12 @@ typedef enum {
     KEST_OP_JUMP_FALSE_EQ_K,
     KEST_OP_JUMP_FALSE_NE_K,
     // Two locals weighed against each other, and the jump: `load2` and then
-    // `jump.false.lt.i`, which is every `while i < n`. See D1281.
+    // `jump.false.lt.i`, which is every `while i < n`.
     KEST_OP_JUMP_FALSE_LT_LL, // u16 slot, u16 slot, u16 forward offset
     KEST_OP_JUMP_FALSE_LE_LL,
     // And what is on the stack weighed against a constant: `const` and then
     // one of the six whole-number jumps, which is every `xs[i] > 0` and every
-    // answer of a call compared with a written number. See D1155.
+    // answer of a call compared with a written number.
     KEST_OP_JUMP_FALSE_LT_C, // u16 constant, u16 forward offset, pops one
     KEST_OP_JUMP_FALSE_LE_C,
     KEST_OP_JUMP_FALSE_GT_C,
@@ -360,7 +357,7 @@ typedef enum {
     // A float local weighed against a constant and the jump, both ways round,
     // because a float comparison is written either way by `||` and `&&`:
     // `load.k` and one of the twelve float jumps above, which is every
-    // `one.x < 0.0` a frame asks of a position. See D1165.
+    // `one.x < 0.0` a frame asks of a position.
     KEST_OP_JUMP_FALSE_LT_FK, // u16 slot, u16 constant, u16 forward offset
     KEST_OP_JUMP_FALSE_LE_FK,
     KEST_OP_JUMP_FALSE_GT_FK,
@@ -375,20 +372,20 @@ typedef enum {
     KEST_OP_JUMP_TRUE_NE_FK,
     // A float sum or difference of two locals written into a local: `load2`
     // and the arithmetic that writes where it is going, which is every
-    // `one.x += one.dx` a frame moves something by. See D1166.
+    // `one.x += one.dx` a frame moves something by.
     KEST_OP_ADD_F_LL, // u16 slot, u16 slot, u16 slot
     KEST_OP_SUB_F_LL,
     // An element read into the frame and an element written out of it, with
     // the run and the index read where they are: `load2` and `index.to`, and
     // `load2` and `elem.from`, which is every `let one = world[at]` and every
-    // `world[at] = one` a frame walks a world with. See D1167.
+    // `world[at] = one` a frame walks a world with.
     KEST_OP_INDEX_TO_LL, // u16 layout, u16 slot, u16 run, u16 index
     KEST_OP_ELEM_FROM_LL, // u16 offset, u16 layout, u16 slot, u16 run, u16 index
     // Whole-number arithmetic with a constant for its right side: on what is
     // on the stack (`.c`, `const` and the arithmetic) or on a local (`.k`,
     // `load.k` and the arithmetic), which is every `% 7`, `* 3` and `+ 1` a
     // rule works a number out with. The narrowing ones carry the kind the
-    // answer is cut to. See D1168.
+    // answer is cut to.
     KEST_OP_MOD_I_C, // u16 constant
     KEST_OP_MOD_I_K, // u16 slot, u16 constant
     KEST_OP_DIV_I_C,
@@ -400,17 +397,17 @@ typedef enum {
     KEST_OP_MUL_I_NARROW_C,
     KEST_OP_MUL_I_NARROW_K,
     // An `f32` as its thirty-two bits and back: a slot holds one widened to
-    // an `f64`, so the two are a conversion each way. See D1171.
+    // an `f64`, so the two are a conversion each way.
     // A float as the bits it is, `u16` 32 or 64 for which width, and every
     // value that is not a number as the one such value, because the sign and
     // the payload of one are what the processor made and differ between
-    // machines. See D1238.
+    // machines.
     KEST_OP_FLOAT_BITS,
     KEST_OP_BITS_F32,
     // An element of a run read by a run and an index where they are, weighed
     // against a constant, and the jump: `index.ll`, `const` and one of the six
     // whole-number jumps, which is every `if one.cools[at] > 0` a rule asks of
-    // a timer. See D1178.
+    // a timer.
     KEST_OP_JUMP_FALSE_LT_E, // u16 run, u16 index, u16 layout, u16 constant,
                              // u16 forward offset
     KEST_OP_JUMP_FALSE_LE_E,
@@ -429,7 +426,7 @@ typedef enum {
     // Working memory: where the heap is, kept in a slot, and the heap put back
     // to it. What the program made in between is gone. A body that is refused
     // does not reach the second of these, so the machine puts back what a run
-    // left open rather than trusting the code to. See D966.
+    // left open rather than trusting the code to.
     KEST_OP_SCRATCH,     // u16 slot
     KEST_OP_UNSCRATCH,   // u16 slot
     KEST_OP_CALL,        // u16 function, u16 argument slots
@@ -446,7 +443,7 @@ typedef enum {
     // and puts it back when the machine stops there -- which is how a
     // breakpoint costs the machine nothing at all when nobody is debugging.
     // The machine stops with its frames where they are and a host carries on
-    // with `kest_resume`. See D991.
+    // with `kest_resume`.
     KEST_OP_STOP,
 } KestOp;
 
@@ -458,7 +455,7 @@ typedef enum {
     KEST_CONST_TEXT,
     // Which function of the program a function value is: a number the machine
     // calls through, which the verifier holds to being called with what that
-    // function takes. See D1242.
+    // function takes.
     KEST_CONST_FN,
 } KestConstClass;
 
@@ -466,8 +463,7 @@ typedef enum {
 // debugger reads the slot as what it holds rather than as bits -- and
 // `at_address` is whether the slot holds where the value is rather than the
 // value, which a `for` that binds its element by address does. Without it a
-// host reads a pointer as a number and has no way to know. See D866 and
-// D1081.
+// host reads a pointer as a number and has no way to know.
 typedef struct {
     const char *name;
     uint16_t slot;
@@ -485,7 +481,7 @@ typedef struct {
 // It is not `KestNative`: that is a function the *host* provides and the
 // program calls, and this is a body of the program the host's compiler wrote.
 // Both are C functions handed a frame and they are the two ends of different
-// boundaries. See D1094.
+// boundaries.
 typedef bool (*KestNativeBody)(KestRuntime *runtime, KestValue *frame,
                                uint16_t *gave);
 
@@ -495,9 +491,9 @@ typedef struct {
     // one copy of a generic from another: `shapes.kept` for
     // `shapes.kept#[T],fn(T) -> bool`. Worked out when the chunk is made,
     // because a message that says which function it is about says it every
-    // time and a host walking the list reads it for every function — and
+    // time and a host walking the list reads it for every function -- and
     // working it out is a copy of the name, which is a thing to hand out once
-    // rather than once an asking. See D610.
+    // rather than once an asking.
     const char *wrote;
     // The file this was compiled from, so a failure while running reports in
     // the same place a failure to compile would have.
@@ -505,7 +501,7 @@ typedef struct {
     // And where in it the declaration this was compiled from is written. Two
     // chunks written the same are either one generic compiled twice or two
     // declarations of one name, and nothing said which: this does, because
-    // copies of one declaration are written in one place. See D612.
+    // copies of one declaration are written in one place.
     KestSpan declared;
     uint8_t *code;
     uint32_t code_count;
@@ -515,7 +511,7 @@ typedef struct {
     // instruction and in the order they were written, which is why reading one
     // means walking the code: the middle of a jump's operand came from
     // nowhere, and an instruction is nearly three bytes, so one a byte was
-    // four fifths of what a module held of a function. See D751.
+    // four fifths of what a module held of a function.
     uint32_t *origins;
     uint32_t origin_count;
     uint32_t origin_capacity;
@@ -531,12 +527,12 @@ typedef struct {
     // rather than built by instructions every time it runs: a case written in
     // a body, a hash of a piece of text, a run of numbers. It is the
     // difference between a frame that costs nothing for one and a frame that
-    // pays for it, and nothing said it per function until now. See D678.
+    // pays for it, and nothing said it per function until now.
     uint32_t folded;
     // And how many slots those values take, which is what says whether eight
     // of them are eight numbers or eight structs. A value worked out where it
     // stands is written into the chunk a slot at a time, so this is the size
-    // of what the function was given. See D679.
+    // of what the function was given.
     uint32_t folded_slots;
     // The names this body gave its slots, for a debugger and for nothing
     // else. Without them a stopped machine can say slot 4 holds 12 and cannot
@@ -547,7 +543,7 @@ typedef struct {
     //
     // No liveness in it: a name is written down once with the slot it was
     // given, and a body that reuses a slot after a scope ends has two names
-    // for it and both are shown. A debugger says so. See D991.
+    // for it and both are shown. A debugger says so.
     KestNamed *named;
     uint16_t named_count;
     uint16_t named_capacity;
@@ -573,14 +569,14 @@ typedef struct {
     // And by how much the number above may now be more than enough. The
     // compiler works out how deep the stack goes from what the body means;
     // the lowering then takes the widest element move off the stack
-    // altogether (D1012), which the compiler's reckoning does not know about.
+    // altogether, which the compiler's reckoning does not know about.
     // Reducing the number above by this would be wrong -- the deepest moment
     // may be somewhere else entirely -- so what is recorded is the slack, and
     // `check-costs.sh` holds a body to asking for no more than its deepest
     // run used plus this. Nought for a body nothing was fused in.
     uint16_t fused_slots;
     // The functions carried into this body at their calls rather than called
-    // (D1156). The machine never enters them from here, and the other backend
+    //. The machine never enters them from here, and the other backend
     // does: a machine is sized for both engines, so a walk of what a body
     // needs counts each of these as the call it would have been.
     uint16_t *carried;
@@ -588,24 +584,24 @@ typedef struct {
     uint16_t carried_room;
     // Whether anything in this program ever names this function as a value.
     // A call through a value enters one of these and nothing else, so it is
-    // what a walk that meets one has to look at — and a program that names
-    // none of them can only be handed one by a host. See D814.
+    // what a walk that meets one has to look at -- and a program that names
+    // none of them can only be handed one by a host.
     bool as_value;
     // The deepest the machine ever got in this body, which only the build
     // that checks itself counts. It is what says the number above is not
-    // merely enough but no more than enough. See D812.
+    // merely enough but no more than enough.
     uint32_t went;
     bool returns_value;
     // What the declaration promised. The promise is checked against the tree
     // before anything is emitted; this is what lets it be checked again
-    // against what was emitted. See D058. Both of them, because both are
-    // proved twice and the second proof reads what is written here. See D853.
+    // against what was emitted. Both of them, because both are
+    // proved twice and the second proof reads what is written here.
     bool no_alloc;
     // Whether nothing this body does can make an array shorter or take one
     // away: no taking, emptying or resizing, no call through a value or into
     // the host, and calls only to bodies that keep them too, compiled before
     // it. What lets a walk that calls it be proved inside its array. Set by
-    // the compiler when the body is finished. See D1188.
+    // the compiler when the body is finished.
     bool keeps_runs;
     bool no_host;
     bool deterministic;
@@ -614,7 +610,7 @@ typedef struct {
     // call enters it instead of the instructions, and everything around the
     // call is unchanged: the frame is where the caller left it, the answer
     // goes where a `return` would put it, and a fault inside it is reported
-    // the way one inside the instructions is. See D1094.
+    // the way one inside the instructions is.
     KestNativeBody native;
 } KestChunk;
 
@@ -637,7 +633,7 @@ typedef struct {
     // somebody else to.
     bool promises;
     // And whether it promises to be inside the simulation profile, which is
-    // what lets a `deterministic` body call it. See D942.
+    // what lets a `deterministic` body call it.
     bool deterministic;
 } KestExtern;
 
@@ -645,7 +641,7 @@ typedef struct {
 // scalar, at the slot and the byte it is at, and one step a tag, which reads
 // the tag and then the steps of the case it names. Built once with the layout,
 // because a type walked every time an element moved was a third of what
-// `bench/rules.kest` spent. See D1159.
+// `bench/rules.kest` spent.
 #define KEST_MOVE_CASES 0xFF
 // A step of more than one of a kind is that kind with this bit set, so a step
 // of one is read the way it always was and only a run pays for a loop.
@@ -659,7 +655,7 @@ typedef struct {
     uint32_t byte;
     // How many of the kind lie side by side from here, in the slots and in the
     // bytes, which is moved as one run: a struct of four `f32` is one step
-    // rather than four, and a run of handles or of text is one copy. See D1177.
+    // rather than four, and a run of handles or of text is one copy.
     uint16_t many;
     // For a tag: how many slots and bytes the enum is, which case steps come
     // first in the ranges, and how many cases there are.
@@ -696,7 +692,7 @@ typedef struct {
     // kept at least twice as big as there are functions. A name is looked for
     // at every call the compiler writes and at every function it registers,
     // and a walk of the list for each made compiling a program of a thousand
-    // modules grow as the square of it. See D1261.
+    // modules grow as the square of it.
     uint32_t *places;
     uint32_t place_capacity;
     KestExtern *externs;
@@ -708,23 +704,22 @@ typedef struct {
     // have in common is the build, and it is the one field of a build a
     // machine writes -- which is why it is an atomic: two machines started on
     // two threads count themselves up at once, and a count that is not one is
-    // a build freed under a machine that is still running. See D324 and D952.
+    // a build freed under a machine that is still running.
     //
-    // What said a stamp counter belonged here too was D316, and D936 moved it
-    // into the machine: two machines of one build are two worlds and a
-    // reference carries which. Nothing counts stamps here now.
+    // No stamp counter belongs here: two machines of one build are two
+    // worlds and a reference carries which, so the machine counts stamps.
     atomic_uint machines;
     // Whether a chunk could not be given another byte or another constant.
     // What that leaves behind is a body with the end missing, which reads as
     // an instruction of the wrong width to anything that walks it -- so the
     // proof below would say the two halves of this compiler disagree about
     // what a program is, about a machine that ran out. The one thing that
-    // happened is said by whoever notices. See D750.
+    // happened is said by whoever notices.
     bool out_of_room;
     // Whether small bodies are carried to their calls rather than called. On
     // for every build but one that is going to be profiled: a profile says how
     // many times each body was entered, which is a question about the program
-    // as written rather than about how it was written out. See D1156.
+    // as written rather than about how it was written out.
     bool carrying_off;
     KestLayout *layouts;
     const KestType **layout_types;
@@ -748,9 +743,9 @@ typedef struct {
 // reaches rather than what the worst of them does, and the walk that answers
 // for the whole program works out both on the way: `slots` and `frames` are
 // what a machine to call this one takes. `reach` is nought where there is an
-// answer, and where it is not, `from` is the function it came from — a caller
+// answer, and where it is not, `from` is the function it came from -- a caller
 // of a function with no answer has none either, and what a reader wants is the
-// one with the `call.value` or the loop in it. See D602 and D603.
+// one with the `call.value` or the loop in it.
 typedef struct {
     uint32_t slots;
     uint32_t frames;
@@ -762,7 +757,7 @@ typedef struct {
 // compiled, so the answer does not either: what it needs, where it calls into
 // the host and which function that is. A host asks for it and every machine
 // asks for it again, and working it out costs more scratch than a machine is
-// made of. See D607.
+// made of.
 typedef struct {
     bool taken;
     bool measured;
@@ -774,12 +769,12 @@ typedef struct {
     // program with no least still has: a frame is at most this, whatever the
     // run of calls above it turned out to be. A program that reaches itself
     // has no worst chain to add up and a ceiling on frames all the same, so
-    // what it needs is at most this many slots a frame. See D815.
+    // what it needs is at most this many slots a frame.
     uint32_t widest;
     // And the same question asked of the shape of the calls rather than of
     // every body: the widest body that goes round, and the whole of the ones
     // that do not. A chain of frames is those two, and the second cannot
-    // repeat. Worked out only for a program with no least. See D816.
+    // repeat. Worked out only for a program with no least.
     uint32_t in_a_turn;
     uint32_t off_the_turns;
     KestReason why;
@@ -787,18 +782,17 @@ typedef struct {
 
 // The two numbers a program with no least is bounded by. `widest_in_a_turn` is
 // the widest body of the ones that lie on a run of calls that comes back round,
-// and `all_the_rest` is the sum of the widths of every body that does not — a
+// and `all_the_rest` is the sum of the widths of every body that does not -- a
 // body off a cycle can stand in a chain of frames at most once, because twice
 // would be a cycle through it, so the whole of them together is a bound on
 // what the chain's acyclic frames cost. Nought for both when there is no room
-// to work them out. See D816.
+// to work them out.
 // `only` is one function and what it reaches, or -1 for every function the
 // program defines. `widest` is the widest body among them, whichever they are.
 //
 // `to_host` counts only the bodies that reach a host function, which are the
 // only ones that can stand in a chain of frames ending at one: a body that
 // never reaches the host is not below a host call and not above one either.
-// See D818.
 void kest_module_cycles(const KestModule *module, KestArena *arena,
                         int32_t only, bool to_host, uint32_t *widest,
                         uint32_t *widest_in_a_turn, uint32_t *all_the_rest);
@@ -818,8 +812,7 @@ int32_t kest_module_find(const KestModule *module, const char *name);
 // copy is named `sort#i32`, which is one place in the program and is not a
 // name anybody wrote; this is that place, so that looking a name up and
 // saying why the lookup could not answer agree about what a copy is.
-// What a module still holds when a build is done, by what asked for it. See
-// D784.
+// What a module still holds when a build is done, by what asked for it.
 void kest_module_holds(const KestModule *module, uint32_t *code,
                        uint32_t *origins, uint32_t *constants,
                        uint32_t *layouts, uint32_t *chunks);
@@ -842,7 +835,7 @@ int32_t kest_module_entry(const KestModule *module, const char *name);
 
 // Where the instruction holding this byte was written, which is a walk over the
 // body: one origin is kept per instruction rather than one per byte. Nought for
-// a chunk with nothing in it. See D751.
+// a chunk with nothing in it.
 uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset);
 
 // What the instruction at `at` takes off the operand stack and puts back on
@@ -850,24 +843,24 @@ uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset);
 // the stack. NULL when that can be said, and why not when it cannot: a call
 // handing a function something other than what it takes, or a value of a
 // layout with no type. The verifier walks every path with it, and the build
-// that checks itself holds it to what the machine moved. See D1239.
+// that checks itself holds it to what the machine moved.
 const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
                           uint32_t at, uint32_t *takes, uint32_t *gives);
 
 // How many of the pieces `concat.i` joins are numbers rather than text: the
 // bits set in what it says. It says it for sixteen pieces at the most, and a
-// piece past the last one said about is not a piece. See D1277.
+// piece past the last one said about is not a piece.
 #define KEST_NUMBERED_MOST 16u
 uint32_t kest_pieces_numbered(uint32_t which);
 
 // How many times a body written in C goes round a `while` between reading
-// whether the host wants it to stop: `kest_native_asking`. See D1283.
+// whether the host wants it to stop: `kest_native_asking`.
 #define KEST_TURNS_ASKED 1024u
 
 // `std.fdlibm`'s sine and cosine written again in C, the same operations in
 // the same order on the same constants, for the two instructions above: what
 // the library answers is what these answer, which `examples/determinism.kest`
-// holds with the library itself run beside them. See D1279.
+// holds with the library itself run beside them.
 double kest_fdlibm_sin(double value);
 double kest_fdlibm_cos(double value);
 
@@ -878,7 +871,7 @@ double kest_fdlibm_cos(double value);
 // whose limits are the stack's and the layout's. A run is a count read with
 // the operand before it: that many slots or constants from there. Written
 // beside each name, one list, because the machine reading a number and the
-// verifier knowing what it is are one fact. See D1237.
+// verifier knowing what it is are one fact.
 typedef enum {
     KEST_OPERAND_NUMBER,
     KEST_OPERAND_SLOT,
@@ -897,7 +890,7 @@ typedef enum {
 // -- and what each number it carries is. The table is read here rather than
 // asked through a call a field, because the verifier, the lowering and the
 // proofs read a row for every instruction of every body, and a call each was
-// a tenth of the verifier's time. See D1284.
+// a tenth of the verifier's time.
 typedef struct {
     const char *name;
     uint8_t shape;
@@ -907,9 +900,9 @@ extern const KestInstruction *const kest_instructions;
 
 // How many bytes the instruction at a byte is, which is how a walk of the code
 // finds where the next one starts. One for a byte that is no instruction, so a
-// walk over what the verifier has not yet read still ends. D057's bug was a
-// second answer to this question that had a jump seven bytes wide, which is
-// why this is the only one.
+// walk over what the verifier has not yet read still ends. This is the only
+// answer to the question, so no second one can say a jump is a different
+// width.
 static inline uint32_t kest_op_wide(uint8_t op) {
     return op <= KEST_OP_STOP ? (uint32_t)(kest_instructions[op].shape & 15u)
                               : 1u;
@@ -917,7 +910,7 @@ static inline uint32_t kest_op_wide(uint8_t op) {
 
 // What an instruction is called. The list of them is `value.c`'s and this is
 // the one way anything else asks it, which is what keeps a machine that says
-// what it ran from holding a second copy of the names. See D870.
+// what it ran from holding a second copy of the names.
 static inline const char *kest_op_name(uint8_t op) {
     return op <= KEST_OP_STOP ? kest_instructions[op].name : "?";
 }
@@ -936,14 +929,14 @@ static inline uint16_t kest_chunk_u16(const KestChunk *chunk, uint32_t offset) {
 // Takes the last instruction back, which the compiler does when a comparison
 // turns out to be what a jump reads. `to` is where that instruction started.
 // It takes back the byte, where the next instruction is expected and where the
-// instruction came from — three things written together and until D804 taken
-// back one at a time, which left every origin after a fused jump naming the
-// instruction after the one it is for. See D804.
+// instruction came from: three things written together and taken back
+// together, or every origin after a fused jump would name the instruction
+// after the one it is for.
 void kest_chunk_take_back(KestChunk *chunk, uint32_t to);
 
 // Writes down that this body called a slot something. Quietly does nothing
 // when there is no room: a name a debugger cannot show is not worth refusing a
-// compile over. See D991.
+// compile over.
 bool kest_chunk_names(KestModule *module, KestChunk *chunk, const char *name,
                       uint16_t slot, uint16_t slots, uint8_t kind,
                       bool at_address);
@@ -997,7 +990,7 @@ const char *kest_module_askable(const KestModule *module, const char *name);
 // cannot be written as a word, and saying so beats guessing.
 //
 // False when the word is not one of that type, and `why` is what to say about
-// it — a reason without the word or the type in front of it, so that a caller
+// it -- a reason without the word or the type in front of it, so that a caller
 // says where it came from in its own words.
 bool kest_value_read(KestArena *arena, const char *text, const KestType *type,
                      KestValue *into, const char **why);
@@ -1022,7 +1015,6 @@ int kest_write_real(char *buffer, size_t size, double value, bool narrow);
 // `KEST_WHOLE_ROOM` bytes, ended with a nought; answers how many characters it
 // wrote before it. Written out rather than asked of `snprintf`, which reads a
 // format every time and was a fifth of what making text out of numbers cost.
-// See D1173.
 #define KEST_WHOLE_ROOM 24
 int kest_write_whole(char *buffer, uint64_t bits, bool is_signed);
 
@@ -1044,7 +1036,7 @@ void kest_module_disassemble(const KestModule *module,
 // The same thing for whatever is reading it rather than for a person: what is
 // laid out, what the host must provide, and every function with its
 // instructions as an offset, a name and the numbers after it. What the text
-// form decorates — the value behind a constant, where a jump lands — is left
+// form decorates -- the value behind a constant, where a jump lands -- is left
 // as the numbers, because a reader that wanted prose would have asked for it.
 // What one question about room answers, written as the fields of an object
 // without the braces around them: the whole program when `only` is -1 and one
@@ -1055,9 +1047,9 @@ void kest_module_needs_json(const KestModule *module, int32_t only, FILE *out);
 
 // The same, as one object. `entries` is the names to answer about beside the
 // program, and every one of them the program has is in the answer whether or
-// not it differs — a tool looks one up rather than reading a list.
+// not it differs -- a tool looks one up rather than reading a list.
 // A number that moves when what the machine will run moves, and does not move
-// when only where it was written does. See D659.
+// when only where it was written does.
 uint64_t kest_module_mark(const KestModule *module);
 
 void kest_module_disassemble_json(const KestModule *module,

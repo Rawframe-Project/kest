@@ -12,7 +12,7 @@
 // What the two protocols an editor speaks are made of: a message framed by
 // its length, JSON read into a tree, and JSON written into a buffer. The
 // language server and the debug adapter are two conversations in the same
-// words, so the words are written once. See D1182.
+// words, so the words are written once.
 
 // A JSON value, which is what a client sends and what has to be read without
 // a library. The tree is in an arena that is thrown away with the message, so

@@ -6,13 +6,13 @@
 #include <string.h>
 
 // Reading nothing but the files it is handed, when it is handed any: every
-// path a read asks for is one of those or is not there. See D1172.
+// path a read asks for is one of those or is not there.
 static KestBuild *opened(const char *library, char **paths, int count,
                          const KestFile *handed, uint32_t handed_count,
                          size_t room, uint64_t work) {
     // A build begins with nobody refused. What was refused before this one is
     // the last build's afternoon, and a host that compiles twice should not
-    // have the first one's memory hold its tongue about the second. See D880.
+    // have the first one's memory hold its tongue about the second.
     kest_arena_forget_refusals();
     KestArena *arena = kest_arena_new();
     if (arena == NULL) {
@@ -32,7 +32,7 @@ static KestBuild *opened(const char *library, char **paths, int count,
     build->reported = 0;
     kest_diags_init(&build->diags, arena);
     // Before anything is read, for the reason the ceiling on bytes is: what
-    // reading costs is the first thing counted. See D1248.
+    // reading costs is the first thing counted.
     build->diags.work_given = work;
     kest_module_init(&build->module, arena);
     build->units.handed = handed;
@@ -117,7 +117,7 @@ bool kest_build_check(KestBuild *build) {
 
 // What the optimizer found in one body, for whoever is writing a pass. It
 // goes to the error stream because what a program wrote is the program's
-// answer, the same rule the profile's own numbers follow. See D1024.
+// answer, the same rule the profile's own numbers follow.
 // The backends a body is handed to, in the order they read it. There is one
 // door into a build for what a body means and two things that want it, and a
 // second walk of the program would be a second reading of the same answer.
@@ -161,19 +161,19 @@ bool kest_build_emit(KestBuild *build) {
     // A body with the end missing reads as an instruction of the wrong width
     // to the proof below, which would say the two halves of this compiler
     // disagree about what a program is. What happened is that the host had
-    // nothing left, and this is where that is noticed. See D750.
+    // nothing left, and this is where that is noticed.
     //
     // Two halves of that: the module says whether what it was writing ran out,
     // and the compiler answers whether it did. The answer was thrown away, so
     // a compiler that had no room for a layout went on without one and the
-    // module said nothing was wrong — `emit` under a ceiling wrote every
+    // module said nothing was wrong -- `emit` under a ceiling wrote every
     // instruction of a program and one fewer layout than it has, and came back
-    // nought. See D845.
+    // nought.
     // The bodies go in an arena of their own, the way the trees do and for the
     // same reason: a backend reads them and nothing after it does, so a build
-    // that is finished holds neither. See D748 and D962. Taken under the
+    // that is finished holds neither. Taken under the
     // build's, so what a host gave a build is what the bodies may have too,
-    // and what they held at their widest is what the build cost. See D1247.
+    // and what they held at their widest is what the build cost.
     KestIrProgram ir;
     KestArena *bodies = kest_arena_new_under(build->arena);
     KestLower *writes = bodies == NULL
@@ -188,7 +188,7 @@ bool kest_build_emit(KestBuild *build) {
     // Both backends, when both were asked for. The C goes in the build's own
     // arena rather than the bodies' one: a body is let go as soon as it has
     // been written and what was written from it is read after the last of
-    // them. See D1093.
+    // them.
     Backends both = {writes, NULL, build->c_writer};
     if (build->c_writer != NULL) {
         both.c = build->c_writer->begin(build->arena, &build->module);
@@ -205,7 +205,7 @@ bool kest_build_emit(KestBuild *build) {
     // development question and not a command: what it prints is a count of
     // shapes in the resolved form of a program, which is of no use to anybody
     // who is not writing a pass. Read once so a compiler cannot change its
-    // mind half way through. See D1024.
+    // mind half way through.
     {
         static int asked = -1;
         if (asked < 0) {
@@ -235,8 +235,7 @@ bool kest_build_emit(KestBuild *build) {
     // is a question about the whole program.
     if (both.c != NULL && compiled) {
         // Every file the program was read from, and the manifest that said
-        // where its imports resolve, when the program is to carry them. See
-        // D1172.
+        // where its imports resolve, when the program is to carry them.
         KestFile *carried = NULL;
         uint32_t carried_count = 0;
         if (build->carrying) {
@@ -268,7 +267,7 @@ bool kest_build_emit(KestBuild *build) {
     }
     // The promise was checked against the tree; this holds it against what was
     // emitted. If the two disagree the tree walk missed something, and finding
-    // that out here beats finding it out in a frame (D058).
+    // that out here beats finding it out in a frame.
     if (build->diags.error_count == 0) {
         at = kest_ir_ticked(build->now, build->now_context);
         kest_module_prove(&build->module, build->arena, &build->diags);
@@ -278,7 +277,7 @@ bool kest_build_emit(KestBuild *build) {
     build->compiled = build->diags.error_count == 0;
     // And the trees, which nothing reads once every copy has been compiled and
     // the promise has been held against what was emitted. What it cost is
-    // already counted, where each file was read. See D748.
+    // already counted, where each file was read.
     if (build->units.trees != NULL) {
         kest_arena_returned(build->arena, kest_arena_held(build->units.trees));
         kest_arena_free(build->units.trees);
@@ -315,7 +314,7 @@ KestBuild *kest_build_from(const KestFile *files, uint32_t count,
     }
     char *paths[1] = {(char *)files[0].path};
     // A library a build was not told of is looked for on no disk: everything
-    // it reads is what it was handed. See D1172.
+    // it reads is what it was handed.
     return finished(opened(library == NULL ? "" : library, paths, 1, files,
                            count, room, 0),
                     errors, form, room);
@@ -334,7 +333,7 @@ static KestBuild *finished(KestBuild *build, FILE *errors, KestForm form,
         // Two reasons now, and which of them is known here without asking
         // anything: a build given a ceiling and refused before it had a list
         // to write in was refused by the ceiling, and the arena that would
-        // have said so is already gone. See D844.
+        // have said so is already gone.
         if (room > 0) {
             char said[120];
             snprintf(said, sizeof said, KEST_CRAMPED_START, room);
@@ -367,7 +366,7 @@ size_t kest_build_cost(const KestBuild *build) {
     // there, and there is nothing for it to have cost.
     // The most it held at once, with what the stages that work in memory of
     // their own held beside it: a build given this much has room to do it
-    // again. See D1247.
+    // again.
     return build == NULL ? 0 : kest_arena_widest(build->arena);
 }
 
@@ -412,7 +411,7 @@ uint64_t kest_build_mark(const KestBuild *build) {
     // The files' own marks, folded in the order they were read. Folded here
     // rather than left to a host: two hosts that combined them their own way
     // would have two numbers for one program, and the point of the number is
-    // that it is the same everywhere. See D658.
+    // that it is the same everywhere.
     uint64_t mark = KEST_MARK_START;
     for (uint32_t at = 0; at < build->units.count; at++) {
         mark = kest_mark_number(mark, build->units.items[at].source.mark, 8);
@@ -479,7 +478,6 @@ void kest_build_report(KestBuild *build, FILE *out, KestForm form) {
 // every other question about the one at a place answers a host past the end
 // the way it answers a host about a real one that takes nothing or gives
 // nothing back. So the end of the walk is silent and asking past it is not.
-// See D436.
 static bool no_extern_at(const KestBuild *build, uint32_t at) {
     if (build == NULL) {
         return true;
@@ -603,7 +601,7 @@ bool kest_build_free(KestBuild *build) {
     }
     // Acquired against the release a machine counts itself off with: a build
     // freed on one thread has to see what a machine on another did before it
-    // went. See D952.
+    // went.
     unsigned standing = atomic_load_explicit(&build->module.machines,
                                              memory_order_acquire);
     if (standing > 0) {
@@ -623,7 +621,7 @@ bool kest_build_free(KestBuild *build) {
         return false;
     }
     // A build that was never compiled still has its trees, because what gives
-    // them back is the last stage that reads them. See D748.
+    // them back is the last stage that reads them.
     if (build->units.trees != NULL) {
         kest_arena_free(build->units.trees);
         build->units.trees = NULL;
@@ -653,16 +651,16 @@ const char *kest_build_name(KestBuild *build, const char *name) {
     // Already under a module, which is how `check` prints it and therefore how
     // somebody types it: `math.factorial` is not `math.math.factorial`. Any
     // dot at all, and not this module's own name, because a program is the
-    // file that was named and everything it imports — `shapes.doubled` in a
+    // file that was named and everything it imports -- `shapes.doubled` in a
     // file that imports `shapes` is a function of this program, and putting
     // the root module in front of it made a name nobody could have typed and
-    // then said that name back. See D341.
+    // then said that name back.
     //
     // And written the way the file writes it, which is a module's last part:
     // somebody typing `math.min` against a program that imports `std.math`
     // means `std.math.min`, because that is the line they read. Expanded
     // through the root file's own imports, which is the same question the
-    // checker asks of every name in that file. See D1039.
+    // checker asks of every name in that file.
     const char *dot = strchr(name, '.');
     if (dot != NULL) {
         size_t head = (size_t)(dot - name);
@@ -705,11 +703,11 @@ const char *kest_build_name(KestBuild *build, const char *name) {
 }
 
 // The whole program's walk, worked out the first time anybody asks for it and
-// answered out of the build after. What it costs is scratch — six arrays a
-// function wide — and for `examples/embed.kest` that is 1596 bytes against the
+// answered out of the build after. What it costs is scratch -- six arrays a
+// function wide -- and for `examples/embed.kest` that is 1596 bytes against the
 // 600 a machine is made of, so a host that makes a machine a frame was paying
 // for the same walk every frame. The module it walks does not change after it
-// is compiled, so neither does the answer. See D607.
+// is compiled, so neither does the answer.
 static const KestWalk *walk_it(KestBuild *build) {
     if (!build->walked.taken) {
         build->walked.taken = true;
@@ -720,7 +718,7 @@ static const KestWalk *walk_it(KestBuild *build) {
         // And what a program with no least is bounded by, worked out only
         // when there is no least to have: the widest body, which one walk
         // answers along with which functions go round and how wide the ones
-        // that do not are altogether. See D815 and D816.
+        // that do not are altogether.
         if (!build->walked.measured) {
             kest_module_cycles(&build->module, build->arena, -1, false,
                                &build->walked.widest, &build->walked.in_a_turn,
@@ -737,10 +735,10 @@ bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why) {
     }
     why->reach = KEST_REACH_UNASKED;
     why->where = NULL;
-    // A build that did not compile is not one a host can be holding —
-    // `kest_build` frees it and answers NULL — so this is the same nothing as
+    // A build that did not compile is not one a host can be holding --
+    // `kest_build` frees it and answers NULL -- so this is the same nothing as
     // a NULL: what could be said about it is a program's worth of diagnostics
-    // and none of them is a reason there is no least. See D566.
+    // and none of them is a reason there is no least.
     if (build == NULL || least == NULL || !build->compiled) {
         return false;
     }
@@ -758,9 +756,9 @@ bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why) {
     // allocates is what it is given to work on, and a loop over four events
     // and a loop over four thousand are the same program. Written rather than
     // left alone, because a field an answer does not touch is one a caller
-    // cannot tell from one it did — and these three doors answer into the same
+    // cannot tell from one it did -- and these three doors answer into the same
     // shape, so all three say the same nothing about the one thing none of
-    // them knows. A host's own cap goes on after asking. See D724.
+    // them knows. A host's own cap goes on after asking.
     least->heap_bytes = 0;
     return true;
 }
@@ -793,7 +791,7 @@ bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
 }
 
 // What the three bound doors have in common: two readings of a chain of frames,
-// the smaller of them, and never more than the usual number. See D816.
+// the smaller of them, and never more than the usual number.
 static uint32_t a_chain_of(uint32_t widest, uint32_t in_a_turn,
                            uint32_t off_the_turns, uint32_t allowed) {
     uint64_t a_frame_each = (uint64_t)widest * allowed;
@@ -866,7 +864,7 @@ bool kest_bound_of(KestBuild *build, const char *name, uint32_t frames,
     // And a name that has none is bounded by the two readings of a chain of
     // frames, over what this one reaches rather than over the whole program.
     // The reason the walk gave is kept: a host is told a bound and why there
-    // was nothing better. See D817.
+    // was nothing better.
     if (why->reach == KEST_REACH_NO_ROOM) {
         return false;
     }
@@ -964,7 +962,7 @@ bool kest_bound_from(KestBuild *build, const char *name, uint32_t frames,
     inside->heap_bytes = 0;
     // Nothing reaches a host function, so there is nowhere to call back in
     // from and nothing to make room for. The same nothing `kest_needs_from`
-    // gives, and true for the same reason. See D818.
+    // gives, and true for the same reason.
     if (widest == 0) {
         inside->stack_slots = 0;
         inside->call_depth = 0;
@@ -982,7 +980,7 @@ static KestRuntime *start(KestBuild *build, const KestHost *host,
     // answers NULL for a program that did not compile, which is the first
     // thing a host meets, and the next line a host writes is this one. No
     // machine comes of no build, and there is nowhere to say more -- a report
-    // belongs to a build, and there is none. See D895.
+    // belongs to a build, and there is none.
     if (build == NULL || !build->compiled) {
         return NULL;
     }
@@ -990,7 +988,7 @@ static KestRuntime *start(KestBuild *build, const KestHost *host,
     // of the build's arena, which is a bump pointer: two machines started on
     // two threads read and wrote it at once, and the thread sanitiser says so
     // the moment anything asks. The reference says a host may start a machine
-    // from any thread, so the report is the machine's from here. See D1071.
+    // from any thread, so the report is the machine's from here.
     KestArena *own = kest_arena_new();
     if (own == NULL) {
         kest_diags_starve(&build->diags);
@@ -1018,7 +1016,7 @@ static KestRuntime *start(KestBuild *build, const KestHost *host,
         // This is the one write to a build a start makes, and it is the one a
         // host may not make from two threads at once. A start that works
         // touches nothing of the build's but the count of how many machines
-        // are standing on it, which is an atomic. See D1071.
+        // are standing on it, which is an atomic.
         kest_diags_absorb(&build->diags, said);
         kest_arena_free(own);
     }
@@ -1038,7 +1036,7 @@ KestRuntime *kest_start_untrusted(KestBuild *build, const KestHost *host,
     // A program nobody trusts is one that may never end and may ask for
     // everything, so what bounds it is not a default a host forgot to
     // change: nought is refused here rather than read as no ceiling. Said to
-    // the build, as a start that fails says everything. See D1246.
+    // the build, as a start that fails says everything.
     bool bounded = true;
     KestSpan nowhere = {0, 0};
     if (limits == NULL || limits->fuel == 0) {

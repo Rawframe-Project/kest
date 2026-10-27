@@ -8,7 +8,7 @@ import std.sort
 // Luau's own `bench/tests/trig.lua` in Kest: forty cubed transforms, each a
 // rotation worked out from sines and cosines and written as sixteen numbers.
 // A sine here is the library's own, the same bits on every machine, where
-// Luau's is the platform's. See D1267.
+// Luau's is the platform's.
 
 fn update(matrix: [f64], amount: i32, offset: f64, scale: f64, time: f64) {
     let i = 0

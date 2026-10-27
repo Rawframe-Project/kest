@@ -5,7 +5,7 @@ import std.text
 // The other `say` in this program, and the reason there are two: a module's
 // name is the whole path and what a file writes is the last word of it, so
 // `ui.say` and `data.say` coexist and a file that wanted both would be refused
-// at its two import lines rather than given one of them. See D1039.
+// at its two import lines rather than given one of them.
 //
 // This one is not for a person. It is the line a save is written as and read
 // back from, which is a different question about text and belongs in a

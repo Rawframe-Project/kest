@@ -4,7 +4,7 @@
 // else -- no network, no other process, nothing of the machine the page runs
 // on. It is the same module `tools/check-wasm.sh` runs under Node's own
 // implementation, run here under this one, and the gate runs this one under
-// Node too, so what the page does is what was checked. See D1266.
+// Node too, so what the page does is what was checked.
 
 const ERRNO = {
     SUCCESS: 0, BADF: 8, EXIST: 20, INVAL: 28, ISDIR: 31, NOENT: 44,

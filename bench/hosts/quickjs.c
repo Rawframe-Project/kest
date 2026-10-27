@@ -1,7 +1,7 @@
 // `bench/hosts` through QuickJS's C API: the frame over the host's run of
 // doubles lent as an `ArrayBuffer`, a crossing a body, and the program asking
 // its host, over `bodies.js`. QuickJS has an interpreter and no compiler to
-// machine code, so there is one line of each. See D1272.
+// machine code, so there is one line of each.
 //
 //   quickjs bench/hosts/bodies.js [bench/hosts/churn.js]
 #include <stdatomic.h>

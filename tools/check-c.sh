@@ -2,7 +2,7 @@
 # The other backend, held to answering what the first one does. `kest emit --c`
 # writes the same bodies as C for the compiler a release is built with, and
 # what says the two are one program is that a program compiled both ways
-# answers the same thing. The gate runs this. See D1093.
+# answers the same thing. The gate runs this.
 #
 # Two halves. Every program it is given is written as C and handed to the
 # host's compiler, because C that will not compile is the one kind of wrongness
@@ -71,7 +71,7 @@ was written"
     # A function that says it gives back a value and can run off its end is
     # one the host's compiler only warns about, and what it gives back then is
     # whatever was in a register: refused here, where the one program in the
-    # tree that ends in a loop is. See D1274.
+    # tree that ends in a loop is.
     if $cc -O1 -Werror=return-type -Iinclude -c -o "$room"/wrote.o \
             "$room"/wrote.c 2>"$room"/why; then
         echo "compiled 1" >>"$room"/found
@@ -121,7 +121,7 @@ read_sweep "$at"
 # would hand the host's compiler a file of comments and pass. It used to be
 # wrong to write everything as well -- there was no C for a crossing into the
 # host, so a file that claimed the whole of a program was a file claiming what
-# it could not do. There is now (D1108), and a program every body of which is
+# it could not do. There is now, and a program every body of which is
 # written is the ordinary case rather than a fault; what says a body left out
 # is left out honestly is the reason beside its name and the run that follows.
 if [ "$compiled" -eq 0 ] || [ "$written" -eq 0 ] ||
@@ -506,7 +506,7 @@ fn main() -> i32 {
     // a hash of text is. Asked outright rather than left to the total below,
     // where a hash of where the text is rather than what it says comes out
     // different by an amount that is whatever the addresses were -- and one
-    // run in 251 it came out the same. See D1164.
+    // run in 251 it came out the same.
     if hash(label(0)) != hash("{label(0)}") {
         return 200
     }
@@ -542,7 +542,7 @@ struct Item {
 
 // Two cases carrying something in the same place and not the same kind of
 // thing: a byte and a float are read as what their case says, not as the
-// other one. See D1232.
+// other one.
 enum Mark {
     Scored(u8)
     Weighed(f32)
@@ -702,7 +702,7 @@ fn spelled(t: Tag, n: i32, f: f64, g: f32, b: bool, u: u32) -> text {
 }
 
 // A number on its own in a hole is made into text alone, where one beside
-// other pieces is written into the join (D1277): both ways, and both signs.
+// other pieces is written into the join: both ways, and both signs.
 fn alone(n: i32) -> text {
     return "{n}"
 }
@@ -1010,7 +1010,7 @@ PROGRAM
 # Two walks whose element is not inside the array by the time it is read,
 # because the body made it shorter: once through a body it called and once
 # by taking from it where it stands. A walk the compiler proves inside its
-# array is read with nothing asked (D1187), so these are what says the proof
+# array is read with nothing asked, so these are what says the proof
 # looks at the body: both engines have to refuse at the same place.
 cat >"$work"/programs/shrunk.kest <<'PROGRAM'
 module shrunk
@@ -1050,7 +1050,7 @@ fn main() -> i32 {
 PROGRAM
 # And a walk that calls a body which only calls another: a call is proved
 # harmless when what it calls keeps runs, and this one calls a body that
-# takes from the array, so the walk proves nothing. See D1188.
+# takes from the array, so the walk proves nothing.
 cat >"$work"/programs/handed.kest <<'PROGRAM'
 module handed
 
@@ -1078,7 +1078,7 @@ PROGRAM
 # And a walk that counts past the end of an array it indexes: the question
 # asked where a walk begins says the array is shorter than the limit, and
 # every element goes back to being asked about, so both engines refuse at
-# the sixth. See D1189.
+# the sixth.
 cat >"$work"/programs/shorter.kest <<'PROGRAM'
 module shorter
 
@@ -1096,7 +1096,7 @@ fn main() -> i32 {
 PROGRAM
 # And a walk that puts a shorter array in the slot it is asking about: the
 # question was asked of the array that was there, so an array stored there in
-# the walk makes the walk prove nothing. See D1189.
+# the walk makes the walk prove nothing.
 cat >"$work"/programs/swapped.kest <<'PROGRAM'
 module swapped
 
@@ -1119,7 +1119,7 @@ PROGRAM
 # arm would have made past the others follows its `return` and is never
 # taken, and what it would have landed on is reached by nothing. The backend
 # refused a label only those land on, and handed `colony.work` and every body
-# of this to the machine. See D1206.
+# of this to the machine.
 cat >"$work"/programs/returns.kest <<'PROGRAM'
 module returns
 
@@ -1171,7 +1171,6 @@ PROGRAM
 # first element past what is there, run by the machine; with the proof made
 # where it may not be, the compiled walk reads what the bytes still hold.
 # Taken out one at a time, each condition was not refused by anything else.
-# See D1214.
 cat >"$work"/programs/popped.kest <<'PROGRAM'
 module popped
 
@@ -1241,9 +1240,9 @@ fn main() -> i32 {
     return total % 251
 }
 PROGRAM
-# And the question D1189 asks where a walk begins, on its edge: a limit one
-# past the array's length. `shorter.kest` walks to ten over five, which a flag
-# off by one answers the same as the right one. See D1215.
+# And the question a walk to a limit asks where it begins, on its edge: a limit
+# one past the array's length. `shorter.kest` walks to ten over five, which a
+# flag off by one answers the same as the right one.
 cat >"$work"/programs/onepast.kest <<'PROGRAM'
 module onepast
 
@@ -1259,8 +1258,8 @@ fn main() -> i32 {
     return total % 251
 }
 PROGRAM
-# An index worked out of the count, `at * 2 + 1`, which the question D1288
-# asks where a walk begins answers for the last turn's index: an array that
+# An index worked out of the count, `at * 2 + 1`, which the question asked
+# where a walk begins answers for the last turn's index: an array that
 # holds every one of them, and one a single element short, which both engines
 # refuse at the fifth turn in the same words.
 cat >"$work"/programs/pairs.kest <<'PROGRAM'
@@ -1295,8 +1294,7 @@ fn main() -> i32 {
 PROGRAM
 # And a walk that grows the array it writes: the bytes move under it, so where
 # they are is not read once where the walk begins. A walk that read it there
-# writes where the array was, and the sum after it is of where it is. See
-# D1288.
+# writes where the array was, and the sum after it is of where it is.
 cat >"$work"/programs/growing.kest <<'PROGRAM'
 module growing
 
@@ -1376,7 +1374,7 @@ for file in "$work"/programs/*.kest; do
     # And the whole of it: a `main` of its own over bodies the machine runs
     # is the machine run twice. Two are written to be halves -- a number with
     # no spelling in C, handed to the machine on purpose, which is what they
-    # hold the crossing to. See D1206.
+    # hold the crossing to.
     whole=$(sed -n 's,^// \([0-9]*\) of \([0-9]*\) bodies written$,\1 \2,p' \
             "$work"/one.c)
     case "$name" in
@@ -1442,7 +1440,7 @@ done
 # pragmas that is the build that holds its half of the guard. A probe asks
 # whether fusing across statements is live here at all, the way the generated
 # C writes a multiply and an add, because a build that cannot fuse answers
-# alike for the wrong reason, and says so rather than passing. See D1226.
+# alike for the wrong reason, and says so rather than passing.
 fused_said="none built where the host's compiler fuses, which it does not here"
 cat >"$work"/probe.c <<'PROBE'
 #include <stdio.h>
@@ -1512,7 +1510,7 @@ fi
 # in drive the machine, and the little host at the bottom of a generated file
 # only writes -- so this one is written here, links the generated file with
 # `-DKEST_NO_MAIN`, and calls `kest_natives_here` for one of its two runs and
-# not for the other. Same answer, same words, one binary. See D1111.
+# not for the other. Same answer, same words, one binary.
 inside_said="no host of its own was built"
 cat >"$work"/reentry.kest <<'PROGRAM'
 module reentry
@@ -1582,7 +1580,7 @@ static void asked_back(KestValue *frame, KestRuntime *runtime, void *context) {
 // Once with the C, once without, and once with the C linked in and the machine
 // started for code nobody trusts, which runs what the verifier proved and not
 // what the host's compiler made of it: what says so is how many instructions
-// the machine itself ran, which the C does not add to. See D1246.
+// the machine itself ran, which the C does not add to.
 static int ran(const char *path, bool compiled, bool untrusted,
                unsigned long long *stepped) {
     KestBuild *build = kest_build(path, getenv("KEST_LIB"), stderr,
@@ -1690,9 +1688,9 @@ calls back in, said \`$inside\` and came back $inside_was" >>"$said"
 fi
 
 # And a loop that never ends, stopped by its host from another thread, in
-# both engines. A compiled body spends no budget (D1094), so what reaches one
+# both engines. A compiled body spends no budget, so what reaches one
 # is `kest_cancel`, which a body written as C asks after at the back of every
-# `while` (D1283): the host runs it compiled and then on the machine, gives the
+# `while`: the host runs it compiled and then on the machine, gives the
 # stop a thread of its own, and holds each run to coming back refused with
 # `K0660`. An alarm is what says a run that never came back.
 stopped_said="no loop that never ends was stopped"
@@ -1823,7 +1821,7 @@ fi
 # because a host handed an array can do exactly this, and only a host can
 # show that the refusal is needed: taken out, the release engine read past
 # the end and answered 21 where the machine stops at index three. Both runs
-# have to stop, alike. See D1221.
+# have to stop, alike.
 cat >"$work"/hostwalk.kest <<'PROGRAM'
 module hostwalk
 
@@ -1946,7 +1944,7 @@ fi
 # them: what this backend writes is C, and C's undefined arithmetic is a
 # wrapped number in a build that does not look and a report in one that does.
 # The count of an unsigned walk was one more than the top of `int64_t` in the
-# generated C and answered right for as long as nothing looked. See D1218.
+# generated C and answered right for as long as nothing looked.
 sanitisers=""
 printf 'int main(void) { return 0; }\n' >"$work"/probe.c
 if $cc -fsanitize=undefined,address -fno-sanitize-recover=undefined \
@@ -2005,7 +2003,7 @@ $c_was with what was written as C, or says something else"
     # that grow worlds are left out and counted, for the reason the gate's own
     # walk leaves them out. The workloads under `bench` are worlds grown to be
     # measured, which a walk at every allocation reads whole each time, and
-    # are not walked for the same reason. See D1179.
+    # are not walked for the same reason.
     case "$file" in
     examples/churn.kest | examples/holding.kest)
         echo "not_walked 1" >>"$found"

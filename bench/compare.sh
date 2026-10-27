@@ -13,14 +13,15 @@
 # after another: a round runs every row once and the next round runs them all
 # again, so what a neighbour did for half a second falls on one run of many
 # rows rather than on every run of one. Taken back to back, the same binary
-# was 54 ms on `kernel` in one sitting and 74 in the next. See D1195. Everything a row does is in it: reading
-# the program, compiling it where that is what the engine does, and running
-# it. Building a binary ahead of time -- this language's release engine and
-# daslang's `-exe` -- is not, because it is not what a game does when it runs.
+# was 54 ms on `kernel` in one sitting and 74 in the next. Everything a row does
+# is in it: reading the program, compiling it where that is what the engine
+# does, and running it. Building a binary ahead of time -- this language's
+# release engine and daslang's `-exe` -- is not, because it is not what a game
+# does when it runs.
 #
 # `KEST_LUAU`, `KEST_LUA`, `KEST_LUAJIT` and `KEST_DAS` say where the
 # comparators are, and `KEST_CPP` a C++ compiler for the floor; a row whose
-# engine is not there is left out rather than guessed. See D1180 and D1272.
+# engine is not there is left out rather than guessed.
 set -eu
 
 # What the build made: the preset's build directory, out/dev unless
@@ -129,7 +130,7 @@ for one in kernel control graph words rules; do
     if [ -n "${KEST_DAS:-}" ] && [ -f "bench/$one.das" ]; then
         row "$one" "daslang" "$KEST_DAS" -no-module-cache "bench/$one.das"
         # It writes the name it was given with `.exe` after it on this system
-        # as well, so both are looked for. See D1161.
+        # as well, so both are looked for.
         if "$KEST_DAS" -no-module-cache -exe -output "$built/$one.das.bin" \
                 "bench/$one.das" >/dev/null 2>&1; then
             for exe in "$built/$one.das.bin" "$built/$one.das.bin.exe"; do
