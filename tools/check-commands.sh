@@ -260,6 +260,8 @@ written = [one["written"] for one in held["declarations"]]
 if written[1:3] != ["fn fill(s: Shelf) -> Shelf",
                     "fn empty(s: Shelf) -> bool"]:
     wrong.append("the functions are written " + repr(written[1:3]))
+if held.get("schema") != 4 or held.get("errors") != 0:
+    wrong.append("its object does not start with `schema` and `errors`")
 print("; ".join(wrong))
 ' "$scratch"/doc/said)
     if [ -n "$wrongly" ]; then
@@ -267,6 +269,55 @@ print("; ".join(wrong))
     fi
 fi
 rm -rf "$scratch"/doc
+
+# `hostile --json` is one object like every command's, holding as `text` the
+# file the words form writes and as `calls` the count it says beside it; and
+# `debug`, a conversation, refuses `--json` in JSON rather than mixing the two.
+mkdir -p "$scratch"/hostile
+if ! $kest hostile examples/embed.kest 3 >"$scratch"/hostile/words \
+        2>"$scratch"/hostile/count </dev/null ||
+   ! $kest hostile --json examples/embed.kest 3 >"$scratch"/hostile/said \
+        2>&1 </dev/null; then
+    complain "hostile: a file with doors was refused: \
+$(head -1 "$scratch"/hostile/said)"
+else
+    wrongly=$(python3 -c '
+import json
+import re
+import sys
+
+held = json.load(open(sys.argv[1]))
+words = open(sys.argv[2]).read()
+count = re.match(r"hostile: ([0-9]+) call", open(sys.argv[3]).read())
+wrong = []
+if held.get("schema") != 4 or held.get("errors") != 0:
+    wrong.append("its object does not start with `schema` and `errors`")
+if held.get("text") != words:
+    wrong.append("its `text` is not the file the words form writes")
+if count is None or held.get("calls") != int(count.group(1)):
+    wrong.append("its `calls` is not the count the words form says")
+if held.get("seed") != 3:
+    wrong.append("its `seed` is not the one asked for")
+print("; ".join(wrong))
+' "$scratch"/hostile/said "$scratch"/hostile/words "$scratch"/hostile/count)
+    if [ -n "$wrongly" ]; then
+        complain "hostile: --json says something else: $wrongly"
+    fi
+fi
+if $kest debug --json examples/embed.kest >"$scratch"/hostile/debug \
+        2>&1 </dev/null ||
+   ! python3 -c '
+import json
+import sys
+
+held = json.load(open(sys.argv[1]))
+sys.exit(0 if held["schema"] == 4 and
+         held["diagnostics"][0]["code"] == "K0649" else 1)
+' "$scratch"/hostile/debug 2>/dev/null; then
+    complain "debug: --json was not refused as one object"
+    sed 's/^/    /' "$scratch"/hostile/debug | head -3
+fi
+rm -rf "$scratch"/hostile
 
 # One file, asked everything. What it says is what is wrong with it, so a
 # file that is right says nothing at all -- which is what lets these run at
