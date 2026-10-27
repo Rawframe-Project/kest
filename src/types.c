@@ -3009,6 +3009,16 @@ KestType *kest_resolve_type_ref(KestProgram *program,
     return error_type(program);
 }
 
+// What a name comes back as when there was no room to write it, told apart
+// from every name a type can have by where it is rather than by what it says:
+// a listing that wrote it as it stands said `?` where a type was, and came
+// back as though it had written the program.
+static const char UNNAMED[] = "?";
+
+bool kest_type_named(const char *name) {
+    return name != UNNAMED;
+}
+
 const char *kest_type_name(KestArena *arena, const KestType *type) {
     if (type == NULL) {
         return "?";
@@ -3035,22 +3045,33 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
             type->result == NULL || type->result->tag == KEST_T_VOID
                 ? NULL
                 : kest_type_name(arena, type->result);
+        if (result == UNNAMED) {
+            return UNNAMED;
+        }
         size_t room = strlen("block()") + strlen(" no.alloc") +
                       strlen(" no.host") + strlen(" deterministic") + 1;
         for (uint32_t i = 0; i < type->param_count; i++) {
-            room += strlen(kest_type_name(arena, type->params[i])) + 2;
+            const char *one = kest_type_name(arena, type->params[i]);
+            if (one == UNNAMED) {
+                return UNNAMED;
+            }
+            room += strlen(one) + 2;
         }
         room += result == NULL ? 0 : strlen(result) + 4;
         char *written = kest_arena_alloc(arena, room, 1);
         if (written == NULL) {
-            return "?";
+            return UNNAMED;
         }
 
         size_t used =
             kest_put(written, room, 0, type->block ? "block(" : "fn(");
         for (uint32_t i = 0; i < type->param_count; i++) {
+            const char *one = kest_type_name(arena, type->params[i]);
+            if (one == UNNAMED) {
+                return UNNAMED;
+            }
             used = kest_put(written, room, used, "%s%s", i == 0 ? "" : ", ",
-                            kest_type_name(arena, type->params[i]));
+                            one);
         }
         used = kest_put(written, room, used, ")");
         if (result != NULL) {
@@ -3078,11 +3099,14 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
     }
 
     const char *inner = kest_type_name(arena, type->element);
+    if (inner == UNNAMED) {
+        return UNNAMED;
+    }
     // What is written round it, with room for a count written out in full.
     size_t room = strlen(inner) + 32;
     char *buffer = kest_arena_alloc(arena, room, 1);
     if (buffer == NULL) {
-        return "?";
+        return UNNAMED;
     }
     switch (type->tag) {
     case KEST_T_ARRAY:
@@ -3168,7 +3192,7 @@ const char *kest_retired(KestProgram *program, const char *alias,
 
 const char *kest_type_name_read(KestArena *arena, const KestType *type) {
     const char *name = kest_type_name(arena, type);
-    if (strlen(name) <= NAMED_AS_FAR_AS) {
+    if (name == UNNAMED || strlen(name) <= NAMED_AS_FAR_AS) {
         return name;
     }
     size_t cut = NAMED_AS_FAR_AS;
@@ -3177,7 +3201,7 @@ const char *kest_type_name_read(KestArena *arena, const KestType *type) {
     }
     char *shorter = kest_arena_alloc(arena, cut + 4, 1);
     if (shorter == NULL) {
-        return "?";
+        return UNNAMED;
     }
     memcpy(shorter, name, cut);
     memcpy(shorter + cut, "...", 4);
@@ -5333,6 +5357,18 @@ static Held *held_of(Held *held, uint32_t *count, const char *name) {
     return one;
 }
 
+// A type's name for a listing, and whether there was room to write it. A
+// listing is what a program holds, so one with a name it could not write is
+// not that program's, and is not handed on as though it were.
+static const char *listed_name(bool *whole, KestArena *arena,
+                               const KestType *type) {
+    const char *name = kest_type_name(arena, type);
+    if (name == UNNAMED) {
+        *whole = false;
+    }
+    return name;
+}
+
 bool kest_program_dump(const KestProgram *program, KestArena *arena,
                        const char *root, FILE *out) {
     // Which modules this program holds, so a name can be split where its
@@ -5342,9 +5378,8 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
     const Modules *were_modules = dumping_modules;
     dumping_files = program->files;
     Modules modules;
-    dumping_modules = modules_prepare(arena, program->files, &modules)
-                          ? &modules
-                          : NULL;
+    bool whole = modules_prepare(arena, program->files, &modules);
+    dumping_modules = whole ? &modules : NULL;
     size_t root_length = root == NULL ? 0 : strlen(root);
     uint32_t elsewhere = 0;
     uint32_t said = 0;
@@ -5400,7 +5435,7 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
                     fprintf(out, " slot +%u byte +%u %s",
                             type->cases[c].offsets[p],
                             type->cases[c].byte_offsets[p],
-                            kest_type_name(arena, type->cases[c].payload[p]));
+                            listed_name(&whole, arena, type->cases[c].payload[p]));
                 }
                 fputc('\n', out);
             }
@@ -5418,7 +5453,7 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
             fprintf(out, "  slot +%u  byte +%-3u %s: %s\n",
                     type->members[m].offset, type->members[m].byte_offset,
                     type->members[m].name,
-                    kest_type_name(arena, type->members[m].type));
+                    listed_name(&whole, arena, type->members[m].type));
         }
     }
 
@@ -5440,7 +5475,7 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
         if (type->tag != KEST_T_FN) {
             said++;
             fprintf(out, "const %s: %s\n", symbol->name,
-                    kest_type_name(arena, type));
+                    listed_name(&whole, arena, type));
             continue;
         }
         // Written the way the file writes it, so that what a host has to
@@ -5476,13 +5511,13 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
         fputs("(", out);
         for (uint32_t p = 0; p < type->param_count; p++) {
             fprintf(out, "%s%s", p > 0 ? ", " : "",
-                    kest_type_name(arena, type->params[p]));
+                    listed_name(&whole, arena, type->params[p]));
         }
         // Written the way the file writes it: a function that gives nothing
         // back has no arrow, so this has none either.
         bool gives = type->result != NULL && type->result->tag != KEST_T_VOID;
         fprintf(out, ")%s%s%s%s%s\n", gives ? " -> " : "",
-                gives ? kest_type_name(arena, type->result) : "",
+                gives ? listed_name(&whole, arena, type->result) : "",
                 type->no_alloc ? " no.alloc" : "",
                 type->no_host ? " no.host" : "",
                 type->deterministic ? " deterministic" : "");
@@ -5518,7 +5553,7 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
     }
     dumping_files = was_dumping;
     dumping_modules = were_modules;
-    return true;
+    return whole;
 }
 
 
@@ -5550,7 +5585,7 @@ static bool a_name_byte(char byte) {
 // so a fingerprint that tells the two apart is one that moves when nothing a
 // caller can act on has.
 static const char *where_it_stands(KestArena *arena, const char *written,
-                                   const KestType *of) {
+                                   const KestType *of, bool *whole) {
     if (of->type_param_count == 0 || of->type_param_names == NULL) {
         return written;
     }
@@ -5560,6 +5595,7 @@ static const char *where_it_stands(KestArena *arena, const char *written,
     size_t room = strlen(written) * 3 + 8;
     char *out = KEST_ARENA_ARRAY(arena, char, room);
     if (out == NULL) {
+        *whole = false;
         return written;
     }
     size_t at = 0;
@@ -5681,13 +5717,12 @@ static void write_module(const KestProgram *program, const char *name,
     kest_json_text(held, out);
 }
 
-void kest_program_dump_json(const KestProgram *program, KestArena *arena,
+bool kest_program_dump_json(const KestProgram *program, KestArena *arena,
                             FILE *out) {
     const Modules *were_modules = dumping_modules;
     Modules modules;
-    dumping_modules = modules_prepare(arena, program->files, &modules)
-                          ? &modules
-                          : NULL;
+    bool whole = modules_prepare(arena, program->files, &modules);
+    dumping_modules = whole ? &modules : NULL;
     fputs("\"types\":[", out);
     bool first = true;
     for (uint32_t i = 0; i < program->type_count; i++) {
@@ -5747,7 +5782,7 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
                     fputs(p == 0 ? "" : ",", out);
                     fputs("{\"type\":", out);
                     kest_json_text(
-                        kest_type_name(arena, type->cases[c].payload[p]), out);
+                        listed_name(&whole, arena, type->cases[c].payload[p]), out);
                     fprintf(out, ",\"slot\":%u,\"byte\":%u}",
                             type->cases[c].offsets[p],
                             type->cases[c].byte_offsets[p]);
@@ -5763,7 +5798,7 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
             fputs("{\"name\":", out);
             kest_json_text(type->members[m].name, out);
             fputs(",\"type\":", out);
-            kest_json_text(kest_type_name(arena, type->members[m].type), out);
+            kest_json_text(listed_name(&whole, arena, type->members[m].type), out);
             fprintf(out, ",\"slot\":%u,\"byte\":%u,\"own\":%s}",
                     type->members[m].offset, type->members[m].byte_offset,
                     type->members[m].own ? "true" : "false");
@@ -5809,14 +5844,14 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         fputs("],\"parameters\":[", out);
         for (uint32_t p = 0; p < symbol->type->param_count; p++) {
             fputs(p == 0 ? "" : ",", out);
-            kest_json_text(kest_type_name(arena, symbol->type->params[p]), out);
+            kest_json_text(listed_name(&whole, arena, symbol->type->params[p]), out);
         }
         // What it gives back, under a name of its own: `result` is what a
         // call answered and is null when there is none, and this is the type
         // a function gives back, which is `nothing` when it gives nothing.
         // One name for one thing, and these were two things.
         fputs("],\"gives\":", out);
-        kest_json_text(kest_type_name(arena, symbol->type->result), out);
+        kest_json_text(listed_name(&whole, arena, symbol->type->result), out);
         fprintf(out, ",\"noAlloc\":%s,\"noHost\":%s,"
                      "\"deterministic\":%s,\"foreign\":%s,"
                      "\"named\":%s",
@@ -5877,13 +5912,14 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         stands_for = kest_mark_bytes(stands_for, "(", 1);
         for (uint32_t p = 0; p < symbol->type->param_count; p++) {
             const char *one = where_it_stands(
-                arena, kest_type_name(arena, symbol->type->params[p]),
-                symbol->type);
+                arena, listed_name(&whole, arena, symbol->type->params[p]),
+                symbol->type, &whole);
             stands_for = kest_mark_bytes(stands_for, one, strlen(one));
             stands_for = kest_mark_bytes(stands_for, ",", 1);
         }
         const char *gives = where_it_stands(
-            arena, kest_type_name(arena, symbol->type->result), symbol->type);
+            arena, listed_name(&whole, arena, symbol->type->result),
+            symbol->type, &whole);
         stands_for = kest_mark_bytes(stands_for, ")->", 3);
         stands_for = kest_mark_bytes(stands_for, gives, strlen(gives));
         char promised[4] = {symbol->type->no_alloc ? 'a' : '-',
@@ -5910,7 +5946,7 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         kest_json_text(symbol->name, out);
         write_module(program, symbol->name, out);
         fputs(",\"type\":", out);
-        kest_json_text(kest_type_name(arena, symbol->type), out);
+        kest_json_text(listed_name(&whole, arena, symbol->type), out);
         fprintf(out, ",\"named\":%s", symbol->named ? "true" : "false");
         write_where(symbol->source, symbol->span, out);
         fputc('}', out);
@@ -5926,4 +5962,5 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
     fprintf(out, ",\"typesMade\":%u,\"typeBytes\":%zu", program->types_made,
             sizeof(KestType));
     dumping_modules = were_modules;
+    return whole;
 }

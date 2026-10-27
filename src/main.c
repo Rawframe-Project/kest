@@ -104,18 +104,92 @@ static const char *const TICK_CALLS[] = {TICK_BULK, TICK_SINGLE, NULL};
 static const char *const EVERY_CALL[] = {KEST_MAIN, TICK_BULK, TICK_SINGLE,
                                          NULL};
 
-// The listing, which works out as it goes what the program needs -- and asks
-// the build's memory for the room to. A listing that ran out of it partway is
-// one that left lines out, so it is said the way a build that ran out is
-// said, rather than handed over short with nothing wrong.
-static void listed(KestBuild *build, bool json) {
-    bool refused_before = kest_arena_refused_by_ceiling(build->arena);
-    if (json) {
-        kest_module_disassemble_json(&build->module, EVERY_CALL, stdout);
-    } else {
-        kest_module_disassemble(&build->module, EVERY_CALL, stdout);
+// What a program holds, and what it was compiled to, each for a person or for
+// a tool. Each answers whether there was room to work all of it out.
+typedef enum {
+    LISTING_PROGRAM,
+    LISTING_PROGRAM_JSON,
+    LISTING_MODULE,
+    LISTING_MODULE_JSON,
+} Listing;
+
+static bool list(KestBuild *build, Listing listing, FILE *into) {
+    switch (listing) {
+    case LISTING_PROGRAM:
+        return kest_program_dump(build->program, build->arena,
+                                 build->units.items[0].module, into);
+    case LISTING_PROGRAM_JSON:
+        return kest_program_dump_json(build->program, build->arena, into);
+    case LISTING_MODULE:
+        return kest_module_disassemble(&build->module, EVERY_CALL, into);
+    case LISTING_MODULE_JSON:
+        return kest_module_disassemble_json(&build->module, EVERY_CALL, into);
     }
+    return false;
+}
+
+// A listing works out as it goes what it says, and asks the build's memory for
+// the room to. One with a part it had no room for is not the program's, and
+// one written straight out has said it before anybody knows: `check` wrote `?`
+// where a type was and `emit` left out what a machine takes, and both came back
+// nought. So it is written aside, and whether it was whole is known before a
+// word of it is handed on; a ceiling that refused it partway is no room either.
+// Where there is nowhere aside to write, which is WebAssembly's system
+// interface, it is written to `out` when there is one and only what it answered
+// is kept, and NULL comes back.
+static FILE *listed_aside(KestBuild *build, Listing listing, FILE *out,
+                          bool *whole) {
+    *whole = true;
+    FILE *aside = kest_scratch_file();
+    if (aside == NULL && out == NULL) {
+        return NULL;
+    }
+    bool refused_before = kest_arena_refused_by_ceiling(build->arena);
+    *whole = list(build, listing, aside == NULL ? out : aside);
     if (!refused_before && kest_arena_refused_by_ceiling(build->arena)) {
+        *whole = false;
+    }
+    return aside;
+}
+
+static void handed_on(FILE *aside, FILE *out) {
+    rewind(aside);
+    char moving[4096];
+    size_t got = 0;
+    while ((got = fread(moving, 1, sizeof moving, aside)) > 0) {
+        fwrite(moving, 1, got, out);
+    }
+}
+
+// A listing written aside for a tool, put where it goes in the object: what
+// was written aside when it was whole, its fields as null when it was not, and
+// the listing itself where nothing could be written aside.
+static void listing_handed_on(KestBuild *build, Listing listing, FILE *aside,
+                              bool whole, const char *missing) {
+    if (aside == NULL) {
+        (void)list(build, listing, stdout);
+        return;
+    }
+    if (whole) {
+        handed_on(aside, stdout);
+    } else {
+        fputs(missing, stdout);
+    }
+    fclose(aside);
+}
+
+// A listing for a person: handed on whole or not at all, and a run that ran
+// out said where every other one is said.
+static void listed(KestBuild *build, Listing listing) {
+    bool whole = true;
+    FILE *aside = listed_aside(build, listing, stdout, &whole);
+    if (aside != NULL) {
+        if (whole) {
+            handed_on(aside, stdout);
+        }
+        fclose(aside);
+    }
+    if (!whole) {
         kest_diags_starve(&build->diags);
     }
 }
@@ -2757,10 +2831,7 @@ static int run(const char *command, const char *executable, char **paths,
                 // having compiled anything. A listing it had no room to work
                 // out is not written half-way and is not written wrongly: it
                 // is a run that ran out, said where every other one is said.
-                if (!kest_program_dump(build->program, build->arena,
-                                       build->units.items[0].module, stdout)) {
-                    kest_diags_starve(&build->diags);
-                }
+                listed(build, LISTING_PROGRAM);
             }
         } else if (emitting) {
             bool emitted = kest_build_emit(build);
@@ -2784,7 +2855,7 @@ static int run(const char *command, const char *executable, char **paths,
                 if (written != NULL) {
                     fputs(written, stdout);
                 } else if (!writing_c) {
-                    listed(build, false);
+                    listed(build, LISTING_MODULE);
                 }
             }
             // In JSON it goes inside the object below, because a stream that
@@ -3183,23 +3254,52 @@ static int run(const char *command, const char *executable, char **paths,
 
     kest_diags_sort(&build->diags);
     if (json) {
+        // What reading and checking this program cost the compiler, which is
+        // the one number about itself this project has never printed: a goal
+        // written down as *cost is visible and provable* had nothing to say
+        // about the compiler's own. Read before anything else is, because
+        // writing what follows allocates too and a number that counted the
+        // writing would grow with how much a tool asked to be told.
+        size_t cost = kest_build_cost(build);
+        size_t held = kest_build_held(build);
+        size_t working = kest_arena_most_beneath(build->arena);
+        size_t askings = kest_arena_askings(build->arena);
+        unsigned long long worked = (unsigned long long)kest_build_work(build);
+        // What the program holds, or what it was compiled to, written aside
+        // before the object starts: whether there was room for all of it
+        // decides what the diagnostics at the front of it say. Where it had
+        // not, its fields are there and null, because a reader is told every
+        // field is.
+        bool listing_asked = false;
+        Listing json_listing = LISTING_PROGRAM_JSON;
+        const char *listing_missing = NULL;
+        if (checking && build->program != NULL) {
+            listing_asked = true;
+            listing_missing = "\"types\":null,\"functions\":null,"
+                              "\"constants\":null,\"typesMade\":null,"
+                              "\"typeBytes\":null";
+        } else if (emitting && !building && build->compiled) {
+            listing_asked = true;
+            json_listing = LISTING_MODULE_JSON;
+            listing_missing = "\"layouts\":null,\"hosts\":null,"
+                              "\"needs\":null,\"functions\":null";
+        }
+        FILE *listing = NULL;
+        bool listing_whole = true;
+        if (listing_asked) {
+            listing = listed_aside(build, json_listing, NULL, &listing_whole);
+            if (!listing_whole) {
+                kest_diags_starve(&build->diags);
+            }
+        }
         // One object, with whatever the command has to add beside what it
         // found wrong.
         fputc('{', stdout);
         kest_diags_write_json(&build->diags, stdout);
-        // What reading and checking this program cost the compiler, which is
-        // the one number about itself this project has never printed: a goal
-        // written down as *cost is visible and provable* had nothing to say
-        // about the compiler's own. Read here rather than at the end, because
-        // writing what follows allocates too and a number that counted the
-        // writing would grow with how much a tool asked to be told.
         fprintf(stdout,
                 ",\"cost\":%zu,\"held\":%zu,\"working\":%zu,\"askings\":%zu"
                 ",\"work\":%llu",
-                kest_build_cost(build), kest_build_held(build),
-                kest_arena_most_beneath(build->arena),
-                kest_arena_askings(build->arena),
-                (unsigned long long)kest_build_work(build));
+                cost, held, working, askings, worked);
         // And what of that cost was working values out where they are written,
         // which is a thing every stage after reading does some of: the checker
         // asks about numbers a program wrote down, so that a count below
@@ -3304,7 +3404,8 @@ static int run(const char *command, const char *executable, char **paths,
         }
         if (checking && build->program != NULL) {
             fputc(',', stdout);
-            kest_program_dump_json(build->program, build->arena, stdout);
+            listing_handed_on(build, json_listing, listing, listing_whole,
+                              listing_missing);
         }
         if (emitting && !building && build->compiled) {
             // And what the machine will run, as one number. Said where the
@@ -3313,7 +3414,8 @@ static int run(const char *command, const char *executable, char **paths,
             fprintf(stdout, ",\"codeMark\":\"%016llx\"",
                     (unsigned long long)kest_build_code_mark(build));
             fputc(',', stdout);
-            listed(build, true);
+            listing_handed_on(build, json_listing, listing, listing_whole,
+                              listing_missing);
             // And the same bodies as C, for a tool that asked for them. It is
             // a string rather than a stream of its own for the reason
             // everything else here is one: what a command says is one object.
