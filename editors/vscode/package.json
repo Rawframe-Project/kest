@@ -2,7 +2,7 @@
   "name": "kest",
   "displayName": "Kest",
   "description": "Kest language support: syntax, diagnostics, go to definition, references, rename, hover, completion, the one form and a debugger. Everything semantic comes from `kest lsp` and `kest dap`, which are the compiler itself.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "rawframe",
   "license": "MIT",
   "repository": {
