@@ -2,15 +2,14 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
-## [0.0.2](https://github.com/Rawframe-Project/kest/compare/v0.0.1...v0.0.2) (2026-10-27)
-
+## 0.0.2 (2026-10-27)
 
 ### Fixed
 
-* **build:** start a release's compiler without a shell ([#21](https://github.com/Rawframe-Project/kest/issues/21)) ([f7fd4c5](https://github.com/Rawframe-Project/kest/commit/f7fd4c5df6a58c9d8cb911d3084e8bf73707500f)), closes [#15](https://github.com/Rawframe-Project/kest/issues/15)
-* **cli:** hold doc, hostile and debug to schema 4 under --json ([#23](https://github.com/Rawframe-Project/kest/issues/23)) ([c49bf3f](https://github.com/Rawframe-Project/kest/commit/c49bf3f61f28a22c295c60256faaca33030723bd)), closes [#20](https://github.com/Rawframe-Project/kest/issues/20)
-* **cli:** refuse fmt, lex and parse cleanly when memory runs out ([#27](https://github.com/Rawframe-Project/kest/issues/27)) ([c734add](https://github.com/Rawframe-Project/kest/commit/c734add3ef5cc54d013d4528412b7b7d5b862680)), closes [#26](https://github.com/Rawframe-Project/kest/issues/26)
-* **cli:** write doc's page whole or not at all ([#25](https://github.com/Rawframe-Project/kest/issues/25)) ([b1839dc](https://github.com/Rawframe-Project/kest/commit/b1839dcdfb29fb1aa4aa68dcde59bfbe84aaf0d4)), closes [#24](https://github.com/Rawframe-Project/kest/issues/24)
+- `kest build --release` starts the C compiler directly with an argument list instead of through `sh` or `cmd.exe`, so no path has to be quoted for a shell and a path holding a newline works. `CC` is split into words at spaces and tabs, the first naming the compiler and the rest passed as flags before kest's own; a run in double quotes stays one word, so a compiler under `C:/Program Files` can be named. A compiler that refuses and a compiler that is not there both still give `K0663`. ([#21](https://github.com/Rawframe-Project/kest/pull/21))
+- Under `--json`, `doc` now writes a schema 4 object with `schema`, `diagnostics` and `errors`; `hostile` writes one object with `file`, `seed`, `calls`, `unmakeable` and the written file as `text` instead of ignoring the option; and `debug --json` is refused with `K0649`, pointing at `dap`. The command-line docs name the commands that report `cost` and `work`. ([#23](https://github.com/Rawframe-Project/kest/pull/23))
+- `doc` writes its page whole or not at all: running out of memory partway through no longer leaves half an object before the refusal, and `doc` honours `--room`. Output with enough room is unchanged. ([#25](https://github.com/Rawframe-Project/kest/pull/25))
+- `fmt`, `lex` and `parse` are refused cleanly when a file's arena cannot be made, instead of crashing, and `fmt` running out of memory now says `K0639` in text and in `--json` rather than reporting a fault in the formatter or nothing at all. ([#27](https://github.com/Rawframe-Project/kest/pull/27))
 
 ## 0.0.1 (2026-10-27)
 
