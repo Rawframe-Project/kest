@@ -5586,11 +5586,7 @@ static const char *where_it_stands(KestArena *arena, const char *written,
             out[put++] = written[at++];
             continue;
         }
-        int said = snprintf(out + put, room - put, "#%u", which);
-        if (said < 0) {
-            return written;
-        }
-        put += (size_t)said;
+        put = kest_put(out, room, put, "#%u", which);
         at += length;
     }
     out[put] = '\0';

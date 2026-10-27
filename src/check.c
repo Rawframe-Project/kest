@@ -2307,9 +2307,9 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
         // have taken alone: `pick(1)` is a whole number, and calling it `i32`
         // would be this compiler answering a question nobody asked.
         char passed[256];
-        int wrote = 0;
-        for (uint32_t i = 0; i < argument_count && wrote >= 0 &&
-                             (size_t)wrote < sizeof(passed);
+        size_t wrote = 0;
+        passed[0] = '\0';
+        for (uint32_t i = 0; i < argument_count && wrote + 1 < sizeof(passed);
              i++) {
             const KestExpr *literal = literal_of(expr->call.args[i]);
             // `none` is written as `none` and has no type of its own until
@@ -2323,16 +2323,13 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
                                                       : "a number with a "
                                                         "fraction")
                     : kest_type_name(checker->program->arena, given[i]);
-            wrote += snprintf(passed + wrote, sizeof(passed) - (size_t)wrote,
-                              "%s%s", i == 0 ? "" : ", ", what);
+            wrote = kest_put(passed, sizeof(passed), wrote, "%s%s",
+                             i == 0 ? "" : ", ", what);
         }
-        if (wrote >= 0 && expr->call.arg_count > argument_count &&
-            (size_t)wrote < sizeof(passed)) {
-            wrote += snprintf(passed + wrote, sizeof(passed) - (size_t)wrote,
-                              ", and %u more",
-                              expr->call.arg_count - argument_count);
+        if (expr->call.arg_count > argument_count) {
+            kest_put(passed, sizeof(passed), wrote, ", and %u more",
+                     expr->call.arg_count - argument_count);
         }
-        passed[wrote < 0 ? 0 : wrote] = '\0';
         // And which of the two happened. A pass over the families can find
         // several where a pass over the exact types finds none -- two `pick`s
         // taking `u8` and `u16`, called with `1` -- and what a reader was told
@@ -2396,16 +2393,15 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
             }
             const KestSymbol *one = candidates[order[c]];
             char shape[256];
-            int used = 0;
-            for (uint32_t p = 0; p < one->type->param_count && used >= 0 &&
-                                 (size_t)used < sizeof(shape);
-                 p++) {
-                used += snprintf(shape + used, sizeof(shape) - (size_t)used,
-                                 "%s%s", p == 0 ? "" : ", ",
-                                 kest_type_name(checker->program->arena,
-                                                one->type->params[p]));
+            size_t used = 0;
+            shape[0] = '\0';
+            for (uint32_t p = 0;
+                 p < one->type->param_count && used + 1 < sizeof(shape); p++) {
+                used = kest_put(shape, sizeof(shape), used, "%s%s",
+                                p == 0 ? "" : ", ",
+                                kest_type_name(checker->program->arena,
+                                               one->type->params[p]));
             }
-            shape[used < 0 ? 0 : used] = '\0';
             kest_diags_note(diags, one->source, one->span,
                             "this one takes (%s)", shape);
         }

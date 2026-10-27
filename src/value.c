@@ -47,11 +47,13 @@ int kest_write_real(char *buffer, size_t size, double value, bool narrow) {
             break;
         }
     }
-    int written = snprintf(buffer, size, "%.*g", chosen, value);
+    // How long the text is as written into `buffer`, which is never more than
+    // fits in it, whatever `snprintf` says it would have needed.
+    size_t written = kest_put(buffer, size, 0, "%.*g", chosen, value);
     if (strpbrk(buffer, ".eni") == NULL) {
-        written += snprintf(buffer + written, size - (size_t)written, ".0");
+        written = kest_put(buffer, size, written, ".0");
     }
-    return written;
+    return (int)written;
 }
 
 int kest_write_whole(char *buffer, uint64_t bits, bool is_signed) {

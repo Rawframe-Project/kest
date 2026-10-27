@@ -6760,6 +6760,31 @@ if [ "$read_back" -ne "$swept" ]; then
 fi
 rm -rf "$carried_said"
 
+# Text written a piece at a time into a buffer too small for it ends inside the
+# buffer, with a nought on its last byte, however much more each piece asks for.
+cat > "$scratch"/appends.c <<'EOF'
+#include "diag.h"
+
+int main(void) {
+    char out[8];
+    size_t at = kest_put(out, sizeof(out), 0, "%s", "abc");
+    at = kest_put(out, sizeof(out), at, "%s", "defghijk");
+    if (at != sizeof(out) - 1 || out[at] != '\0') {
+        return 1;
+    }
+    at = kest_put(out, sizeof(out), at, "%s", "more");
+    return at == sizeof(out) - 1 && out[at] == '\0' ? 0 : 2;
+}
+EOF
+if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -Isrc \
+        -o "$scratch"/appends "$scratch"/appends.c $build_dir/libkest.a -lm \
+        2>"$scratch"/appends-why ||
+   ! "$scratch"/appends; then
+    complain "appends: text written into a buffer too small for it did not \
+end inside it"
+    sed 's/^/    /' "$scratch"/appends-why | head -4
+fi
+
 rm -f "$scratch"/cmd-err
 if [ $failed -eq 0 ]; then
     echo "every command does something on $# file(s), and $seen_said"
