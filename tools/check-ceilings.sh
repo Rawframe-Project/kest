@@ -2033,12 +2033,16 @@ aimed=0
 # spread lands one refusal or none: the proof's first one was refused there,
 # answered nothing, and the build went on as though the module had been proved.
 # `emit --c` writes C beside the bytecode from an arena the build does not
-# own, which a build stopped partway never gave back.
+# own, which a build stopped partway never gave back. `every` is `run` with
+# each of its allocations refused in turn, over a program small enough to walk
+# whole: a local whose name could not be copied was left in the compiler's
+# list without one, three allocations wide in a thousand, and a body that
+# resumes from a `wait` looked it up by name and read through it.
 for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
                 "check lib/std/text.kest" "run examples/flags.kest" \
                 "emit examples/boxes.kest" "machine examples/words.kest" \
                 "machine examples/pieces.kest" "tail examples/boxes.kest" \
-                "emit --c examples/boxes.kest"; do
+                "emit --c examples/boxes.kest" "every examples/chores.kest"; do
     how=${aimed_at%% *}
     what=${aimed_at#* }
     from_one=0
@@ -2048,15 +2052,21 @@ for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
         # shellcheck disable=SC2086
         from_one=$(allocations_of check $what)
     fi
+    last=256
     if [ "$how" = tail ]; then
         how=emit
         every=1
+    fi
+    if [ "$how" = every ]; then
+        how=run
+        every=1
+        last=0
     fi
     # shellcheck disable=SC2086
     takes=$(allocations_of "$how" $what)
     steps=40
     if [ $every -eq 1 ]; then
-        from_one=$((takes > 256 ? takes - 256 : 0))
+        from_one=$((last > 0 && takes > last ? takes - last : 0))
         steps=$((takes - from_one - 1))
     fi
     span=$((takes - from_one))

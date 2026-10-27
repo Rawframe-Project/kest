@@ -435,17 +435,20 @@ static void bind_local(Compiler *compiler, KestSpan span, uint16_t slot,
                MAX_LOCALS);
         return;
     }
-    Local *local = &compiler->locals[compiler->local_count++];
+    Local *local = &compiler->locals[compiler->local_count];
     memset(local, 0, sizeof *local);
     local->name = kest_arena_strndup(compiler->program->arena,
                                      span_text(compiler, span), span.length);
     if (local->name == NULL) {
         // A local is found by its name, so one without a name is a slot
         // nothing can reach and a pointer everything that looks for it would
-        // read.
+        // read. So a local is counted only once it has its name, here and in
+        // the two below: one counted first was left in the list nameless when
+        // the copy was refused, and the next lookup read through it.
         compiler->out_of_memory = true;
         return;
     }
+    compiler->local_count++;
     local->slot = slot;
     local->size = size;
     local->depth = compiler->depth;
@@ -461,7 +464,7 @@ static void hold_local(Compiler *compiler, KestSpan span, const KestType *type,
                MAX_LOCALS);
         return;
     }
-    Local *local = &compiler->locals[compiler->local_count++];
+    Local *local = &compiler->locals[compiler->local_count];
     memset(local, 0, sizeof *local);
     local->name = kest_arena_strndup(compiler->program->arena,
                                      span_text(compiler, span), span.length);
@@ -469,6 +472,7 @@ static void hold_local(Compiler *compiler, KestSpan span, const KestType *type,
         compiler->out_of_memory = true;
         return;
     }
+    compiler->local_count++;
     local->size = slots;
     local->depth = compiler->depth;
     local->folded = values;
@@ -503,7 +507,7 @@ static uint16_t declare_local(Compiler *compiler, KestSpan span,
     }
     // Slots are reused between scopes and between functions, so everything a
     // name holds is written here rather than left over from the last one.
-    Local *local = &compiler->locals[compiler->local_count++];
+    Local *local = &compiler->locals[compiler->local_count];
     memset(local, 0, sizeof *local);
     local->name = kest_arena_strndup(compiler->program->arena,
                                      span_text(compiler, span), span.length);
@@ -511,6 +515,7 @@ static uint16_t declare_local(Compiler *compiler, KestSpan span,
         compiler->out_of_memory = true;
         return 0;
     }
+    compiler->local_count++;
     local->slot = compiler->next_slot;
     local->type = type;
     local->size = type_slots(type);
