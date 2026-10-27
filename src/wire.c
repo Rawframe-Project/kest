@@ -12,6 +12,10 @@ typedef struct {
     // Broken by having no room rather than by what was sent, which is a
     // different thing to tell the client.
     bool starved;
+    // How many objects and lists are open around where this is, and whether
+    // one more was refused for being past the deepest.
+    uint32_t depth;
+    bool too_deep;
 } Reading;
 
 static KestJson *read_value(Reading *reading);
@@ -167,7 +171,28 @@ static KestJson *read_text(Reading *reading) {
     return one;
 }
 
+static KestJson *read_any(Reading *reading);
+
+// One level of nesting is one frame of the stack, because the members of an
+// object or a list are read by coming back here. So the levels are counted and
+// refused past the deepest, rather than left to run the stack out, which no
+// amount of memory would stop.
 static KestJson *read_value(Reading *reading) {
+    skip_space(reading);
+    bool opens = reading->at < reading->end &&
+                 (*reading->at == '{' || *reading->at == '[');
+    if (opens && reading->depth >= KEST_WIRE_DEEPEST) {
+        reading->too_deep = true;
+        reading->broke = true;
+        return NULL;
+    }
+    reading->depth += opens ? 1u : 0u;
+    KestJson *value = read_any(reading);
+    reading->depth -= opens ? 1u : 0u;
+    return value;
+}
+
+static KestJson *read_any(Reading *reading) {
     skip_space(reading);
     if (reading->at >= reading->end || reading->broke) {
         reading->broke = true;
@@ -281,11 +306,14 @@ const KestJson *kest_wire_down(const KestJson *object, const char *first,
 
 KestWireRead kest_wire_read(KestArena *arena, const char *bytes, size_t length,
                             KestJson **value) {
-    Reading reading = {bytes, bytes + length, arena, false, false};
+    Reading reading = {bytes, bytes + length, arena, false, false, 0, false};
     KestJson *message = read_value(&reading);
     *value = reading.broke ? NULL : message;
     if (reading.starved) {
         return KEST_WIRE_NO_ROOM;
+    }
+    if (reading.too_deep) {
+        return KEST_WIRE_TOO_DEEP;
     }
     return reading.broke ? KEST_WIRE_NOT_JSON : KEST_WIRE_JSON;
 }

@@ -434,6 +434,20 @@ static void answer_without_room(Server *server, const KestJson *id) {
     send(server, said, (size_t)written);
 }
 
+// A message nested past what is read is answered as one that is not JSON,
+// since nothing in it was read, with the number it went past.
+static void too_deep(Server *server) {
+    char said[192];
+    int written = snprintf(said, sizeof said,
+                           "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{"
+                           "\"code\":-32700,\"message\":\"this message nests "
+                           "more than %d deep\"}}",
+                           KEST_WIRE_DEEPEST);
+    if (written > 0 && (size_t)written < sizeof said) {
+        send(server, said, (size_t)written);
+    }
+}
+
 static void finish_answer(Server *server, KestSaid *out) {
     kest_wire_char(out, '}');
     if (!out->broke && out->bytes != NULL) {
@@ -952,13 +966,20 @@ int kest_lsp_serve(const char *library, FILE *in, FILE *out) {
         KestJson *message = NULL;
         KestWireRead read =
             kest_wire_read(server.arena, body, length, &message);
-        if (read == KEST_WIRE_JSON) {
+        switch (read) {
+        case KEST_WIRE_JSON:
             handle(&server, message);
             server.asking = NULL;
-        } else if (read == KEST_WIRE_NO_ROOM) {
+            break;
+        case KEST_WIRE_NO_ROOM:
             send(&server, NO_ROOM_TO_READ, sizeof NO_ROOM_TO_READ - 1);
-        } else {
+            break;
+        case KEST_WIRE_NOT_JSON:
             send(&server, NOT_JSON, sizeof NOT_JSON - 1);
+            break;
+        case KEST_WIRE_TOO_DEEP:
+            too_deep(&server);
+            break;
         }
         kest_arena_rewind(server.arena, before);
         free(body);

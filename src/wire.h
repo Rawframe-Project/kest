@@ -52,7 +52,14 @@ typedef enum {
     KEST_WIRE_JSON,
     KEST_WIRE_NOT_JSON,
     KEST_WIRE_NO_ROOM,
+    KEST_WIRE_TOO_DEEP,
 } KestWireRead;
+
+// How many objects and lists a message may hold one inside another. Reading
+// one level is one frame of the stack, so a message nested without end ran
+// the stack out; past this it is refused as one a server cannot read. What an
+// editor or a debug adapter sends is a handful of levels deep.
+#define KEST_WIRE_DEEPEST 64
 
 // The value a message holds, into `value`, which is NULL unless the message
 // was read. The tree is in `arena` and goes with it.

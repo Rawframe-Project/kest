@@ -2218,6 +2218,105 @@ if [ $arenas -eq 0 ]; then
     failed=1
 fi
 
+# And the deepest a message to an editor's server may nest. Reading one level
+# is one frame of the stack, so a message nested without end ran the stack out
+# and the server with it, whatever memory there was. Both servers are asked at
+# the deepest, where the request is answered as usual, one level past it, where
+# the message is refused the way one that is not JSON is and the number is
+# said, and far past it, where the same refusal has to come back rather than a
+# crash. The adapter cannot answer what it did not read, so it says so in the
+# debug console. The number is read from `wire.h` rather than written here.
+deepest=$(sed -n 's/^#define KEST_WIRE_DEEPEST \([0-9]*\)$/\1/p' src/wire.h)
+nested=$(python3 - "$build_dir"/kest-debug "${deepest:-0}" <<'PY'
+import json, subprocess, sys
+
+command, deepest = sys.argv[1], int(sys.argv[2])
+
+
+def framed(text):
+    body = text.encode()
+    return b"Content-Length: %d\r\n\r\n" % len(body) + body
+
+
+def heard(out):
+    said, at = [], 0
+    while True:
+        head = out.find(b"Content-Length: ", at)
+        blank = out.find(b"\r\n\r\n", head)
+        if head < 0 or blank < 0:
+            return said
+        many = int(out[head + 16:blank])
+        said.append(json.loads(out[blank + 4:blank + 4 + many]))
+        at = blank + 4 + many
+
+
+def lists(levels):
+    return "[" * levels + "]" * levels
+
+
+def lsp(levels):
+    # The message is an object and its `params` another, so the lists inside
+    # bring it to `levels` in all.
+    asked = ('{"jsonrpc":"2.0","id":1,"method":"workspace/symbol",'
+             '"params":{"query":"","deep":%s}}' % lists(levels - 2))
+    shut = '{"jsonrpc":"2.0","id":2,"method":"shutdown"}'
+    ran = subprocess.run([command, "lsp"], capture_output=True, timeout=120,
+                         input=framed(asked) + framed(shut))
+    return ran, heard(ran.stdout)
+
+
+def dap(levels):
+    asked = ('{"seq":1,"type":"request","command":"threads",'
+             '"arguments":{"deep":%s}}' % lists(levels - 2))
+    shut = '{"seq":2,"type":"request","command":"disconnect","arguments":{}}'
+    ran = subprocess.run([command, "dap"], capture_output=True, timeout=120,
+                         input=framed(asked) + framed(shut))
+    return ran, heard(ran.stdout)
+
+
+wrong = []
+if deepest < 3:
+    wrong.append("wire.h names no deepest")
+for levels, read in ((deepest, True), (deepest + 1, False), (200000, False)):
+    ran, said = lsp(levels)
+    if ran.returncode != 0 or b"Sanitizer" in ran.stderr:
+        wrong.append("lsp came back %d at %d deep" % (ran.returncode, levels))
+        continue
+    first = said[0] if said else {}
+    if read and (first.get("id") != 1 or "result" not in first):
+        wrong.append("lsp did not answer a message %d deep" % levels)
+    if not read and (first.get("id", 0) is not None or
+                     first.get("error", {}).get("code") != -32700 or
+                     str(deepest) not in first["error"].get("message", "")):
+        wrong.append("lsp did not refuse a message %d deep saying %d" %
+                     (levels, deepest))
+    if not any(one.get("id") == 2 for one in said):
+        wrong.append("lsp stopped answering after a message %d deep" % levels)
+    ran, said = dap(levels)
+    if ran.returncode != 0 or b"Sanitizer" in ran.stderr:
+        wrong.append("dap came back %d at %d deep" % (ran.returncode, levels))
+        continue
+    answered = [one.get("request_seq") for one in said
+                if one.get("type") == "response"]
+    told = [one["body"]["output"] for one in said
+            if one.get("event") == "output" and
+            one.get("body", {}).get("category") == "important"]
+    if read and 1 not in answered:
+        wrong.append("dap did not answer a message %d deep" % levels)
+    if not read and (1 in answered or
+                     not any(str(deepest) in one for one in told)):
+        wrong.append("dap did not say it left a message %d deep unread, "
+                     "saying %d" % (levels, deepest))
+    if 2 not in answered:
+        wrong.append("dap stopped answering after a message %d deep" % levels)
+print("; ".join(wrong) if wrong else "yes")
+PY
+)
+if [ "$nested" != "yes" ]; then
+    echo "ceilings: the deepest a message to lsp or dap nests: $nested"
+    failed=1
+fi
+
 if [ $failed -eq 0 ]; then
     # What the ladder walked, said so that another machine reads the same
     # sentence with its own numbers: from where this program first runs down to
