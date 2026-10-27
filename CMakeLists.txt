@@ -335,6 +335,10 @@ if(KEST_RAYLIB)
   add_executable(colony examples/colony/host/colony.c ${PROJECT_BINARY_DIR}/build/colony/native.c)
   set_source_files_properties(${PROJECT_BINARY_DIR}/build/colony/native.c PROPERTIES
     COMPILE_DEFINITIONS KEST_NO_MAIN)
+  # The host is held to the hosts' warnings, as Tetris's is; the rules beside it
+  # are what the C backend wrote, not a file anybody edits.
+  set_source_files_properties(examples/colony/host/colony.c PROPERTIES
+    COMPILE_OPTIONS "${kest_host_warn}")
   target_include_directories(colony PRIVATE ${KEST_RAYLIB})
   target_compile_options(colony PRIVATE ${kest_optimize})
   target_link_libraries(colony PRIVATE libkest ${kest_raylib_libs})

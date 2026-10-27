@@ -49,7 +49,7 @@ Each check prints one summary line when it passes; anything else is a failure wi
 | `build` | one cell per CMake preset through the organization's `cpp.yml`, warnings as errors, each running its test preset: `linux-gcc` every test but the C backend, the doors, fuzzing and WebAssembly, with ThreadSanitizer; `linux-clang` the fast tests, the C backend, the doors, fuzzing and WebAssembly; `linux-arm64` the fast tests, the regression programs and the C backend, where every processor fuses a multiply and an add; `macos-clang` the fast tests; `windows-msvc` the conformance trace |
 | `build-main` | on `main` and at night only: the seeded fuzzer under the checking build on arm64 (`linux-arm64-fuzz`), which takes ten minutes on that runner |
 | `package` | the release archive from the `release` preset on Linux, macOS and Windows, unpacked elsewhere, run, and a host built against it |
-| `games`, `tetris-windows` | the raylib hosts built and played under Xvfb, and the colony run both ways; the Windows zip built |
+| `games`, `tetris-windows` | the raylib hosts built with warnings as errors and played under Xvfb, the colony run both ways, and a warning planted in each host refused; the Windows zip built |
 | `required` | passes when every job above passed or was skipped by `changes`; the ruleset requires this and the pull request title check |
 
 Every workflow sets `permissions: {}` and grants each job what it needs, runs its steps in bash unless a step names another shell (`scorecard.yml` sets no default shell, which Scorecard's publishing rejects), checks out without keeping credentials, and pins every action by commit SHA; Dependabot moves the pins weekly.

@@ -265,6 +265,20 @@ jobs:
                 out/dev/examples/colony/colony --frames 600 --native "$native" | tee said
             grep -q "^600 frames: people" said
           done
+      # Last, because it leaves the hosts unbuilt: a warning planted in each
+      # has to stop its build, so a host that warns cannot pass.
+      - name: A warning in a host fails its build
+        run: |
+          for host in tetris:examples/tetris/host.c colony:examples/colony/host/colony.c; do
+            target=${host%%:*} source=${host#*:}
+            printf '\nstatic int planted(void) { int unused; return 0; }\n' >>"$source"
+            if cmake --build --preset dev --target "$target" >built 2>&1; then
+              echo "a warning in $source did not stop the $target build" >&2
+              exit 1
+            fi
+            grep -q "unused" built
+            git checkout -- "$source"
+          done
 
   # And the same game as something a Windows player unzips and runs: raylib's
   # own build for MSVC, the library and the host compiled with the runtime
