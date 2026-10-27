@@ -2101,10 +2101,12 @@ fi
 # and a build whose trees had nowhere to go read nothing, said nothing, and ran
 # as though it had run the program. Walked until one is refused that changes
 # nothing, and then past it, because an arena refused and quietly done without
-# is the thing this is looking for and looks the same as the end.
+# is the thing this is looking for and looks the same as the end. `fmt` and
+# `doc` take an arena of their own outside any build, so they are walked too.
 arenas=0
 for aimed_at in "run examples/vectors.kest" "emit examples/boxes.kest" \
-                "check lib/std/text.kest" "run examples/queue.kest"; do
+                "check lib/std/text.kest" "run examples/queue.kest" \
+                "fmt examples/boxes.kest" "doc examples/inventory.kest"; do
     how=${aimed_at%% *}
     what=${aimed_at#* }
     whole=$($build_dir/kest-debug "$how" "$what" 2>&1 </dev/null)
