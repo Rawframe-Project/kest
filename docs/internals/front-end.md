@@ -36,7 +36,7 @@ Lists are read into a fixed buffer of 16 on the C stack and copied into the aren
 
 ## Projects
 
-[`src/project.c`](../../src/project.c) reads `kest.project`: lines of `name value`, `#` comments, nothing else. An unknown name is refused, because a misspelt line reads exactly like a missing one. `kest_project_from` reads a manifest handed over as text, which is how a release binary is a project with no files around it.
+[`src/project.c`](../../src/project.c) reads `kest.project`: lines of `name value`, `#` comments, nothing else. An unknown name is refused, because a misspelt line reads exactly like a missing one. `kest_project_from` reads a manifest handed over as text, which is how a release binary is a project with no files around it. A manifest is read once and left as it was read: each value is copied out of it, and the text itself is what a release carries.
 
 ## Loader
 

@@ -43,6 +43,8 @@ typedef struct {
     const char *tests;
     // Where it was read from, so a message about it says where.
     const char *path;
+    // What it says, as it was read, for whatever carries a project with it.
+    const char *text;
 } KestProject;
 
 // Reads a manifest. `where` is a directory or a file; a directory is looked in

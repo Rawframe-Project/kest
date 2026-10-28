@@ -484,27 +484,19 @@ static void roots_above(KestArena *arena, KestUnits *units,
             kest_project_path(at, manifest, sizeof(manifest));
             const KestFile *file =
                 handed_file(arena, units, tidied(arena, manifest));
-            const char *text =
-                file == NULL || file->text == NULL
-                    ? NULL
-                    : kest_arena_strndup(arena, file->text, file->length);
-            project = text == NULL ? NULL
-                                   : kest_project_from(arena, at, text, &why);
+            project = file == NULL || file->text == NULL
+                          ? NULL
+                          : kest_project_from(arena, at, file->text, &why);
         } else {
             project = kest_project_read(arena, at, &why);
         }
         if (project != NULL) {
             // Kept, as what it said, for whoever carries what a program was
-            // read from.
+            // read from: the text the project was read from, rather than the
+            // file read off the disk a second time.
             if (units != NULL) {
-                size_t length = 0;
-                bool starved = false;
-                char *text = read_file(arena, units, project->path, &length,
-                                       &starved);
-                if (text != NULL) {
-                    units->manifest_path = project->path;
-                    units->manifest_text = text;
-                }
+                units->manifest_path = project->path;
+                units->manifest_text = project->text;
             }
             for (uint32_t i = 0; i < project->source_count; i++) {
                 roots->sources[roots->count++] = project->sources[i];
