@@ -831,8 +831,13 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
 }
 
 void kest_json_text(const char *text, FILE *out) {
+    kest_json_bytes(text, strlen(text), out);
+}
+
+void kest_json_bytes(const char *text, size_t length, FILE *out) {
     fputc('"', out);
-    for (const unsigned char *p = (const unsigned char *)text; *p; p++) {
+    const unsigned char *end = (const unsigned char *)text + length;
+    for (const unsigned char *p = (const unsigned char *)text; p < end; p++) {
         switch (*p) {
         case '"':
             fputs("\\\"", out);

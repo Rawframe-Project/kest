@@ -385,29 +385,42 @@ static int refused_at_the_words(bool json, const char *code,
     return 1;
 }
 
+// Every comment in a file, found before anything about the file is said.
+// A comment is not a token, and a list of them with no room for it was a
+// listing with every comment left out and nothing saying so; found first, no
+// room is said where every other refusal is, and a listing is whole.
+typedef struct {
+    KestSpan *spans;
+    uint32_t count;
+} Comments;
+
+static bool comments_found(KestArena *arena, const KestSource *source,
+                           Comments *into) {
+    into->count = kest_comments(source, NULL, 0);
+    into->spans = into->count == 0
+                      ? NULL
+                      : KEST_ARENA_ARRAY(arena, KestSpan, into->count);
+    if (into->count > 0 && into->spans == NULL) {
+        return false;
+    }
+    kest_comments(source, into->spans, into->count);
+    return true;
+}
+
 // Where every comment in the file is, for whatever reads a file to show it:
 // what the tokens are is in the text form, and a comment is not a token, so
 // this is the one way to ask.
-static void dump_comments_json(KestArena *arena, const KestSource *source,
-                               FILE *out) {
-    uint32_t count = kest_comments(source, NULL, 0);
-    KestSpan *spans = count == 0 ? NULL
-                                 : KEST_ARENA_ARRAY(arena, KestSpan, count);
-    if (count > 0 && spans == NULL) {
-        return;
-    }
-    kest_comments(source, spans, count);
-
+static void dump_comments_json(const Comments *comments,
+                               const KestSource *source, FILE *out) {
     fputs(",\"comments\":[", out);
-    for (uint32_t i = 0; i < count; i++) {
+    for (uint32_t i = 0; i < comments->count; i++) {
+        KestSpan span = comments->spans[i];
         uint32_t line = 0;
         uint32_t column = 0;
-        kest_source_locate(source, spans[i].offset, &line, &column);
+        kest_source_locate(source, span.offset, &line, &column);
         fprintf(out, "%s{\"line\":%u,\"column\":%u,\"text\":", i > 0 ? "," : "",
                 line, column);
-        char *text = kest_arena_strndup(
-            arena, kest_span_text(source, spans[i]), spans[i].length);
-        kest_json_text(text == NULL ? "" : text, out);
+        kest_json_bytes(kest_span_text(source, span), span.length, out);
         fputc('}', out);
     }
     fputc(']', out);
@@ -417,9 +430,8 @@ static void dump_comments_json(KestArena *arena, const KestSource *source,
 // answer is the tokens, and until this it said everything about a file except
 // them: a reader saw the stream and anything reading the JSON saw the
 // comments and the diagnostics beside a hole where the answer was.
-static void dump_tokens_json(KestArena *arena, const KestToken *tokens,
-                             uint32_t count, const KestSource *source,
-                             FILE *out) {
+static void dump_tokens_json(const KestToken *tokens, uint32_t count,
+                             const KestSource *source, FILE *out) {
     fputs(",\"tokens\":[", out);
     for (uint32_t i = 0; i < count; i++) {
         uint32_t line = 0;
@@ -428,10 +440,8 @@ static void dump_tokens_json(KestArena *arena, const KestToken *tokens,
         fprintf(out, "%s{\"kind\":", i > 0 ? "," : "");
         kest_json_text(kest_token_name(tokens[i].kind), out);
         fprintf(out, ",\"line\":%u,\"column\":%u,\"text\":", line, column);
-        char *text = kest_arena_strndup(
-            arena, kest_span_text(source, tokens[i].span),
-            tokens[i].span.length);
-        kest_json_text(text == NULL ? "" : text, out);
+        kest_json_bytes(kest_span_text(source, tokens[i].span),
+                        tokens[i].span.length, out);
         // Whether a line ending here carries on to the next. It is the one
         // thing about a token that a tool cannot work out from the token: the
         // rule is the lexer's, and a second copy of it in whatever is reading
@@ -449,17 +459,10 @@ static void dump_tokens_json(KestArena *arena, const KestToken *tokens,
 // missing and nothing saying so. What keeps a formatter honest is that a
 // comment is read twice, by the compiler and by the check, and neither reading
 // was one a person could look at.
-static void dump_tokens(KestArena *arena, const KestToken *tokens,
-                        uint32_t count, const KestSource *source) {
-    uint32_t written = kest_comments(source, NULL, 0);
-    KestSpan *comments = written == 0
-                             ? NULL
-                             : KEST_ARENA_ARRAY(arena, KestSpan, written);
-    if (comments == NULL) {
-        written = 0;
-    } else {
-        kest_comments(source, comments, written);
-    }
+static void dump_tokens(const KestToken *tokens, uint32_t count,
+                        const Comments *found, const KestSource *source) {
+    const KestSpan *comments = found->spans;
+    uint32_t written = found->count;
     uint32_t said = 0;
     for (uint32_t i = 0; i < count; i++) {
         uint32_t line = 0;
@@ -1267,6 +1270,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
         KestSource alone = {0};
         KestToken *tokens = NULL;
         uint32_t found = 0;
+        Comments comments = {NULL, 0};
         bool loaded;
         if (what == FILE_LEX) {
             loaded = kest_read_source(arena, &diags, paths[i], &alone);
@@ -1275,8 +1279,10 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 tokens = kest_lex_all(arena, &alone, &diags, &found);
                 // Nothing but room makes the lexer answer nothing, and a file
                 // with no tokens listed and nothing said is a file that is
-                // empty, which this one is not.
-                if (tokens == NULL) {
+                // empty, which this one is not. The same for the comments,
+                // found before anything is said so that a listing is whole.
+                if (tokens == NULL ||
+                    !comments_found(arena, &alone, &comments)) {
                     kest_diags_starve(&diags);
                     loaded = false;
                 }
@@ -1301,7 +1307,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                     printf("// %s\n", paths[i]);
                 }
                 if (what == FILE_LEX) {
-                    dump_tokens(arena, tokens, found, &alone);
+                    dump_tokens(tokens, found, &comments, &alone);
                 } else {
                     if (!read) {
                         printf("// this is what parsed; %u thing%s refused\n",
@@ -1357,8 +1363,8 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                     // tokens or the sizes the array grew through.
                     fprintf(stdout, ",\"tokenBytes\":%zu,\"tokenRoom\":%u",
                             sizeof(KestToken), kest_lex_room());
-                    dump_tokens_json(arena, tokens, found, &alone, stdout);
-                    dump_comments_json(arena, &alone, stdout);
+                    dump_tokens_json(tokens, found, &alone, stdout);
+                    dump_comments_json(&comments, &alone, stdout);
                 }
                 fputs("}\n", stdout);
             } else {
@@ -1497,9 +1503,11 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                             ",\"edit\":{\"offset\":%zu,\"length\":%zu,"
                             "\"line\":%u,\"column\":%u,\"text\":",
                             head, source->length - tail - head, line, column);
-                    char *put = kest_arena_strndup(arena, text + head,
-                                                   length - tail - head);
-                    kest_json_text(put == NULL ? "" : put, stdout);
+                    // Written from where it stands rather than copied to end
+                    // it: a copy with no room was an edit that replaced the
+                    // bytes with nothing, and an editor applying it on save
+                    // deleted them.
+                    kest_json_bytes(text + head, length - tail - head, stdout);
                     fputc('}', stdout);
                 }
             }
