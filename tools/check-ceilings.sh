@@ -2201,6 +2201,65 @@ for how in fmt parse lex check run; do
     esac
 done
 
+# And a project's manifest with no room to read it, which was taken for no
+# manifest: the sources it names were never looked under, and an import from
+# one of them said it could not be read. The manifest here is bigger than the
+# ceiling and the program is not, so what is asked is that the manifest is
+# refused as the room running out.
+mkdir -p "$scratch"/project/src "$scratch"/project/vendor/shapes
+{
+    printf 'project p\nentry src/main.kest\nsource src\nsource vendor\n'
+    line=0
+    while [ $line -lt 400 ]; do
+        echo "# line $line of a manifest bigger than the room it is read in"
+        line=$((line + 1))
+    done
+} >"$scratch"/project/kest.project
+cat >"$scratch"/project/vendor/shapes/area.kest <<'EOF'
+module shapes.area
+
+fn square(side: i32) -> i32 {
+    return side * side
+}
+EOF
+cat >"$scratch"/project/src/main.kest <<'EOF'
+module main
+
+import std.io
+import shapes.area
+
+fn main() {
+    let four = area.square(2)
+    io.print("square {four}")
+}
+EOF
+manifest=$(wc -c <"$scratch"/project/kest.project)
+for how in check run; do
+    said=$(cd "$scratch"/project && $build_dir/kest-debug $how \
+               --room $((manifest * 2 / 3)) src/main.kest 2>&1 </dev/null)
+    answered=$?
+    case "$said" in
+    *K0701*)
+        echo "ceilings: \`kest $how\` with no room for its project's" \
+             "manifest said an import could not be read"
+        failed=1
+        ;;
+    *K0658*)
+        if [ $answered -ne 1 ]; then
+            echo "ceilings: \`kest $how\` with no room for its project's" \
+                 "manifest came back $answered"
+            failed=1
+        fi
+        ;;
+    *)
+        echo "ceilings: \`kest $how\` with no room for its project's" \
+             "manifest did not say it had no room"
+        printf '%s\n' "$said" | head -3 | sed 's/^/    /'
+        failed=1
+        ;;
+    esac
+done
+
 # And every arena taken, refused in turn. Taking one is asking the host for its
 # first block, which none of the refusals above is aimed at, so each stage that
 # works in an arena of its own had never been seen told no -- and two of them
