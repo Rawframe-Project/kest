@@ -3,55 +3,62 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "diag.h"
 #include "kest.h"
 
-// A line of the file, with the ends taken off. Lines are read in place: the
-// whole file is in the arena and a line is a piece of it with a nought written
-// where the end was.
-static char *next_line(char **at) {
-    if (*at == NULL || **at == '\0') {
-        return NULL;
+// A line of the file, with the ends taken off: where it starts and how long
+// it is. Read where it stands rather than cut out of the file with a nought,
+// so the file is left as it was read and is what a release carries; cut up,
+// it had to be read off the disk a second time for that.
+static bool next_line(const char **at, const char **line, size_t *length) {
+    if (**at == '\0') {
+        return false;
     }
-    char *line = *at;
-    char *end = strchr(line, '\n');
+    const char *start = *at;
+    const char *end = strchr(start, '\n');
     if (end == NULL) {
-        *at = line + strlen(line);
+        end = start + strlen(start);
+        *at = end;
     } else {
-        *end = '\0';
         *at = end + 1;
         // A file written on the other kind of machine ends its lines with two
         // characters, and the first of them is not part of the line.
-        if (end > line && end[-1] == '\r') {
-            end[-1] = '\0';
+        if (end > start && end[-1] == '\r') {
+            end--;
         }
     }
-    return line;
+    *line = start;
+    *length = (size_t)(end - start);
+    return true;
 }
 
-// The word at the front and what follows it, with the space between taken off.
-// Answers NULL for a line that says nothing.
-static const char *split_line(char *line, const char **value) {
-    while (*line == ' ' || *line == '\t') {
+// The word at the front of a line and what follows it, with the space between
+// taken off. False for a line that says nothing.
+static bool split_line(const char *line, size_t length, const char **name,
+                       size_t *name_length, const char **value,
+                       size_t *value_length) {
+    const char *end = line + length;
+    while (line < end && (*line == ' ' || *line == '\t')) {
         line++;
     }
-    if (*line == '\0' || *line == '#') {
-        return NULL;
+    if (line == end || *line == '#') {
+        return false;
     }
-    char *at = line;
-    while (*at != '\0' && *at != ' ' && *at != '\t') {
+    const char *at = line;
+    while (at < end && *at != ' ' && *at != '\t') {
         at++;
     }
-    if (*at == '\0') {
-        *value = at;
-        return line;
-    }
-    *at++ = '\0';
-    while (*at == ' ' || *at == '\t') {
+    *name = line;
+    *name_length = (size_t)(at - line);
+    while (at < end && (*at == ' ' || *at == '\t')) {
         at++;
     }
     *value = at;
-    return line;
+    *value_length = (size_t)(end - at);
+    return true;
 }
+
+static const char NO_ROOM[] = "there was no room to read the project";
 
 static char *read_whole(KestArena *arena, const char *path, bool *there) {
     *there = false;
@@ -111,9 +118,9 @@ KestProject *kest_project_from(KestArena *arena, const char *where,
     // A manifest handed over is the one there is, and nothing is looked for on
     // a disk.
     bool there = handed != NULL;
-    char *text = handed != NULL
-                     ? kest_arena_strndup(arena, handed, strlen(handed))
-                     : read_whole(arena, path, &there);
+    const char *text = handed != NULL
+                           ? kest_arena_strndup(arena, handed, strlen(handed))
+                           : read_whole(arena, path, &there);
     if (text == NULL) {
         // A file that is not there is not a mistake: a program is a file and
         // needs no project around it. A file that is there and will not be
@@ -125,10 +132,11 @@ KestProject *kest_project_from(KestArena *arena, const char *where,
 
     KestProject *project = KEST_ARENA_NEW(arena, KestProject);
     if (project == NULL) {
-        *why = "there was no room to read the project";
+        *why = NO_ROOM;
         return NULL;
     }
     memset(project, 0, sizeof(*project));
+    project->text = text;
     project->path = kest_arena_strndup(arena, path, strlen(path));
     project->name = "";
     project->entry = "";
@@ -137,34 +145,44 @@ KestProject *kest_project_from(KestArena *arena, const char *where,
     project->edition = KEST_EDITION_STRING;
     project->tests = "";
 
-    char *at = text;
-    char *line = NULL;
-    while ((line = next_line(&at)) != NULL) {
-        const char *value = NULL;
-        const char *name = split_line(line, &value);
-        if (name == NULL) {
+    const char *at = text;
+    const char *line = NULL;
+    size_t line_length = 0;
+    while (next_line(&at, &line, &line_length)) {
+        const char *name = NULL;
+        size_t name_length = 0;
+        const char *written = NULL;
+        size_t written_length = 0;
+        if (!split_line(line, line_length, &name, &name_length, &written,
+                        &written_length)) {
             continue;
         }
-        if (strcmp(name, "project") == 0) {
+        // Refused rather than read as the nearest one there is: a project
+        // written for an edition this compiler has not got is a project whose
+        // words may mean something here they did not mean there.
+        if (kest_word_same("edition", name, name_length) &&
+            !kest_word_same(KEST_EDITION_STRING, written, written_length)) {
+            *why = "a project says an edition this does not know";
+            return NULL;
+        }
+        const char *value = kest_arena_strndup(arena, written, written_length);
+        if (value == NULL) {
+            *why = NO_ROOM;
+            return NULL;
+        }
+        if (kest_word_same("project", name, name_length)) {
             project->name = value;
-        } else if (strcmp(name, "entry") == 0) {
+        } else if (kest_word_same("entry", name, name_length)) {
             project->entry = value;
-        } else if (strcmp(name, "kest") == 0) {
+        } else if (kest_word_same("kest", name, name_length)) {
             project->needs_kest = value;
-        } else if (strcmp(name, "profile") == 0) {
+        } else if (kest_word_same("profile", name, name_length)) {
             project->profile = value;
-        } else if (strcmp(name, "edition") == 0) {
-            // Refused rather than read as the nearest one there is: a project
-            // written for an edition this compiler has not got is a project
-            // whose words may mean something here they did not mean there.
-            if (strcmp(value, KEST_EDITION_STRING) != 0) {
-                *why = "a project says an edition this does not know";
-                return NULL;
-            }
+        } else if (kest_word_same("edition", name, name_length)) {
             project->edition = value;
-        } else if (strcmp(name, "tests") == 0) {
+        } else if (kest_word_same("tests", name, name_length)) {
             project->tests = value;
-        } else if (strcmp(name, "source") == 0) {
+        } else if (kest_word_same("source", name, name_length)) {
             if (project->source_count >= KEST_MOST_SOURCES) {
                 *why = "a project says more places to look than this reads";
                 return NULL;
