@@ -2225,9 +2225,14 @@ done
 # ask for less stack. A command with no memory says it has none, and nothing
 # else: no code but those three is an answer here. `new` makes its project in
 # a directory emptied before every run, since one that is already there is
-# refused for a reason of its own.
+# refused for a reason of its own. A body that resumes is walked on its own,
+# because the two names after `resumes` were read back in an arena of their
+# own: with it refused, `fmt` printed the function without them and came back
+# nought, the checker blamed its `wait` and the compiler blamed the checker.
 arenas=0
 for aimed_at in "run examples/vectors.kest" "emit examples/boxes.kest" \
+                "fmt examples/chores.kest" "check examples/chores.kest" \
+                "run examples/chores.kest" \
                 "check lib/std/text.kest" "run examples/queue.kest" \
                 "fmt examples/boxes.kest" "doc examples/inventory.kest" \
                 "tick examples/events.kest 3" "call examples/vectors.kest steps" \
