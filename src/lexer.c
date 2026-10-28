@@ -78,6 +78,11 @@ static const Escape *escape_named(char written) {
 // The list a reader is given when they write one that is not there, built
 // from the same table rather than written out beside it.
 static const char *escapes_written(KestArena *arena) {
+    // A lexer reading a token or two back has diagnostics with no arena, and
+    // says nothing to anybody: it was read once already.
+    if (arena == NULL) {
+        return "";
+    }
     size_t room = sizeof(ESCAPES) / sizeof(ESCAPES[0]) * 9 + 1;
     char *out = kest_arena_alloc(arena, room, 1);
     if (out == NULL) {
@@ -380,8 +385,8 @@ const char *kest_token_bare(KestTokenKind kind, char *into, size_t room) {
     return into;
 }
 
-static void kest_lexer_init(KestLexer *lexer, const KestSource *source,
-                     KestDiags *diags) {
+static void lexer_init(KestLexer *lexer, const KestSource *source,
+                       KestDiags *diags) {
     lexer->source = source;
     lexer->diags = diags;
     lexer->offset = 0;
@@ -750,7 +755,7 @@ static void skip_blanks(KestLexer *lexer) {
     }
 }
 
-static KestToken kest_lexer_next(KestLexer *lexer) {
+static KestToken lexer_next(KestLexer *lexer) {
     kest_diags_work(lexer->diags, 1);
     while (true) {
         skip_blanks(lexer);
@@ -1150,7 +1155,7 @@ KestToken *kest_lex_range(KestArena *arena, const KestSource *source,
                           KestDiags *diags, uint32_t start, uint32_t end,
                           uint32_t *count) {
     KestLexer lexer;
-    kest_lexer_init(&lexer, source, diags);
+    lexer_init(&lexer, source, diags);
     lexer.offset = start;
     // The only range anything asks for is the inside of a hole.
     lexer.in_hole = true;
@@ -1161,9 +1166,24 @@ KestToken *kest_lex_again(KestArena *arena, const KestSource *source,
                           KestDiags *diags, uint32_t start, uint32_t end,
                           uint32_t *count) {
     KestLexer lexer;
-    kest_lexer_init(&lexer, source, diags);
+    lexer_init(&lexer, source, diags);
     lexer.offset = start;
     return lex_from(arena, &lexer, end, count);
+}
+
+KestToken kest_lex_one(const KestSource *source, uint32_t *offset) {
+    KestDiags quiet;
+    kest_diags_init(&quiet, NULL);
+    kest_diags_mute(&quiet, true);
+    KestLexer lexer;
+    lexer_init(&lexer, source, &quiet);
+    lexer.offset = *offset;
+    KestToken token;
+    do {
+        token = lexer_next(&lexer);
+    } while (token.kind == KEST_TOK_NEWLINE);
+    *offset = lexer.offset;
+    return token;
 }
 
 KestToken *kest_lex_all(KestArena *arena, const KestSource *source,
@@ -1171,7 +1191,7 @@ KestToken *kest_lex_all(KestArena *arena, const KestSource *source,
     check_text(source, diags);
 
     KestLexer lexer;
-    kest_lexer_init(&lexer, source, diags);
+    lexer_init(&lexer, source, diags);
     return lex_from(arena, &lexer, (uint32_t)source->length, count);
 }
 
@@ -1251,7 +1271,7 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
             tokens[used++] = done;
             break;
         }
-        tokens[used] = kest_lexer_next(lexer);
+        tokens[used] = lexer_next(lexer);
         // A block holds statements, so a line inside one ends where it is
         // written even when the block is inside brackets: what the count of
         // brackets is for is a line break inside `(` and `[`, and a brace puts

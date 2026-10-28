@@ -10,38 +10,20 @@ bool kest_resumes_spans(const KestSource *source, const KestDecl *decl,
     }
     // Read by the lexer rather than by looking at the bytes, because between
     // the two names there may be anything a line may hold: a line ended after
-    // the dot, a comment. Only a function that waits is read this way.
-    KestArena *arena = kest_arena_new();
-    if (arena == NULL) {
-        return false;
-    }
-    KestDiags quiet;
-    kest_diags_init(&quiet, arena);
-    uint32_t count = 0;
-    KestToken *tokens =
-        kest_lex_again(arena, source, &quiet, decl->function.resumes - 1,
-                       (uint32_t)source->length, &count);
-    KestSpan names[2] = {{0, 0}, {0, 0}};
-    uint32_t found = 0;
-    bool dotted = false;
-    for (uint32_t i = 0; tokens != NULL && i < count && found < 2; i++) {
-        if (tokens[i].kind == KEST_TOK_NEWLINE) {
-            continue;
-        }
-        if (tokens[i].kind == KEST_TOK_IDENT && (found == 0 || dotted)) {
-            names[found++] = tokens[i].span;
-            continue;
-        }
-        if (tokens[i].kind == KEST_TOK_DOT && found == 1 && !dotted) {
-            dotted = true;
-            continue;
-        }
-        break;
-    }
-    kest_arena_free(arena);
-    *param = names[0];
-    *field = names[1];
-    return found == 2;
+    // the dot, a comment. A token at a time and kept nowhere, so it needs no
+    // memory: the tokens were once lexed into an arena of their own, and a
+    // function whose arena was refused was read as one that does not wait --
+    // `fmt` printed it without `resumes` and the checker blamed its `wait`.
+    uint32_t offset = decl->function.resumes - 1;
+    KestToken named = kest_lex_one(source, &offset);
+    KestToken dot = kest_lex_one(source, &offset);
+    KestToken held = kest_lex_one(source, &offset);
+    KestSpan nowhere = {0, 0};
+    bool read = named.kind == KEST_TOK_IDENT && dot.kind == KEST_TOK_DOT &&
+                held.kind == KEST_TOK_IDENT;
+    *param = named.kind == KEST_TOK_IDENT ? named.span : nowhere;
+    *field = read ? held.span : nowhere;
+    return read;
 }
 
 // What a generic may ask of a type it is given. Two, and each is a thing this
