@@ -3292,6 +3292,18 @@ static int run(const char *command, const char *executable, char **paths,
                 kest_diags_starve(&build->diags);
             }
         }
+        // And what the function `call` called needs, worked out aside for the
+        // same reason: a walk with no room for it says so in the field, and
+        // the diagnostics in front of it have to say so too. What it wrote is
+        // handed on either way, because what it wrote is true.
+        FILE *needs = NULL;
+        if (called >= 0) {
+            needs = kest_scratch_file();
+            if (needs != NULL &&
+                !kest_module_needs_json(&build->module, called, needs)) {
+                kest_diags_starve(&build->diags);
+            }
+        }
         // One object, with whatever the command has to add beside what it
         // found wrong.
         fputc('{', stdout);
@@ -3476,7 +3488,12 @@ static int run(const char *command, const char *executable, char **paths,
         // this one always knows the answer to exactly.
         if (called >= 0) {
             fputs(",\"needs\":{", stdout);
-            kest_module_needs_json(&build->module, called, stdout);
+            if (needs == NULL) {
+                (void)kest_module_needs_json(&build->module, called, stdout);
+            } else {
+                handed_on(needs, stdout);
+                fclose(needs);
+            }
             fputc('}', stdout);
         }
         // What it cost to answer, beside what it needed to. A machine that

@@ -2035,11 +2035,14 @@ aimed=0
 # the compiler. These two are the machine's own life and nothing else: the heap
 # it hands arrays and text out of, the frames it stands them on, and what it
 # needs to say any of it went wrong.
-# `tail` is `emit` with every one of its last allocations refused in turn. What
-# a build does once the bodies are compiled -- proving what was emitted against
-# what was promised -- takes a handful of allocations at the very end, where a
-# spread lands one refusal or none: the proof's first one was refused there,
-# answered nothing, and the build went on as though the module had been proved.
+# `tail` is a command with every one of its last allocations refused in turn.
+# What a build does once the bodies are compiled -- proving what was emitted
+# against what was promised -- takes a handful of allocations at the very end,
+# where a spread lands one refusal or none: the proof's first one was refused
+# there, answered nothing, and the build went on as though the module had been
+# proved. And what `call --json` says the function it called needs is worked
+# out last of all: with no room for it, the field said so and the run came back
+# as though nothing had happened.
 # `emit --c` writes C beside the bytecode from an arena the build does not
 # own, which a build stopped partway never gave back. `every` is a command
 # with each of its allocations refused in turn, over a program small enough to
@@ -2051,7 +2054,8 @@ aimed=0
 for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
                 "check lib/std/text.kest" "run examples/flags.kest" \
                 "emit examples/boxes.kest" "machine examples/words.kest" \
-                "machine examples/pieces.kest" "tail examples/boxes.kest" \
+                "machine examples/pieces.kest" "tail emit examples/boxes.kest" \
+                "tail call --json examples/vectors.kest steps" \
                 "emit --c examples/boxes.kest" "every run examples/chores.kest" \
                 "every check examples/borrow.kest"; do
     how=${aimed_at%% *}
@@ -2065,7 +2069,8 @@ for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
     fi
     last=256
     if [ "$how" = tail ]; then
-        how=emit
+        how=${what%% *}
+        what=${what#* }
         every=1
     fi
     if [ "$how" = every ]; then
