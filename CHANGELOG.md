@@ -2,6 +2,29 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.0.3](https://github.com/Rawframe-Project/kest/compare/v0.0.2...v0.0.3) (2026-10-28)
+
+
+### Fixed
+
+* **api:** never carry a machine's words past its arena ([#38](https://github.com/Rawframe-Project/kest/issues/38)) ([800d4db](https://github.com/Rawframe-Project/kest/commit/800d4db4385f7689a544e59a37a37255464ccd13)), closes [#36](https://github.com/Rawframe-Project/kest/issues/36)
+* **cli:** never hand on a listing with a part it had no room for ([#40](https://github.com/Rawframe-Project/kest/issues/40)) ([495af8c](https://github.com/Rawframe-Project/kest/commit/495af8cc9d17b4cb022c491046017f402d6968a7)), closes [#39](https://github.com/Rawframe-Project/kest/issues/39)
+* **cli:** never hand on a partial lex or fmt listing ([#52](https://github.com/Rawframe-Project/kest/issues/52)) ([4f1c4a4](https://github.com/Rawframe-Project/kest/commit/4f1c4a4368a790f670562572d386023f4f99d7eb)), closes [#47](https://github.com/Rawframe-Project/kest/issues/47)
+* **cli:** say a manifest had no room rather than that it is not there ([#51](https://github.com/Rawframe-Project/kest/issues/51)) ([92d72bd](https://github.com/Rawframe-Project/kest/commit/92d72bdfe2129312dc9aa1beaafa02740a3f7d98)), closes [#50](https://github.com/Rawframe-Project/kest/issues/50)
+* **cli:** say K0639 when reading a file runs out of memory ([#48](https://github.com/Rawframe-Project/kest/issues/48)) ([a7e4422](https://github.com/Rawframe-Project/kest/commit/a7e4422b36329a5b7a27dbd90b0ddd100eecb00e)), closes [#45](https://github.com/Rawframe-Project/kest/issues/45)
+* **cli:** say K0639 wherever a command runs out of memory ([#30](https://github.com/Rawframe-Project/kest/issues/30)) ([d89156c](https://github.com/Rawframe-Project/kest/commit/d89156c22b1507183902090342c01b47bf466a17)), closes [#28](https://github.com/Rawframe-Project/kest/issues/28)
+* **cli:** say when call --json had no room for its needs ([#42](https://github.com/Rawframe-Project/kest/issues/42)) ([2e794dd](https://github.com/Rawframe-Project/kest/commit/2e794dde4912a78551632a71558e745b52bfe564)), closes [#41](https://github.com/Rawframe-Project/kest/issues/41)
+* **cli:** set a listing aside in memory on every target ([#44](https://github.com/Rawframe-Project/kest/issues/44)) ([59b5c9e](https://github.com/Rawframe-Project/kest/commit/59b5c9e3bc3272488eebc1dbebe00c80b1729e6a)), closes [#43](https://github.com/Rawframe-Project/kest/issues/43)
+* **compiler:** count a local only once it has its name ([#37](https://github.com/Rawframe-Project/kest/issues/37)) ([2c3b3f8](https://github.com/Rawframe-Project/kest/commit/2c3b3f8abcfd7bcd9a034ad178ea11be8cc8faa9)), closes [#35](https://github.com/Rawframe-Project/kest/issues/35)
+* **lsp:** answer every request, even one that could not be read ([#31](https://github.com/Rawframe-Project/kest/issues/31)) ([602210d](https://github.com/Rawframe-Project/kest/commit/602210de5b37d205a8c76c1f10bb2caa153c76e6)), closes [#29](https://github.com/Rawframe-Project/kest/issues/29)
+* **lsp:** refuse a message nested past a fixed depth ([#34](https://github.com/Rawframe-Project/kest/issues/34)) ([ea8521f](https://github.com/Rawframe-Project/kest/commit/ea8521fff00d25e3958d6990182abf5d201ab291)), closes [#32](https://github.com/Rawframe-Project/kest/issues/32)
+* **parser:** read a resumes clause back without memory ([#49](https://github.com/Rawframe-Project/kest/issues/49)) ([13ad1a5](https://github.com/Rawframe-Project/kest/commit/13ad1a5048c5d856367330016df56d035a322fb7)), closes [#46](https://github.com/Rawframe-Project/kest/issues/46)
+
+
+### Changed
+
+* **cli:** read a project's manifest once ([#54](https://github.com/Rawframe-Project/kest/issues/54)) ([6bba3bb](https://github.com/Rawframe-Project/kest/commit/6bba3bbd3ffb57abba844dd77d850b5c9e2b3af9)), closes [#53](https://github.com/Rawframe-Project/kest/issues/53)
+
 ## 0.0.2 (2026-10-27)
 
 ### Fixed
