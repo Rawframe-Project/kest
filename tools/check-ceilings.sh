@@ -2050,14 +2050,19 @@ aimed=0
 # compiler's list without one, three allocations wide in a thousand of `run`,
 # and a body that resumes from a `wait` looked it up by name and read through
 # it; and `check` wrote `?` for a type whose name it had no room to write and
-# came back nought, in eight places of fifteen hundred.
+# came back nought, in eight places of fifteen hundred. `parse` and `fmt` read
+# a file and nothing else, and a reader that gave up there said nothing:
+# `parse` printed no tree and came back nought, and `fmt` said a file it had
+# read whole was not read.
 for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
                 "check lib/std/text.kest" "run examples/flags.kest" \
                 "emit examples/boxes.kest" "machine examples/words.kest" \
                 "machine examples/pieces.kest" "tail emit examples/boxes.kest" \
                 "tail call --json examples/vectors.kest steps" \
                 "emit --c examples/boxes.kest" "every run examples/chores.kest" \
-                "every check examples/borrow.kest"; do
+                "every check examples/borrow.kest" \
+                "every parse examples/blocks.kest" \
+                "every fmt examples/blocks.kest"; do
     how=${aimed_at%% *}
     what=${aimed_at#* }
     from_one=0
@@ -2146,6 +2151,15 @@ for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
                  "had run out, and a compiler with no room left has nothing to" \
                  "say about a program"
             failed=1
+        elif ! printf '%s' "$said" | grep -q -e K0639 -e K0658; then
+            # And a refusal that says nothing about room: `fmt` told its
+            # reader a file it had read whole was not read, in a sentence
+            # with no code at all, which the line above lets through.
+            echo "ceilings: refusing allocation $at_one of $takes in" \
+                 "\`kest $how $what\` came back $answered without saying it" \
+                 "had run out"
+            printf '%s\n' "$said" | head -3 | sed 's/^/    /'
+            failed=1
         fi
     done
 done
@@ -2155,6 +2169,37 @@ if [ $aimed -eq 0 ]; then
          "none left"
     failed=1
 fi
+
+# And a file with no room to read it, which the walk above cannot ask: it
+# refuses every allocation from one on, so what was said about the file was
+# refused too, and the run said it had run out for that reason instead. Under a
+# ceiling of half the file, the file is refused and what is said about it is
+# not, and every command said the file could not be read.
+half=$(($(wc -c <examples/numbers.kest) / 2))
+for how in fmt parse lex check run; do
+    said=$($build_dir/kest-debug $how --room $half examples/numbers.kest 2>&1 \
+           </dev/null)
+    answered=$?
+    case "$said" in
+    *K0701*)
+        echo "ceilings: \`kest $how --room $half examples/numbers.kest\`" \
+             "said the file could not be read, when there was no room to"
+        failed=1
+        ;;
+    *K0658*)
+        if [ $answered -ne 1 ]; then
+            echo "ceilings: \`kest $how --room $half examples/numbers.kest\`" \
+                 "came back $answered with no room for the file"
+            failed=1
+        fi
+        ;;
+    *)
+        echo "ceilings: \`kest $how --room $half examples/numbers.kest\`" \
+             "did not say it had no room for the file"
+        failed=1
+        ;;
+    esac
+done
 
 # And every arena taken, refused in turn. Taking one is asking the host for its
 # first block, which none of the refusals above is aimed at, so each stage that
