@@ -6,7 +6,7 @@
 typedef enum {
     KEST_TOK_EOF,
     // A statement terminator. Emitted for a line break only where a statement
-    // could actually have ended; see kest_lexer_next.
+    // could actually have ended; see lexer_next.
     KEST_TOK_NEWLINE,
 
     KEST_TOK_IDENT,
@@ -124,6 +124,11 @@ KestToken *kest_lex_range(KestArena *arena, const KestSource *source,
 KestToken *kest_lex_again(KestArena *arena, const KestSource *source,
                           KestDiags *diags, uint32_t start, uint32_t end,
                           uint32_t *count);
+
+// The next token from `offset` that is not the end of a line, and `offset`
+// moved past it. Kept nowhere and said to nobody, so it needs no memory: what
+// it is for is reading back a word or two of a file already read whole.
+KestToken kest_lex_one(const KestSource *source, uint32_t *offset);
 
 // What a string literal holds: the characters between its quotes with the
 // escapes read. The span is the content, without them.
