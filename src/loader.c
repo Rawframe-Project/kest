@@ -936,9 +936,20 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
         kest_diags_starve(diags);
         return false;
     }
+    // Where the program stands and what project it is in, each of which copes
+    // with no room by answering as though there were nothing there: a
+    // directory with no room for its name is the one the command ran in, and a
+    // manifest with no room to read it is no manifest. A project's sources
+    // were then never looked under, and an import from one said it could not
+    // be read. So a refusal anywhere in the two is said as what it is.
+    bool refused_before = kest_arena_refused_anywhere();
     const char *root = directory_of(arena, paths[0]);
     Roots roots;
     roots_above(arena, units, paths[0], &roots);
+    if (!refused_before && kest_arena_refused_anywhere()) {
+        kest_diags_starve(diags);
+        return false;
+    }
     KestSpan nowhere = {0, 0};
     for (int i = 0; i < count; i++) {
         // The first file settles the root; the rest are read against it.
