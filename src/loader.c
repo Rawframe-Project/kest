@@ -806,6 +806,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         const char *next =
             path_of_import(arena, from, name, decl->name.length);
         if (next == NULL) {
+            kest_diags_starve(diags);
             return false;
         }
         // And where a project says its modules are, which is the whole answer
@@ -870,8 +871,12 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     loaded->imports = KEST_ARENA_ARRAY(arena, const char *, imports + 1);
     loaded->import_paths = KEST_ARENA_ARRAY(arena, const char *, imports + 1);
     loaded->import_reached = KEST_ARENA_ARRAY(arena, bool, imports + 1);
+    // Said here, because the stage above reads a false as a file that was not
+    // read: `fmt` told its reader so about a file it had read whole, and
+    // `parse` printed no tree and came back nought.
     if (loaded->imports == NULL || loaded->import_paths == NULL ||
         loaded->import_reached == NULL) {
+        kest_diags_starve(diags);
         return false;
     }
     for (uint32_t i = 0; i < loaded->unit.count; i++) {
@@ -1085,8 +1090,12 @@ bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,
         return false;
     }
     const char *owned = kest_arena_strndup(arena, tidy, strlen(tidy));
-    return owned != NULL &&
-           kest_source_init(into, arena, owned, text, length);
+    if (owned == NULL ||
+        !kest_source_init(into, arena, owned, text, length)) {
+        kest_diags_starve(diags);
+        return false;
+    }
+    return true;
 }
 
 bool kest_read_unit(KestArena *arena, KestDiags *diags, const char *path,

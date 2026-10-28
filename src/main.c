@@ -1273,6 +1273,13 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
             if (loaded) {
                 kest_diags_in(&diags, &alone);
                 tokens = kest_lex_all(arena, &alone, &diags, &found);
+                // Nothing but room makes the lexer answer nothing, and a file
+                // with no tokens listed and nothing said is a file that is
+                // empty, which this one is not.
+                if (tokens == NULL) {
+                    kest_diags_starve(&diags);
+                    loaded = false;
+                }
             }
         } else {
             loaded = kest_read_unit(arena, &diags, paths[i], &units) &&
