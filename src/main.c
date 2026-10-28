@@ -128,67 +128,95 @@ static bool list(KestBuild *build, Listing listing, FILE *into) {
     return false;
 }
 
+// Somewhere to write a listing before it is handed on. In memory where the C
+// library can grow a stream there, which is every POSIX system and
+// WebAssembly's system interface, and a file nobody else sees on Windows,
+// whose library cannot. A temporary file everywhere left WebAssembly, which
+// has none, writing listings unchecked.
+typedef struct {
+    FILE *file;
+    char *bytes;
+    size_t length;
+} Aside;
+
+static bool aside_opened(Aside *aside) {
+    memset(aside, 0, sizeof *aside);
+#if defined(_WIN32)
+    aside->file = tmpfile();
+#else
+    aside->file = open_memstream(&aside->bytes, &aside->length);
+#endif
+    return aside->file != NULL;
+}
+
+// Whether everything written aside is there: a stream in memory that could
+// not grow fails the write, not whatever was writing to it.
+static bool aside_held(Aside *aside) {
+    return fflush(aside->file) == 0 && !ferror(aside->file);
+}
+
+static void aside_handed_on(Aside *aside, FILE *out) {
+#if defined(_WIN32)
+    rewind(aside->file);
+    char moving[4096];
+    size_t got = 0;
+    while ((got = fread(moving, 1, sizeof moving, aside->file)) > 0) {
+        fwrite(moving, 1, got, out);
+    }
+#else
+    fflush(aside->file);
+    fwrite(aside->bytes, 1, aside->length, out);
+#endif
+}
+
+static void aside_closed(Aside *aside) {
+    if (aside->file != NULL) {
+        fclose(aside->file);
+    }
+    free(aside->bytes);
+    memset(aside, 0, sizeof *aside);
+}
+
 // A listing works out as it goes what it says, and asks the build's memory for
 // the room to. One with a part it had no room for is not the program's, and
 // one written straight out has said it before anybody knows: `check` wrote `?`
 // where a type was and `emit` left out what a machine takes, and both came back
 // nought. So it is written aside, and whether it was whole is known before a
-// word of it is handed on; a ceiling that refused it partway is no room either.
-// Where there is nowhere aside to write, which is WebAssembly's system
-// interface, it is written to `out` when there is one and only what it answered
-// is kept, and NULL comes back.
-static FILE *listed_aside(KestBuild *build, Listing listing, FILE *out,
-                          bool *whole) {
-    *whole = true;
-    FILE *aside = kest_scratch_file();
-    if (aside == NULL && out == NULL) {
-        return NULL;
+// word of it is handed on; a ceiling that refused it partway is no room
+// either, and so is having nowhere aside to write it.
+static bool listed_aside(KestBuild *build, Listing listing, Aside *aside) {
+    if (!aside_opened(aside)) {
+        return false;
     }
     bool refused_before = kest_arena_refused_by_ceiling(build->arena);
-    *whole = list(build, listing, aside == NULL ? out : aside);
+    bool whole = list(build, listing, aside->file);
+    whole = aside_held(aside) && whole;
     if (!refused_before && kest_arena_refused_by_ceiling(build->arena)) {
-        *whole = false;
+        whole = false;
     }
-    return aside;
-}
-
-static void handed_on(FILE *aside, FILE *out) {
-    rewind(aside);
-    char moving[4096];
-    size_t got = 0;
-    while ((got = fread(moving, 1, sizeof moving, aside)) > 0) {
-        fwrite(moving, 1, got, out);
-    }
+    return whole;
 }
 
 // A listing written aside for a tool, put where it goes in the object: what
-// was written aside when it was whole, its fields as null when it was not, and
-// the listing itself where nothing could be written aside.
-static void listing_handed_on(KestBuild *build, Listing listing, FILE *aside,
-                              bool whole, const char *missing) {
-    if (aside == NULL) {
-        (void)list(build, listing, stdout);
-        return;
-    }
+// was written aside when it was whole, and its fields as null when it was not.
+static void listing_handed_on(Aside *aside, bool whole, const char *missing) {
     if (whole) {
-        handed_on(aside, stdout);
+        aside_handed_on(aside, stdout);
     } else {
         fputs(missing, stdout);
     }
-    fclose(aside);
+    aside_closed(aside);
 }
 
 // A listing for a person: handed on whole or not at all, and a run that ran
 // out said where every other one is said.
 static void listed(KestBuild *build, Listing listing) {
-    bool whole = true;
-    FILE *aside = listed_aside(build, listing, stdout, &whole);
-    if (aside != NULL) {
-        if (whole) {
-            handed_on(aside, stdout);
-        }
-        fclose(aside);
+    Aside aside;
+    bool whole = listed_aside(build, listing, &aside);
+    if (whole) {
+        aside_handed_on(&aside, stdout);
     }
+    aside_closed(&aside);
     if (!whole) {
         kest_diags_starve(&build->diags);
     }
@@ -3284,10 +3312,10 @@ static int run(const char *command, const char *executable, char **paths,
             listing_missing = "\"layouts\":null,\"hosts\":null,"
                               "\"needs\":null,\"functions\":null";
         }
-        FILE *listing = NULL;
+        Aside listing = {NULL, NULL, 0};
         bool listing_whole = true;
         if (listing_asked) {
-            listing = listed_aside(build, json_listing, NULL, &listing_whole);
+            listing_whole = listed_aside(build, json_listing, &listing);
             if (!listing_whole) {
                 kest_diags_starve(&build->diags);
             }
@@ -3296,11 +3324,16 @@ static int run(const char *command, const char *executable, char **paths,
         // same reason: a walk with no room for it says so in the field, and
         // the diagnostics in front of it have to say so too. What it wrote is
         // handed on either way, because what it wrote is true.
-        FILE *needs = NULL;
+        Aside needs = {NULL, NULL, 0};
+        bool needs_held = true;
         if (called >= 0) {
-            needs = kest_scratch_file();
-            if (needs != NULL &&
-                !kest_module_needs_json(&build->module, called, needs)) {
+            needs_held = aside_opened(&needs);
+            if (needs_held &&
+                !kest_module_needs_json(&build->module, called, needs.file)) {
+                kest_diags_starve(&build->diags);
+            }
+            needs_held = needs_held && aside_held(&needs);
+            if (!needs_held) {
                 kest_diags_starve(&build->diags);
             }
         }
@@ -3416,8 +3449,7 @@ static int run(const char *command, const char *executable, char **paths,
         }
         if (checking && build->program != NULL) {
             fputc(',', stdout);
-            listing_handed_on(build, json_listing, listing, listing_whole,
-                              listing_missing);
+            listing_handed_on(&listing, listing_whole, listing_missing);
         }
         if (emitting && !building && build->compiled) {
             // And what the machine will run, as one number. Said where the
@@ -3426,8 +3458,7 @@ static int run(const char *command, const char *executable, char **paths,
             fprintf(stdout, ",\"codeMark\":\"%016llx\"",
                     (unsigned long long)kest_build_code_mark(build));
             fputc(',', stdout);
-            listing_handed_on(build, json_listing, listing, listing_whole,
-                              listing_missing);
+            listing_handed_on(&listing, listing_whole, listing_missing);
             // And the same bodies as C, for a tool that asked for them. It is
             // a string rather than a stream of its own for the reason
             // everything else here is one: what a command says is one object.
@@ -3488,12 +3519,14 @@ static int run(const char *command, const char *executable, char **paths,
         // this one always knows the answer to exactly.
         if (called >= 0) {
             fputs(",\"needs\":{", stdout);
-            if (needs == NULL) {
-                (void)kest_module_needs_json(&build->module, called, stdout);
+            if (needs_held) {
+                aside_handed_on(&needs, stdout);
             } else {
-                handed_on(needs, stdout);
-                fclose(needs);
+                fputs("\"slots\":null,\"frames\":null,\"why\":", stdout);
+                kest_json_text(kest_reach_name(KEST_REACH_NO_ROOM), stdout);
+                fputs(",\"where\":null", stdout);
             }
+            aside_closed(&needs);
             fputc('}', stdout);
         }
         // What it cost to answer, beside what it needed to. A machine that
@@ -3699,9 +3732,9 @@ int main(int argc, char **argv) {
     // day beside itself -- was written at the root of the machine it ran on,
     // and refused where that is nobody's to write. Where it was run from is
     // what `PWD` says, which the runner hands over.
-    const char *here = getenv("PWD");
-    if (here != NULL && here[0] == '/') {
-        chdir(here);
+    const char *run_from = getenv("PWD");
+    if (run_from != NULL && run_from[0] == '/') {
+        chdir(run_from);
     }
 #endif
     if (argc < 2) {

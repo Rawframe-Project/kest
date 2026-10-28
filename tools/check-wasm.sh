@@ -39,8 +39,8 @@ if [ -z "$linker" ] || ! command -v clang >/dev/null 2>&1 ||
 fi
 mkdir -p "$scratch"/objects
 for source in src/*.c; do
-    if ! clang --target=wasm32-wasi -std=c11 -O2 -Wall -Wextra -Werror \
-            -Iinclude -DKEST_LIB_DIR='"/lib/kest/"' \
+    if ! clang --target=wasm32-wasi -std=c11 -O2 -Wall -Wextra -Wshadow \
+            -Werror -Iinclude -DKEST_LIB_DIR='"/lib/kest/"' \
             -c -o "$scratch/objects/$(basename "$source" .c).o" "$source" \
             2>"$scratch"/why; then
         echo "wasm: \`$source\` does not compile for WebAssembly:"
