@@ -2050,10 +2050,16 @@ aimed=0
 # compiler's list without one, three allocations wide in a thousand of `run`,
 # and a body that resumes from a `wait` looked it up by name and read through
 # it; and `check` wrote `?` for a type whose name it had no room to write and
-# came back nought, in eight places of fifteen hundred. `parse` and `fmt` read
-# a file and nothing else, and a reader that gave up there said nothing:
-# `parse` printed no tree and came back nought, and `fmt` said a file it had
-# read whole was not read.
+# came back nought, in eight places of fifteen hundred. `parse`, `lex` and
+# `fmt` read a file and nothing else, and a reader that gave up there said
+# nothing: `parse` and `lex` printed no tree and no tokens and came back
+# nought, and `fmt` said a file it had read whole was not read. `lex` and
+# `fmt --json` copied a piece of the file only to end it with a nought, and
+# wrote `""` where the copy was refused: `fmt --json` handed an editor an edit
+# that replaced a file's changed lines with nothing, and `lex` left every
+# comment out. The file `fmt --json` is asked about is one with something to
+# change.
+sed 's/^    /  /' examples/blocks.kest >"$scratch"/unformed.kest
 for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
                 "check lib/std/text.kest" "run examples/flags.kest" \
                 "emit examples/boxes.kest" "machine examples/words.kest" \
@@ -2062,7 +2068,10 @@ for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
                 "emit --c examples/boxes.kest" "every run examples/chores.kest" \
                 "every check examples/borrow.kest" \
                 "every parse examples/blocks.kest" \
-                "every fmt examples/blocks.kest"; do
+                "every fmt examples/blocks.kest" \
+                "every lex examples/chores.kest" \
+                "every lex --json examples/chores.kest" \
+                "every fmt --json $scratch/unformed.kest"; do
     how=${aimed_at%% *}
     what=${aimed_at#* }
     from_one=0

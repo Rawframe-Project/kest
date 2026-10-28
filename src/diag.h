@@ -353,6 +353,10 @@ void kest_diags_render(const KestDiags *diags, FILE *out);
 // is one of these rather than one each.
 void kest_json_text(const char *text, FILE *out);
 
+// The same for `length` bytes where they stand, for a piece of a file: what
+// is written needs no copy ended with a nought, so it needs no memory.
+void kest_json_bytes(const char *text, size_t length, FILE *out);
+
 // Renders the identical set as JSON, for tooling and for models repairing
 // their own output.
 void kest_diags_render_json(const KestDiags *diags, FILE *out);
