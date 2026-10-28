@@ -26,11 +26,16 @@ static bool read_failed(FILE *file) {
     return ferror(file) != 0;
 }
 
-static char *read_stream(KestArena *arena, FILE *file, size_t *length) {
+static char *read_stream(KestArena *arena, FILE *file, size_t *length,
+                         bool *starved) {
     size_t room = 4096;
     size_t used = 0;
     char *text = kest_arena_alloc(arena, room, 1);
-    while (text != NULL) {
+    if (text == NULL) {
+        *starved = true;
+        return NULL;
+    }
+    while (true) {
         size_t read = fread(text + used, 1, room - used - 1, file);
         used += read;
         if (read == 0 || feof(file)) {
@@ -41,13 +46,14 @@ static char *read_stream(KestArena *arena, FILE *file, size_t *length) {
         }
         char *grown = kest_arena_alloc(arena, room * 2, 1);
         if (grown == NULL) {
+            *starved = true;
             return NULL;
         }
         memcpy(grown, text, used);
         text = grown;
         room *= 2;
     }
-    if (text == NULL || read_failed(file)) {
+    if (read_failed(file)) {
         return NULL;
     }
     text[used] = '\0';
@@ -132,8 +138,13 @@ static const KestFile *handed_file(KestArena *arena, const KestUnits *units,
     return NULL;
 }
 
+// NULL for a file that could not be read, and for one there was no room to
+// read, which `starved` says: the two were one answer, and a file too big for
+// what was left was refused as one that could not be read -- K0701 rather than
+// that the room had run out.
 static char *read_file(KestArena *arena, const KestUnits *units,
-                       const char *path, size_t *length) {
+                       const char *path, size_t *length, bool *starved) {
+    *starved = false;
     if (units != NULL && units->handed != NULL) {
         const KestFile *file = handed_file(arena, units, path);
         if (file == NULL || file->text == NULL) {
@@ -141,6 +152,7 @@ static char *read_file(KestArena *arena, const KestUnits *units,
         }
         char *held = kest_arena_alloc(arena, file->length + 1, 1);
         if (held == NULL) {
+            *starved = true;
             return NULL;
         }
         memcpy(held, file->text, file->length);
@@ -154,6 +166,7 @@ static char *read_file(KestArena *arena, const KestUnits *units,
         }
         char *held = kest_arena_alloc(arena, overlaid[i].length + 1, 1);
         if (held == NULL) {
+            *starved = true;
             return NULL;
         }
         memcpy(held, overlaid[i].text, overlaid[i].length);
@@ -179,13 +192,14 @@ static char *read_file(KestArena *arena, const KestUnits *units,
     // ever have made, which is the right answer for the wrong reason and a
     // different reason on every disk.
     if (size < 0 || size == LONG_MAX) {
-        char *text = read_stream(arena, file, length);
+        char *text = read_stream(arena, file, length, starved);
         fclose(file);
         return text;
     }
 
     char *text = kest_arena_alloc(arena, (size_t)size + 1, 1);
     if (text == NULL) {
+        *starved = true;
         fclose(file);
         return NULL;
     }
@@ -484,7 +498,9 @@ static void roots_above(KestArena *arena, KestUnits *units,
             // read from.
             if (units != NULL) {
                 size_t length = 0;
-                char *text = read_file(arena, units, project->path, &length);
+                bool starved = false;
+                char *text = read_file(arena, units, project->path, &length,
+                                       &starved);
                 if (text != NULL) {
                     units->manifest_path = project->path;
                     units->manifest_text = text;
@@ -593,7 +609,12 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     }
 
     size_t length = 0;
-    char *text = read_file(arena, units, path, &length);
+    bool starved = false;
+    char *text = read_file(arena, units, path, &length, &starved);
+    if (starved) {
+        kest_diags_starve(diags);
+        return false;
+    }
     if (text == NULL) {
         // A missing import is reported where it was written, unless this is
         // the file the command named, which has nowhere to point at.
@@ -1083,7 +1104,12 @@ bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,
                       KestSource *into) {
     const char *tidy = tidied(arena, path);
     size_t length = 0;
-    char *text = read_file(arena, NULL, tidy, &length);
+    bool starved = false;
+    char *text = read_file(arena, NULL, tidy, &length, &starved);
+    if (starved) {
+        kest_diags_starve(diags);
+        return false;
+    }
     if (text == NULL) {
         KestSpan nowhere = {0, 0};
         refuse_to_read(diags, tidy, nowhere, NULL);
