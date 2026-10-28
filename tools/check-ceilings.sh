@@ -2179,6 +2179,37 @@ if [ $aimed -eq 0 ]; then
     failed=1
 fi
 
+# And a file with no room to read it, which the walk above cannot ask: it
+# refuses every allocation from one on, so what was said about the file was
+# refused too, and the run said it had run out for that reason instead. Under a
+# ceiling of half the file, the file is refused and what is said about it is
+# not, and every command said the file could not be read.
+half=$(($(wc -c <examples/numbers.kest) / 2))
+for how in fmt parse lex check run; do
+    said=$($build_dir/kest-debug $how --room $half examples/numbers.kest 2>&1 \
+           </dev/null)
+    answered=$?
+    case "$said" in
+    *K0701*)
+        echo "ceilings: \`kest $how --room $half examples/numbers.kest\`" \
+             "said the file could not be read, when there was no room to"
+        failed=1
+        ;;
+    *K0658*)
+        if [ $answered -ne 1 ]; then
+            echo "ceilings: \`kest $how --room $half examples/numbers.kest\`" \
+                 "came back $answered with no room for the file"
+            failed=1
+        fi
+        ;;
+    *)
+        echo "ceilings: \`kest $how --room $half examples/numbers.kest\`" \
+             "did not say it had no room for the file"
+        failed=1
+        ;;
+    esac
+done
+
 # And every arena taken, refused in turn. Taking one is asking the host for its
 # first block, which none of the refusals above is aimed at, so each stage that
 # works in an arena of its own had never been seen told no -- and two of them
