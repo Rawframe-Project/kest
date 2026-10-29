@@ -4304,6 +4304,49 @@ K0310|fn main() -> i32 {\n    let a: i32 = 1\n    let b: i32?? = a\n    if let i
 K0310|fn main() -> i32 {\n    let n = 1\n    room(n, 8)\n    return 0\n}|`room` makes room in an array or a store
 REFUSED
 
+# A backslash with nothing after it on its line or in its file, in a string or a
+# byte, which is no escape. It was read as one: at the end of a file the token
+# ran a byte past it, and `lex --json` wrote that byte into the token's text as
+# `\u0000`; at the end of a line the line break was taken into the string and
+# into the message about it, which `K0103` said with the break inside its
+# quotes. The first is what a fuzz run over the lexer found, cut down.
+printf 'fn main() -> i32 {\n    let a = " e\\' >"$scratch"/refused/ends.kest
+ended=$("$kest" lex --json "$scratch"/refused/ends.kest 2>&1 </dev/null)
+case "$ended" in
+*'\u0000'*)
+    complain "lex: a string ending the file with a backslash ran past the file"
+    ;;
+esac
+ended=$("$kest" check "$scratch"/refused/ends.kest 2>&1 </dev/null)
+case "$ended" in
+*K0103*)
+    complain "check: a backslash ending the file was read as an escape"
+    ;;
+esac
+# And the same where lines end `\r\n`, which the lexer reads: the carriage
+# return is the end of the line, not an escape and not a byte of the text.
+for ending in 'let a = " e\\\n' "let b = '\\\\\n" 'let a = " e\\\r\n' \
+              "let b = '\\\\\r\n" 'let a = " e\r\n' "let b = 'a\r\n"; do
+    case "$ending" in
+    *'\r\n') line='\r\n' ;;
+    *) line='\n' ;;
+    esac
+    printf "%b" "fn main() -> i32 {$line    $ending    return 0$line}$line" \
+        >"$scratch"/refused/ends.kest
+    ended=$("$kest" check "$scratch"/refused/ends.kest 2>&1 </dev/null)
+    case "$ended" in
+    *K0103* | *K0109*)
+        complain "check: a line ending a string or byte was read as part of \
+it: \`$(printf '%s' "$ended" | grep -m 1 -e K0103 -e K0109)\`"
+        ;;
+    *K0101* | *K0106*) ;;
+    *)
+        complain "check: a string or byte left open at the end of a line did \
+not say so"
+        ;;
+    esac
+done
+
 # And the one a command is refused for rather than a file: `call` with nothing
 # to call.
 cat > "$scratch"/refused/calling.kest <<'KEST'
