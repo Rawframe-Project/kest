@@ -2559,6 +2559,16 @@ int main(int argc, char **argv) {
     }
     if (strcmp(argv[1], "watch") == 0) {
         printf("changed %d\n", kest_held_changed(held) ? 1 : 0);
+    } else if (strcmp(argv[1], "twice") == 0) {
+        /* No more heap than the world holds, and reloaded twice: `save` is
+           refused the same bytes both times. */
+        KestRuntime *runtime = kest_held_runtime(held);
+        kest_heap_allow(runtime, kest_heap_used(runtime));
+        for (int i = 0; i < 2; i++) {
+            char said[256] = "";
+            bool again = kest_held_reload(held, NULL, said, sizeof(said));
+            printf("reloaded %d: %s\n", again ? 1 : 0, said);
+        }
     } else {
         char said[256] = "";
         bool again = kest_held_reload(held, argc > 2 ? argv[2] : NULL, said,
@@ -2621,6 +2631,24 @@ C
                     esac
                 done
             done
+            # And a second reload with no more room than the first. What a
+            # refusal asked for was what told no room from `save`'s answer,
+            # and a refusal of the same size leaves it where it was, so the
+            # second reload blamed the program.
+            said=$("$scratch"/own/held twice 2>&1)
+            case "$said" in
+            *"did not answer bytes"* | *"reloaded 1"*)
+                echo "ceilings: a second reload with no room did not say so:" \
+                     "\`$(printf '%s' "$said" | tr '\n' ' ')\`"
+                failed=1
+                ;;
+            esac
+            if [ "$(printf '%s\n' "$said" | grep -c "no room to call")" != 2 ]
+            then
+                echo "ceilings: two reloads with no room to call \`save\`" \
+                     "said \`$(printf '%s' "$said" | tr '\n' ' ')\`"
+                failed=1
+            fi
         else
             echo "ceilings: the host that keeps a world did not build"
             sed 's/^/    /' "$scratch"/own/made | head -3
