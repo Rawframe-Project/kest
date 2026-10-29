@@ -744,6 +744,20 @@ static bool worth_saying(const KestDiags *diags, const KestDiag *one) {
     return !diags->starved || !one->after_the_room;
 }
 
+bool kest_diags_worth_saying(const KestDiags *diags, const KestDiag *one) {
+    return worth_saying(diags, one);
+}
+
+const char *kest_diags_starved_words(const KestDiags *diags, const char **code,
+                                     char *room, size_t space) {
+    if (diags == NULL || !diags->starved) {
+        *code = NULL;
+        return NULL;
+    }
+    *code = starved_code(diags);
+    return starved_says(diags, room, space);
+}
+
 void kest_diags_render(const KestDiags *diags, FILE *out) {
     // What a program printed before this happened goes first. The two streams
     // are kept apart on purpose -- what a program says is an answer and what

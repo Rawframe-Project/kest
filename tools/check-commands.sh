@@ -6449,6 +6449,79 @@ published with $told"
     ;;
 esac
 
+# And a build that ran out. Running out is a bit beside the list rather than an
+# item in it, and the server published only the list, so a file whose build ran
+# out was published with nothing wrong, or with only what it found first. In the
+# build that checks itself, every allocation is refused from 64 points spread
+# over a session that opens a file with one mistake in it: every list published
+# has to be the one published with nothing refused, or say it ran out.
+printf 'fn main() -> i32 {\n    return nothing_at_all(0)\n}\n' \
+    >"$scratch"/serving/wrong.kest
+starved=$(timeout 600 python3 - "$build_dir"/kest-debug \
+        "$scratch"/serving/wrong.kest <<'PY'
+import json, os, subprocess, sys
+
+kest, path = sys.argv[1], os.path.abspath(sys.argv[2])
+uri = "file://" + path
+messages = [
+    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": uri, "languageId": "kest",
+                                 "version": 1, "text": open(path).read()}}},
+]
+body = b""
+for one in messages:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+
+
+def published(refused_at):
+    env = dict(os.environ)
+    if refused_at:
+        env["KEST_REFUSE_AT"] = str(refused_at)
+    out = subprocess.run([kest, "lsp"], input=body, capture_output=True,
+                         env=env).stdout
+    lists = []
+    at = 0
+    while True:
+        head = out.find(b"Content-Length: ", at)
+        blank = out.find(b"\r\n\r\n", head) if head >= 0 else -1
+        if blank < 0:
+            break
+        many = int(out[head + 16:blank])
+        said = json.loads(out[blank + 4:blank + 4 + many])
+        at = blank + 4 + many
+        if said.get("method") == "textDocument/publishDiagnostics":
+            lists.append(sorted(d["code"] for d in
+                                said["params"]["diagnostics"]))
+    return lists
+
+
+whole = published(0)
+if len(whole) != 1 or not whole[0]:
+    print("with nothing refused it published %s" % whole)
+    sys.exit(0)
+low, high = 1, 1 << 20
+while high - low > 1:
+    middle = (low + high) // 2
+    if published(middle) == whole:
+        high = middle
+    else:
+        low = middle
+wrong = []
+for k in range(64):
+    refused_at = 1 + k * high // 64
+    for got in published(refused_at):
+        if got != whole[0] and not {"K0639", "K0658", "K0705"} & set(got):
+            wrong.append("%d: %s" % (refused_at, got))
+print("; ".join(wrong[:3]) if wrong else "yes")
+PY
+)
+if [ "$starved" != "yes" ]; then
+    complain "lsp: a build that ran out was published without saying so: \
+$starved"
+fi
+
 # And every request answered, whatever happened to it. A client that sends a
 # request waits for its answer, so a message the server could not read -- one
 # that is not JSON, or one there was no memory to read into its tree -- and an

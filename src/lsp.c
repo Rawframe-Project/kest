@@ -284,6 +284,36 @@ static void ready(Server *server) {
     build_again(server);
 }
 
+// One diagnostic of the list a client is sent, with its suggestion under its
+// message as a client shows one.
+static void put_said(Server *server, KestSaid *out, bool *first,
+                     const char *text, size_t length, KestSpan span,
+                     bool error, const char *code, const char *message,
+                     const char *suggestion) {
+    kest_wire_say(out, *first ? "" : ",");
+    *first = false;
+    kest_wire_say(out, "{\"range\":");
+    put_range(out, text, length, span.offset,
+              span.length == 0 ? 1 : span.length);
+    kest_wire_sayf(out, ",\"severity\":%d,\"source\":\"kest\",\"code\":",
+                   error ? 1 : 2);
+    kest_wire_text(out, code);
+    kest_wire_say(out, ",\"message\":");
+    if (suggestion != NULL && suggestion[0] != '\0') {
+        size_t room = strlen(message) + strlen(suggestion) + 4;
+        char *both = kest_arena_alloc(server->arena, room, 1);
+        if (both != NULL) {
+            snprintf(both, room, "%s\n%s", message, suggestion);
+            kest_wire_text(out, both);
+        } else {
+            kest_wire_text(out, message);
+        }
+    } else {
+        kest_wire_text(out, message);
+    }
+    kest_wire_char(out, '}');
+}
+
 // What is wrong with the file, sent whether or not anything is: a client that
 // is told nothing leaves the last set on the screen.
 static void publish(Server *server) {
@@ -294,52 +324,50 @@ static void publish(Server *server) {
     kest_wire_text(&out, file->uri);
     kest_wire_say(&out, ",\"diagnostics\":[");
     bool first = true;
-    if (server->build != NULL) {
+    if (server->build != NULL && file->path != NULL) {
         const KestDiags *diags = &server->build->diags;
+        KestSpan start = {0, 0};
         for (uint32_t i = 0; i < diags->count; i++) {
             const KestDiag *one = &diags->items[i];
             // Only what is wrong with the file in front of the person. A
             // program is more than one file and a client is told about one.
-            // What is about no file -- a manifest that cannot be read, a
-            // build with no room -- is about this one too, and is put at its
-            // start: left out, a file in a project nothing could be read of
-            // was shown as one with nothing wrong with it.
-            if (file->path == NULL ||
+            // What is about no file -- a manifest that cannot be read -- is
+            // about this one too, and is put at its start: left out, a file
+            // in a project nothing could be read of was shown as one with
+            // nothing wrong with it.
+            if (!kest_diags_worth_saying(diags, one) ||
                 (one->source != NULL &&
                  strcmp(one->source->path, file->path) != 0)) {
                 continue;
             }
             size_t length = file->length;
             const char *text = file->text;
-            KestSpan span = {0, 0};
+            KestSpan span = start;
             if (one->source != NULL) {
                 text = text_of(one->source, &length);
                 span = one->span;
             }
-            kest_wire_say(&out, first ? "" : ",");
-            first = false;
-            kest_wire_say(&out, "{\"range\":");
-            put_range(&out, text, length, span.offset,
-                      span.length == 0 ? 1 : span.length);
-            kest_wire_sayf(&out, ",\"severity\":%d,\"source\":\"kest\",\"code\":",
-                    one->severity == KEST_SEVERITY_ERROR ? 1 : 2);
-            kest_wire_text(&out, one->code);
-            kest_wire_say(&out, ",\"message\":");
-            if (one->suggestion != NULL && one->suggestion[0] != '\0') {
-                size_t room = strlen(one->message) +
-                              strlen(one->suggestion) + 4;
-                char *both = kest_arena_alloc(server->arena, room, 1);
-                if (both != NULL) {
-                    snprintf(both, room, "%s\n%s", one->message,
-                             one->suggestion);
-                    kest_wire_text(&out, both);
-                } else {
-                    kest_wire_text(&out, one->message);
-                }
-            } else {
-                kest_wire_text(&out, one->message);
+            put_said(server, &out, &first, text, length, span,
+                     one->severity == KEST_SEVERITY_ERROR, one->code,
+                     one->message, one->suggestion);
+        }
+        // And running out, which is a bit beside the list rather than an
+        // item in it: a build that ran out published only what it worked out
+        // before it did, which can be nothing, and a file that could not be
+        // checked was shown as one with nothing wrong with it. Said as the
+        // command line says it, what it was about to say first.
+        char room[160];
+        const char *code = NULL;
+        const char *words =
+            kest_diags_starved_words(diags, &code, room, sizeof room);
+        if (words != NULL) {
+            if (diags->last_code[0] != '\0') {
+                put_said(server, &out, &first, file->text, file->length,
+                         start, true, diags->last_code, diags->last_words,
+                         NULL);
             }
-            kest_wire_char(&out, '}');
+            put_said(server, &out, &first, file->text, file->length, start,
+                     true, code, words, NULL);
         }
     }
     kest_wire_say(&out, "]}}");
