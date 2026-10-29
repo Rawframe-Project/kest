@@ -1,0 +1,5 @@
+# Commits that only changed layout, which git blame steps over:
+# git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# chore(build): format the C sources with the CI image's clang-format (#86)
+23ee26347d3d93b1d0dd6deaa712b657b66f8701

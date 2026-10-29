@@ -48,7 +48,7 @@ Run the `dev` workflow, long fuzzing and every benchmark through the workspace's
 
 ## C conventions
 
-C11, `-Wall -Wextra -Wshadow -Wconversion -Werror` for the library; `.clang-format` is the layout.
+C11, `-Wall -Wextra -Wshadow -Wconversion -Werror` for the library; `.clang-format` is the layout, as the CI image's clang-format reads it: CI's `format` job refuses a C file it would change, so format what you touched with `clang-format -i` in that image.
 
 | Thing | Style | Example |
 | --- | --- | --- |

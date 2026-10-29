@@ -65,7 +65,7 @@ Every check script runs on its own from the root of the tree after a build, read
 
 ## Source conventions
 
-- C11 and libc, nothing else. `-Wall -Wextra -Wshadow -Wconversion -Werror` for the library; the hosts drop `-Wshadow`. `.clang-format` is the layout.
+- C11 and libc, nothing else. `-Wall -Wextra -Wshadow -Wconversion -Werror` for the library; the hosts drop `-Wshadow`. `.clang-format` is the layout, held by CI's `format` job with the CI image's clang-format.
 - A public function is `kest_` followed by snake case and is declared in `include/kest.h` or a module header; an internal function is plain snake case and `static`. `tools/check-dead.sh` holds every declared function to existing and being called from outside its own file, and every `kest_` name to being declared.
 - A module includes only modules above it in `tools/modules.txt`.
 - No global mutable state except the reference stamp counter.
