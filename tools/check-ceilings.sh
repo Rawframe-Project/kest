@@ -2445,6 +2445,29 @@ C
         own_walk $((${#long} + 5 + 7)) test --json
         own_walk 5 build --release src/main.kest
         own_walk $((1237 * 4)) tick "$(pwd)"/examples/events.kest 1237
+        # And a machine's ground, where a program's values live, which is
+        # 624 bytes on a 64-bit Linux and taken once a machine. A machine
+        # started without it took the first value the program made as the heap
+        # being full: "the program has used 0 bytes and this asked for 0 more".
+        # A refusal that lands nowhere checks nothing, so the first one has to
+        # be said as no room; when the ground changes size, so does this.
+        numbers="$(pwd)"/examples/numbers.kest
+        own_walk 624 run "$numbers"
+        grounded=$(cd "$scratch"/own/project &&
+                   LD_PRELOAD="$scratch"/own/refuse.so \
+                   REFUSE_SIZE=624 REFUSE_NTH=1 \
+                   "$build_dir"/kest run "$numbers" 2>&1 \
+                   </dev/null)
+        case "$?:$grounded" in
+        1:*K0639*) ;;
+        *)
+            echo "ceilings: a machine refused the 624 bytes of its ground" \
+                 "did not say it had no room; if the ground is no longer 624" \
+                 "bytes, this check names the wrong size"
+            printf '%s\n' "$grounded" | tail -2 | sed 's/^/    /'
+            failed=1
+            ;;
+        esac
 
         # And the doors that keep a world across a reload, which take theirs
         # the same way. A reload with no room to copy what `save` answered

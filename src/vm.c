@@ -6836,7 +6836,8 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
     atomic_init(&rt->cancel_asked, 0);
     if (rt->stack == NULL || rt->frames == NULL || rt->natives == NULL ||
         rt->contexts == NULL || rt->said_extern == NULL ||
-        rt->said_copy == NULL || rt->said_layout == NULL || rt->heap == NULL) {
+        rt->said_copy == NULL || rt->said_layout == NULL || rt->heap == NULL ||
+        rt->ground == NULL) {
         // A host says how much stack and how deep the calls may go, and both
         // are taken before anything runs. Asking for more than the machine
         // this is on can give came back as nothing at all: a host with a
@@ -6846,7 +6847,10 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
         // halves the wrong number is a host halving it forever. Everything
         // else here is sized by the program and not by any number a host
         // picked, so when only that could not be had there is nothing a host
-        // could halve, and what happened is that there was no memory.
+        // could halve, and what happened is that there was no memory. The
+        // ground is one of those: a machine started without it took the first
+        // value the program made as the heap being full, and said the program
+        // had used nought bytes and asked for nought more.
         KestSpan nowhere = {0, 0};
         kest_diags_in(diags, NULL);
         if (rt->stack != NULL && rt->frames != NULL) {
