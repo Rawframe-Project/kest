@@ -2293,6 +2293,7 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
         return error_type(program);
     }
     if (type != NULL) {
+        kest_program_type_used(program, ref->name, type);
         kest_import_reached(program, name, length);
         if (kest_needs_import(program, name, length)) {
             const char *dot = memchr(name, '.', length);
@@ -2762,6 +2763,7 @@ KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref) {
             // written and found again after that.
             KestType *shape = kest_lookup_type(program, name, ref->name.length);
             if (shape != NULL && shape->type_param_count > 0) {
+                kest_program_type_used(program, ref->name, shape);
                 uint32_t count = ref->arg_count;
                 KestType **args = KEST_ARENA_ARRAY(program->arena, KestType *,
                                                    count == 0 ? 1 : count);
@@ -3424,11 +3426,69 @@ static uint32_t under_one_name(KestProgram *program, const char *name,
     return count;
 }
 
+static uint32_t written_hash(const KestSource *source, uint32_t offset,
+                             const KestSource *declared_in, uint32_t declared) {
+    uint64_t mixed = (uint64_t)(uintptr_t)source;
+    mixed = (mixed ^ offset) * 0x9e3779b97f4a7c15ull;
+    mixed = (mixed ^ (uint64_t)(uintptr_t)declared_in) * 0x9e3779b97f4a7c15ull;
+    mixed = (mixed ^ declared) * 0x9e3779b97f4a7c15ull;
+    return (uint32_t)(mixed >> 32);
+}
+
+static bool same_written(const KestUse *one, const KestSource *source,
+                         uint32_t offset, const KestSource *declared_in,
+                         uint32_t declared) {
+    return one->source == source && one->span.offset == offset &&
+           one->declared_in == declared_in && one->declared.offset == declared;
+}
+
+// Room for one more use in the slots, kept at most half full. Answers false
+// when there is none, and then the use is not kept, as it is not when there
+// is no room for the list.
+static bool use_slot_room(KestProgram *program) {
+    if ((program->use_count + 1) * 2 <= program->use_slot_room) {
+        return true;
+    }
+    uint32_t room =
+        program->use_slot_room == 0 ? 128 : program->use_slot_room * 2;
+    uint32_t *slots = KEST_ARENA_ARRAY(program->arena, uint32_t, room);
+    if (slots == NULL) {
+        return false;
+    }
+    uint32_t mask = room - 1;
+    for (uint32_t i = 0; i < program->use_count; i++) {
+        const KestUse *one = &program->uses[i];
+        uint32_t slot = written_hash(one->source, one->span.offset,
+                                     one->declared_in, one->declared.offset) &
+                        mask;
+        while (slots[slot] != 0) {
+            slot = (slot + 1) & mask;
+        }
+        slots[slot] = i + 1;
+    }
+    program->use_slots = slots;
+    program->use_slot_room = room;
+    return true;
+}
+
 void kest_program_used(KestProgram *program, const KestSource *source,
                        KestSpan span, const KestSource *declared_in,
                        KestSpan declared, const KestType *type, bool is_local) {
     if (program == NULL || source == NULL || !program->index_names) {
         return;
+    }
+    if (!use_slot_room(program)) {
+        return;
+    }
+    uint32_t mask = program->use_slot_room - 1;
+    uint32_t slot =
+        written_hash(source, span.offset, declared_in, declared.offset) & mask;
+    while (program->use_slots[slot] != 0) {
+        if (same_written(&program->uses[program->use_slots[slot] - 1], source,
+                         span.offset, declared_in, declared.offset)) {
+            return;
+        }
+        slot = (slot + 1) & mask;
     }
     if (program->use_count == program->use_capacity) {
         uint32_t grown =
@@ -3446,6 +3506,7 @@ void kest_program_used(KestProgram *program, const KestSource *source,
         program->uses = moved;
         program->use_capacity = grown;
     }
+    program->use_slots[slot] = program->use_count + 1;
     KestUse *one = &program->uses[program->use_count++];
     one->source = source;
     one->span = span;
@@ -3453,6 +3514,24 @@ void kest_program_used(KestProgram *program, const KestSource *source,
     one->declared = declared;
     one->type = type;
     one->is_local = is_local;
+}
+
+void kest_program_type_used(KestProgram *program, KestSpan written,
+                            const KestType *type) {
+    if (program == NULL || type == NULL || type->declared_in == NULL ||
+        !program->index_names) {
+        return;
+    }
+    const char *text = kest_span_text(program->source, written);
+    for (uint32_t i = written.length; i > 0; i--) {
+        if (text[i - 1] == '.') {
+            written.offset += i;
+            written.length -= i;
+            break;
+        }
+    }
+    kest_program_used(program, program->source, written, type->declared_in,
+                      type->span, type, false);
 }
 
 const KestUse *kest_program_uses(const KestProgram *program, uint32_t *count) {

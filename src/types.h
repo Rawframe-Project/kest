@@ -373,6 +373,14 @@ typedef struct {
     KestUse *uses;
     uint32_t use_count;
     uint32_t use_capacity;
+    // Each of them once: what was written where, and what it named. A body
+    // or a signature can be read more than once on the way to a program -- a
+    // generic once and again for every copy, a constant's type where it is
+    // declared and where it is checked -- and a use listed twice is a
+    // reference shown twice and a rename that sends two edits to one place.
+    // What a slot holds is one more than the use it names.
+    uint32_t *use_slots;
+    uint32_t use_slot_room;
     // Whether to keep them at all. A compile run out of a build does not want
     // an index of every name in the program and should not pay for one: the
     // library's is a third again of what a finished build holds. An editor
@@ -451,6 +459,13 @@ void kest_program_in(KestProgram *program, const KestUnitInfo *unit);
 void kest_program_used(KestProgram *program, const KestSource *source,
                        KestSpan span, const KestSource *declared_in,
                        KestSpan declared, const KestType *type, bool is_local);
+
+// And a type named where it is written, at the last word of what was written
+// (`Point` in `thing.Point`), which is the word under a cursor and the one a
+// rename changes. A type the language has rather than a file is not kept: it
+// has nowhere to send an editor.
+void kest_program_type_used(KestProgram *program, KestSpan written,
+                            const KestType *type);
 
 // Every name written in this program, in the order they were read. What an
 // editor asks of it: which use is under this offset, which declaration it

@@ -6803,6 +6803,219 @@ if [ "$reached" != "yes" ]; then
     complain "lsp: a name written under its module: $reached"
 fi
 
+# And the name of a type, wherever it is written: in a type, in what builds
+# one, and under the module it came from. The index kept values only, so an
+# editor answered `null` for every one of them, and references found none.
+# Each is kept once: a signature is read more than once on the way to a
+# program, and a reference listed twice is a rename that writes twice.
+mkdir -p "$scratch"/serving/typing/src/pack
+printf 'project typing\nsource src\n' >"$scratch"/serving/typing/kest.project
+cat >"$scratch"/serving/typing/src/main.kest <<'KEST'
+module main
+
+import pack.thing
+
+struct Here {
+    a: i32
+}
+
+fn make(h: Here) -> thing.Point {
+    return thing.Point(h.a)
+}
+
+fn main() -> i32 {
+    let h: Here = Here(1)
+    let p: thing.Point = make(h)
+    let d = thing.Door.Open
+    let l = thing.Door.Locked(2)
+    return p.x + len("{d}{l}")
+}
+KEST
+cat >"$scratch"/serving/typing/src/pack/thing.kest <<'KEST'
+module pack.thing
+
+struct Point {
+    x: i32
+}
+
+enum Door {
+    Open
+    Locked(i32)
+}
+KEST
+typed=$(python3 - "$kest" "$scratch"/serving/typing/src <<'PY'
+import json, os, subprocess, sys
+
+kest, root = sys.argv[1], os.path.abspath(sys.argv[2])
+main = os.path.join(root, "main.kest")
+text = open(main).read()
+lines = text.split("\n")
+uri = "file://" + main
+
+
+def at(line, written, back):
+    column = lines[line].index(written) + len(written) - back
+    return {"textDocument": {"uri": uri},
+            "position": {"line": line, "character": column}}
+
+
+# What is asked about, where it is written, and the file and line it is
+# declared on.
+asked = [
+    ("Here as a parameter", at(8, "h: Here", 1), "/main.kest", 4),
+    ("thing.Point as a result", at(8, "thing.Point", 1), "/pack/thing.kest",
+     2),
+    ("thing.Point(h.a)", at(9, "thing.Point(", 2), "/pack/thing.kest", 2),
+    ("Here in a let", at(13, ": Here", 1), "/main.kest", 4),
+    ("Here(1)", at(13, "= Here(", 2), "/main.kest", 4),
+    ("thing.Point in a let", at(14, "thing.Point", 1), "/pack/thing.kest", 2),
+    ("thing.Door.Open", at(15, "thing.Door", 1), "/pack/thing.kest", 6),
+    ("thing.Door.Locked(2)", at(16, "thing.Door", 1), "/pack/thing.kest", 6),
+]
+messages = [
+    {"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": uri, "languageId": "kest",
+                                 "version": 1, "text": text}}},
+]
+for i, (_, where, _, _) in enumerate(asked):
+    messages.append({"jsonrpc": "2.0", "id": i + 1,
+                     "method": "textDocument/definition", "params": where})
+messages.append({"jsonrpc": "2.0", "id": 98,
+                 "method": "textDocument/references", "params": asked[3][1]})
+messages.append({"jsonrpc": "2.0", "id": 99,
+                 "method": "textDocument/references", "params": asked[1][1]})
+body = b""
+for one in messages:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+out = subprocess.run([kest, "lsp"], input=body, capture_output=True).stdout
+answers = {}
+at_byte = 0
+while True:
+    head = out.find(b"Content-Length: ", at_byte)
+    blank = out.find(b"\r\n\r\n", head) if head >= 0 else -1
+    if blank < 0:
+        break
+    many = int(out[head + 16:blank])
+    said = json.loads(out[blank + 4:blank + 4 + many])
+    at_byte = blank + 4 + many
+    if "id" in said:
+        answers[said["id"]] = said.get("result")
+wrong = []
+for i, (what, _, ends, line) in enumerate(asked):
+    got = answers.get(i + 1)
+    if not got or not got["uri"].endswith(ends) or \
+            got["range"]["start"]["line"] != line:
+        wrong.append("the definition of %s was %s" % (what, json.dumps(got)))
+for asking, name, want in ((98, "Here", [8, 13, 13]),
+                           (99, "Point", [8, 9, 14])):
+    named = sorted(one["range"]["start"]["line"]
+                   for one in answers.get(asking) or [] if one["uri"] == uri)
+    if named != want:
+        wrong.append("%s was named on lines %s of main.kest" % (name, named))
+print("; ".join(wrong) if wrong else "yes")
+PY
+)
+if [ "$typed" != "yes" ]; then
+    complain "lsp: the name of a type: $typed"
+fi
+
+# And each use once, where what was written is read more than once on the way
+# to a program: a constant's type where it is declared and where it is checked,
+# a field of a generic struct for every copy of it, and a generic function's
+# body for itself and for every copy. Every reading kept its own, so `n` below
+# was named five times on one line, and a rename sent five edits to it.
+mkdir -p "$scratch"/serving/again/src
+printf 'project again\nsource src\n' >"$scratch"/serving/again/kest.project
+cat >"$scratch"/serving/again/src/main.kest <<'KEST'
+module main
+
+struct Here {
+    a: i32
+}
+
+const ORIGIN: Here = Here(0)
+
+struct Box<T> {
+    held: T
+    at: Here
+}
+
+fn first<T>(xs: [T]) -> Here {
+    let n = len(xs)
+    return Here(n)
+}
+
+fn main() -> i32 {
+    let a: Box<i32> = Box(1, ORIGIN)
+    let b: Box<text> = Box("x", ORIGIN)
+    let xs: [i32] = array()
+    let ys: [text] = array()
+    return a.at.a + b.at.a + first(xs).a + first(ys).a
+}
+KEST
+again=$(python3 - "$kest" "$scratch"/serving/again/src/main.kest <<'PY'
+import json, os, subprocess, sys
+
+kest, main = sys.argv[1], os.path.abspath(sys.argv[2])
+text = open(main).read()
+lines = text.split("\n")
+uri = "file://" + main
+
+
+def at(line, written, back):
+    column = lines[line].index(written) + len(written) - back
+    return {"textDocument": {"uri": uri},
+            "position": {"line": line, "character": column}}
+
+
+# What is asked about, where, and every line it is named on, once each.
+asked = [
+    ("Here", at(6, ": Here", 1), [6, 6, 10, 13, 15]),
+    ("Box", at(19, ": Box", 1), [19, 19, 20, 20]),
+    ("n", at(15, "Here(n", 1), [15]),
+    ("ORIGIN", at(19, "ORIGIN", 1), [19, 20]),
+]
+messages = [
+    {"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": uri, "languageId": "kest",
+                                 "version": 1, "text": text}}},
+]
+for i, (_, where, _) in enumerate(asked):
+    messages.append({"jsonrpc": "2.0", "id": i + 1,
+                     "method": "textDocument/references", "params": where})
+body = b""
+for one in messages:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+out = subprocess.run([kest, "lsp"], input=body, capture_output=True).stdout
+answers = {}
+at_byte = 0
+while True:
+    head = out.find(b"Content-Length: ", at_byte)
+    blank = out.find(b"\r\n\r\n", head) if head >= 0 else -1
+    if blank < 0:
+        break
+    many = int(out[head + 16:blank])
+    said = json.loads(out[blank + 4:blank + 4 + many])
+    at_byte = blank + 4 + many
+    if "id" in said:
+        answers[said["id"]] = said.get("result")
+wrong = []
+for i, (name, _, want) in enumerate(asked):
+    named = sorted(one["range"]["start"]["line"]
+                   for one in answers.get(i + 1) or [])
+    if named != want:
+        wrong.append("%s was named on lines %s" % (name, named))
+print("; ".join(wrong) if wrong else "yes")
+PY
+)
+if [ "$again" != "yes" ]; then
+    complain "lsp: a name read more than once on the way to a program: $again"
+fi
+
 # And two open files, one importing the other, over a module that does not
 # build. Each open file's list is its own build's to send: the one in between
 # is told on its own import line that the module does not build, and a build

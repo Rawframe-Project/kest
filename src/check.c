@@ -3217,6 +3217,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             checker->program, span_text(checker, owner), owner.length);
         if (choice != NULL && choice->tag == KEST_T_ENUM) {
             report_unimported(checker, owner);
+            kest_program_type_used(checker->program, owner, choice);
             if (choice->type_param_count > 0) {
                 choice = copy_of_case(checker, expr, choice,
                                       expr->call.callee->field.name, expected);
@@ -3239,6 +3240,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             checker->program, span_text(checker, name), name.length);
         if (type != NULL && type->tag == KEST_T_STRUCT) {
             report_unimported(checker, name);
+            kest_program_type_used(checker->program, name, type);
             // A shape is not a type. Which copy is meant comes from what it
             // is built with, the same way a generic call works.
             if (type->type_param_count > 0) {
@@ -3253,6 +3255,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
         // the host handed over. `array()` and `store()` already read "an
         // empty one" from a name with nothing in the brackets.
         if (type != NULL && type->tag == KEST_T_FLAGS) {
+            kest_program_type_used(checker->program, name, type);
             expr->call.callee->type = type;
             if (expr->call.arg_count > 1) {
                 check_arity(checker, expr, 1);
@@ -3841,6 +3844,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
         // One named bit, which is a value of the set it was named in.
         if (choice != NULL && choice->tag == KEST_T_FLAGS) {
             report_unimported(checker, owner);
+            kest_program_type_used(checker->program, owner, choice);
             expr->field.object->type = choice;
             if (find_case(checker, choice, expr->field.name) == NULL) {
                 return error_type(checker);
@@ -3849,6 +3853,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
         }
         if (choice != NULL && choice->tag == KEST_T_ENUM) {
             report_unimported(checker, owner);
+            kest_program_type_used(checker->program, owner, choice);
             // A case of a shape carrying nothing: which copy it is comes from
             // where the value is going, because the case itself says nothing
             // about the names.
