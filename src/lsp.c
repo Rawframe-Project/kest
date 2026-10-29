@@ -631,9 +631,16 @@ static void publish(Server *server) {
     publish_others(server, file);
 }
 
+static bool covers(KestSpan span, size_t offset) {
+    return offset >= span.offset && offset < (size_t)span.offset + span.length;
+}
+
 // Which name is written under this offset, out of the index the checker wrote
 // while it resolved. The nearest one that covers it, because a field access is
-// a name inside a name.
+// a name inside a name. And where no use is written there, a use of what is
+// declared there: the index holds the places a name is used, a declaration is
+// not one of them, and a rename or a reference list asked from the `n` of
+// `let n = 1` was answered with nothing.
 static const KestUse *use_at(Server *server, size_t offset) {
     if (server->build == NULL || server->build->program == NULL) {
         return NULL;
@@ -641,22 +648,29 @@ static const KestUse *use_at(Server *server, size_t offset) {
     uint32_t count = 0;
     const KestUse *uses = kest_program_uses(server->build->program, &count);
     const KestUse *best = NULL;
+    const KestUse *declaring = NULL;
     const Open *file = here(server);
+    if (file->path == NULL) {
+        return NULL;
+    }
     for (uint32_t i = 0; i < count; i++) {
         const KestUse *one = &uses[i];
-        if (one->source == NULL || file->path == NULL ||
-            strcmp(one->source->path, file->path) != 0) {
-            continue;
+        if (one->declared_in != NULL && one->declared_in->path != NULL &&
+            strcmp(one->declared_in->path, file->path) == 0 &&
+            covers(one->declared, offset) &&
+            (declaring == NULL ||
+             one->declared.length < declaring->declared.length)) {
+            declaring = one;
         }
-        if (offset < one->span.offset ||
-            offset >= (size_t)one->span.offset + one->span.length) {
+        if (one->source == NULL || strcmp(one->source->path, file->path) != 0 ||
+            !covers(one->span, offset)) {
             continue;
         }
         if (best == NULL || one->span.length < best->span.length) {
             best = one;
         }
     }
-    return best;
+    return best != NULL ? best : declaring;
 }
 
 static bool same_declaration(const KestUse *a, const KestUse *b) {
@@ -851,6 +865,25 @@ static void references(Server *server, const KestJson *id,
     start_answer(&out, id);
     kest_wire_char(&out, '[');
     bool first = true;
+    // The declaration is a place the name is written, and a client asking
+    // with `includeDeclaration` is asking for it as well.
+    const KestJson *context = kest_wire_member(params, "context");
+    const KestJson *declaration =
+        context == NULL ? NULL
+                        : kest_wire_member(context, "includeDeclaration");
+    if (wanted != NULL && declaration != NULL &&
+        declaration->kind == KEST_JSON_TRUE && wanted->declared_in != NULL &&
+        wanted->declared_in->path != NULL) {
+        size_t length = 0;
+        const char *text = text_of(wanted->declared_in, &length);
+        first = false;
+        kest_wire_say(&out, "{\"uri\":");
+        put_uri(&out, wanted->declared_in->path);
+        kest_wire_say(&out, ",\"range\":");
+        put_range(&out, text, length, wanted->declared.offset,
+                  wanted->declared.length);
+        kest_wire_char(&out, '}');
+    }
     if (wanted != NULL && server->build != NULL &&
         server->build->program != NULL) {
         uint32_t count = 0;
