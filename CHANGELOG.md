@@ -2,6 +2,25 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## 0.0.3 (2026-10-28)
+
+### Fixed
+
+- A machine that cannot get its heap arena, or the bookkeeping its program needs, says `K0639`; `K0638` is said only for the stack or frames a host picked. A host that saw `K0638` for a missing heap arena sees `K0639` instead. `emit` and every build no longer hand on a module whose proof could not start, `emit --c` and `build --release` free the C writer's scratch memory when compiling stops partway, and `hostile`, `new`, `doctor`, `lsp` and `dap` say `K0639` when their own memory cannot be made, instead of `K0701`, `K0605` or nothing. ([#30](https://github.com/Rawframe-Project/kest/pull/30))
+- `kest lsp` answers every request. A message that is not JSON is answered with `-32700` and no id; one there was no memory to hold, or whose answer could not be written, with `-32603` and `K0639`, under its own id when that is a number or a plain name of at most 64 characters. `kest dap` says a message it could not read in the debug console and refuses a request whose response could not be written. A `Content-Length` of 2^64 - 1 no longer reads past the end of a buffer. ([#31](https://github.com/Rawframe-Project/kest/pull/31))
+- `lsp` and `dap` refuse a message nested more than 64 deep and say the limit, instead of running out of stack and crashing. ([#34](https://github.com/Rawframe-Project/kest/pull/34))
+- A build that runs out of memory while naming a local says `K0639` instead of crashing the compiler. ([#37](https://github.com/Rawframe-Project/kest/pull/37))
+- A host that starts a machine with a door missing (`K0606`) no longer prints freed memory in the build report when memory runs short; the report says `K0639`. ([#38](https://github.com/Rawframe-Project/kest/pull/38))
+- `check` and `emit` hand on their listing, and `call --json` its `needs`, only when it is whole. With no room for a part they used to print `?` for a type (and a different `signature` under `--json`), or leave lines out, and come back 0; now the run says `K0639`, and under `--json` the listing's fields are `null`. This holds on every target, the WebAssembly build the playground runs included. ([#40](https://github.com/Rawframe-Project/kest/pull/40), [#42](https://github.com/Rawframe-Project/kest/pull/42), [#44](https://github.com/Rawframe-Project/kest/pull/44))
+- `fmt`, `parse`, `lex`, `check` and `run` say `K0639` (`K0658` under `--room`) and come back 1 when reading a file runs out of memory, instead of saying the file could not be read (`K0701`), or printing nothing and coming back 0. ([#48](https://github.com/Rawframe-Project/kest/pull/48))
+- A function that `resumes` is no longer read as one that does not when memory runs short: `fmt` and `fmt -w` no longer drop `resumes c.at`, `parse` keeps it, and the checker and the compiler no longer blame the program with `K0368` or `K0505`. ([#49](https://github.com/Rawframe-Project/kest/pull/49))
+- In a project, a manifest there was no room to read says `K0639` (`K0658` under `--room`) instead of being taken for no manifest, which made an import from one of its sources say `K0701`. ([#51](https://github.com/Rawframe-Project/kest/pull/51))
+- `fmt --json` no longer hands an editor an edit that replaces the changed bytes with `""` when memory runs short, which deleted that part of the file on save. `lex --json` no longer writes `""` for a token or comment it had no room to copy or leaves out `comments`, and `lex` no longer drops every comment from its listing; each says `K0639` instead. Under `--json`, a span that holds a NUL byte is now written whole, with the byte as `\u0000`, where it used to be cut off at that byte. `lex --json`'s `cost`, `held` and `askings` now count the comment list: one allocation more, which is what `lex` takes. ([#52](https://github.com/Rawframe-Project/kest/pull/52))
+
+### Changed
+
+- A build in a project reads its manifest once instead of twice, and a `--room` ceiling counts it once. Under a ceiling, a manifest line with a name kest does not know can now be refused as no room rather than as an unknown name. ([#54](https://github.com/Rawframe-Project/kest/pull/54))
+
 ## 0.0.2 (2026-10-27)
 
 ### Fixed
