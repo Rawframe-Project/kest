@@ -1,6 +1,6 @@
 #!/bin/sh
 # The boundaries a stranger's bytes arrive through, under the checking build:
-# eight seeds of four hundred inputs over each of the seven, which is a minute
+# eight seeds of four hundred inputs over each of the nine, which is a minute
 # rather than an afternoon. A long campaign is the same fuzzer with other
 # numbers. What each boundary holds is written in tools/fuzz.c; what they share
 # is that every input ends in an answer or a refusal, which is what not
@@ -26,7 +26,7 @@ if [ ! -x "$fuzzer" ]; then
 fi
 
 # One boundary each, side by side: none of them reads what another writes.
-for what in source handles lends refs text migrate chunks; do
+for what in source handles lends refs text migrate chunks fmt manifest; do
     (
         for seed in 1 2 3 4 5 6 7 8; do
             said=$("$fuzzer" "$seed" 400 "$scratch/$what-$seed.kest" "$what" \
@@ -79,7 +79,7 @@ fi
 if [ "$failed" -ne 0 ]; then
     exit 1
 fi
-echo "fuzzing: $((fuzzed * 400)) input(s) made from eight seeds over seven" \
+echo "fuzzing: $((fuzzed * 400)) input(s) made from eight seeds over nine" \
      "boundaries, every one of them an answer or a refusal under a build that" \
      "checks itself, and the source ones folding to the same answers compiled" \
      "the other two ways"
