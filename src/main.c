@@ -1122,7 +1122,7 @@ typedef struct {
     const int32_t *given;
 } Ticked;
 
-static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
+static bool drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
                          const int32_t *given, bool reset, Ticked *out) {
     KestProgram *program = build->program;
     KestArena *arena = build->arena;
@@ -1136,9 +1136,11 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
     // address a lend may not have, because what a program holds of text
     // is a pointer into that arena and a lend is memory a program may write
     // into. A host owns what it lends.
+    // Answers false only here: with no room for the events, nothing was
+    // driven, and a program left undriven read as one that takes no events.
     int32_t *events = count > 0 ? calloc((size_t)count, sizeof(int32_t)) : NULL;
     if (count > 0 && events == NULL) {
-        return;
+        return false;
     }
     for (int32_t i = 0; i < count; i++) {
         // Counted up from nought, unless the caller wrote down which ones
@@ -1175,7 +1177,7 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
             out->near = kest_nearest_global(program, bulk, strlen(bulk));
         }
         free(events);
-        return;
+        return true;
     }
 
     // Found once. What a name means is a search, and a per-event crossing is
@@ -1209,7 +1211,7 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
             frame[0].integer = events[i];
             if (!kest_call(runtime, single_at, frame, 1)) {
                 free(events);
-                return;
+                return true;
             }
             if (gives) {
                 total += frame[0].integer;
@@ -1222,7 +1224,7 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
             if (reset) {
                 if (!kest_heap_reset(runtime)) {
                     free(events);
-                    return;
+                    return true;
                 }
                 out->thrown++;
             }
@@ -1234,6 +1236,7 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
         out->peak = peak;
     }
     free(events);
+    return true;
 }
 
 typedef enum {
@@ -2748,6 +2751,9 @@ static char *made_release(const char *executable, const char *program,
     char *out = malloc(length + 1);
     char source[1100];
     if (out == NULL) {
+        // Said, because the build has nothing wrong with it: a release that
+        // answered NULL with nothing said came back 0 with no binary made.
+        kest_diags_starve(diags);
         return NULL;
     }
     memcpy(out, base, length);
@@ -2773,15 +2779,22 @@ static char *made_release(const char *executable, const char *program,
     size_t fixed = sizeof(after) / sizeof(after[0]);
     char **words = malloc((extra + fixed + 1) * sizeof(char *));
     char *split = malloc(strlen(compiler) + 1);
-    int status = -1;
-    if (words != NULL && split != NULL) {
-        compiler_words(compiler, split, words);
-        for (size_t i = 0; i < fixed; i++) {
-            words[extra + i] = (char *)after[i];
-        }
-        words[extra + fixed] = NULL;
-        status = wrote ? ran_program(words) : -1;
+    if (words == NULL || split == NULL) {
+        // No room to say what to run is not a compiler that could not make
+        // the release, which is what `K0663` would blame.
+        free(words);
+        free(split);
+        remove(source);
+        free(out);
+        kest_diags_starve(diags);
+        return NULL;
     }
+    compiler_words(compiler, split, words);
+    for (size_t i = 0; i < fixed; i++) {
+        words[extra + i] = (char *)after[i];
+    }
+    words[extra + fixed] = NULL;
+    int status = wrote ? ran_program(words) : -1;
     free(words);
     free(split);
     remove(source);
@@ -3109,7 +3122,11 @@ static int run(const char *command, const char *executable, char **paths,
             kest_fuel_set(runtime, fuel);
             if (runtime != NULL) {
                 if (ticking) {
-                    drive_events(runtime, build, count, given, reset, &ticked);
+                    bool driven = drive_events(runtime, build, count, given,
+                                               reset, &ticked);
+                    if (!driven) {
+                        kest_diags_starve(&build->diags);
+                    }
                     // What the program is holding at the end of it, and what
                     // it was ever handed on the way: the first settles where a
                     // world settles and the second is what a frame cost.
@@ -3126,7 +3143,8 @@ static int run(const char *command, const char *executable, char **paths,
                     ticked.frames = given_room.call_depth;
                     ticked.allowed = given_room.heap_bytes;
                     ticked.ran = true;
-                    if (!ticked.bulk && !ticked.single && !ticked.named) {
+                    if (driven && !ticked.bulk && !ticked.single &&
+                        !ticked.named) {
                         // Driving a program that takes no events looks the
                         // same as driving one that took them and did nothing.
                         // A program that has one and cannot be driven by it
@@ -3674,29 +3692,34 @@ static int by_name(const void *left, const void *right) {
 
 // Every `.kest` directly under a directory, in that order. This is the one
 // place this compiler asks what is in a directory, and `kest test` is what
-// asks: a project says where its tests are and not which they are. Answers how
-// many, with the paths in `into` for the caller to free, and nought for a
-// directory that is not there or has none -- which the caller tells apart,
-// because the second is a project saying something that is not so.
-static uint32_t tests_under(const char *where, char ***into) {
+// asks: a project says where its tests are and not which they are. Puts how
+// many in `many`, with the paths in `into` for the caller to free, and nought
+// for a directory that is not there or has none -- which the caller tells
+// apart, because the second is a project saying something that is not so.
+// Answers false when there was no room for the list, with nothing in it: a
+// list that stopped where the room did was some of the tests run as all of
+// them, and a run that passed.
+static bool tests_under(const char *where, char ***into, uint32_t *many) {
     *into = NULL;
+    *many = 0;
     char **found = NULL;
     uint32_t count = 0;
     uint32_t room = 0;
+    bool whole = true;
 #if defined(_WIN32)
     char pattern[1024];
     snprintf(pattern, sizeof(pattern), "%s\\*.kest", where);
     struct _finddata_t entry;
     intptr_t walking = _findfirst(pattern, &entry);
     if (walking == -1) {
-        return 0;
+        return true;
     }
     do {
         const char *name = entry.name;
 #else
     DIR *walking = opendir(where);
     if (walking == NULL) {
-        return 0;
+        return true;
     }
     for (const struct dirent *entry = readdir(walking); entry != NULL;
          entry = readdir(walking)) {
@@ -3710,6 +3733,7 @@ static uint32_t tests_under(const char *where, char ***into) {
             uint32_t bigger = room == 0 ? 8 : room * 2;
             char **grown = realloc(found, (size_t)bigger * sizeof(char *));
             if (grown == NULL) {
+                whole = false;
                 break;
             }
             found = grown;
@@ -3718,6 +3742,7 @@ static uint32_t tests_under(const char *where, char ***into) {
         size_t wide = strlen(where) + strlen(name) + 2;
         char *path = malloc(wide);
         if (path == NULL) {
+            whole = false;
             break;
         }
         snprintf(path, wide, "%s/%s", where, name);
@@ -3729,11 +3754,19 @@ static uint32_t tests_under(const char *where, char ***into) {
     }
     closedir(walking);
 #endif
+    if (!whole) {
+        for (uint32_t i = 0; i < count; i++) {
+            free(found[i]);
+        }
+        free(found);
+        return false;
+    }
     if (count > 1) {
         qsort(found, count, sizeof(char *), by_name);
     }
     *into = found;
-    return count;
+    *many = count;
+    return true;
 }
 
 // The project the command was run in, for a command given no file. A manifest
@@ -4072,8 +4105,11 @@ int main(int argc, char **argv) {
             KestProject *here = NULL;
             status = project_here(asking, json, &here);
             if (here != NULL && here->tests[0] != '\0') {
-                found_count = tests_under(here->tests, &found);
-                if (found_count == 0) {
+                if (!tests_under(here->tests, &found, &found_count)) {
+                    kest_diags_say_one(json ? stdout : stderr, json,
+                                       KEST_STARVED_CODE, KEST_STARVED_SAYS);
+                    status = 1;
+                } else if (found_count == 0) {
                     // A project that says where its tests are and has none
                     // there is a project saying something that is not so, and
                     // a run of no tests that answers nought is a gate that
