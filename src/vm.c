@@ -2579,6 +2579,10 @@ static void no_room_growing(Vm *vm, const Frame *frame,
 // there is not one. Worked out here rather than kept anywhere, because this
 // happens once, on the way out.
 static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
+    // Every refusal for frames or slots comes through here, and those are room
+    // the way a heap is: a host picked the numbers, and a host that gives more
+    // lets the same program through.
+    vm->ran_out++;
     uint32_t slots = 0;
     uint32_t deep = 0;
     KestReason why = {KEST_REACH_UNASKED, NULL};
