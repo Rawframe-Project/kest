@@ -2269,6 +2269,43 @@ for how in check run; do
     esac
 done
 
+# And a file a program reads with no room on its heap for the text. The door
+# handed back the empty piece `kest_text` writes when it cannot copy, and the
+# machine refused that as text that did not come from it (`K0652`): this
+# command line blamed as a broken host for the heap having no room. The
+# ceiling is the file's own size, which compiling the program fits under and
+# the text cannot.
+mkdir -p "$scratch"/reading
+head -c 1000000 /dev/zero | tr '\0' 'a' >"$scratch"/reading/big.txt
+cat >"$scratch"/reading/reads.kest <<'KEST'
+module reads
+
+import std.os
+
+fn main() -> i32 {
+    if os.read("big.txt") == none {
+        return 2
+    }
+    return 0
+}
+KEST
+said=$(cd "$scratch"/reading &&
+       $build_dir/kest-debug run --room 1000000 reads.kest 2>&1 </dev/null)
+answered=$?
+case "$answered:$said" in
+*K0652*)
+    echo "ceilings: a file read with no room for its text blamed the host"
+    failed=1
+    ;;
+1:*K0662*"would not take what it read"*) ;;
+*)
+    echo "ceilings: a file read with no room for its text came back" \
+         "$answered and did not say the door could not hand it over"
+    printf '%s\n' "$said" | head -3 | sed 's/^/    /'
+    failed=1
+    ;;
+esac
+
 # And every arena taken, refused in turn. Taking one is asking the host for its
 # first block, which none of the refusals above is aimed at, so each stage that
 # works in an arena of its own had never been seen told no -- and two of them

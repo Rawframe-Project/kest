@@ -543,6 +543,28 @@ static void os_arg_count(KestValue *frame, KestRuntime *runtime,
     frame[0].integer = program_arg_count;
 }
 
+// Text handed to the program, or the door refused. `kest_text` answers false
+// and writes an empty piece that is not on the heap when it cannot copy: with
+// no room it has said `K0605`, and with bytes that are not text `K0611`. A
+// door that handed that back as what it read was refused by the machine as a
+// host answering text that did not come from it, which blamed this command
+// line for the heap having no room. A length past what a piece of text can say
+// is refused too, rather than cut to the part that fits.
+static bool handed_back(KestRuntime *runtime, const char *bytes, size_t length,
+                        KestValue *frame) {
+    if (length > UINT32_MAX) {
+        kest_native_failed(runtime, "what it read is more bytes than a piece "
+                                    "of text holds");
+        return false;
+    }
+    if (!kest_text(runtime, bytes, (uint32_t)length, frame)) {
+        kest_native_failed(runtime, "the machine would not take what it read "
+                                    "as text");
+        return false;
+    }
+    return true;
+}
+
 // An optional is the value and a byte after it saying whether the value is
 // there, which is two slots in a frame. Nothing is the byte set to nought, and
 // what is written where the value would be is not read.
@@ -550,13 +572,22 @@ static void os_arg(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)context;
     int32_t at = (int32_t)frame[0].integer;
     if (program_args == NULL || at < 0 || at >= program_arg_count) {
-        kest_text(runtime, "", 0, frame);
-        frame[2].integer = 0;
+        if (handed_back(runtime, "", 0, frame)) {
+            frame[2].integer = 0;
+        }
         return;
     }
-    kest_text(runtime, program_args[at],
-              (uint32_t)strlen(program_args[at]), frame);
-    frame[2].integer = 1;
+    if (handed_back(runtime, program_args[at], strlen(program_args[at]),
+                    frame)) {
+        frame[2].integer = 1;
+    }
+}
+
+// Nothing, for a file that is not there or could not be read.
+static void nothing_read(KestRuntime *runtime, KestValue *frame) {
+    if (handed_back(runtime, "", 0, frame)) {
+        frame[2].integer = 0;
+    }
 }
 
 // Reading a whole file. Nothing rather than empty text when it cannot be read:
@@ -568,16 +599,14 @@ static void os_file_read(KestValue *frame, KestRuntime *runtime,
     uint32_t wide = 0;
     const char *named = kest_text_bytes(frame, &wide);
     if (named == NULL || wide >= sizeof path) {
-        kest_text(runtime, "", 0, frame);
-        frame[2].integer = 0;
+        nothing_read(runtime, frame);
         return;
     }
     memcpy(path, named, wide);
     path[wide] = '\0';
     FILE *reading = fopen(path, "rb");
     if (reading == NULL) {
-        kest_text(runtime, "", 0, frame);
-        frame[2].integer = 0;
+        nothing_read(runtime, frame);
         return;
     }
     size_t room = 4096;
@@ -598,12 +627,18 @@ static void os_file_read(KestValue *frame, KestRuntime *runtime,
         bytes = grown;
         room *= 2;
     }
-    bool wrong = bytes == NULL || ferror(reading);
+    // No room to hold the file is not a file that is not there: said as
+    // what it is, rather than as nothing.
+    if (bytes == NULL) {
+        fclose(reading);
+        kest_native_failed(runtime, "there was no room to read the file");
+        return;
+    }
+    bool wrong = ferror(reading);
     fclose(reading);
     if (wrong) {
         free(bytes);
-        kest_text(runtime, "", 0, frame);
-        frame[2].integer = 0;
+        nothing_read(runtime, frame);
         return;
     }
     // A nought among the bytes would make text that stops early, and text that
@@ -611,12 +646,12 @@ static void os_file_read(KestValue *frame, KestRuntime *runtime,
     // than handed over short: a file is all of it or nothing.
     if (memchr(bytes, 0, held) != NULL) {
         free(bytes);
-        kest_text(runtime, "", 0, frame);
-        frame[2].integer = 0;
+        nothing_read(runtime, frame);
         return;
     }
-    kest_text(runtime, bytes, (uint32_t)held, frame);
-    frame[2].integer = 1;
+    if (handed_back(runtime, bytes, held, frame)) {
+        frame[2].integer = 1;
+    }
     free(bytes);
 }
 
@@ -710,7 +745,7 @@ static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
     char *bytes = malloc(room);
     if (bytes == NULL) {
         program_could_not_read = true;
-        kest_text(runtime, "", 0, frame);
+        handed_back(runtime, "", 0, frame);
         return;
     }
     for (;;) {
@@ -735,7 +770,7 @@ static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
         program_could_not_read = true;
         held = 0;
     }
-    kest_text(runtime, bytes, (uint32_t)held, frame);
+    handed_back(runtime, bytes, held, frame);
     free(bytes);
 }
 
@@ -744,7 +779,7 @@ static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
 // holds it, and a program holds a piece of text for as long as it likes.
 static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)context;
-    kest_text(runtime, "kest", 4, frame);
+    handed_back(runtime, "kest", 4, frame);
 }
 
 // A clock that measures elapsed time and only goes forwards. `clock()` is the
