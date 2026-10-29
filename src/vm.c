@@ -3559,9 +3559,8 @@ static const KestChunk *the_function(const KestModule *module,
 #if defined(__GNUC__)
 __attribute__((cold, noinline))
 #endif
-static bool
-walked_past(Vm *vmp, Frame *frame, const uint8_t *instruction, int64_t index,
-            uint32_t length) {
+static bool walked_past(Vm *vmp, Frame *frame, const uint8_t *instruction,
+                        int64_t index, uint32_t length) {
     fail(vmp, frame, instruction, "K0645",
          "a walk read byte %lld of text of %u bytes", (long long)index, length);
     kest_diags_fault(vmp->diags, "a walk over text takes its length before "
