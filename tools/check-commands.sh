@@ -5043,6 +5043,50 @@ case "$nowhere_under" in
     ;;
 esac
 
+# A manifest that is there and cannot be read as a project is said as that,
+# by every command that reads one. It was taken for no manifest: its sources
+# were never looked under, a program in it was read in the first edition
+# whatever edition it named, `kest run` with no file said there was no project
+# here, and `kest test` with no file ran nothing and answered nought.
+mkdir -p "$scratch"/refused/broken/src "$scratch"/refused/broken/tests
+cat > "$scratch"/refused/broken/kest.project <<'KEST'
+project broken
+entry src/main.kest
+source src
+tests tests
+sources lib
+KEST
+cat > "$scratch"/refused/broken/src/main.kest <<'KEST'
+module main
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+cp "$scratch"/refused/broken/src/main.kest "$scratch"/refused/broken/tests/
+for asked in "check src/main.kest" "run" "build" "test" "test --json"; do
+    # shellcheck disable=SC2086
+    broken=$(cd "$scratch"/refused/broken && "$kest" $asked 2>&1 </dev/null)
+    broken_was=$?
+    case "$broken_was:$broken" in
+    1:*"K0709"*"cannot be read as a project"*"does not know"*) ;;
+    *)
+        complain "$asked: a manifest with a line it does not know answered \
+$broken_was and said \`$(printf '%s' "$broken" | head -1)\`"
+        ;;
+    esac
+done
+printf 'project broken\nsource src\nedition 1999\n' \
+    >"$scratch"/refused/broken/kest.project
+broken=$("$kest" check "$scratch"/refused/broken/src/main.kest 2>&1 </dev/null)
+case "$broken" in
+*"K0709"*"an edition this does not know"*) ;;
+*)
+    complain "check: a project naming an edition it does not know said \
+\`$(printf '%s' "$broken" | head -1)\`"
+    ;;
+esac
+
 # A value written where a statement belongs is a `return` with the word left
 # off, and the function is told exactly that. What the arms are measured
 # against is then what the function gives back rather than nothing, so `none`

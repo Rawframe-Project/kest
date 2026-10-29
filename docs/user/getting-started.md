@@ -86,7 +86,7 @@ That gives a manifest, a program in `src/main.kest` and a test in `tests/adding.
 | `profile kest-det 3` | the deterministic profile it is written under, see [Determinism](determinism.md) |
 | `edition 2026` | the edition of the language it is written in, see [Versions and editions](editions.md) |
 
-An unknown name in the manifest is an error rather than a line that is skipped.
+An unknown name in the manifest is an error rather than a line that is skipped: every command run in the project refuses it with `K0709`, and `kest doctor` says what it read.
 
 **Modules and sources.** A module's name is where its file is: `module game.npc` lives in `game/npc.kest` under one of the `source` directories. Inside a project the `source` lines are the whole list of places an import is looked for, in the order they are written. A dependency is another `source` line pointing at wherever its code was put; there is no package registry and nothing is downloaded. A module found under two sources is an error, because the import line cannot say which one it means.
 

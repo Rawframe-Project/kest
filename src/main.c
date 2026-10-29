@@ -3701,6 +3701,35 @@ static uint32_t tests_under(const char *where, char ***into) {
     return count;
 }
 
+// The project the command was run in, for a command given no file. A manifest
+// that is there and cannot be read is said, rather than taken for no manifest:
+// `kest test` in a project whose manifest had a line it did not know ran no
+// tests and answered nought, and `kest run` said there was no project here.
+// Answers 1 when it has said why, with `*here` NULL either way then.
+static int project_here(KestArena *asking, bool json, KestProject **here) {
+    *here = NULL;
+    if (asking == NULL) {
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
+        return 1;
+    }
+    bool refused_before = kest_arena_refused_anywhere();
+    const char *why = NULL;
+    *here = kest_project_read(asking, "", &why);
+    if (!refused_before && kest_arena_refused_anywhere()) {
+        *here = NULL;
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
+        return 1;
+    }
+    if (*here == NULL && why != NULL) {
+        return refused_at_the_words(json, "K0709",
+                                    "`%s` cannot be read as a project: %s",
+                                    KEST_PROJECT_FILE, why);
+    }
+    return 0;
+}
+
 static int run_tests(const char *executable, char **paths, int path_count,
                      bool json, size_t room, uint64_t work, uint64_t fuel) {
     int failed = 0;
@@ -4005,9 +4034,8 @@ int main(int argc, char **argv) {
         int status = 0;
         if (path_count == 0) {
             KestArena *asking = kest_arena_new();
-            const char *why = NULL;
-            KestProject *here =
-                asking == NULL ? NULL : kest_project_read(asking, "", &why);
+            KestProject *here = NULL;
+            status = project_here(asking, json, &here);
             if (here != NULL && here->tests[0] != '\0') {
                 found_count = tests_under(here->tests, &found);
                 if (found_count == 0) {
@@ -4091,17 +4119,27 @@ int main(int argc, char **argv) {
         char *from_project = NULL;
         if (path_count == 0) {
             KestArena *asking = kest_arena_new();
-            const char *why = NULL;
-            KestProject *here =
-                asking == NULL ? NULL : kest_project_read(asking, "", &why);
+            KestProject *here = NULL;
+            if (project_here(asking, json, &here) != 0) {
+                kest_arena_free(asking);
+                free(paths);
+                free(given);
+                return 1;
+            }
             if (here != NULL && here->entry[0] != '\0') {
                 size_t length = strlen(here->entry);
                 from_project = malloc(length + 1);
-                if (from_project != NULL) {
-                    memcpy(from_project, here->entry, length + 1);
-                    paths[0] = from_project;
-                    path_count = 1;
+                if (from_project == NULL) {
+                    kest_arena_free(asking);
+                    free(paths);
+                    free(given);
+                    kest_diags_say_one(json ? stdout : stderr, json,
+                                       KEST_STARVED_CODE, KEST_STARVED_SAYS);
+                    return 1;
                 }
+                memcpy(from_project, here->entry, length + 1);
+                paths[0] = from_project;
+                path_count = 1;
             }
             if (asking != NULL) {
                 kest_arena_free(asking);
