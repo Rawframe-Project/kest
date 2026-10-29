@@ -3407,6 +3407,10 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry, const char *from,
         "#include <string.h>\n"
         "#include <math.h>\n"
         "#include <time.h>\n"
+        "#if defined(_WIN32)\n"
+        "#include <fcntl.h>\n"
+        "#include <io.h>\n"
+        "#endif\n"
         "\n"
         "#include \"kest.h\"\n"
         "\n"
@@ -4001,7 +4005,15 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry, const char *from,
         "time(s)\\n\",\n"
         "            ran, (unsigned long long)times);\n"
         "}\n"
-        "\nint main(int argc, char **argv) {\n",
+        "\nint main(int argc, char **argv) {\n"
+        "    // The two streams in the mode where a byte written is the byte\n"
+        "    // that comes out, as `kest run` has them: Windows starts them in\n"
+        "    // one that writes two bytes for a line end, and a release printed\n"
+        "    // other bytes than the program it carries.\n"
+        "#if defined(_WIN32)\n"
+        "    _setmode(_fileno(stdout), _O_BINARY);\n"
+        "    _setmode(_fileno(stderr), _O_BINARY);\n"
+        "#endif\n",
         bound_count);
     if (carried != NULL) {
         write_carried_main(c, &file, carried, carried_count, library);
