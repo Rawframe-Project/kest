@@ -2445,6 +2445,114 @@ C
         own_walk $((${#long} + 5 + 7)) test --json
         own_walk 5 build --release src/main.kest
         own_walk $((1237 * 4)) tick "$(pwd)"/examples/events.kest 1237
+
+        # And the doors that keep a world across a reload, which take theirs
+        # the same way. A reload with no room to copy what `save` answered
+        # said `save` did not answer bytes, and a watch list with no room for
+        # it watched nothing, so no edit was ever noticed. The host says how
+        # many files the program was read from, which is how big the list is.
+        cat >"$scratch"/own/held.c <<'C'
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "kest.h"
+
+int main(int argc, char **argv) {
+    KestHost *host = kest_host_new();
+    if (host == NULL || argc < 2) {
+        return 2;
+    }
+    if (strcmp(argv[1], "files") == 0) {
+        KestBuild *build =
+            kest_build("examples/held.kest", NULL, NULL, KEST_FORM_TEXT, 0);
+        uint32_t many = 0;
+        while (build != NULL && kest_build_read(build, many) != NULL) {
+            many++;
+        }
+        printf("%u\n", many);
+        kest_build_free(build);
+        return 0;
+    }
+    if (strcmp(argv[1], "value") == 0) {
+        printf("%zu\n", sizeof(KestValue));
+        return 0;
+    }
+    KestHeld *held = kest_held_new("examples/held.kest", NULL, host, NULL);
+    KestValue cells = {.integer = 57};
+    if (held == NULL || !kest_held_begin(held, "begin", &cells, 1)) {
+        printf("not held\n");
+        return 0;
+    }
+    if (strcmp(argv[1], "watch") == 0) {
+        printf("changed %d\n", kest_held_changed(held) ? 1 : 0);
+    } else {
+        char said[256] = "";
+        bool again = kest_held_reload(held, argc > 2 ? argv[2] : NULL, said,
+                                      sizeof(said));
+        printf("reloaded %d: %s\n", again ? 1 : 0, said);
+    }
+    kest_held_free(held);
+    kest_host_free(host);
+    return 0;
+}
+C
+        if "${CC:-cc}" -O1 -Iinclude -o "$scratch"/own/held \
+               "$scratch"/own/held.c "$build_dir"/libkest.a -lm \
+               2>"$scratch"/own/made; then
+            files=$("$scratch"/own/held files)
+            noticed=no
+            for refuse_nth in 1 2 3 4 5 6 7 8; do
+                said=$(LD_PRELOAD="$scratch"/own/refuse.so \
+                       REFUSE_SIZE=$((files * 16)) REFUSE_NTH=$refuse_nth \
+                       "$scratch"/own/held watch 2>&1)
+                case "$said" in
+                "changed 1") noticed=yes ;;
+                "changed 0" | "not held") ;;
+                *)
+                    echo "ceilings: a held world with its watch list refused" \
+                         "said \`$said\`"
+                    failed=1
+                    ;;
+                esac
+            done
+            if [ $noticed = no ]; then
+                echo "ceilings: a held world with no room to watch its" \
+                     "files never said they changed"
+                failed=1
+            fi
+            # What `save` answers is the turn and a byte a cell; the list a
+            # machine keeps a host's handles in starts at eight values; and a
+            # program whose world is three slots, reloaded under one of two,
+            # is handed it in a wider frame than any call before it.
+            value=$("$scratch"/own/held value)
+            sed -e 's/^module examples.held$/module grown/' \
+                -e 's/^    turns: \[i32\]$/    turns: [i32]\n    more: [i32]/' \
+                -e 's/World(cells, array(1, 0))/World(cells, array(1, 0), array(1, 0))/' \
+                -e 's/World(cells, array(1, turn))/World(cells, array(1, turn), array(1, 0))/' \
+                examples/held.kest >"$scratch"/own/grown.kest
+            for asked in "$((4 + 57))" "$((8 * value))" \
+                         "$((3 * value)) $scratch/own/grown.kest"; do
+                for refuse_nth in 1 2 3 4 5 6 7 8; do
+                    # shellcheck disable=SC2086
+                    said=$(set -- $asked
+                           LD_PRELOAD="$scratch"/own/refuse.so \
+                           REFUSE_SIZE=$1 REFUSE_NTH=$refuse_nth \
+                           "$scratch"/own/held reload ${2:-} 2>&1)
+                    case "$said" in
+                    *"did not answer bytes"* | *"would not make a world"*)
+                        echo "ceilings: a reload with no room blamed the" \
+                             "program: \`$said\`"
+                        failed=1
+                        ;;
+                    esac
+                done
+            done
+        else
+            echo "ceilings: the host that keeps a world did not build"
+            sed 's/^/    /' "$scratch"/own/made | head -3
+            failed=1
+        fi
     else
         echo "ceilings: the shim that refuses the command line's own memory" \
              "did not build"

@@ -2120,8 +2120,10 @@ const void *kest_held_run(KestHeld *held, const char *piece, uint32_t *count,
                           uint16_t *stride);
 
 // Whether any file the program was built from is not the bytes it was built
-// from: every one is read again and held to its mark. A host asks this as
-// often as it wants a reload to be noticed, and not every frame.
+// from: every one is read again and held to its mark. A file that cannot be
+// read is a change, and so is a build there was no room to list the files of,
+// so that a reload finds out what is wrong. A host asks this as often as it
+// wants a reload to be noticed, and not every frame.
 bool kest_held_changed(KestHeld *held);
 
 // The program built again from `path` (NULL for the one it was) and put under

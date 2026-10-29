@@ -37,6 +37,11 @@ struct KestHeld {
     uint32_t door_room;
     Watched *watched;
     uint32_t watched_count;
+    // Whether there was no room to list what to watch. A file that cannot be
+    // read is a change, so a reload finds out what is wrong with it; a file
+    // there was no room to watch is the same, rather than one that never
+    // changes.
+    bool unwatched;
     KestValue *frame;
     uint32_t frame_room;
 };
@@ -64,16 +69,23 @@ static void forget_watched(KestHeld *held) {
 
 static void watch(KestHeld *held) {
     forget_watched(held);
+    held->unwatched = false;
     uint32_t many = 0;
     while (kest_build_read(held->build, many) != NULL) {
         many++;
     }
     held->watched = calloc(many == 0 ? 1 : many, sizeof(Watched));
     if (held->watched == NULL) {
+        held->unwatched = true;
         return;
     }
     for (uint32_t i = 0; i < many; i++) {
-        held->watched[i].path = copied(kest_build_read(held->build, i));
+        char *path = copied(kest_build_read(held->build, i));
+        if (path == NULL) {
+            held->unwatched = true;
+            return;
+        }
+        held->watched[i].path = path;
         held->watched[i].mark = kest_build_read_mark(held->build, i);
         held->watched_count++;
     }
@@ -153,11 +165,20 @@ KestRuntime *kest_held_runtime(KestHeld *held) {
     return held == NULL ? NULL : held->runtime;
 }
 
+// What a call came to: answered, refused by the machine, or never made for
+// want of a frame to make it in, which is this host's room and no answer of
+// the program's.
+typedef enum {
+    CALLED,
+    CALL_REFUSED,
+    CALL_NO_ROOM,
+} Called;
+
 // Where the world goes in a frame, and what the frame has to be to hold a
 // call of `entry` with `count` more values in it.
-static bool call_with(KestHeld *held, KestRuntime *runtime, int32_t entry,
-                      bool with_world, const KestValue *args, uint32_t count,
-                      KestValue **answered) {
+static Called call_with(KestHeld *held, KestRuntime *runtime, int32_t entry,
+                        bool with_world, const KestValue *args, uint32_t count,
+                        KestValue **answered) {
     uint32_t in_front = with_world ? held->slots : 0;
     uint32_t wide = kest_frame_slots(runtime, entry);
     if (wide < in_front + count) {
@@ -165,7 +186,7 @@ static bool call_with(KestHeld *held, KestRuntime *runtime, int32_t entry,
     }
     KestValue *frame = frame_of(held, wide);
     if (frame == NULL) {
-        return false;
+        return CALL_NO_ROOM;
     }
     if (in_front > 0) {
         memcpy(frame, held->world, in_front * sizeof(KestValue));
@@ -173,14 +194,19 @@ static bool call_with(KestHeld *held, KestRuntime *runtime, int32_t entry,
     if (count > 0) {
         memcpy(frame + in_front, args, count * sizeof(KestValue));
     }
+    // A machine that ran out of room while it ran is refused for that and
+    // not for what the program answered; what it last had refused moves when
+    // it is refused again.
+    size_t wanted = kest_heap_wanted(runtime);
     if (!kest_call(runtime, entry, frame, wide)) {
         if (held->errors != NULL) {
             kest_report(runtime, held->errors, KEST_FORM_TEXT);
         }
-        return false;
+        return kest_heap_wanted(runtime) != wanted ? CALL_NO_ROOM
+                                                   : CALL_REFUSED;
     }
     *answered = frame;
-    return true;
+    return CALLED;
 }
 
 bool kest_held_begin(KestHeld *held, const char *entry, const KestValue *args,
@@ -193,7 +219,8 @@ bool kest_held_begin(KestHeld *held, const char *entry, const KestValue *args,
         found < 0 ? NULL : kest_frame_gives(held->runtime, found);
     KestValue *frame = NULL;
     if (shape == NULL ||
-        !call_with(held, held->runtime, found, false, args, count, &frame)) {
+        call_with(held, held->runtime, found, false, args, count, &frame) !=
+            CALLED) {
         return false;
     }
     KestValue *world = malloc((shape->slots == 0 ? 1 : shape->slots) *
@@ -254,8 +281,8 @@ bool kest_held_call(KestHeld *held, const char *entry, const KestValue *args,
     Door *door = door_named(held, entry);
     KestValue *frame = NULL;
     if (door == NULL ||
-        !call_with(held, held->runtime, door->entry, true, args, count,
-                   &frame)) {
+        call_with(held, held->runtime, door->entry, true, args, count,
+                  &frame) != CALLED) {
         return false;
     }
     if (answer != NULL) {
@@ -323,6 +350,9 @@ static bool marked(const char *path, uint64_t *mark) {
 bool kest_held_changed(KestHeld *held) {
     if (held == NULL) {
         return false;
+    }
+    if (held->unwatched) {
+        return true;
     }
     for (uint32_t i = 0; i < held->watched_count; i++) {
         uint64_t now = 0;
@@ -428,29 +458,48 @@ bool kest_held_reload(KestHeld *held, const char *path, char *said,
     // Saved by the running machine, and copied out of it before it goes.
     KestValue *frame = NULL;
     const KestRun *bytes = NULL;
-    if (call_with(held, held->runtime, save, true, NULL, 0, &frame)) {
+    Called saved = call_with(held, held->runtime, save, true, NULL, 0, &frame);
+    if (saved == CALL_NO_ROOM) {
+        kest_runtime_free(fresh);
+        kest_build_free(candidate);
+        return refused(said, room,
+                       "refused: there was no room to call `save`%s", NULL);
+    }
+    if (saved == CALLED) {
         bytes = run_of(frame[0]);
     }
-    uint8_t *copy = NULL;
-    uint32_t length = 0;
-    if (bytes != NULL && bytes->stride == 1) {
-        length = bytes->length;
-        copy = malloc(length == 0 ? 1 : length);
-        if (copy != NULL && length > 0) {
-            memcpy(copy, bytes->bytes, length);
-        }
-    }
-    if (copy == NULL) {
+    if (bytes == NULL || bytes->stride != 1) {
         kest_runtime_free(fresh);
         kest_build_free(candidate);
         return refused(said, room,
                        "refused: `save` did not answer bytes%s", NULL);
     }
+    uint32_t length = bytes->length;
+    uint8_t *copy = malloc(length == 0 ? 1 : length);
+    if (copy == NULL) {
+        // The host's room, not the program's answer.
+        kest_runtime_free(fresh);
+        kest_build_free(candidate);
+        return refused(said, room,
+                       "refused: there was no room to copy what `save` "
+                       "answered%s",
+                       NULL);
+    }
+    if (length > 0) {
+        memcpy(copy, bytes->bytes, length);
+    }
 
     // And made again by the new one out of nothing but those bytes.
+    // A lend the new machine had no room to write down is its room and not
+    // the program's answer, as a frame there was no room for is; the machine
+    // is a new one, so a refusal it remembers is this one.
     KestValue lent = kest_borrow(fresh, copy, length, "u8", 1);
-    bool made = lent.object != NULL &&
-                call_with(held, fresh, restore, false, &lent, 1, &frame);
+    Called restored = lent.object == NULL
+                          ? (kest_heap_wanted(fresh) != 0 ? CALL_NO_ROOM
+                                                           : CALL_REFUSED)
+                          : call_with(held, fresh, restore, false, &lent, 1,
+                                      &frame);
+    bool made = restored == CALLED;
     KestValue *world =
         malloc((shape->slots == 0 ? 1 : shape->slots) * sizeof(KestValue));
     if (made && world != NULL) {
@@ -460,7 +509,34 @@ bool kest_held_reload(KestHeld *held, const char *path, char *said,
         kest_lend_ends(fresh, lent);
     }
     free(copy);
-    if (!made || world == NULL || !keep_world(fresh, shape, world)) {
+    if (restored == CALL_NO_ROOM) {
+        free(world);
+        kest_runtime_free(fresh);
+        kest_build_free(candidate);
+        return refused(said, room,
+                       "refused: there was no room to hand `restore` what "
+                       "was saved%s",
+                       NULL);
+    }
+    if (made && world == NULL) {
+        kest_runtime_free(fresh);
+        kest_build_free(candidate);
+        return refused(said, room,
+                       "refused: there was no room to hold the world "
+                       "`restore` made%s",
+                       NULL);
+    }
+    // Keeping a handle is refused only for want of room to remember it.
+    if (made && !keep_world(fresh, shape, world)) {
+        free(world);
+        kest_runtime_free(fresh);
+        kest_build_free(candidate);
+        return refused(said, room,
+                       "refused: there was no room to keep the world "
+                       "`restore` made%s",
+                       NULL);
+    }
+    if (!made || world == NULL) {
         free(world);
         kest_runtime_free(fresh);
         kest_build_free(candidate);
