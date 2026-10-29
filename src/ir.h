@@ -515,6 +515,4 @@ const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
 // between them, and it is asked of every body in the build that checks itself.
 const char *kest_ir_verify(const KestIrBody *body);
 
-
-
 #endif

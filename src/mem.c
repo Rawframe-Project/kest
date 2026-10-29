@@ -343,7 +343,8 @@ void kest_arena_free(KestArena *arena) {
 // than below what the block holds: a pointer into the part nobody has been
 // given is a pointer this arena has not given anybody.
 static bool block_holds(const Block *block, const unsigned char *address) {
-    size_t reach = block->used < block->capacity ? block->used : block->capacity;
+    size_t reach =
+        block->used < block->capacity ? block->used : block->capacity;
     return address >= block->data && address < block->data + reach;
 }
 
@@ -482,8 +483,6 @@ static bool refuse_this_one(void) {
 // did.
 static bool anybody_refused;
 
-
-
 bool kest_arena_refused_anywhere(void) {
     return anybody_refused;
 }
@@ -552,8 +551,7 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     return result;
 }
 
-void *kest_arena_extend(KestArena *arena, void *last, size_t was,
-                        size_t want) {
+void *kest_arena_extend(KestArena *arena, void *last, size_t was, size_t want) {
     if (arena == NULL || last == NULL || want <= was) {
         return NULL;
     }
@@ -706,4 +704,3 @@ size_t kest_arena_refused_holding(const KestArena *arena) {
 size_t kest_arena_most_beneath(const KestArena *arena) {
     return arena->most_beneath;
 }
-

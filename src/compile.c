@@ -400,8 +400,7 @@ static const char *span_text(Compiler *compiler, KestSpan span) {
 
 static Local *find_local(Compiler *compiler, KestSpan span) {
     const char *name = span_text(compiler, span);
-    for (uint16_t i = compiler->local_count; i > compiler->visible_floor;
-         i--) {
+    for (uint16_t i = compiler->local_count; i > compiler->visible_floor; i--) {
         Local *local = &compiler->locals[i - 1];
         if (!local->hidden && kest_word_same(local->name, name, span.length)) {
             return local;
@@ -662,11 +661,11 @@ static uint32_t elem_place(Compiler *compiler, KestIrRef base, KestIrRef index,
 // Reading what is at an address, which is one value made of what was there.
 static void load_at(Compiler *compiler, uint16_t offset, const KestType *type,
                     KestSpan span) {
-    uint32_t held = at_place(compiler, ir_top(compiler, 0), KEST_IR_NONE,
-                             offset, 0, 0, layout_of(compiler, type), type,
-                             span);
-    uint32_t at = ir_emit(compiler, KEST_IR_LOAD, type, 1, type,
-                          value_slots(type), span);
+    uint32_t held =
+        at_place(compiler, ir_top(compiler, 0), KEST_IR_NONE, offset, 0, 0,
+                 layout_of(compiler, type), type, span);
+    uint32_t at =
+        ir_emit(compiler, KEST_IR_LOAD, type, 1, type, value_slots(type), span);
     ir_place_of(compiler, at, held);
 }
 
@@ -770,10 +769,9 @@ static bool resolve_place(Compiler *compiler, const KestExpr *expr,
     if (!resolve_place(compiler, expr->field.object, &base, &base_size)) {
         return false;
     }
-    const KestMember *member =
-        find_member(expr->field.object->type,
-                    span_text(compiler, expr->field.name),
-                    expr->field.name.length);
+    const KestMember *member = find_member(
+        expr->field.object->type, span_text(compiler, expr->field.name),
+        expr->field.name.length);
     if (member == NULL) {
         return false;
     }
@@ -781,8 +779,6 @@ static bool resolve_place(Compiler *compiler, const KestExpr *expr,
     *size = value_slots(member->type);
     return true;
 }
-
-
 
 // Which operation an operator that compares is. What instruction that becomes
 // is the backend's question, because the answer depends on what is being
@@ -836,8 +832,7 @@ static bool every_value_fits(const KestType *from, const KestType *to) {
 // cut back. Sixty-four bits is the slot, so nothing is cut there. Whether the
 // arithmetic before it takes it into itself is the backend's question and is
 // asked there.
-static void ir_narrow(Compiler *compiler, const KestType *type,
-                      KestSpan span) {
+static void ir_narrow(Compiler *compiler, const KestType *type, KestSpan span) {
     if (type == NULL || type->width == 64 ||
         (type->tag != KEST_T_INT && type->tag != KEST_T_FLAGS)) {
         return;
@@ -852,9 +847,9 @@ static void ir_narrow(Compiler *compiler, const KestType *type,
 // What a string literal holds, and what a number literal is worth. Both are
 // the lexer's to know, because both are about how a thing is spelled.
 static const char *literal_text(Compiler *compiler, KestSpan span,
-                               size_t *length) {
-    return kest_literal_text(compiler->program->arena, compiler->program->source,
-                             span, length);
+                                size_t *length) {
+    return kest_literal_text(compiler->program->arena,
+                             compiler->program->source, span, length);
 }
 
 static double parse_real(Compiler *compiler, KestSpan span) {
@@ -885,8 +880,9 @@ static bool compile_function_value(Compiler *compiler, const KestExpr *expr) {
     }
     int32_t index = kest_module_find(compiler->module, expr->type->symbol);
     if (index < 0) {
-        fault(compiler, expr->span, "this names a function that was never "
-                                    "compiled");
+        fault(compiler, expr->span,
+              "this names a function that was never "
+              "compiled");
         return true;
     }
     // Written down as one that a call through a value may enter. What such a
@@ -1037,8 +1033,8 @@ static void emit_constant(Compiler *compiler, KestValue value,
                           KestConstClass class, const KestType *type,
                           KestSpan span) {
     uint8_t held = (uint8_t)class;
-    uint32_t first = kest_ir_constants_add(compiler->ir, compiler->body,
-                                           &value, &held, 1);
+    uint32_t first =
+        kest_ir_constants_add(compiler->ir, compiler->body, &value, &held, 1);
     if (compiler->ir->out_of_memory) {
         compiler->out_of_memory = true;
         return;
@@ -1103,8 +1099,8 @@ static bool compile_folded(Compiler *compiler, const KestExpr *expr) {
         }
     }
     const char *why = NULL;
-    if (kest_fold_const(compiler->program, expr, values, slots, &why,
-                        NULL) != slots) {
+    if (kest_fold_const(compiler->program, expr, values, slots, &why, NULL) !=
+        slots) {
         return false;
     }
     counted_fold(compiler, slots);
@@ -1143,9 +1139,8 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
     }
     if (symbol != NULL && symbol->is_const) {
         uint16_t slots = value_slots(symbol->type);
-        KestValue *values =
-            KEST_ARENA_ARRAY(compiler->ir->arena, KestValue,
-                             slots == 0 ? 1 : slots);
+        KestValue *values = KEST_ARENA_ARRAY(compiler->ir->arena, KestValue,
+                                             slots == 0 ? 1 : slots);
         const char *why = NULL;
         if (values == NULL) {
             compiler->out_of_memory = true;
@@ -1234,62 +1229,62 @@ static bool expr_reads_only_fields(Compiler *compiler, const KestExpr *expr,
         if (name_is(compiler, expr->field.object, name, length)) {
             return fields_are_fine;
         }
-        return expr_reads_only_fields(compiler, expr->field.object, name, length,
-                                      fields_are_fine);
+        return expr_reads_only_fields(compiler, expr->field.object, name,
+                                      length, fields_are_fine);
     case KEST_EXPR_UNARY:
-        return expr_reads_only_fields(compiler, expr->unary.operand, name, length,
-                                      fields_are_fine);
+        return expr_reads_only_fields(compiler, expr->unary.operand, name,
+                                      length, fields_are_fine);
     case KEST_EXPR_BINARY:
         return expr_reads_only_fields(compiler, expr->binary.left, name, length,
                                       fields_are_fine) &&
-               expr_reads_only_fields(compiler, expr->binary.right, name, length,
-                                      fields_are_fine);
+               expr_reads_only_fields(compiler, expr->binary.right, name,
+                                      length, fields_are_fine);
     case KEST_EXPR_CALL:
         if (!expr_reads_only_fields(compiler, expr->call.callee, name, length,
-                                      fields_are_fine)) {
+                                    fields_are_fine)) {
             return false;
         }
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {
-            if (!expr_reads_only_fields(compiler, expr->call.args[i], name, length,
-                                      fields_are_fine)) {
+            if (!expr_reads_only_fields(compiler, expr->call.args[i], name,
+                                        length, fields_are_fine)) {
                 return false;
             }
         }
         return true;
     case KEST_EXPR_INDEX:
-        return expr_reads_only_fields(compiler, expr->index.object, name, length,
-                                      fields_are_fine) &&
+        return expr_reads_only_fields(compiler, expr->index.object, name,
+                                      length, fields_are_fine) &&
                expr_reads_only_fields(compiler, expr->index.index, name, length,
                                       fields_are_fine);
     case KEST_EXPR_ARRAY:
         for (uint32_t i = 0; i < expr->array.count; i++) {
-            if (!expr_reads_only_fields(compiler, expr->array.items[i], name, length,
-                                      fields_are_fine)) {
+            if (!expr_reads_only_fields(compiler, expr->array.items[i], name,
+                                        length, fields_are_fine)) {
                 return false;
             }
         }
         return true;
     case KEST_EXPR_TEXT:
         for (uint32_t i = 0; i < expr->text.count; i++) {
-            if (!expr_reads_only_fields(compiler, expr->text.parts[i].value, name, length,
-                                      fields_are_fine)) {
+            if (!expr_reads_only_fields(compiler, expr->text.parts[i].value,
+                                        name, length, fields_are_fine)) {
                 return false;
             }
         }
         return true;
     case KEST_EXPR_MATCH: {
         for (uint32_t i = 0; i < expr->choose->subject_count; i++) {
-            if (!expr_reads_only_fields(compiler, expr->choose->subjects[i], name, length,
-                                      fields_are_fine)) {
+            if (!expr_reads_only_fields(compiler, expr->choose->subjects[i],
+                                        name, length, fields_are_fine)) {
                 return false;
             }
         }
         for (uint32_t a = 0; a < expr->choose->arm_count; a++) {
             const KestArm *arm = &expr->choose->arms[a];
             if (!expr_reads_only_fields(compiler, arm->value, name, length,
-                                      fields_are_fine) ||
+                                        fields_are_fine) ||
                 !reads_only_fields(compiler, &arm->body, name, length,
-                                      fields_are_fine)) {
+                                   fields_are_fine)) {
                 return false;
             }
         }
@@ -1299,16 +1294,16 @@ static bool expr_reads_only_fields(Compiler *compiler, const KestExpr *expr,
         const KestBranch *branch = expr->branch;
         return expr_reads_only_fields(compiler, branch->condition, name, length,
                                       fields_are_fine) &&
-               expr_reads_only_fields(compiler, branch->then_value, name, length,
-                                      fields_are_fine) &&
+               expr_reads_only_fields(compiler, branch->then_value, name,
+                                      length, fields_are_fine) &&
                reads_only_fields(compiler, &branch->then_body, name, length,
-                                      fields_are_fine) &&
+                                 fields_are_fine) &&
                expr_reads_only_fields(compiler, branch->otherwise, name, length,
                                       fields_are_fine) &&
-               expr_reads_only_fields(compiler, branch->else_value, name, length,
-                                      fields_are_fine) &&
+               expr_reads_only_fields(compiler, branch->else_value, name,
+                                      length, fields_are_fine) &&
                reads_only_fields(compiler, &branch->else_body, name, length,
-                                      fields_are_fine);
+                                 fields_are_fine);
     }
     default:
         return true;
@@ -1330,7 +1325,7 @@ static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
                 return false;
             }
             if (!expr_reads_only_fields(compiler, stmt->let.value, name, length,
-                                      fields_are_fine)) {
+                                        fields_are_fine)) {
                 return false;
             }
             break;
@@ -1342,40 +1337,40 @@ static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
                         length)) {
                 return false;
             }
-            if (!expr_reads_only_fields(compiler, stmt->assign.target, name, length,
-                                      fields_are_fine) ||
-                !expr_reads_only_fields(compiler, stmt->assign.value, name, length,
-                                      fields_are_fine)) {
+            if (!expr_reads_only_fields(compiler, stmt->assign.target, name,
+                                        length, fields_are_fine) ||
+                !expr_reads_only_fields(compiler, stmt->assign.value, name,
+                                        length, fields_are_fine)) {
                 return false;
             }
             break;
         case KEST_STMT_EXPR:
             if (!expr_reads_only_fields(compiler, stmt->value, name, length,
-                                      fields_are_fine)) {
+                                        fields_are_fine)) {
                 return false;
             }
             break;
         case KEST_STMT_WHILE:
-            if (!expr_reads_only_fields(compiler, stmt->loop.condition, name, length,
-                                      fields_are_fine) ||
+            if (!expr_reads_only_fields(compiler, stmt->loop.condition, name,
+                                        length, fields_are_fine) ||
                 !reads_only_fields(compiler, &stmt->loop.body, name, length,
-                                      fields_are_fine)) {
+                                   fields_are_fine)) {
                 return false;
             }
             break;
         case KEST_STMT_FOR:
-            if (!expr_reads_only_fields(compiler, stmt->each->sequence, name, length,
-                                      fields_are_fine) ||
-                !expr_reads_only_fields(compiler, stmt->each->until, name, length,
-                                      fields_are_fine) ||
+            if (!expr_reads_only_fields(compiler, stmt->each->sequence, name,
+                                        length, fields_are_fine) ||
+                !expr_reads_only_fields(compiler, stmt->each->until, name,
+                                        length, fields_are_fine) ||
                 !reads_only_fields(compiler, &stmt->each->body, name, length,
-                                      fields_are_fine)) {
+                                   fields_are_fine)) {
                 return false;
             }
             break;
         case KEST_STMT_RETURN:
             if (!expr_reads_only_fields(compiler, stmt->result, name, length,
-                                      fields_are_fine)) {
+                                        fields_are_fine)) {
                 return false;
             }
             break;
@@ -1389,7 +1384,7 @@ static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
         // than going quietly missing from two walks.
         case KEST_STMT_SCRATCH:
             if (!reads_only_fields(compiler, &stmt->block, name, length,
-                                 fields_are_fine)) {
+                                   fields_are_fine)) {
                 return false;
             }
             break;
@@ -1597,8 +1592,7 @@ static bool can_address(Compiler *compiler, const KestExpr *expr) {
     if (expr->kind == KEST_EXPR_INDEX && expr->index.object->type != NULL &&
         expr->index.object->type->tag == KEST_T_FIXED) {
         int64_t at = written_index(compiler, expr->index.index);
-        return at >= 0 &&
-               (uint64_t)at < expr->index.object->type->count &&
+        return at >= 0 && (uint64_t)at < expr->index.object->type->count &&
                can_address(compiler, expr->index.object);
     }
     if (expr->kind == KEST_EXPR_FIELD) {
@@ -1625,10 +1619,9 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
         if (!compile_address(compiler, expr->field.object, offset)) {
             return false;
         }
-        const KestMember *member =
-            find_member(expr->field.object->type,
-                        span_text(compiler, expr->field.name),
-                        expr->field.name.length);
+        const KestMember *member = find_member(
+            expr->field.object->type, span_text(compiler, expr->field.name),
+            expr->field.name.length);
         if (member == NULL) {
             return false;
         }
@@ -1693,9 +1686,9 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
         return true;
     }
     stack_pop(compiler, 1);
-    uint32_t where = elem_place(compiler, ir_top(compiler, 1),
-                                ir_top(compiler, 0), 0, sequence->element,
-                                expr->span);
+    uint32_t where =
+        elem_place(compiler, ir_top(compiler, 1), ir_top(compiler, 0), 0,
+                   sequence->element, expr->span);
     uint32_t at = ir_emit(compiler, KEST_IR_ADDR, sequence->element, 2, NULL, 1,
                           expr->span);
     ir_place_of(compiler, at, where);
@@ -1740,8 +1733,7 @@ static bool fold_quietly(Compiler *compiler, const KestExpr *expr,
 // once a turn and nowhere else: `way == 0` in the turn where `way` is two.
 // `a && b` and `a || b` are settled by the half that settles them, and by the
 // other half where the first does not.
-static bool known_truth(Compiler *compiler, const KestExpr *expr,
-                        bool *truth) {
+static bool known_truth(Compiler *compiler, const KestExpr *expr, bool *truth) {
     if (compiler->unrolling == 0 || expr == NULL || expr->type == NULL ||
         expr->type->tag != KEST_T_BOOL) {
         return false;
@@ -1848,7 +1840,8 @@ static Exits compile_condition(Compiler *compiler, const KestExpr *expr,
     compile_expr(compiler, expr);
     stack_pop(compiler, 1);
     const KestType *optional = expr->type;
-    uint16_t held = optional == NULL ? 0 : (uint16_t)(value_slots(optional) - 1);
+    uint16_t held =
+        optional == NULL ? 0 : (uint16_t)(value_slots(optional) - 1);
     take_exit(compiler, &out,
               ir_ask_leaving(compiler, false,
                              optional == NULL ? NULL : optional->element, held,
@@ -1986,7 +1979,8 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
         ir_lands(compiler, skip);
         // The branch arrives here having discarded the left side, and this
         // makes the answer in its place, so the depth is unchanged.
-        ir_emit(compiler, op == KEST_TOK_PIPEPIPE ? KEST_IR_TRUE : KEST_IR_FALSE,
+        ir_emit(compiler,
+                op == KEST_TOK_PIPEPIPE ? KEST_IR_TRUE : KEST_IR_FALSE,
                 expr->type, 0, expr->type, 1, span);
         ir_lands(compiler, done);
         // Whichever way it went, one value is here.
@@ -2118,7 +2112,6 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
         fault(compiler, span, "this is an operator with no instruction");
         return;
     }
-
 }
 
 // Whether what is being put on a run is a whole piece of text rather than one
@@ -2257,12 +2250,11 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         }
         bool taking = kest_word_same("remove", name, length);
         stack_pop(compiler, taking ? 2 : 1);
-        uint16_t gives =
-            (uint16_t)(value_slots(element) + (taking ? 0 : 1));
+        uint16_t gives = (uint16_t)(value_slots(element) + (taking ? 0 : 1));
         stack_push(compiler, gives);
-        uint32_t at = ir_emit(compiler, taking ? KEST_IR_TAKE : KEST_IR_POP_LAST,
-                              array, taking ? 2 : 1, expr->type, gives,
-                              expr->span);
+        uint32_t at =
+            ir_emit(compiler, taking ? KEST_IR_TAKE : KEST_IR_POP_LAST, array,
+                    taking ? 2 : 1, expr->type, gives, expr->span);
         ir_carries(compiler, at, layout_of(compiler, element), 0, 0);
         return true;
     }
@@ -2273,13 +2265,13 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         kest_word_same("float", name, length)) {
         bool to_bits = kest_word_same("bits", name, length);
         const KestType *real =
-            to_bits ? (expr->call.arg_count > 0 ? expr->call.args[0]->type
-                                                : NULL)
-                    : expr->type;
+            to_bits
+                ? (expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL)
+                : expr->type;
         stack_pop(compiler, 1);
         stack_push(compiler, 1);
-        uint32_t at = ir_emit(compiler, KEST_IR_BITS, real, 1, expr->type, 1,
-                              expr->span);
+        uint32_t at =
+            ir_emit(compiler, KEST_IR_BITS, real, 1, expr->type, 1, expr->span);
         ir_carries(compiler, at, to_bits ? 0 : 1, 0, 0);
         return true;
     }
@@ -2292,10 +2284,9 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         // the place may be hashed -- so the walk that knows what a value is
         // made of does it rather than the instruction that hashes a whole
         // number.
-        bool whole = of != NULL && (of->tag == KEST_T_ENUM ||
-                                    of->tag == KEST_T_STRUCT ||
-                                    of->tag == KEST_T_FIXED ||
-                                    of->tag == KEST_T_REF);
+        bool whole =
+            of != NULL && (of->tag == KEST_T_ENUM || of->tag == KEST_T_STRUCT ||
+                           of->tag == KEST_T_FIXED || of->tag == KEST_T_REF);
         stack_pop(compiler, value_slots(of));
         stack_push(compiler, 1);
         uint32_t at =
@@ -2322,8 +2313,8 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
             return true;
         }
         stack_pop(compiler, (uint16_t)(1 + value_slots(element)));
-        uint32_t at = ir_emit(compiler, KEST_IR_APPEND, array, 2, NULL, 0,
-                              expr->span);
+        uint32_t at =
+            ir_emit(compiler, KEST_IR_APPEND, array, 2, NULL, 0, expr->span);
         ir_carries(compiler, at, layout_of(compiler, element), 0, 0);
         return true;
     }
@@ -2342,8 +2333,8 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         }
         stack_pop(compiler, (uint16_t)(1 + value_slots(element)));
         stack_push(compiler, 1);
-        uint32_t at = ir_emit(compiler, KEST_IR_FIT, array, 2, expr->type, 1,
-                              expr->span);
+        uint32_t at =
+            ir_emit(compiler, KEST_IR_FIT, array, 2, expr->type, 1, expr->span);
         ir_carries(compiler, at, layout_of(compiler, element), 0, 0);
         return true;
     }
@@ -2366,9 +2357,8 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         // And which type a place in it holds, written beside the stride so the
         // machine can say what a handle is of. A stride says how far apart two
         // places are and nothing about what is in one.
-        uint16_t holds = layout_of(compiler, expr->type == NULL
-                                                 ? NULL
-                                                 : expr->type->element);
+        uint16_t holds = layout_of(
+            compiler, expr->type == NULL ? NULL : expr->type->element);
         // The operation reads how much room to make either way, so one that
         // was not asked for gets a nought, the way an empty `array()` gets a
         // fill it never looks at.
@@ -2402,20 +2392,20 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
     if (adding) {
         stack_pop(compiler, (uint16_t)(1 + stride));
         stack_push(compiler, 1);
-        uint32_t at = ir_emit(compiler, KEST_IR_STORE_ADD, store, 2,
-                              expr->type, 1, expr->span);
+        uint32_t at = ir_emit(compiler, KEST_IR_STORE_ADD, store, 2, expr->type,
+                              1, expr->span);
         ir_carries(compiler, at, stride, 0, 0);
     } else if (getting) {
         stack_pop(compiler, 2);
         stack_push(compiler, (uint16_t)(stride + 1));
-        uint32_t at = ir_emit(compiler, KEST_IR_STORE_GET, store, 2,
-                              expr->type, (uint16_t)(stride + 1), expr->span);
+        uint32_t at = ir_emit(compiler, KEST_IR_STORE_GET, store, 2, expr->type,
+                              (uint16_t)(stride + 1), expr->span);
         ir_carries(compiler, at, stride, 0, 0);
     } else if (setting) {
         stack_pop(compiler, (uint16_t)(2 + stride));
         stack_push(compiler, 1);
-        uint32_t at = ir_emit(compiler, KEST_IR_STORE_SET, store, 3,
-                              expr->type, 1, expr->span);
+        uint32_t at = ir_emit(compiler, KEST_IR_STORE_SET, store, 3, expr->type,
+                              1, expr->span);
         ir_carries(compiler, at, stride, 0, 0);
     } else {
         stack_pop(compiler, 2);
@@ -2441,8 +2431,8 @@ static void compile_conversion(Compiler *compiler, const KestExpr *expr,
 
     if (to->tag == KEST_T_INT) {
         if (from_real) {
-            uint32_t at = ir_emit(compiler, KEST_IR_TO_WHOLE, to, 1, to, 1,
-                                  expr->span);
+            uint32_t at =
+                ir_emit(compiler, KEST_IR_TO_WHOLE, to, 1, to, 1, expr->span);
             ir_carries(compiler, at, kest_scalar_of(to), 0, 0);
         } else {
             // A `bool` is already nought or one, and an integer only has to
@@ -2493,12 +2483,14 @@ static void compile_case_tail(Compiler *compiler, const KestExpr *expr,
     uint16_t slack = (uint16_t)(choice->slots - 1 - carried);
     KestValue zero = {0};
     for (uint16_t i = 0; i < slack; i++) {
-        emit_constant(compiler, zero, KEST_CONST_INT, whole_type(compiler), expr->span);
+        emit_constant(compiler, zero, KEST_CONST_INT, whole_type(compiler),
+                      expr->span);
     }
 
     KestValue tag = {0};
     tag.integer = (int64_t)(variant - choice->cases);
-    emit_constant(compiler, tag, KEST_CONST_INT, whole_type(compiler), expr->span);
+    emit_constant(compiler, tag, KEST_CONST_INT, whole_type(compiler),
+                  expr->span);
 
     // The tag was made last and belongs first, so the whole value is turned
     // over: what was made is payload then tag, and what a slot run is is tag
@@ -2618,8 +2610,8 @@ static void bindings_kept(Compiler *compiler, const char ***names,
     *count = program->bound_count;
     *names = KEST_ARENA_ARRAY(program->arena, const char *,
                               *count == 0 ? 1 : *count);
-    *types = KEST_ARENA_ARRAY(program->arena, KestType *,
-                              *count == 0 ? 1 : *count);
+    *types =
+        KEST_ARENA_ARRAY(program->arena, KestType *, *count == 0 ? 1 : *count);
     if (*names == NULL || *types == NULL) {
         compiler->out_of_memory = true;
         *count = 0;
@@ -2684,8 +2676,9 @@ static void compile_expansion(Compiler *compiler, const KestExpr *expr) {
                    "than %d deep",
                    DEEPEST_EXPANSION);
         } else {
-            fault(compiler, expr->span, "this calls a function that takes a "
-                                        "block and has no body");
+            fault(compiler, expr->span,
+                  "this calls a function that takes a "
+                  "block and has no body");
         }
         KestValue nothing = {0};
         for (uint16_t i = 0; i < answer_slots; i++) {
@@ -2698,8 +2691,9 @@ static void compile_expansion(Compiler *compiler, const KestExpr *expr) {
     memset(&here, 0, sizeof here);
     here.outer = compiler->expanding;
     uint16_t slots[16] = {0};
-    for (uint32_t i = 0; i < expr->call.arg_count && i < 16 &&
-                         i < callee->param_count && i < decl->function.param_count;
+    for (uint32_t i = 0;
+         i < expr->call.arg_count && i < 16 && i < callee->param_count &&
+         i < decl->function.param_count;
          i++) {
         const KestType *wanted = callee->params[i];
         const KestExpr *argument = expr->call.args[i];
@@ -2724,7 +2718,8 @@ static void compile_expansion(Compiler *compiler, const KestExpr *expr) {
                 bound->expanding = compiler->expanding;
                 bound->span_here = compiler->span_here;
             } else {
-                const BlockBinding *from = block_named(compiler, argument->span);
+                const BlockBinding *from =
+                    block_named(compiler, argument->span);
                 if (from == NULL) {
                     fault(compiler, argument->span,
                           "this hands on a block there is none of");
@@ -2777,8 +2772,8 @@ static void compile_expansion(Compiler *compiler, const KestExpr *expr) {
     compiler->visible_floor = here.base;
     compiler->expanding = &here;
     compiler->expansion_depth++;
-    for (uint32_t i = 0; i < decl->function.param_count && i < 16 &&
-                         i < callee->param_count;
+    for (uint32_t i = 0;
+         i < decl->function.param_count && i < 16 && i < callee->param_count;
          i++) {
         if (callee->params[i] != NULL && callee->params[i]->block) {
             continue;
@@ -2821,9 +2816,8 @@ static void compile_block_call(Compiler *compiler, const KestExpr *expr,
     const KestLambda *lambda = bound->lambda->lambda;
     const KestType *block = bound->type;
     uint16_t slots[16] = {0};
-    for (uint32_t i = 0; i < expr->call.arg_count && i < 16 &&
-                         i < block->param_count;
-         i++) {
+    for (uint32_t i = 0;
+         i < expr->call.arg_count && i < 16 && i < block->param_count; i++) {
         uint16_t size = value_slots(block->params[i]);
         compile_expr(compiler, expr->call.args[i]);
         slots[i] = reserve_slot(compiler, size);
@@ -2856,14 +2850,12 @@ static void compile_block_call(Compiler *compiler, const KestExpr *expr,
     compiler->expanding = bound->expanding;
     kest_bind_types(program, bound->bound_names, bound->bound_types,
                     bound->bound_count);
-    for (uint32_t i = 0; i < lambda->param_count && i < 16 &&
-                         i < block->param_count;
-         i++) {
+    for (uint32_t i = 0;
+         i < lambda->param_count && i < 16 && i < block->param_count; i++) {
         bind_local(compiler, lambda->params[i], slots[i],
                    value_slots(block->params[i]));
         if (compiler->local_count > 0) {
-            compiler->locals[compiler->local_count - 1].type =
-                block->params[i];
+            compiler->locals[compiler->local_count - 1].type = block->params[i];
         }
     }
     bool gives = block->result != NULL && block->result->tag != KEST_T_VOID;
@@ -2948,8 +2940,9 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     // A dotted callee is a function in another module, or an extern named for
     // its host type. Both are one name with a dot in it.
     if (callee->kind != KEST_EXPR_NAME && callee->kind != KEST_EXPR_FIELD) {
-        fault(compiler, callee->span, "this calls something that is not a "
-                                     "function");
+        fault(compiler, callee->span,
+              "this calls something that is not a "
+              "function");
         return;
     }
 
@@ -2958,7 +2951,8 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     // hundred and fifty-six slots was copied onto the stack to be thrown
     // away. Anything else is still worked out: a call in there is the point
     // of the line as often as not.
-    const KestExpr *only = expr->call.arg_count == 1 ? expr->call.args[0] : NULL;
+    const KestExpr *only =
+        expr->call.arg_count == 1 ? expr->call.args[0] : NULL;
     bool is_a_function =
         callee->type != NULL && callee->type->tag == KEST_T_FN &&
         callee->type->symbol != NULL &&
@@ -2970,7 +2964,8 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
                        callee->span.length)) {
         KestValue how_many = {0};
         how_many.integer = only->type->count;
-        emit_constant(compiler, how_many, KEST_CONST_INT, whole_type(compiler), expr->span);
+        emit_constant(compiler, how_many, KEST_CONST_INT, whole_type(compiler),
+                      expr->span);
         return;
     }
 
@@ -3016,7 +3011,8 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     if (callee->type != NULL && callee->type->tag == KEST_T_FLAGS) {
         if (expr->call.arg_count == 0) {
             KestValue empty = {0};
-            emit_constant(compiler, empty, KEST_CONST_INT, callee->type, expr->span);
+            emit_constant(compiler, empty, KEST_CONST_INT, callee->type,
+                          expr->span);
         }
         // A set made from a number of the same width is the same bits, so
         // there is nothing to emit over what is already on the stack.
@@ -3172,7 +3168,8 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         if (kest_is_narrow(expr->type)) {
             value.real = (float)value.real;
         }
-        emit_constant(compiler, value, KEST_CONST_FLOAT, expr->type, expr->span);
+        emit_constant(compiler, value, KEST_CONST_FLOAT, expr->type,
+                      expr->span);
         break;
     }
     case KEST_EXPR_STRING: {
@@ -3225,8 +3222,8 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             break;
         }
         if (local->folded != NULL) {
-            emit_value_slots(compiler, local->holds, local->folded,
-                             local->size, expr->span);
+            emit_value_slots(compiler, local->holds, local->folded, local->size,
+                             expr->span);
             break;
         }
         stack_push(compiler, local->size);
@@ -3263,7 +3260,8 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         // does not work out a division by nought, so that stays a refusal
         // where it runs.
         if (expr->type != NULL &&
-            (expr->type->tag == KEST_T_INT || expr->type->tag == KEST_T_FLOAT) &&
+            (expr->type->tag == KEST_T_INT ||
+             expr->type->tag == KEST_T_FLOAT) &&
             compile_folded(compiler, expr)) {
             break;
         }
@@ -3303,7 +3301,8 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             if (bit != NULL) {
                 value.integer = (int64_t)1 << (bit - set->cases);
             }
-            emit_constant(compiler, value, KEST_CONST_INT, expr->type, expr->span);
+            emit_constant(compiler, value, KEST_CONST_INT, expr->type,
+                          expr->span);
             break;
         }
         if (expr->field.object->type != NULL &&
@@ -3319,10 +3318,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             load_slots(compiler, slot, size, expr->type, expr->span);
             break;
         }
-        const KestMember *member =
-            find_member(expr->field.object->type,
-                        span_text(compiler, expr->field.name),
-                        expr->field.name.length);
+        const KestMember *member = find_member(
+            expr->field.object->type, span_text(compiler, expr->field.name),
+            expr->field.name.length);
         if (member == NULL) {
             fault(compiler, expr->span,
                   "this reads a field the type does not have");
@@ -3372,9 +3370,10 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             // what says the run is settled is the name rather than another
             // fold -- and a position written down is one value rather than a
             // reach into the run.
-            Local *by_name = expr->index.object->kind == KEST_EXPR_NAME
-                                 ? find_local(compiler, expr->index.object->span)
-                                 : NULL;
+            Local *by_name =
+                expr->index.object->kind == KEST_EXPR_NAME
+                    ? find_local(compiler, expr->index.object->span)
+                    : NULL;
             if (by_name != NULL && by_name->folded != NULL) {
                 int64_t at = written_index(compiler, expr->index.index);
                 if (at >= 0 && (uint64_t)at < object->count) {
@@ -3391,9 +3390,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 compile_expr(compiler, expr->index.index);
                 stack_pop(compiler, 1);
                 stack_push(compiler, stride);
-                uint32_t one = ir_emit(compiler, KEST_IR_CONST_AT,
-                                       object->element, 1, object->element,
-                                       stride, expr->span);
+                uint32_t one =
+                    ir_emit(compiler, KEST_IR_CONST_AT, object->element, 1,
+                            object->element, stride, expr->span);
                 ir_carries(compiler, one, (uint16_t)first, stride,
                            (uint16_t)object->count);
                 break;
@@ -3417,9 +3416,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 compile_expr(compiler, expr->index.index);
                 stack_pop(compiler, 1);
                 stack_push(compiler, stride);
-                uint32_t held = run_place(compiler, slot, stride,
-                                          (uint16_t)object->count,
-                                          object->element, expr->span);
+                uint32_t held =
+                    run_place(compiler, slot, stride, (uint16_t)object->count,
+                              object->element, expr->span);
                 uint32_t one = ir_emit(compiler, KEST_IR_LOAD, object->element,
                                        1, object->element, stride, expr->span);
                 ir_place_of(compiler, one, held);
@@ -3452,9 +3451,8 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             // The run is a constant, so it is in the chunk already: one of
             // it is read there rather than copied into slots to be read back.
             uint16_t wide = object->slots;
-            KestValue *held =
-                KEST_ARENA_ARRAY(compiler->ir->arena, KestValue,
-                                 wide == 0 ? 1 : wide);
+            KestValue *held = KEST_ARENA_ARRAY(compiler->ir->arena, KestValue,
+                                               wide == 0 ? 1 : wide);
             const char *why = NULL;
             if (held != NULL && wide > 0 &&
                 kest_fold_const(compiler->program, expr->index.object, held,
@@ -3467,9 +3465,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 compile_expr(compiler, expr->index.index);
                 stack_pop(compiler, 1);
                 stack_push(compiler, stride);
-                uint32_t one = ir_emit(compiler, KEST_IR_CONST_AT,
-                                       object->element, 1, object->element,
-                                       stride, expr->span);
+                uint32_t one =
+                    ir_emit(compiler, KEST_IR_CONST_AT, object->element, 1,
+                            object->element, stride, expr->span);
                 ir_carries(compiler, one, (uint16_t)first, stride,
                            (uint16_t)object->count);
                 break;
@@ -3487,9 +3485,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 compile_expr(compiler, expr->index.index);
                 stack_pop(compiler, 1);
                 stack_push(compiler, stride);
-                uint32_t where = run_place(compiler, kept, stride,
-                                           (uint16_t)object->count,
-                                           object->element, expr->span);
+                uint32_t where =
+                    run_place(compiler, kept, stride, (uint16_t)object->count,
+                              object->element, expr->span);
                 uint32_t one = ir_emit(compiler, KEST_IR_LOAD, object->element,
                                        1, object->element, stride, expr->span);
                 ir_place_of(compiler, one, where);
@@ -3569,11 +3567,10 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             // walk of the parts counts has to come back to the two slots one
             // is. An optional is the same shape: what it holds, and a tag
             // after it.
-            bool laid_out = type->tag == KEST_T_FLAGS ||
-                            type->tag == KEST_T_ENUM ||
-                            type->tag == KEST_T_OPTIONAL ||
-                            type->tag == KEST_T_STRUCT ||
-                            type->tag == KEST_T_FIXED;
+            bool laid_out =
+                type->tag == KEST_T_FLAGS || type->tag == KEST_T_ENUM ||
+                type->tag == KEST_T_OPTIONAL || type->tag == KEST_T_STRUCT ||
+                type->tag == KEST_T_FIXED;
             stack_pop(compiler, value_slots(type));
             stack_push(compiler, 2);
             uint32_t written = ir_emit(compiler, KEST_IR_TEXT_OF, type, 1,
@@ -3590,9 +3587,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         }
         stack_pop(compiler, (uint16_t)(expr->text.count * 2 - numbered));
         stack_push(compiler, 2);
-        uint32_t joined = ir_emit(compiler, KEST_IR_TEXT_JOIN, expr->type,
-                                  (uint16_t)expr->text.count, expr->type, 2,
-                                  expr->span);
+        uint32_t joined =
+            ir_emit(compiler, KEST_IR_TEXT_JOIN, expr->type,
+                    (uint16_t)expr->text.count, expr->type, 2, expr->span);
         ir_carries(compiler, joined, (uint16_t)expr->text.count, which, 0);
         break;
     }
@@ -3622,9 +3619,8 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             break;
         }
 
-        Exits otherwise =
-            compile_condition(compiler, branch->condition,
-                              branch->binding.length > 0);
+        Exits otherwise = compile_condition(compiler, branch->condition,
+                                            branch->binding.length > 0);
 
         // `if let` leaves what the optional held below the tag the jump
         // consumed. The taken arm binds it; the other arm drops it.
@@ -3638,9 +3634,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             const KestType *optional = branch->condition->type;
             held = (uint16_t)(value_slots(optional) - 1);
             compiler->depth++;
-            uint16_t slot = declare_local(
-                compiler, branch->binding,
-                optional == NULL ? NULL : optional->element);
+            uint16_t slot =
+                declare_local(compiler, branch->binding,
+                              optional == NULL ? NULL : optional->element);
             bound = ir_top(compiler, 0);
             stack_pop(compiler, held);
             store_slots(compiler, slot, held,
@@ -3709,8 +3705,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         for (uint32_t i = 0; i < count; i++) {
             chosen[i] = choose->subjects[i]->type;
             if (chosen[i] == NULL || chosen[i]->tag != KEST_T_ENUM) {
-                fault(compiler, expr->span, "this matches something that is "
-                                            "not an enum");
+                fault(compiler, expr->span,
+                      "this matches something that is "
+                      "not an enum");
                 return;
             }
         }
@@ -3860,9 +3857,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         }
         stack_pop(compiler, (uint16_t)(expr->array.count * slots));
         stack_push(compiler, 1);
-        uint32_t made = ir_emit(compiler, KEST_IR_ARRAY, expr->type,
-                                (uint16_t)expr->array.count, expr->type, 1,
-                                expr->span);
+        uint32_t made =
+            ir_emit(compiler, KEST_IR_ARRAY, expr->type,
+                    (uint16_t)expr->array.count, expr->type, 1, expr->span);
         ir_carries(compiler, made, (uint16_t)expr->array.count,
                    layout_of(compiler, element), 0);
         break;
@@ -3906,8 +3903,8 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr) {
     bool settled;
     if (known_truth(compiler, expr, &settled)) {
         stack_push(compiler, 1);
-        ir_emit(compiler, settled ? KEST_IR_TRUE : KEST_IR_FALSE, expr->type,
-                0, expr->type, 1, expr->span);
+        ir_emit(compiler, settled ? KEST_IR_TRUE : KEST_IR_FALSE, expr->type, 0,
+                expr->type, 1, expr->span);
     } else {
         compile_expr_kind(compiler, expr);
     }
@@ -4024,8 +4021,7 @@ static bool walk_keeps(const Compiler *compiler, uint32_t from,
         if (op->kind == KEST_IR_PUT && op->place != KEST_IR_NO_PLACE) {
             const KestIrPlace *place = &body->places[op->place];
             if (place->kind == KEST_IR_PLACE_RUN ||
-                (place->kind == KEST_IR_PLACE_SLOT &&
-                 counter >= place->slot &&
+                (place->kind == KEST_IR_PLACE_SLOT && counter >= place->slot &&
                  counter < place->slot + place->slots)) {
                 return false;
             }
@@ -4096,8 +4092,8 @@ static bool counted_at(const KestIrBody *body, KestIrRef value,
     }
     if (op->kind == KEST_IR_NARROW && op->arg_count == 1 &&
         wide_whole(op->type)) {
-        return counted_at(body, body->args[op->first_arg], counter, scale,
-                          plus, depth + 1);
+        return counted_at(body, body->args[op->first_arg], counter, scale, plus,
+                          depth + 1);
     }
     if ((op->kind != KEST_IR_MUL && op->kind != KEST_IR_ADD) ||
         op->arg_count != 2 || !wide_whole(op->type)) {
@@ -4313,8 +4309,8 @@ static void hold_empty(Compiler *compiler, const KestStmt *stmt,
     }
     if (compiler->lost_count) {
         compiler->lost_count = false;
-        refuse(compiler, stmt->span,
-               "K0505", "this takes more off the stack than it put on");
+        refuse(compiler, stmt->span, "K0505",
+               "this takes more off the stack than it put on");
         kest_diags_fault(compiler->program->diags,
                          "the compiler's count of the stack went under "
                          "nothing");
@@ -4325,7 +4321,8 @@ static void hold_empty(Compiler *compiler, const KestStmt *stmt,
     }
     refuse(compiler, stmt->span, "K0505",
            "this leaves the stack %u deep and a statement leaves it as it "
-           "found it", compiler->stack_depth);
+           "found it",
+           compiler->stack_depth);
     kest_diags_fault(compiler->program->diags,
                      "the compiler's count of the stack and what a statement "
                      "is disagree");
@@ -4343,18 +4340,15 @@ static void compile_count(Compiler *compiler, const KestStmt *stmt) {
     // which slot: `0..len(xs)` counts through `xs`.
     int32_t measured = -1;
     if (compiler->body != NULL && compiler->body->op_count >= 2 &&
-        compiler->body->ops[compiler->body->op_count - 1].kind ==
-            KEST_IR_LEN &&
-        compiler->body->ops[compiler->body->op_count - 1].arg_count ==
-            1) {
+        compiler->body->ops[compiler->body->op_count - 1].kind == KEST_IR_LEN &&
+        compiler->body->ops[compiler->body->op_count - 1].arg_count == 1) {
         const KestIrOp *len =
             &compiler->body->ops[compiler->body->op_count - 1];
-        measured = read_out_of(
-            compiler->body, compiler->body->args[len->first_arg]);
+        measured =
+            read_out_of(compiler->body, compiler->body->args[len->first_arg]);
     }
     stack_pop(compiler, 1);
-    store_slots(compiler, end_slot, 1,
-                stmt->each->until->type, stmt->span);
+    store_slots(compiler, end_slot, 1, stmt->each->until->type, stmt->span);
 
     // The loop's own count stays where nobody can reach it and the
     // name is a copy of it, the same way a walk of an array works, so
@@ -4362,11 +4356,13 @@ static void compile_count(Compiler *compiler, const KestStmt *stmt) {
     uint16_t index_slot = reserve_slot(compiler, 1);
     compile_expr(compiler, stmt->each->sequence);
     stack_pop(compiler, 1);
-    store_slots(compiler, index_slot, 1, whole_type(compiler),
-                stmt->span);
+    store_slots(compiler, index_slot, 1, whole_type(compiler), stmt->span);
 
-    Walk walk = {index_slot, end_slot, stmt->each->sequence->type,
-                 kest_is_unsigned(stmt->each->sequence->type), false,
+    Walk walk = {index_slot,
+                 end_slot,
+                 stmt->each->sequence->type,
+                 kest_is_unsigned(stmt->each->sequence->type),
+                 false,
                  0};
     uint32_t exit = open_walk(compiler, walk, stmt->span);
 
@@ -4399,8 +4395,7 @@ static void compile_count(Compiler *compiler, const KestStmt *stmt) {
     // shorter.
     if (!stmt->each->name_written &&
         written_index(compiler, stmt->each->sequence) >= 0) {
-        prove_walk(compiler, loop->start, measured, index_slot,
-                   end_slot);
+        prove_walk(compiler, loop->start, measured, index_slot, end_slot);
     }
     close_walk(compiler, loop, exit, walk, stmt->span);
 
@@ -4440,15 +4435,21 @@ typedef struct {
 
 static Written written_so_far(const Compiler *compiler) {
     const KestIrBody *body = compiler->body;
-    return (Written){body->op_count,     body->arg_count,
-                     body->value_count,  body->place_count,
-                     body->name_count,   body->constant_count,
-                     body->folded,       body->folded_slots,
+    return (Written){body->op_count,
+                     body->arg_count,
+                     body->value_count,
+                     body->place_count,
+                     body->name_count,
+                     body->constant_count,
+                     body->folded,
+                     body->folded_slots,
                      compiler->value_count,
                      compiler->program->diags->count,
                      compiler->program->diags->error_count,
-                     compiler->local_count, compiler->next_slot,
-                     compiler->stack_depth, compiler->depth,
+                     compiler->local_count,
+                     compiler->next_slot,
+                     compiler->stack_depth,
+                     compiler->depth,
                      compiler->loop_count};
 }
 
@@ -4647,8 +4648,7 @@ static void compile_counting(Compiler *compiler, const KestStmt *stmt) {
     take_back(compiler, &before);
     compile_unrolled(compiler, stmt, first, turns);
     Reaches unrolled;
-    reaches_of(compiler->body, before.ops, compiler->body->op_count,
-               &unrolled);
+    reaches_of(compiler->body, before.ops, compiler->body->op_count, &unrolled);
     if (!compiler->out_of_memory &&
         compiler->program->diags->count == before.diags &&
         reach_alike(&walked, &unrolled)) {
@@ -4697,10 +4697,9 @@ static bool walked_place(Compiler *compiler, const KestExpr *expr,
         !walked_place(compiler, expr->field.object, slot)) {
         return false;
     }
-    const KestMember *member =
-        find_member(expr->field.object->type,
-                    span_text(compiler, expr->field.name),
-                    expr->field.name.length);
+    const KestMember *member = find_member(
+        expr->field.object->type, span_text(compiler, expr->field.name),
+        expr->field.name.length);
     if (member == NULL) {
         return false;
     }
@@ -4766,9 +4765,8 @@ static void compile_fields_walk(Compiler *compiler, const KestStmt *stmt) {
 static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
     switch (stmt->kind) {
     case KEST_STMT_LET: {
-        const KestType *type = stmt->let.value == NULL
-                                   ? NULL
-                                   : stmt->let.value->type;
+        const KestType *type =
+            stmt->let.value == NULL ? NULL : stmt->let.value->type;
         uint16_t size = value_slots(type);
         // A value worked out where it is written whose name nothing assigns
         // to is a value the chunk holds. A run of four numbers in a body was
@@ -4784,8 +4782,8 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             const char *why = NULL;
             if (kest_fold_const(compiler->program, stmt->let.value, held, size,
                                 &why, NULL) == size) {
-                KestValue *kept = KEST_ARENA_ARRAY(compiler->ir->arena,
-                                                   KestValue, size);
+                KestValue *kept =
+                    KEST_ARENA_ARRAY(compiler->ir->arena, KestValue, size);
                 if (kept == NULL) {
                     compiler->out_of_memory = true;
                     break;
@@ -4811,8 +4809,8 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         // worked out while running, so it goes on the stack under the value.
         uint16_t written_slot = 0;
         uint16_t written_size = 0;
-        bool at_a_slot = resolve_place(compiler, target, &written_slot,
-                                       &written_size);
+        bool at_a_slot =
+            resolve_place(compiler, target, &written_slot, &written_size);
         if (!at_a_slot && target->kind == KEST_EXPR_INDEX &&
             target->index.object->type != NULL &&
             target->index.object->type->tag == KEST_T_FIXED) {
@@ -4823,9 +4821,9 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
                 resolve_place(compiler, target->index.object, &base,
                               &run_size)) {
                 compile_expr(compiler, target->index.index);
-                uint32_t where = run_place(compiler, base, size,
-                                           (uint16_t)run->count,
-                                           target->type, stmt->span);
+                uint32_t where =
+                    run_place(compiler, base, size, (uint16_t)run->count,
+                              target->type, stmt->span);
                 compile_expr(compiler, stmt->assign.value);
                 stack_pop(compiler, (uint16_t)(size + 1));
                 uint32_t at = ir_emit(compiler, KEST_IR_PUT, target->type, 2,
@@ -4855,8 +4853,8 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         }
         // A vector is read whole and worked out a component at a time, which
         // is what its operators are anywhere.
-        bool stepping_vector = stmt->assign.op != KEST_TOK_EQ &&
-                               kest_is_vector(target->type);
+        bool stepping_vector =
+            stmt->assign.op != KEST_TOK_EQ && kest_is_vector(target->type);
         uint16_t read = stepping_vector ? size : 1;
         // In slots, it is read where it is.
         bool read_in_place = stepping_vector && in_slots;
@@ -4923,9 +4921,9 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             store_slots(compiler, slot, size, target->type, stmt->span);
         } else {
             stack_pop(compiler, (uint16_t)(size + 2));
-            uint32_t where = elem_place(compiler, ir_top(compiler, 2),
-                                        ir_top(compiler, 1), offset,
-                                        target->type, stmt->span);
+            uint32_t where =
+                elem_place(compiler, ir_top(compiler, 2), ir_top(compiler, 1),
+                           offset, target->type, stmt->span);
             uint32_t at = ir_emit(compiler, KEST_IR_PUT, target->type, 3, NULL,
                                   0, stmt->span);
             ir_place_of(compiler, at, where);
@@ -4937,14 +4935,13 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         compile_expr(compiler, stmt->value);
         // A call that returns nothing left nothing behind to discard.
         {
-            uint16_t size = stmt->value == NULL
-                                ? 0
-                                : value_slots(stmt->value->type);
+            uint16_t size =
+                stmt->value == NULL ? 0 : value_slots(stmt->value->type);
             if (size > 0) {
                 stack_pop(compiler, size);
                 ir_emit(compiler, KEST_IR_DROP,
-                        stmt->value == NULL ? NULL : stmt->value->type, 1,
-                        NULL, 0, stmt->span);
+                        stmt->value == NULL ? NULL : stmt->value->type, 1, NULL,
+                        0, stmt->span);
             }
         }
         break;
@@ -4981,9 +4978,9 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         if (opening) {
             const KestType *optional = stmt->loop.condition->type;
             held = (uint16_t)(value_slots(optional) - 1);
-            uint16_t slot = declare_local(
-                compiler, stmt->loop.binding,
-                optional == NULL ? NULL : optional->element);
+            uint16_t slot =
+                declare_local(compiler, stmt->loop.binding,
+                              optional == NULL ? NULL : optional->element);
             bound = ir_top(compiler, 0);
             stack_pop(compiler, held);
             store_slots(compiler, slot, held,
@@ -5036,9 +5033,8 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         bool over_bits = sequence != NULL && sequence->tag == KEST_T_FLAGS;
         bool over_run = sequence != NULL && sequence->tag == KEST_T_FIXED;
         bool over_text = sequence != NULL && sequence->tag == KEST_T_TEXT;
-        if (sequence == NULL ||
-            (sequence->tag != KEST_T_ARRAY && !over_store && !over_bits &&
-             !over_run && !over_text)) {
+        if (sequence == NULL || (sequence->tag != KEST_T_ARRAY && !over_store &&
+                                 !over_bits && !over_run && !over_text)) {
             fault(compiler, stmt->span,
                   "this walks something there is no walk for");
             break;
@@ -5061,7 +5057,8 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
 
             uint16_t index_slot = reserve_slot(compiler, 1);
             KestValue zero = {0};
-            emit_constant(compiler, zero, KEST_CONST_INT, whole_type(compiler), stmt->span);
+            emit_constant(compiler, zero, KEST_CONST_INT, whole_type(compiler),
+                          stmt->span);
             stack_pop(compiler, 1);
             store_slots(compiler, index_slot, 1, whole_type(compiler),
                         stmt->span);
@@ -5072,13 +5069,14 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             uint16_t limit_slot = reserve_slot(compiler, 1);
             KestValue how_many = {0};
             how_many.integer = sequence->count;
-            emit_constant(compiler, how_many, KEST_CONST_INT, whole_type(compiler), stmt->span);
+            emit_constant(compiler, how_many, KEST_CONST_INT,
+                          whole_type(compiler), stmt->span);
             stack_pop(compiler, 1);
             store_slots(compiler, limit_slot, 1, whole_type(compiler),
                         stmt->span);
 
-            Walk walk = {index_slot, limit_slot, whole_type(compiler), false,
-                         false, 0};
+            Walk walk = {index_slot, limit_slot, whole_type(compiler),
+                         false,      false,      0};
             uint32_t exit = open_walk(compiler, walk, stmt->span);
 
             Loop *loop = open_loop(compiler, stmt->span);
@@ -5106,9 +5104,9 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
                        stmt->span);
             stack_pop(compiler, 1);
             stack_push(compiler, stride);
-            uint32_t where = run_place(compiler, run_slot, stride,
-                                       (uint16_t)sequence->count,
-                                       sequence->element, stmt->span);
+            uint32_t where =
+                run_place(compiler, run_slot, stride, (uint16_t)sequence->count,
+                          sequence->element, stmt->span);
             uint32_t one = ir_emit(compiler, KEST_IR_LOAD, sequence->element, 1,
                                    sequence->element, stride, stmt->span);
             ir_place_of(compiler, one, where);
@@ -5116,8 +5114,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             uint16_t held =
                 declare_local(compiler, stmt->each->name, sequence->element);
             stack_pop(compiler, stride);
-            store_slots(compiler, held, stride, sequence->element,
-                        stmt->span);
+            store_slots(compiler, held, stride, sequence->element, stmt->span);
 
             compile_block(compiler, &stmt->each->body);
             close_walk(compiler, loop, exit, walk, stmt->span);
@@ -5146,10 +5143,10 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         store_slots(compiler, walked_slot, walked, sequence, stmt->span);
 
         KestValue zero = {0};
-        emit_constant(compiler, zero, KEST_CONST_INT, whole_type(compiler), stmt->span);
+        emit_constant(compiler, zero, KEST_CONST_INT, whole_type(compiler),
+                      stmt->span);
         stack_pop(compiler, 1);
-        store_slots(compiler, index_slot, 1, whole_type(compiler),
-                    stmt->span);
+        store_slots(compiler, index_slot, 1, whole_type(compiler), stmt->span);
 
         // What there is to walk, once. For an array that is how long it is:
         // a walk is over what it held when it began, so the body cannot
@@ -5164,25 +5161,23 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             if (over_bits) {
                 KestValue names_count = {0};
                 names_count.integer = (int64_t)sequence->case_count;
-                emit_constant(compiler, names_count, KEST_CONST_INT, whole_type(compiler),
-                              stmt->span);
+                emit_constant(compiler, names_count, KEST_CONST_INT,
+                              whole_type(compiler), stmt->span);
             } else {
                 stack_push(compiler, walked);
-                load_slots(compiler, walked_slot, walked, sequence,
-                           stmt->span);
+                load_slots(compiler, walked_slot, walked, sequence, stmt->span);
                 stack_pop(compiler, walked);
                 stack_push(compiler, 1);
-                ir_emit(compiler,
-                        over_text ? KEST_IR_TEXT_LEN : KEST_IR_LEN, sequence,
-                        1, whole_type(compiler), 1, stmt->span);
+                ir_emit(compiler, over_text ? KEST_IR_TEXT_LEN : KEST_IR_LEN,
+                        sequence, 1, whole_type(compiler), 1, stmt->span);
             }
             stack_pop(compiler, 1);
             store_slots(compiler, limit_slot, 1, whole_type(compiler),
                         stmt->span);
         }
 
-        Walk walk = {index_slot, limit_slot, whole_type(compiler), false,
-                     !counted, walked_slot};
+        Walk walk = {index_slot, limit_slot, whole_type(compiler),
+                     false,      !counted,   walked_slot};
         uint32_t before = open_walk(compiler, walk, stmt->span);
 
         Loop *loop = open_loop(compiler, stmt->span);
@@ -5269,12 +5264,11 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             root = root->kind == KEST_EXPR_FIELD ? root->field.object
                                                  : root->index.object;
         }
-        bool untouched =
-            root != NULL && root->kind == KEST_EXPR_NAME &&
-            reads_only_fields(compiler, &stmt->each->body,
-                              span_text(compiler, root->span),
-                              root->span.length, false) &&
-            writes_no_arrays(compiler, &stmt->each->body);
+        bool untouched = root != NULL && root->kind == KEST_EXPR_NAME &&
+                         reads_only_fields(compiler, &stmt->each->body,
+                                           span_text(compiler, root->span),
+                                           root->span.length, false) &&
+                         writes_no_arrays(compiler, &stmt->each->body);
         bool by_address =
             !over_store && untouched && sequence->element != NULL &&
             sequence->element->tag == KEST_T_STRUCT &&
@@ -5305,16 +5299,16 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             ir_emit(compiler, KEST_IR_STORE_REF, sequence, 2, NULL, 1,
                     stmt->span);
         } else if (by_address) {
-            uint32_t where = elem_place(compiler, ir_top(compiler, 1),
-                                        ir_top(compiler, 0), 0,
-                                        sequence->element, stmt->span);
+            uint32_t where =
+                elem_place(compiler, ir_top(compiler, 1), ir_top(compiler, 0),
+                           0, sequence->element, stmt->span);
             uint32_t at = ir_emit(compiler, KEST_IR_ADDR, sequence->element, 2,
                                   NULL, 1, stmt->span);
             ir_place_of(compiler, at, where);
         } else {
-            uint32_t where = elem_place(compiler, ir_top(compiler, 1),
-                                        ir_top(compiler, 0), 0,
-                                        sequence->element, stmt->span);
+            uint32_t where =
+                elem_place(compiler, ir_top(compiler, 1), ir_top(compiler, 0),
+                           0, sequence->element, stmt->span);
             uint32_t at = ir_emit(compiler, KEST_IR_LOAD, sequence->element, 2,
                                   sequence->element, stride, stmt->span);
             ir_place_of(compiler, at, where);
@@ -5322,8 +5316,8 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
 
         const KestType *bound =
             over_store || over_text ? NULL : sequence->element;
-        uint16_t element_slot =
-            declare_local(compiler, stmt->each->name, by_address ? NULL : bound);
+        uint16_t element_slot = declare_local(compiler, stmt->each->name,
+                                              by_address ? NULL : bound);
         if (by_address) {
             Local *held = &compiler->locals[compiler->local_count - 1];
             held->is_address = true;
@@ -5370,12 +5364,12 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
                 size = value_slots(stmt->result->type);
                 if (here->result_size > 0) {
                     stack_pop(compiler, here->result_size);
-                    store_slots(compiler, here->result_slot,
-                                here->result_size, here->result, stmt->span);
+                    store_slots(compiler, here->result_slot, here->result_size,
+                                here->result, stmt->span);
                 } else if (size > 0) {
                     stack_pop(compiler, size);
-                    ir_emit(compiler, KEST_IR_DROP, stmt->result->type, 1,
-                            NULL, 0, stmt->span);
+                    ir_emit(compiler, KEST_IR_DROP, stmt->result->type, 1, NULL,
+                            0, stmt->span);
                 }
             }
             run_deferred(compiler, here->deferred, stmt->span);
@@ -5416,8 +5410,9 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         // be kept.
         if (compiler->resuming == NULL || stmt->wait.ordinal == 0 ||
             stmt->wait.ordinal > MOST_WAITS) {
-            fault(compiler, stmt->span, "this waits in a body that does not "
-                                        "resume");
+            fault(compiler, stmt->span,
+                  "this waits in a body that does not "
+                  "resume");
             break;
         }
         KestValue tag = {0};
@@ -5473,8 +5468,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
     case KEST_STMT_SCRATCH: {
         if (compiler->region_count == MAX_REGIONS) {
             refuse(compiler, stmt->span, "K0502",
-                   "working-memory blocks nest more than %d deep",
-                   MAX_REGIONS);
+                   "working-memory blocks nest more than %d deep", MAX_REGIONS);
             break;
         }
         uint16_t names = compiler->local_count;
@@ -5525,15 +5519,14 @@ static bool leaves_early(const KestStmt *stmt) {
 static void close_regions(Compiler *compiler, uint16_t from, bool leaving,
                           KestSpan span) {
     for (uint16_t i = compiler->region_count; i > from; i--) {
-        uint32_t at = ir_emit(compiler, KEST_IR_REGION_CLOSE, NULL, 0, NULL, 0,
-                              span);
+        uint32_t at =
+            ir_emit(compiler, KEST_IR_REGION_CLOSE, NULL, 0, NULL, 0, span);
         // Whether this is the block ending or a way out of it. The one that
         // ends it is where the walk over the body stops counting; the ones a
         // `return`, a `break` or a `continue` write are the machine putting
         // the heap back on the way past, and the block is still open as far as
         // what may be kept goes.
-        ir_carries(compiler, at, compiler->regions[i - 1], 0,
-                   leaving ? 1 : 0);
+        ir_carries(compiler, at, compiler->regions[i - 1], 0, leaving ? 1 : 0);
     }
 }
 
@@ -5714,8 +5707,8 @@ static void resume_where_waiting(Compiler *compiler, const KestBlock *block) {
     waits_in_block(block, tags, &count);
     for (uint32_t w = 1; w <= count; w++) {
         stack_push(compiler, 1);
-        load_slots(compiler, compiler->resume_tag_slot, 1,
-                   whole_type(compiler), named);
+        load_slots(compiler, compiler->resume_tag_slot, 1, whole_type(compiler),
+                   named);
         KestValue tag = {0};
         tag.integer = (int64_t)tags[w];
         emit_constant(compiler, tag, KEST_CONST_INT, whole_type(compiler),
@@ -5724,8 +5717,7 @@ static void resume_where_waiting(Compiler *compiler, const KestBlock *block) {
         ir_emit(compiler, KEST_IR_EQ, whole_type(compiler), 2,
                 truth_type(compiler), 1, named);
         stack_pop(compiler, 1);
-        compiler->resume_jumps[w] =
-            ir_ask(compiler, true, named);
+        compiler->resume_jumps[w] = ir_ask(compiler, true, named);
     }
 }
 
@@ -5746,8 +5738,8 @@ static bool close_body(Compiler *compiler, const KestBlock *block,
     // than watched while it was written: the block is what says a value is
     // shorter-lived, and what it reaches is a question about the body.
     KestSpan escaped = declared;
-    const char *keeps = kest_ir_escapes(compiler->body, compiler->ir->arena,
-                                        &escaped);
+    const char *keeps =
+        kest_ir_escapes(compiler->body, compiler->ir->arena, &escaped);
     if (keeps != NULL) {
         refuse(compiler, escaped, "K0507", "%s", keeps);
         kest_diags_suggest(compiler->program->diags,
@@ -5763,8 +5755,8 @@ static bool close_body(Compiler *compiler, const KestBlock *block,
     bool went = kest_ir_body_end(compiler->ir);
     compiler->body = NULL;
     if (!went) {
-        compiler->out_of_memory = compiler->out_of_memory ||
-                                  compiler->ir->out_of_memory;
+        compiler->out_of_memory =
+            compiler->out_of_memory || compiler->ir->out_of_memory;
     }
     return went;
 }
@@ -5835,9 +5827,8 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             chunk->source = program->source;
             chunk->declared = symbol->span;
             chunk->returns_value = decl->function.result != NULL;
-            chunk->result_slots = symbol->type->result == NULL
-                                      ? 0
-                                      : symbol->type->result->slots;
+            chunk->result_slots =
+                symbol->type->result == NULL ? 0 : symbol->type->result->slots;
             chunk->no_alloc = symbol->type->no_alloc;
             chunk->no_host = symbol->type->no_host;
             chunk->deterministic = symbol->type->deterministic;
@@ -5856,8 +5847,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
                 return false;
             }
             kest_program_in(program, instance->unit);
-            two_of_one_name(program, instance->symbol,
-                            instance->decl->name);
+            two_of_one_name(program, instance->symbol, instance->decl->name);
             return false;
         }
         chunk->source = &instance->unit->source;
@@ -5866,9 +5856,8 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         // name.
         chunk->declared = instance->decl->name;
         chunk->returns_value = instance->decl->function.result != NULL;
-        chunk->result_slots = instance->type->result == NULL
-                                  ? 0
-                                  : instance->type->result->slots;
+        chunk->result_slots =
+            instance->type->result == NULL ? 0 : instance->type->result->slots;
         chunk->no_alloc = instance->type->no_alloc;
         chunk->no_host = instance->type->no_host;
         chunk->deterministic = instance->type->deterministic;
@@ -5920,10 +5909,9 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
                                "constant",
                                symbol->name);
             } else {
-                kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0504",
-                               symbol->span,
-                               "`%s` is not worked out where it is written",
-                               symbol->name);
+                kest_diags_add(
+                    program->diags, KEST_SEVERITY_ERROR, "K0504", symbol->span,
+                    "`%s` is not worked out where it is written", symbol->name);
             }
             kest_diags_suggest(program->diags, "%s",
                                why != NULL
@@ -6000,8 +5988,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         kest_bind_types(program, made->names, made->bindings, made->count);
 
         const KestDecl *decl = instance->decl;
-        if (!open_body(&compiler, module->functions[index++],
-                       instance->type)) {
+        if (!open_body(&compiler, module->functions[index++], instance->type)) {
             return false;
         }
         compiler.unit = unit_index(units, instance->unit);

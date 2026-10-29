@@ -93,7 +93,7 @@
 
 // Both headers begin with it, so which one a handle is can be read without
 // knowing which one it was meant to be.
-#define KEST_HANDLE_IS(handle, tag)                                          \
+#define KEST_HANDLE_IS(handle, tag)                                            \
     ((handle) != NULL && *(const uint32_t *)(handle) == (tag))
 
 typedef struct {
@@ -156,7 +156,6 @@ static void unpack(KestValue *out, const KestLayout *layout,
                    const unsigned char *from, TagRead *told);
 static void pack(unsigned char *to, const KestLayout *layout,
                  const KestValue *from);
-
 
 // One scalar, read out of memory into slots and written back. It is the same
 // switch `unpack` and `pack` run over a piece, factored out so that all three
@@ -249,7 +248,7 @@ static inline WHERE_IT_IS_READ void read_piece(KestValue *out, uint8_t kind,
 }
 
 static inline void write_piece(unsigned char *at, uint8_t kind,
-                        const KestValue *from) {
+                               const KestValue *from) {
     switch (kind) {
     case KEST_L_TEXT: {
         memcpy(at, &from[0], 8);
@@ -302,39 +301,39 @@ static inline void write_piece(unsigned char *at, uint8_t kind,
 // copy: a copy of the whole run is a call, and a wide read of slots written
 // one at a time a moment before waits for every one of those writes to land,
 // which took a run of four `f64` from a tenth fewer cycles to a sixth more.
-#define READ_RUN(type, member, count)                                           \
-    for (uint32_t k = 0; k < (uint32_t)(count); k++) {                        \
+#define READ_RUN(type, member, count)                                          \
+    for (uint32_t k = 0; k < (uint32_t)(count); k++) {                         \
         type v;                                                                \
         memcpy(&v, at + k * sizeof(type), sizeof(type));                       \
         to[k].member = v;                                                      \
     }
 
-#define WRITE_RUN(type, member, count)                                          \
-    for (uint32_t k = 0; k < (uint32_t)(count); k++) {                        \
+#define WRITE_RUN(type, member, count)                                         \
+    for (uint32_t k = 0; k < (uint32_t)(count); k++) {                         \
         type v = (type)from[k].member;                                         \
         memcpy(at + k * sizeof(type), &v, sizeof(type));                       \
     }
 
 #define COPY_IN(count)                                                         \
-    for (uint32_t k = 0; k < (uint32_t)(count); k++) {                        \
+    for (uint32_t k = 0; k < (uint32_t)(count); k++) {                         \
         memcpy(&to[k], at + k * 8, 8);                                         \
     }
 
 #define COPY_OUT(count)                                                        \
-    for (uint32_t k = 0; k < (uint32_t)(count); k++) {                        \
+    for (uint32_t k = 0; k < (uint32_t)(count); k++) {                         \
         memcpy(at + k * 8, &from[k], 8);                                       \
     }
 
 // And one of them, which is most steps, in the same switch as the runs: a step
 // that went to a second switch for its kind paid for two jumps.
-#define READ_ONE(type, member)                                                  \
+#define READ_ONE(type, member)                                                 \
     do {                                                                       \
         type v;                                                                \
         memcpy(&v, at, sizeof(type));                                          \
         to[0].member = v;                                                      \
     } while (0)
 
-#define WRITE_ONE(type, member)                                                 \
+#define WRITE_ONE(type, member)                                                \
     do {                                                                       \
         type v = (type)from[0].member;                                         \
         memcpy(at, &v, sizeof(type));                                          \
@@ -464,7 +463,8 @@ static void walk_in(KestValue *out, const KestMoving *walk, uint32_t first,
 }
 
 static void walk_out(unsigned char *to_bytes, const KestMoving *walk,
-                     uint32_t first, uint32_t count, const KestValue *from_slots) {
+                     uint32_t first, uint32_t count,
+                     const KestValue *from_slots) {
     uint32_t end = first + count;
     for (uint32_t i = first; i < end; i++) {
         const KestMoveStep *step = &walk->steps[i];
@@ -567,7 +567,8 @@ static void walk_out(unsigned char *to_bytes, const KestMoving *walk,
 static void unpack(KestValue *out, const KestLayout *layout,
                    const unsigned char *from, TagRead *told) {
     if (layout->count == 1 && !layout->tagged) {
-        read_piece(out, layout->pieces[0].kind, from + layout->pieces[0].offset);
+        read_piece(out, layout->pieces[0].kind,
+                   from + layout->pieces[0].offset);
         return;
     }
     const KestMoving *walk = layout->walk;
@@ -577,7 +578,8 @@ static void unpack(KestValue *out, const KestLayout *layout,
 static void pack(unsigned char *to, const KestLayout *layout,
                  const KestValue *from) {
     if (layout->count == 1 && !layout->tagged) {
-        write_piece(to + layout->pieces[0].offset, layout->pieces[0].kind, from);
+        write_piece(to + layout->pieces[0].offset, layout->pieces[0].kind,
+                    from);
         return;
     }
     const KestMoving *walk = layout->walk;
@@ -711,9 +713,8 @@ static size_t numbered_length(const KestValue *pieces, uint16_t count,
     return length;
 }
 
-static size_t numbered_copy(char *text, const KestValue *pieces,
-                            uint16_t count, uint16_t which,
-                            const Numbered *numbers) {
+static size_t numbered_copy(char *text, const KestValue *pieces, uint16_t count,
+                            uint16_t which, const Numbered *numbers) {
     size_t used = 0;
     uint32_t at = 0;
     for (uint16_t i = 0; i < count; i++) {
@@ -1145,8 +1146,8 @@ static void follow(Vm *rt, const void *at);
 // two are always in one function and always in that order, so the count going
 // back to what it was is what says a hand was emptied.
 static void *in_hand(Vm *rt, void *at) {
-    if (at != NULL && rt->hands < (uint32_t)(sizeof(rt->in_hand) /
-                                             sizeof(rt->in_hand[0]))) {
+    if (at != NULL &&
+        rt->hands < (uint32_t)(sizeof(rt->in_hand) / sizeof(rt->in_hand[0]))) {
         rt->in_hand[rt->hands++] = at;
     }
     return at;
@@ -1453,8 +1454,9 @@ static void under_the_ceiling(Vm *rt) {
         return;
     }
     size_t elsewhere = kest_arena_used(rt->heap);
-    kest_ground_cap(rt->ground,
-                    rt->heap_bytes > elsewhere ? rt->heap_bytes - elsewhere : 1);
+    kest_ground_cap(rt->ground, rt->heap_bytes > elsewhere
+                                    ? rt->heap_bytes - elsewhere
+                                    : 1);
 }
 
 static void *take(Vm *rt, KestValue *reach, size_t bytes, KestGroundKind kind) {
@@ -1475,7 +1477,6 @@ static void *take(Vm *rt, KestValue *reach, size_t bytes, KestGroundKind kind) {
     }
     return at;
 }
-
 
 // What the program calls a type, which is the last piece of the name it is
 // registered under. A host writes `Event`, not the module it came from.
@@ -1605,8 +1606,8 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
     // No walk here: a host asks for this between calls, when what the program
     // holds is named by the host's own memory and by nothing a walk can read.
     under_the_ceiling(runtime);
-    char *held = kest_ground_take(runtime->ground, length + 1,
-                                  KEST_GROUND_PLAIN);
+    char *held =
+        kest_ground_take(runtime->ground, length + 1, KEST_GROUND_PLAIN);
     if (held != NULL && !handed_over(runtime, held)) {
         held = NULL;
     }
@@ -1692,8 +1693,8 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // an element has one, which is exactly the set that can be lent, and a
     // host asking beforehand asks the same thing.
     const KestLayout *named_layouts[2] = {NULL, NULL};
-    uint32_t named = kest_module_layout_of(runtime->module, element,
-                                           named_layouts, 2);
+    uint32_t named =
+        kest_module_layout_of(runtime->module, element, named_layouts, 2);
     const KestLayout *layout = named_layouts[0];
     // A lend is not in a file, so nothing is pointed at.
     KestSpan nowhere = {0, 0};
@@ -1712,8 +1713,9 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                                "`struct Row { m: %s }`",
                                element);
         } else if (nearest != NULL) {
-            kest_diags_suggest(runtime->diags, "the nearest one that can be "
-                                               "lent to is `%s`",
+            kest_diags_suggest(runtime->diags,
+                               "the nearest one that can be "
+                               "lent to is `%s`",
                                nearest);
         } else {
             kest_diags_suggest(runtime->diags,
@@ -1787,8 +1789,8 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // write to. The one that arrives that way is text: a program that is given
     // a piece of it holds a pointer into the heap or into the build, and a host
     // that lends those bytes as a run of numbers has made the one thing this
-    // language says cannot be written into a thing that can. A literal rewritten
-    // that way stays rewritten for every machine the build starts.
+    // language says cannot be written into a thing that can. A literal
+    // rewritten that way stays rewritten for every machine the build starts.
     if (data != NULL && (ours(runtime, data) ||
                          kest_arena_holds(runtime->module->arena, data))) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0653", nowhere,
@@ -1869,8 +1871,8 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         runtime->spare_lends = (Array *)(void *)array->bytes;
     } else {
         under_the_ceiling(runtime);
-        array = kest_ground_take(runtime->ground, sizeof(Array),
-                                 KEST_GROUND_ARRAY);
+        array =
+            kest_ground_take(runtime->ground, sizeof(Array), KEST_GROUND_ARRAY);
     }
     if (array == NULL) {
         no_room_to_lend(runtime);
@@ -1879,9 +1881,8 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // Written down before it is handed over: a lend nothing knows about is one
     // that cannot be taken back with the rest of its block.
     if (runtime->lent_count == runtime->lent_capacity) {
-        uint32_t bigger = runtime->lent_capacity == 0
-                              ? 8
-                              : runtime->lent_capacity * 2;
+        uint32_t bigger =
+            runtime->lent_capacity == 0 ? 8 : runtime->lent_capacity * 2;
         // On the heap, where the headers are: a lend costs a header and a
         // place in this, and a heap thrown away takes both with it.
         Array **grown = KEST_ARENA_ARRAY(runtime->heap, Array *, bigger);
@@ -1931,7 +1932,7 @@ static size_t put_text(char *out, size_t room, const char *text) {
 // is being written is the source and not the content. A hole holding text on
 // its own is the content, and that is the one exception.
 static size_t put_quoted(char *out, size_t room, const char *text,
-                        size_t length) {
+                         size_t length) {
     size_t used = 0;
     if (used < room) {
         out[used] = '"';
@@ -2013,8 +2014,7 @@ static size_t format_value(char *out, size_t room, const KestType *type,
     case KEST_T_BOOL:
         return put_text(out, room, slots[0].integer ? "true" : "false");
     case KEST_T_INT:
-        kest_write_whole(buffer, (uint64_t)slots[0].integer,
-                         type->is_signed);
+        kest_write_whole(buffer, (uint64_t)slots[0].integer, type->is_signed);
         return put_text(out, room, buffer);
     case KEST_T_FLOAT:
         kest_write_real(buffer, sizeof(buffer), slots[0].real,
@@ -2023,8 +2023,7 @@ static size_t format_value(char *out, size_t room, const KestType *type,
     case KEST_T_TEXT:
         // How long it is is the slot beside it, not a measurement: a nought
         // is a byte text may hold and measuring stops at one.
-        return put_quoted(out, room, slots[0].text,
-                          (size_t)slots[1].integer);
+        return put_quoted(out, room, slots[0].text, (size_t)slots[1].integer);
     case KEST_T_FLAGS:
         return format_flags(out, room, type, (uint64_t)slots[0].integer);
     case KEST_T_ENUM: {
@@ -2049,10 +2048,10 @@ static size_t format_value(char *out, size_t room, const KestType *type,
                 used += put_text(out + (used < room ? used : room),
                                  used < room ? room - used : 0, ", ");
             }
-            used += format_value(out + (used < room ? used : room),
-                                 used < room ? room - used : 0,
-                                 variant->payload[p],
-                                 slots + variant->offsets[p]);
+            used +=
+                format_value(out + (used < room ? used : room),
+                             used < room ? room - used : 0, variant->payload[p],
+                             slots + variant->offsets[p]);
         }
         used += put_text(out + (used < room ? used : room),
                          used < room ? room - used : 0, ")");
@@ -2216,7 +2215,7 @@ static bool values_equal(const KestType *type, const KestValue *a,
 // that many of something has a number, so there are two of these and not one.
 #define IN_ARRAY(index, array)                                                 \
     do {                                                                       \
-        if ((index) < 0 || (uint64_t)(index) >= (array)->length) {              \
+        if ((index) < 0 || (uint64_t)(index) >= (array)->length) {             \
             fail(vmp, frame, instruction, "K0604",                             \
                  "index %lld is outside an array of length %u",                \
                  (long long)(index), (array)->length);                         \
@@ -2233,13 +2232,13 @@ static bool values_equal(const KestType *type, const KestValue *a,
     do {                                                                       \
         TagRead told = {NULL, 0, false};                                       \
         MOVED(moved_unpacked, (layout)->size);                                 \
-        /* One piece with no tag in it is most of what a program reads out */ \
+        /* One piece with no tag in it is most of what a program reads out */  \
         /* of a run -- a number, a handle, a piece of text -- and is read   */ \
-        /* here rather than through a call and a walk of one.    */ \
+        /* here rather than through a call and a walk of one.    */            \
         if ((layout)->count == 1 && !(layout)->tagged) {                       \
-            /* And an `i32`, which is what a count, a timer and an index   */ \
-            /* are, before the switch rather than as one of its cases.     */ \
-            /*                                                  */ \
+            /* And an `i32`, which is what a count, a timer and an index   */  \
+            /* are, before the switch rather than as one of its cases.     */  \
+            /*                                                  */             \
             if ((layout)->pieces[0].kind == KEST_L_I32) {                      \
                 int32_t read_i32;                                              \
                 memcpy(&read_i32, (from) + (layout)->pieces[0].offset, 4);     \
@@ -2258,10 +2257,10 @@ static bool values_equal(const KestType *type, const KestValue *a,
                      ? kest_type_written(told.type)                            \
                      : "a value with a tag in it",                             \
                  (long long)told.tag);                                         \
-            kest_diags_suggest(vmp->diags,                                     \
-                               "a tag in memory this machine did not write is "\
-                               "the host's to get right, and `kest_case_of` "  \
-                               "names the cases");                             \
+            kest_diags_suggest(                                                \
+                vmp->diags, "a tag in memory this machine did not write is "   \
+                            "the host's to get right, and `kest_case_of` "     \
+                            "names the cases");                                \
             return false;                                                      \
         }                                                                      \
     } while (0)
@@ -2281,9 +2280,9 @@ static bool values_equal(const KestType *type, const KestValue *a,
             fail(vmp, frame, instruction, "K0655",                             \
                  "this names %s %u of the %u this program has", (what),        \
                  (uint32_t)(which), (uint32_t)(many));                         \
-            kest_diags_fault(vmp->diags,                                       \
-                             "what the compiler wrote into an instruction and "\
-                             "what the program holds disagree");               \
+            kest_diags_fault(                                                  \
+                vmp->diags, "what the compiler wrote into an instruction and " \
+                            "what the program holds disagree");                \
             return false;                                                      \
         }                                                                      \
     } while (0)
@@ -2296,7 +2295,7 @@ static bool values_equal(const KestType *type, const KestValue *a,
 #if KEST_CHECKED
 #define OWN_SLOT_AND_CONSTANT(slot, which)                                     \
     do {                                                                       \
-        if (!own_slots(vmp, frame, instruction, (slot), (slot) + 1u) ||         \
+        if (!own_slots(vmp, frame, instruction, (slot), (slot) + 1u) ||        \
             !own_constants(vmp, frame, instruction, (which) + 1u)) {           \
             return false;                                                      \
         }                                                                      \
@@ -2309,14 +2308,14 @@ static bool values_equal(const KestType *type, const KestValue *a,
     } while (0)
 #define OWN_SLOT(slot)                                                         \
     do {                                                                       \
-        if (!own_slots(vmp, frame, instruction, (slot), (slot) + 1u)) {         \
+        if (!own_slots(vmp, frame, instruction, (slot), (slot) + 1u)) {        \
             return false;                                                      \
         }                                                                      \
     } while (0)
 #define OWN_ELEMENT_AND_CONSTANT(holds, at, which)                             \
     do {                                                                       \
-        if (!own_slots(vmp, frame, instruction, (holds), (holds) + 1u) ||       \
-            !own_slots(vmp, frame, instruction, (at), (at) + 1u) ||             \
+        if (!own_slots(vmp, frame, instruction, (holds), (holds) + 1u) ||      \
+            !own_slots(vmp, frame, instruction, (at), (at) + 1u) ||            \
             !own_constants(vmp, frame, instruction, (which) + 1u)) {           \
             return false;                                                      \
         }                                                                      \
@@ -2338,21 +2337,21 @@ static bool values_equal(const KestType *type, const KestValue *a,
         }                                                                      \
     } while (0)
 
-#define HOLD(handle, tag, what)                                              \
-    do {                                                                     \
-        if (!KEST_HANDLE_IS(handle, tag)) {                                  \
-            if (KEST_HANDLE_IS(handle, KEST_WAS_LENT)) {                     \
-                fail(vmp, frame, instruction, "K0637",                       \
-                     "the host has taken this lend back");                   \
-                kest_diags_suggest(vmp->diags,                               \
-                                   "the block is the host's and it said so; " \
-                                   "what a program keeps of a lend is what "  \
-                                   "it copied out of one");                   \
-                return false;                                                \
-            }                                                                \
-            fail(vmp, frame, instruction, "K0612", "this is not %s", what);  \
-            return false;                                                    \
-        }                                                                    \
+#define HOLD(handle, tag, what)                                                \
+    do {                                                                       \
+        if (!KEST_HANDLE_IS(handle, tag)) {                                    \
+            if (KEST_HANDLE_IS(handle, KEST_WAS_LENT)) {                       \
+                fail(vmp, frame, instruction, "K0637",                         \
+                     "the host has taken this lend back");                     \
+                kest_diags_suggest(vmp->diags,                                 \
+                                   "the block is the host's and it said so; "  \
+                                   "what a program keeps of a lend is what "   \
+                                   "it copied out of one");                    \
+                return false;                                                  \
+            }                                                                  \
+            fail(vmp, frame, instruction, "K0612", "this is not %s", what);    \
+            return false;                                                      \
+        }                                                                      \
     } while (0)
 
 // How many words of the live bitmap that many slots need.
@@ -2450,7 +2449,8 @@ static void said_at(Vm *vm, const KestSource *source, KestSpan span,
     // how many were left out, because a number is what a reader of a deep one
     // wants and the middle of it is not.
     uint32_t depth = vm->frame_count;
-    uint32_t shown = depth > KEST_MOST_PLACES + 1 ? KEST_MOST_PLACES : depth - 1;
+    uint32_t shown =
+        depth > KEST_MOST_PLACES + 1 ? KEST_MOST_PLACES : depth - 1;
     for (uint32_t i = 1; i <= shown && i < depth; i++) {
         const Frame *caller = &vm->frames[i - 1];
         const KestChunk *chunk = caller->chunk;
@@ -2481,7 +2481,8 @@ static void said_at(Vm *vm, const KestSource *source, KestSpan span,
 }
 
 static void said_here(Vm *vm, const KestSource *source, KestSpan span,
-                      const char *code, const char *format, ...) KEST_SAYS(5, 6);
+                      const char *code, const char *format, ...)
+    KEST_SAYS(5, 6);
 
 static void said_here(Vm *vm, const KestSource *source, KestSpan span,
                       const char *code, const char *format, ...) {
@@ -2649,8 +2650,8 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
     // back is arithmetic about bodies the host never calls. Nought or less
     // where there is no call to name, which is a machine that could not be
     // made rather than one that ran out.
-    kest_module_cycles(rt->module, rt->heap, called, false, &widest,
-                       &in_a_turn, &off_the_turns);
+    kest_module_cycles(rt->module, rt->heap, called, false, &widest, &in_a_turn,
+                       &off_the_turns);
     bool by_turns =
         in_a_turn > 0 &&
         (uint64_t)off_the_turns + (uint64_t)in_a_turn * rt->call_depth <
@@ -2664,16 +2665,14 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
         kest_arena_rewind(rt->heap, before);
         return;
     }
-    kest_diags_suggest(vm->diags,
-                       "there is no number to ask for: `%s` %s, and this "
-                       "machine was given %u frame(s) of %u slot(s) each and "
-                       "%u besides, so twice the frames is %llu slots",
-                       why.where == NULL ? "something here" : why.where,
-                       kest_reach_name(why.reach), rt->call_depth, a_frame,
-                       besides,
-                       (unsigned long long)(besides +
-                                            (uint64_t)a_frame *
-                                                rt->call_depth * 2));
+    kest_diags_suggest(
+        vm->diags,
+        "there is no number to ask for: `%s` %s, and this "
+        "machine was given %u frame(s) of %u slot(s) each and "
+        "%u besides, so twice the frames is %llu slots",
+        why.where == NULL ? "something here" : why.where,
+        kest_reach_name(why.reach), rt->call_depth, a_frame, besides,
+        (unsigned long long)(besides + (uint64_t)a_frame * rt->call_depth * 2));
     kest_arena_rewind(rt->heap, before);
 }
 
@@ -2777,7 +2776,8 @@ static unsigned char *elements_grown(Vm *rt, KestValue *reach, Array *array,
         }
     }
     uint32_t hands = rt->hands;
-    unsigned char *fresh = in_hand(rt, elements_for(rt, reach, layout, capacity));
+    unsigned char *fresh =
+        in_hand(rt, elements_for(rt, reach, layout, capacity));
     hands_off(rt, hands);
     if (fresh == NULL) {
         return NULL;
@@ -2798,7 +2798,8 @@ static uint32_t all_it_holds(Vm *rt, unsigned char *bytes,
     if (bytes == NULL || layout->size == 0) {
         return asked;
     }
-    size_t room = kest_ground_room(rt->ground, ((const Elems *)(const void *)bytes) - 1);
+    size_t room =
+        kest_ground_room(rt->ground, ((const Elems *)(const void *)bytes) - 1);
     if (room <= sizeof(Elems) + 1) {
         return asked;
     }
@@ -2832,19 +2833,20 @@ static bool room_for(Vm *rt, KestValue *reach, Store *store,
                          sizeof(KestValue) * (size_t)capacity * store->stride,
                          KEST_GROUND_PLAIN));
     uint64_t *serials =
-        elements == NULL ? NULL
-                         : in_hand(rt, take(rt, reach,
-                                            sizeof(uint64_t) * capacity,
-                                            KEST_GROUND_PLAIN));
+        elements == NULL
+            ? NULL
+            : in_hand(rt, take(rt, reach, sizeof(uint64_t) * capacity,
+                               KEST_GROUND_PLAIN));
     uint64_t *live =
         serials == NULL
             ? NULL
-            : in_hand(rt, take(rt, reach, sizeof(uint64_t) * LIVE_WORDS(capacity),
-                               KEST_GROUND_PLAIN));
+            : in_hand(rt,
+                      take(rt, reach, sizeof(uint64_t) * LIVE_WORDS(capacity),
+                           KEST_GROUND_PLAIN));
     uint32_t *free_slots =
-        live == NULL ? NULL
-                     : take(rt, reach, sizeof(uint32_t) * capacity,
-                            KEST_GROUND_PLAIN);
+        live == NULL
+            ? NULL
+            : take(rt, reach, sizeof(uint32_t) * capacity, KEST_GROUND_PLAIN);
     hands_off(rt, hands);
     if (elements == NULL || serials == NULL || live == NULL ||
         free_slots == NULL) {
@@ -2870,8 +2872,8 @@ static bool room_for(Vm *rt, KestValue *reach, Store *store,
 }
 
 static bool grow_store(Vm *rt, KestValue *reach, Store *store) {
-    return room_for(rt, reach, store, store->capacity == 0 ? 8
-                                                      : store->capacity * 2);
+    return room_for(rt, reach, store,
+                    store->capacity == 0 ? 8 : store->capacity * 2);
 }
 
 // Which end of a call a frame is being read at. The two ends find the same
@@ -2995,7 +2997,6 @@ static bool fits_the_piece(uint8_t kind, KestValue given_as) {
     }
 }
 
-
 // Whether every piece of a value fits the width it is kept at, without saying
 // which did not: the question the walk below answers in words, asked first
 // where it can be asked flat. A piece of text is two slots.
@@ -3005,8 +3006,8 @@ static bool pieces_fit(const KestLayout *layout, const KestValue *frame) {
         if (!fits_the_piece(layout->pieces[p].kind, frame[slot])) {
             return false;
         }
-        slot = (uint16_t)(slot +
-                          (layout->pieces[p].kind == KEST_L_TEXT ? 2 : 1));
+        slot =
+            (uint16_t)(slot + (layout->pieces[p].kind == KEST_L_TEXT ? 2 : 1));
     }
     return true;
 }
@@ -3050,8 +3051,8 @@ static void narrower_than_that(KestRuntime *runtime, const char *name,
     kest_diags_in(runtime->diags, NULL);
     if (kind == KEST_L_F32) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636", nowhere,
-                       "`%s` takes `f32` in slot %u and %.17g is not one",
-                       name, at, given.real);
+                       "`%s` takes `f32` in slot %u and %.17g is not one", name,
+                       at, given.real);
     } else {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636", nowhere,
                        "`%s` takes `%s` in slot %u and %lld is not one", name,
@@ -3082,8 +3083,8 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
     }
     if (type->tag == KEST_T_STRUCT) {
         for (uint32_t i = 0; i < type->member_count; i++) {
-            if (!handed_well(runtime, saying, name, type->members[i].type, frame,
-                             at)) {
+            if (!handed_well(runtime, saying, name, type->members[i].type,
+                             frame, at)) {
                 return false;
             }
         }
@@ -3117,10 +3118,11 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         int32_t tag = (int32_t)frame[*at].integer;
         if (tag < 0 || (uint32_t)tag >= type->case_count) {
             if (saying->at_a_crossing) {
-                crossing_failed(runtime, saying, "K0650",
-                     "`%s` answers with a tag in slot %u and %lld is no case "
-                     "of it",
-                     name, *at, (long long)frame[*at].integer);
+                crossing_failed(
+                    runtime, saying, "K0650",
+                    "`%s` answers with a tag in slot %u and %lld is no case "
+                    "of it",
+                    name, *at, (long long)frame[*at].integer);
             } else {
                 kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
                                nowhere,
@@ -3140,8 +3142,8 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         const KestVariantType *variant = &type->cases[tag];
         for (uint32_t p = 0; p < variant->payload_count; p++) {
             uint32_t inside = *at + variant->offsets[p];
-            if (!handed_well(runtime, saying, name, variant->payload[p],
-                             frame, &inside)) {
+            if (!handed_well(runtime, saying, name, variant->payload[p], frame,
+                             &inside)) {
                 return false;
             }
         }
@@ -3163,10 +3165,11 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         // frame, and the program reads it at the first thing it does with it.
         if (frame[*at].text == NULL) {
             if (saying->at_a_crossing) {
-                crossing_failed(runtime, saying, "K0652",
-                     "`%s` answers with text in slot %u and there is no "
-                     "address there",
-                     name, *at);
+                crossing_failed(
+                    runtime, saying, "K0652",
+                    "`%s` answers with text in slot %u and there is no "
+                    "address there",
+                    name, *at);
             } else {
                 kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
                                nowhere,
@@ -3182,10 +3185,11 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         if (!ours(runtime, frame[*at].text) &&
             !kest_arena_holds(runtime->module->arena, frame[*at].text)) {
             if (saying->at_a_crossing) {
-                crossing_failed(runtime, saying, "K0652",
-                     "`%s` answers with text in slot %u that did not come "
-                     "from this machine",
-                     name, *at);
+                crossing_failed(
+                    runtime, saying, "K0652",
+                    "`%s` answers with text in slot %u that did not come "
+                    "from this machine",
+                    name, *at);
             } else {
                 kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
                                nowhere,
@@ -3211,10 +3215,11 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         // the host did. Said at the door, it names the slot.
         if (frame[*at].object == NULL) {
             if (saying->at_a_crossing) {
-                crossing_failed(runtime, saying, "K0652",
-                     "`%s` answers with a handle in slot %u and there is none "
-                     "there",
-                     name, *at);
+                crossing_failed(
+                    runtime, saying, "K0652",
+                    "`%s` answers with a handle in slot %u and there is none "
+                    "there",
+                    name, *at);
             } else {
                 kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
                                nowhere,
@@ -3230,10 +3235,11 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         }
         if (!ours(runtime, frame[*at].object)) {
             if (saying->at_a_crossing) {
-                crossing_failed(runtime, saying, "K0652",
-                     "`%s` answers with a handle in slot %u that did not come "
-                     "from this machine",
-                     name, *at);
+                crossing_failed(
+                    runtime, saying, "K0652",
+                    "`%s` answers with a handle in slot %u that did not come "
+                    "from this machine",
+                    name, *at);
             } else {
                 kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
                                nowhere,
@@ -3262,13 +3268,14 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
             // two things happened.
             if (KEST_HANDLE_IS(frame[*at].object, KEST_WAS_LENT)) {
                 if (saying->at_a_crossing) {
-                    crossing_failed(runtime, saying, "K0637",
-                         "`%s` answers with a handle in slot %u the host has "
-                         "taken back",
-                         name, *at);
+                    crossing_failed(
+                        runtime, saying, "K0637",
+                        "`%s` answers with a handle in slot %u the host has "
+                        "taken back",
+                        name, *at);
                 } else {
-                    kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR,
-                                   "K0637", nowhere,
+                    kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0637",
+                                   nowhere,
                                    "`%s` takes a handle in slot %u and the "
                                    "host has taken this lend back",
                                    name, *at);
@@ -3282,15 +3289,15 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
             const char *asked_for =
                 type->tag == KEST_T_ARRAY ? "an array" : "a store";
             const char *handed =
-                KEST_HANDLE_IS(frame[*at].object, KEST_IS_ARRAY)
-                    ? "an array"
-                    : KEST_HANDLE_IS(frame[*at].object, KEST_IS_STORE)
-                          ? "a store"
-                          : "something this machine did not make";
+                KEST_HANDLE_IS(frame[*at].object, KEST_IS_ARRAY) ? "an array"
+                : KEST_HANDLE_IS(frame[*at].object, KEST_IS_STORE)
+                    ? "a store"
+                    : "something this machine did not make";
             if (saying->at_a_crossing) {
-                crossing_failed(runtime, saying, "K0652",
-                     "`%s` answers with %s in slot %u and this host wrote %s",
-                     name, asked_for, *at, handed);
+                crossing_failed(
+                    runtime, saying, "K0652",
+                    "`%s` answers with %s in slot %u and this host wrote %s",
+                    name, asked_for, *at, handed);
             } else {
                 kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
                                nowhere,
@@ -3312,10 +3319,9 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         // type is the build's own and there is one of each, so this is a
         // pointer against a pointer at the one door a handle can arrive
         // through.
-        const KestType *holds =
-            KEST_HANDLE_IS(frame[*at].object, KEST_IS_ARRAY)
-                ? ((const Array *)frame[*at].object)->of
-                : ((const Store *)frame[*at].object)->of;
+        const KestType *holds = KEST_HANDLE_IS(frame[*at].object, KEST_IS_ARRAY)
+                                    ? ((const Array *)frame[*at].object)->of
+                                    : ((const Store *)frame[*at].object)->of;
         if (type->element != NULL && holds != type->element) {
             const char *wanted =
                 kest_type_name(runtime->diags->arena, type->element);
@@ -3324,10 +3330,11 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                 "its handles hold"
                               : kest_type_name(runtime->diags->arena, holds);
             if (saying->at_a_crossing) {
-                crossing_failed(runtime, saying, "K0661",
-                     "`%s` answers in slot %u with a handle of `%s` where one "
-                     "of `%s` was wanted",
-                     name, *at, given, wanted);
+                crossing_failed(
+                    runtime, saying, "K0661",
+                    "`%s` answers in slot %u with a handle of `%s` where one "
+                    "of `%s` was wanted",
+                    name, *at, given, wanted);
             } else {
                 kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0661",
                                nowhere,
@@ -3363,11 +3370,12 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         uint64_t given = (uint64_t)frame[*at].integer;
         if ((given & ~named) != 0) {
             if (saying->at_a_crossing) {
-                crossing_failed(runtime, saying, "K0652",
-                     "`%s` answers with `%s` in slot %u and %llu has bits it "
-                     "has no names for",
-                     name, kest_type_written(type), *at,
-                     (unsigned long long)given);
+                crossing_failed(
+                    runtime, saying, "K0652",
+                    "`%s` answers with `%s` in slot %u and %llu has bits it "
+                    "has no names for",
+                    name, kest_type_written(type), *at,
+                    (unsigned long long)given);
             } else {
                 kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
                                nowhere,
@@ -3387,9 +3395,10 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         double given = frame[*at].real;
         if (given == given && (double)(float)given != given) {
             if (saying->at_a_crossing) {
-                crossing_failed(runtime, saying, "K0652",
-                     "`%s` answers with `f32` in slot %u and %.17g is not one",
-                     name, *at, given);
+                crossing_failed(
+                    runtime, saying, "K0652",
+                    "`%s` answers with `f32` in slot %u and %.17g is not one",
+                    name, *at, given);
             } else {
                 kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
                                nowhere,
@@ -3408,16 +3417,16 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         int64_t given = frame[*at].integer;
         if (kest_narrow_to(kest_scalar_of(type), given) != given) {
             if (saying->at_a_crossing) {
-                crossing_failed(runtime, saying, "K0652",
-                     "`%s` answers with `%s` in slot %u and %lld is not one",
-                     name, the_width_of_type(type), *at, (long long)given);
+                crossing_failed(
+                    runtime, saying, "K0652",
+                    "`%s` answers with `%s` in slot %u and %lld is not one",
+                    name, the_width_of_type(type), *at, (long long)given);
             } else {
-                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
-                               nowhere,
-                               "`%s` takes `%s` in slot %u and %lld is not "
-                               "one",
-                               name, the_width_of_type(type), *at,
-                               (long long)given);
+                kest_diags_add(
+                    runtime->diags, KEST_SEVERITY_ERROR, "K0636", nowhere,
+                    "`%s` takes `%s` in slot %u and %lld is not "
+                    "one",
+                    name, the_width_of_type(type), *at, (long long)given);
             }
             kest_diags_suggest(runtime->diags,
                                "every width wraps at its own end and a truth "
@@ -3504,9 +3513,8 @@ static uint16_t read_u16(const uint8_t **ip) {
 static const KestChunk *the_function(const KestModule *module,
                                      const KestChunk *mine, int64_t which,
                                      uint16_t handed, uint16_t coming_back,
-                                     const char **code, char *said,
-                                     size_t room, const char **suggest,
-                                     const char **fault) {
+                                     const char **code, char *said, size_t room,
+                                     const char **suggest, const char **fault) {
     *code = NULL;
     *suggest = NULL;
     *fault = NULL;
@@ -3554,8 +3562,7 @@ __attribute__((cold, noinline))
 static bool walked_past(Vm *vmp, Frame *frame, const uint8_t *instruction,
                         int64_t index, uint32_t length) {
     fail(vmp, frame, instruction, "K0645",
-         "a walk read byte %lld of text of %u bytes", (long long)index,
-         length);
+         "a walk read byte %lld of text of %u bytes", (long long)index, length);
     kest_diags_fault(vmp->diags, "a walk over text takes its length before "
                                  "its first turn and reads without asking");
     return false;
@@ -3570,9 +3577,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     const KestModule *module = rt->module;
     Vm *vmp = rt;
 
-    const KestChunk *chunk =
-        carrying_on ? rt->frames[rt->frame_count - 1].chunk
-                    : module->functions[entry];
+    const KestChunk *chunk = carrying_on ? rt->frames[rt->frame_count - 1].chunk
+                                         : module->functions[entry];
     // Where this run of the machine starts. Nothing is running unless a host
     // function called back in, and then it starts above what that one left.
     KestValue *floor = rt->running_top != NULL ? rt->running_top : rt->stack;
@@ -3606,8 +3612,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         frame->ip = chunk->code;
         frame->base = floor;
         frame->said_at = 0;
-        top = floor + (chunk->slot_count > arg_slots ? chunk->slot_count
-                                                     : arg_slots);
+        top = floor +
+              (chunk->slot_count > arg_slots ? chunk->slot_count : arg_slots);
         // A run that enters a body the host's compiler compiled is that body
         // and nothing else: there are no instructions to walk. It is entered
         // the same way a call enters one -- the frame is pushed, the
@@ -4042,8 +4048,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // chunk is the compiler's and the machine does not change it, so the
         // const is put aside for the one number written back.
         {
-            uint32_t at = (uint32_t)(top - mine -
-                                     frame->chunk->slot_count);
+            uint32_t at = (uint32_t)(top - mine - frame->chunk->slot_count);
             KestChunk *seen = (KestChunk *)(uintptr_t)frame->chunk;
             if (at > seen->went) {
                 seen->went = at;
@@ -4082,7 +4087,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint32_t takes = 0;
             uint32_t gives = 0;
             frame->expect = 0;
-            if (*instruction != KEST_OP_RETURN && *instruction != KEST_OP_STOP &&
+            if (*instruction != KEST_OP_RETURN &&
+                *instruction != KEST_OP_STOP &&
                 kest_op_stack(module, frame->chunk,
                               (uint32_t)(instruction - frame->chunk->code),
                               &takes, &gives) == NULL &&
@@ -4090,8 +4096,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 frame->expect = now - takes + gives + 1;
             }
         }
-        if (top > mine + frame->chunk->slot_count +
-                      frame->chunk->stack_needed) {
+        if (top >
+            mine + frame->chunk->slot_count + frame->chunk->stack_needed) {
             fail(vmp, frame, instruction, "K0655",
                  "this body was given room to work out %u slot(s) and is "
                  "%u deep",
@@ -4104,728 +4110,767 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
 #endif
         switch (READ_BYTE()) {
-        case KEST_OP_CONST: THREADED(KEST_OP_CONST) {
-            uint16_t which = READ_U16();
+        case KEST_OP_CONST:
+            THREADED(KEST_OP_CONST) {
+                uint16_t which = READ_U16();
 #if KEST_CHECKED
-            if (!own_constants(vmp, frame, instruction, which + 1u)) {
-                return false;
-            }
+                if (!own_constants(vmp, frame, instruction, which + 1u)) {
+                    return false;
+                }
 #endif
-            MOVED(moved_held, sizeof(KestValue));
-            *top++ = constants[which];
-            NEXT;
-        }
-        case KEST_OP_CONST_RUN: THREADED(KEST_OP_CONST_RUN) {
-            uint16_t first = READ_U16();
-            uint16_t count = READ_U16();
+                MOVED(moved_held, sizeof(KestValue));
+                *top++ = constants[which];
+                NEXT;
+            }
+        case KEST_OP_CONST_RUN:
+            THREADED(KEST_OP_CONST_RUN) {
+                uint16_t first = READ_U16();
+                uint16_t count = READ_U16();
 #if KEST_CHECKED
-            if (!own_constants(vmp, frame, instruction,
-                               (uint32_t)first + count)) {
-                return false;
-            }
+                if (!own_constants(vmp, frame, instruction,
+                                   (uint32_t)first + count)) {
+                    return false;
+                }
 #endif
-            MOVED(moved_held, (uint64_t)count * sizeof(KestValue));
-            memcpy(top, &constants[first], sizeof(KestValue) * count);
-            top += count;
-            NEXT;
-        }
-        case KEST_OP_CONST_AT: THREADED(KEST_OP_CONST_AT) {
-            uint16_t first = READ_U16();
-            uint16_t stride = READ_U16();
-            uint16_t count = READ_U16();
-            int64_t index = (--top)->integer;
-            IN_RUN(index, count);
+                MOVED(moved_held, (uint64_t)count * sizeof(KestValue));
+                memcpy(top, &constants[first], sizeof(KestValue) * count);
+                top += count;
+                NEXT;
+            }
+        case KEST_OP_CONST_AT:
+            THREADED(KEST_OP_CONST_AT) {
+                uint16_t first = READ_U16();
+                uint16_t stride = READ_U16();
+                uint16_t count = READ_U16();
+                int64_t index = (--top)->integer;
+                IN_RUN(index, count);
 #if KEST_CHECKED
-            if (!own_constants(vmp, frame, instruction,
-                               (uint32_t)first + (uint32_t)count * stride)) {
-                return false;
-            }
+                if (!own_constants(vmp, frame, instruction,
+                                   (uint32_t)first +
+                                       (uint32_t)count * stride)) {
+                    return false;
+                }
 #endif
-            MOVED(moved_held, (uint64_t)stride * sizeof(KestValue));
-            memcpy(top,
-                   &constants[first + (size_t)index * stride],
-                   sizeof(KestValue) * stride);
-            top += stride;
-            NEXT;
-        }
-        case KEST_OP_LOAD: THREADED(KEST_OP_LOAD) {
-            uint16_t slot = READ_U16();
+                MOVED(moved_held, (uint64_t)stride * sizeof(KestValue));
+                memcpy(top, &constants[first + (size_t)index * stride],
+                       sizeof(KestValue) * stride);
+                top += stride;
+                NEXT;
+            }
+        case KEST_OP_LOAD:
+            THREADED(KEST_OP_LOAD) {
+                uint16_t slot = READ_U16();
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
-                return false;
-            }
+                if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
+                    return false;
+                }
 #endif
-            MOVED(moved_loaded, sizeof(KestValue));
-            *top++ = mine[slot];
-            NEXT;
-        }
+                MOVED(moved_loaded, sizeof(KestValue));
+                *top++ = mine[slot];
+                NEXT;
+            }
         // The two pairs this machine runs most of, each as one instruction.
         // They do what the two they replace did, in the order they did it:
         // what is saved is a dispatch and a read of the next opcode, which
         // over a frame step is a quarter of everything.
-        case KEST_OP_LOAD2: THREADED(KEST_OP_LOAD2) {
-            uint16_t first = READ_U16();
-            uint16_t second = READ_U16();
+        case KEST_OP_LOAD2:
+            THREADED(KEST_OP_LOAD2) {
+                uint16_t first = READ_U16();
+                uint16_t second = READ_U16();
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, first, first + 1u) ||
-                !own_slots(vmp, frame, instruction, second, second + 1u)) {
-                return false;
-            }
+                if (!own_slots(vmp, frame, instruction, first, first + 1u) ||
+                    !own_slots(vmp, frame, instruction, second, second + 1u)) {
+                    return false;
+                }
 #endif
-            MOVED(moved_loaded, 2 * sizeof(KestValue));
-            *top++ = mine[first];
-            *top++ = mine[second];
-            NEXT;
-        }
-        case KEST_OP_LOADK: THREADED(KEST_OP_LOADK) {
-            uint16_t slot = READ_U16();
-            uint16_t which = READ_U16();
+                MOVED(moved_loaded, 2 * sizeof(KestValue));
+                *top++ = mine[first];
+                *top++ = mine[second];
+                NEXT;
+            }
+        case KEST_OP_LOADK:
+            THREADED(KEST_OP_LOADK) {
+                uint16_t slot = READ_U16();
+                uint16_t which = READ_U16();
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot, slot + 1u) ||
-                !own_constants(vmp, frame, instruction, which + 1u)) {
-                return false;
-            }
+                if (!own_slots(vmp, frame, instruction, slot, slot + 1u) ||
+                    !own_constants(vmp, frame, instruction, which + 1u)) {
+                    return false;
+                }
 #endif
-            MOVED(moved_loaded, sizeof(KestValue));
-            MOVED(moved_held, sizeof(KestValue));
-            *top++ = mine[slot];
-            *top++ = constants[which];
-            NEXT;
-        }
-        case KEST_OP_STORE: THREADED(KEST_OP_STORE) {
-            uint16_t slot = READ_U16();
+                MOVED(moved_loaded, sizeof(KestValue));
+                MOVED(moved_held, sizeof(KestValue));
+                *top++ = mine[slot];
+                *top++ = constants[which];
+                NEXT;
+            }
+        case KEST_OP_STORE:
+            THREADED(KEST_OP_STORE) {
+                uint16_t slot = READ_U16();
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
-                return false;
-            }
+                if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
+                    return false;
+                }
 #endif
-            MOVED(moved_stored, sizeof(KestValue));
-            mine[slot] = *--top;
-            NEXT;
-        }
-        case KEST_OP_LOADN: THREADED(KEST_OP_LOADN) {
-            uint16_t slot = READ_U16();
-            uint16_t count = READ_U16();
+                MOVED(moved_stored, sizeof(KestValue));
+                mine[slot] = *--top;
+                NEXT;
+            }
+        case KEST_OP_LOADN:
+            THREADED(KEST_OP_LOADN) {
+                uint16_t slot = READ_U16();
+                uint16_t count = READ_U16();
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot,
-                           (uint32_t)slot + count)) {
-                return false;
-            }
+                if (!own_slots(vmp, frame, instruction, slot,
+                               (uint32_t)slot + count)) {
+                    return false;
+                }
 #endif
-            // Written out rather than handed to `memcpy`. Most runs are two or
-            // three slots -- a struct of a few fields, or the fields of one
-            // loaded one after another -- and a call that decides how to copy
-            // anything costs more than moving three of them.
-            MOVED(moved_loaded, (uint64_t)count * sizeof(KestValue));
-            for (uint16_t i = 0; i < count; i++) {
-                top[i] = mine[slot + i];
+                // Written out rather than handed to `memcpy`. Most runs are two
+                // or three slots -- a struct of a few fields, or the fields of
+                // one loaded one after another -- and a call that decides how
+                // to copy anything costs more than moving three of them.
+                MOVED(moved_loaded, (uint64_t)count * sizeof(KestValue));
+                for (uint16_t i = 0; i < count; i++) {
+                    top[i] = mine[slot + i];
+                }
+                top += count;
+                NEXT;
             }
-            top += count;
-            NEXT;
-        }
-        case KEST_OP_STOREN: THREADED(KEST_OP_STOREN) {
-            uint16_t slot = READ_U16();
-            uint16_t count = READ_U16();
+        case KEST_OP_STOREN:
+            THREADED(KEST_OP_STOREN) {
+                uint16_t slot = READ_U16();
+                uint16_t count = READ_U16();
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot,
-                           (uint32_t)slot + count)) {
-                return false;
-            }
+                if (!own_slots(vmp, frame, instruction, slot,
+                               (uint32_t)slot + count)) {
+                    return false;
+                }
 #endif
-            top -= count;
-            for (uint16_t i = 0; i < count; i++) {
-                mine[slot + i] = top[i];
+                top -= count;
+                for (uint16_t i = 0; i < count; i++) {
+                    mine[slot + i] = top[i];
+                }
+                MOVED(moved_stored, (uint64_t)count * sizeof(KestValue));
+                NEXT;
             }
-            MOVED(moved_stored, (uint64_t)count * sizeof(KestValue));
-            NEXT;
-        }
-        case KEST_OP_FIELD: THREADED(KEST_OP_FIELD) {
-            uint16_t offset = READ_U16();
-            uint16_t size = READ_U16();
-            uint16_t total = READ_U16();
-            KestValue *value = top - total;
-            MOVED(moved_shuffled, (uint64_t)size * sizeof(KestValue));
-            memmove(value, value + offset, sizeof(KestValue) * size);
-            top = value + size;
-            NEXT;
-        }
-        case KEST_OP_ARRAY: THREADED(KEST_OP_ARRAY) {
-            uint16_t count = READ_U16();
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            SPEND_WORK((uint64_t)count);
-            // The elements first, because the header names them and a walk
-            // set off by taking the header would find elements nothing names.
-            // The other way round the elements are simply not reachable yet
-            // and the header is not there to say they should be.
-            uint32_t hands = rt->hands;
-            unsigned char *bytes =
-                in_hand(rt, elements_for(rt, top, layout, count));
-            Array *array = bytes == NULL
-                               ? NULL
-                               : take(rt, top, sizeof(Array),
-                                      KEST_GROUND_ARRAY);
-            hands_off(rt, hands);
-            if (array == NULL || bytes == NULL) {
-                no_room(vmp, frame, instruction, rt);
-                // What it was making, because nothing here was growing: a
-                // number in the program rather than a ceiling that was nearly
-                // enough.
-                kest_diags_suggest(vmp->diags,
-                                   "it was making an array of %u of %u bytes "
-                                   "each",
-                                   count, layout->size);
-                return false;
+        case KEST_OP_FIELD:
+            THREADED(KEST_OP_FIELD) {
+                uint16_t offset = READ_U16();
+                uint16_t size = READ_U16();
+                uint16_t total = READ_U16();
+                KestValue *value = top - total;
+                MOVED(moved_shuffled, (uint64_t)size * sizeof(KestValue));
+                memmove(value, value + offset, sizeof(KestValue) * size);
+                top = value + size;
+                NEXT;
             }
-            array->what = KEST_IS_ARRAY;
-            array->length = count;
-            array->capacity = count;
-            array->stride = layout->size;
-            array->of = layout->type;
-            array->bytes = bytes;
+        case KEST_OP_ARRAY:
+            THREADED(KEST_OP_ARRAY) {
+                uint16_t count = READ_U16();
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                SPEND_WORK((uint64_t)count);
+                // The elements first, because the header names them and a walk
+                // set off by taking the header would find elements nothing
+                // names. The other way round the elements are simply not
+                // reachable yet and the header is not there to say they should
+                // be.
+                uint32_t hands = rt->hands;
+                unsigned char *bytes =
+                    in_hand(rt, elements_for(rt, top, layout, count));
+                Array *array = bytes == NULL ? NULL
+                                             : take(rt, top, sizeof(Array),
+                                                    KEST_GROUND_ARRAY);
+                hands_off(rt, hands);
+                if (array == NULL || bytes == NULL) {
+                    no_room(vmp, frame, instruction, rt);
+                    // What it was making, because nothing here was growing: a
+                    // number in the program rather than a ceiling that was
+                    // nearly enough.
+                    kest_diags_suggest(
+                        vmp->diags,
+                        "it was making an array of %u of %u bytes "
+                        "each",
+                        count, layout->size);
+                    return false;
+                }
+                array->what = KEST_IS_ARRAY;
+                array->length = count;
+                array->capacity = count;
+                array->stride = layout->size;
+                array->of = layout->type;
+                array->bytes = bytes;
 
-            top -= (size_t)count * layout->slots;
-            for (uint16_t i = 0; i < count; i++) {
-                MOVED(moved_packed, layout->size);
-                pack(bytes + (size_t)i * layout->size, layout,
-                     top + (size_t)i * layout->slots);
+                top -= (size_t)count * layout->slots;
+                for (uint16_t i = 0; i < count; i++) {
+                    MOVED(moved_packed, layout->size);
+                    pack(bytes + (size_t)i * layout->size, layout,
+                         top + (size_t)i * layout->slots);
+                }
+                (top++)->object = array;
+                NEXT;
             }
-            (top++)->object = array;
-            NEXT;
-        }
-        case KEST_OP_MAKE_ARRAY: THREADED(KEST_OP_MAKE_ARRAY) {
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            top -= layout->slots;
-            KestValue *fill = top;
-            int64_t count = (--top)->integer;
-            SPEND_WORK(count < 0 ? 0 : (uint64_t)count);
-            // What fills it is above the top, because the count was taken off
-            // after it: a walk has to read to the top of what is live and not
-            // to the top of the stack. The making itself is the door a body
-            // the host's compiler compiled goes through, so the two engines
-            // make an array the same way and say the same thing when they
-            // cannot.
-            frame->ip = ip;
-            rt->asked_at = instruction;
-            KestValue *was_top = rt->running_top;
-            rt->running_top = fill + layout->slots;
-            bool made = kest_array_new(rt, of_which, count, fill,
-                                       KEST_WHERE_RUNNING,
-                                       top);
-            rt->running_top = was_top;
-            if (!made) {
-                return false;
+        case KEST_OP_MAKE_ARRAY:
+            THREADED(KEST_OP_MAKE_ARRAY) {
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                top -= layout->slots;
+                KestValue *fill = top;
+                int64_t count = (--top)->integer;
+                SPEND_WORK(count < 0 ? 0 : (uint64_t)count);
+                // What fills it is above the top, because the count was taken
+                // off after it: a walk has to read to the top of what is live
+                // and not to the top of the stack. The making itself is the
+                // door a body the host's compiler compiled goes through, so the
+                // two engines make an array the same way and say the same thing
+                // when they cannot.
+                frame->ip = ip;
+                rt->asked_at = instruction;
+                KestValue *was_top = rt->running_top;
+                rt->running_top = fill + layout->slots;
+                bool made = kest_array_new(rt, of_which, count, fill,
+                                           KEST_WHERE_RUNNING, top);
+                rt->running_top = was_top;
+                if (!made) {
+                    return false;
+                }
+                top++;
+                NEXT;
             }
-            top++;
-            NEXT;
-        }
-        case KEST_OP_ROOM: THREADED(KEST_OP_ROOM) {
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            int64_t wanted = (--top)->integer;
-            void *given = (--top)->object;
-            // What was taken off the stack is still what this is about, so a
-            // walk set off by making room has to read to above it rather than
-            // to where the stack now ends.
-            KestValue *reach = top + 2;
-            SPEND_WORK(wanted < 0 ? 0 : (uint64_t)wanted);
-            // The two things in this language that grow, through the one
-            // instruction: a store is made with room by `store(n)` and an
-            // array by `array(n, v)`, and this is the same sentence said to
-            // one that is already there. A store keeps four runs rather than
-            // one, so what it makes room in is four blocks at once, which is
-            // `room_for`'s to know.
-            if (KEST_HANDLE_IS(given, KEST_IS_STORE)) {
-                Store *store = given;
+        case KEST_OP_ROOM:
+            THREADED(KEST_OP_ROOM) {
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                int64_t wanted = (--top)->integer;
+                void *given = (--top)->object;
+                // What was taken off the stack is still what this is about, so
+                // a walk set off by making room has to read to above it rather
+                // than to where the stack now ends.
+                KestValue *reach = top + 2;
+                SPEND_WORK(wanted < 0 ? 0 : (uint64_t)wanted);
+                // The two things in this language that grow, through the one
+                // instruction: a store is made with room by `store(n)` and an
+                // array by `array(n, v)`, and this is the same sentence said to
+                // one that is already there. A store keeps four runs rather
+                // than one, so what it makes room in is four blocks at once,
+                // which is `room_for`'s to know.
+                if (KEST_HANDLE_IS(given, KEST_IS_STORE)) {
+                    Store *store = given;
+                    if (wanted > MAX_COUNTED) {
+                        fail(
+                            vmp, frame, instruction, "K0630",
+                            "this store holds %d, which is all `len` can count",
+                            MAX_COUNTED);
+                        return false;
+                    }
+                    if (wanted > (int64_t)store->capacity &&
+                        !room_for(rt, reach, store, (uint32_t)wanted)) {
+                        no_room_growing(vmp, frame, instruction, rt, "a store",
+                                        store->used,
+                                        sizeof(KestValue) * store->stride,
+                                        (uint32_t)wanted);
+                        return false;
+                    }
+                    break;
+                }
+                Array *array = given;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                if (array->borrowed) {
+                    fail(vmp, frame, instruction, "K0608",
+                         "this array is the host's, so it cannot grow");
+                    return false;
+                }
                 if (wanted > MAX_COUNTED) {
                     fail(vmp, frame, instruction, "K0630",
-                         "this store holds %d, which is all `len` can count",
+                         "this array holds %d, which is all `len` can count",
                          MAX_COUNTED);
                     return false;
                 }
-                if (wanted > (int64_t)store->capacity &&
-                    !room_for(rt, reach, store, (uint32_t)wanted)) {
-                    no_room_growing(vmp, frame, instruction, rt, "a store",
-                                    store->used,
-                                    sizeof(KestValue) * store->stride,
-                                    (uint32_t)wanted);
+                // Room for what is coming and nothing about what is there: the
+                // length does not move, so a program that asks for less than it
+                // already holds is asking for nothing. One block, once, where a
+                // loop of pushes pays for a run of them.
+                if (wanted > (int64_t)array->capacity) {
+                    uint32_t capacity = (uint32_t)wanted;
+                    unsigned char *grown =
+                        elements_grown(rt, reach, array, layout, capacity);
+                    if (grown == NULL) {
+                        no_room(vmp, frame, instruction, rt);
+                        return false;
+                    }
+                    array->bytes = grown;
+                    array->capacity = capacity;
+                }
+                NEXT;
+            }
+        case KEST_OP_PUSH:
+            THREADED(KEST_OP_PUSH) {
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                top -= layout->slots;
+                KestValue *value = top;
+                KestValue handle = *--top;
+                // The growing itself is the door a body the host's compiler
+                // compiled goes through, so an array grows one way and says one
+                // thing when it cannot.
+                frame->ip = ip;
+                rt->asked_at = instruction;
+                KestValue *was_pushing = rt->running_top;
+                rt->running_top = value + layout->slots;
+                bool grew = kest_array_push(rt, handle, of_which, value,
+                                            KEST_WHERE_RUNNING);
+                rt->running_top = was_pushing;
+                if (!grew) {
                     return false;
                 }
-                break;
+                NEXT;
             }
-            Array *array = given;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            if (array->borrowed) {
-                fail(vmp, frame, instruction, "K0608",
-                     "this array is the host's, so it cannot grow");
-                return false;
-            }
-            if (wanted > MAX_COUNTED) {
-                fail(vmp, frame, instruction, "K0630",
-                     "this array holds %d, which is all `len` can count",
-                     MAX_COUNTED);
-                return false;
-            }
-            // Room for what is coming and nothing about what is there: the
-            // length does not move, so a program that asks for less than it
-            // already holds is asking for nothing. One block, once, where a
-            // loop of pushes pays for a run of them.
-            if (wanted > (int64_t)array->capacity) {
-                uint32_t capacity = (uint32_t)wanted;
-                unsigned char *grown =
-                    elements_grown(rt, reach, array, layout, capacity);
-                if (grown == NULL) {
-                    no_room(vmp, frame, instruction, rt);
-                    return false;
-                }
-                array->bytes = grown;
-                array->capacity = capacity;
-            }
-            NEXT;
-        }
-        case KEST_OP_PUSH: THREADED(KEST_OP_PUSH) {
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            top -= layout->slots;
-            KestValue *value = top;
-            KestValue handle = *--top;
-            // The growing itself is the door a body the host's compiler
-            // compiled goes through, so an array grows one way and says one
-            // thing when it cannot.
-            frame->ip = ip;
-            rt->asked_at = instruction;
-            KestValue *was_pushing = rt->running_top;
-            rt->running_top = value + layout->slots;
-            bool grew = kest_array_push(rt, handle, of_which, value,
-                                        KEST_WHERE_RUNNING);
-            rt->running_top = was_pushing;
-            if (!grew) {
-                return false;
-            }
-            NEXT;
-        }
         // The same append with the growth taken out. Where `push` would double
         // the block this answers false and writes nothing, so a body that was
         // given room can fill it under a promise to reach no heap.
-        case KEST_OP_FIT: THREADED(KEST_OP_FIT) {
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            top -= layout->slots;
-            KestValue *value = top;
-            Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            if (array->borrowed) {
-                fail(vmp, frame, instruction, "K0608",
-                     "this array is the host's, so it cannot grow");
-                return false;
+        case KEST_OP_FIT:
+            THREADED(KEST_OP_FIT) {
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                top -= layout->slots;
+                KestValue *value = top;
+                Array *array = (--top)->object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                if (array->borrowed) {
+                    fail(vmp, frame, instruction, "K0608",
+                         "this array is the host's, so it cannot grow");
+                    return false;
+                }
+                if (array->length >= array->capacity ||
+                    array->length == MAX_COUNTED) {
+                    (top++)->integer = 0;
+                    break;
+                }
+                MOVED(moved_packed, layout->size);
+                pack(array->bytes + (size_t)array->length * layout->size,
+                     layout, value);
+                array->length++;
+                MOVED(moved_held, sizeof(KestValue));
+                (top++)->integer = 1;
+                NEXT;
             }
-            if (array->length >= array->capacity ||
-                array->length == MAX_COUNTED) {
-                (top++)->integer = 0;
-                break;
-            }
-            MOVED(moved_packed, layout->size);
-            pack(array->bytes + (size_t)array->length * layout->size, layout,
-                 value);
-            array->length++;
-            MOVED(moved_held, sizeof(KestValue));
-            (top++)->integer = 1;
-            NEXT;
-        }
         // A whole piece of text onto a run of bytes. Text is its bytes
         //, so this is the loop a program had to write taken into one
         // move: the same growth `push` does, once for the whole piece rather
         // than once a byte, and a `memcpy`. Building text a byte at a time was
         // eighty per cent of the instructions `bench/words.kest` ran.
-        case KEST_OP_PUSH_TEXT: THREADED(KEST_OP_PUSH_TEXT) {
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            Said piece = TEXT_OFF();
-            Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            if (array->borrowed) {
-                fail(vmp, frame, instruction, "K0608",
-                     "this array is the host's, so it cannot grow");
-                return false;
-            }
-            if ((uint64_t)array->length + piece.length > (uint64_t)MAX_COUNTED) {
-                fail(vmp, frame, instruction, "K0630",
-                     "this array holds %d, which is all `len` can count",
-                     MAX_COUNTED);
-                return false;
-            }
-            uint32_t wanted = array->length + piece.length;
-            if (wanted > array->capacity) {
-                uint32_t capacity = array->capacity == 0 ? 8 : array->capacity;
-                while (capacity < wanted) {
-                    capacity *= 2;
-                }
-                // What is still live while this may walk: the array and the
-                // piece, both of which are above where the stack now ends.
-                unsigned char *was = array->bytes;
-                unsigned char *grown =
-                    elements_grown(rt, top + 3, array, layout, capacity);
-                if (grown == NULL) {
-                    no_room_growing(vmp, frame, instruction, rt, "an array",
-                                    array->length, layout->size, capacity);
+        case KEST_OP_PUSH_TEXT:
+            THREADED(KEST_OP_PUSH_TEXT) {
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                Said piece = TEXT_OFF();
+                Array *array = (--top)->object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                if (array->borrowed) {
+                    fail(vmp, frame, instruction, "K0608",
+                         "this array is the host's, so it cannot grow");
                     return false;
                 }
-                capacity = all_it_holds(rt, grown, layout, capacity);
-                (((Elems *)(void *)grown) - 1)->places = capacity;
-                if (grown != was) {
-                    SPEND_WORK((uint64_t)array->length);
+                if ((uint64_t)array->length + piece.length >
+                    (uint64_t)MAX_COUNTED) {
+                    fail(vmp, frame, instruction, "K0630",
+                         "this array holds %d, which is all `len` can count",
+                         MAX_COUNTED);
+                    return false;
                 }
-                array->bytes = grown;
-                array->capacity = capacity;
+                uint32_t wanted = array->length + piece.length;
+                if (wanted > array->capacity) {
+                    uint32_t capacity =
+                        array->capacity == 0 ? 8 : array->capacity;
+                    while (capacity < wanted) {
+                        capacity *= 2;
+                    }
+                    // What is still live while this may walk: the array and the
+                    // piece, both of which are above where the stack now ends.
+                    unsigned char *was = array->bytes;
+                    unsigned char *grown =
+                        elements_grown(rt, top + 3, array, layout, capacity);
+                    if (grown == NULL) {
+                        no_room_growing(vmp, frame, instruction, rt, "an array",
+                                        array->length, layout->size, capacity);
+                        return false;
+                    }
+                    capacity = all_it_holds(rt, grown, layout, capacity);
+                    (((Elems *)(void *)grown) - 1)->places = capacity;
+                    if (grown != was) {
+                        SPEND_WORK((uint64_t)array->length);
+                    }
+                    array->bytes = grown;
+                    array->capacity = capacity;
+                }
+                SPEND_WORK(piece.length);
+                MOVED(moved_packed, piece.length);
+                if (piece.length > 0) {
+                    memcpy(array->bytes + array->length, piece.bytes,
+                           piece.length);
+                }
+                array->length = wanted;
+                NEXT;
             }
-            SPEND_WORK(piece.length);
-            MOVED(moved_packed, piece.length);
-            if (piece.length > 0) {
-                memcpy(array->bytes + array->length, piece.bytes,
-                       piece.length);
-            }
-            array->length = wanted;
-            NEXT;
-        }
         // The same with the growth taken out, which is what a body under a
         // promise can do: all of it fits or none of it goes in, because a
         // piece half written is a piece nobody can take back.
-        case KEST_OP_FIT_TEXT: THREADED(KEST_OP_FIT_TEXT) {
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            (void)layout;
-            Said piece = TEXT_OFF();
-            Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            if (array->borrowed) {
-                fail(vmp, frame, instruction, "K0608",
-                     "this array is the host's, so it cannot grow");
-                return false;
+        case KEST_OP_FIT_TEXT:
+            THREADED(KEST_OP_FIT_TEXT) {
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                (void)layout;
+                Said piece = TEXT_OFF();
+                Array *array = (--top)->object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                if (array->borrowed) {
+                    fail(vmp, frame, instruction, "K0608",
+                         "this array is the host's, so it cannot grow");
+                    return false;
+                }
+                if ((uint64_t)array->length + piece.length >
+                        (uint64_t)array->capacity ||
+                    (uint64_t)array->length + piece.length >
+                        (uint64_t)MAX_COUNTED) {
+                    (top++)->integer = 0;
+                    break;
+                }
+                SPEND_WORK(piece.length);
+                MOVED(moved_packed, piece.length);
+                if (piece.length > 0) {
+                    memcpy(array->bytes + array->length, piece.bytes,
+                           piece.length);
+                }
+                array->length += piece.length;
+                MOVED(moved_held, sizeof(KestValue));
+                (top++)->integer = 1;
+                NEXT;
             }
-            if ((uint64_t)array->length + piece.length > (uint64_t)array->capacity ||
-                (uint64_t)array->length + piece.length > (uint64_t)MAX_COUNTED) {
-                (top++)->integer = 0;
-                break;
+        case KEST_OP_INDEX:
+            THREADED(KEST_OP_INDEX) {
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                int64_t index = (--top)->integer;
+                const Array *array = (--top)->object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                IN_ARRAY(index, array);
+                READ_INTO(top, layout,
+                          array->bytes + (size_t)index * array->stride);
+                top += layout->slots;
+                NEXT;
             }
-            SPEND_WORK(piece.length);
-            MOVED(moved_packed, piece.length);
-            if (piece.length > 0) {
-                memcpy(array->bytes + array->length, piece.bytes,
-                       piece.length);
-            }
-            array->length += piece.length;
-            MOVED(moved_held, sizeof(KestValue));
-            (top++)->integer = 1;
-            NEXT;
-        }
-        case KEST_OP_INDEX: THREADED(KEST_OP_INDEX) {
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            int64_t index = (--top)->integer;
-            const Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            IN_ARRAY(index, array);
-            READ_INTO(top, layout,
-                      array->bytes + (size_t)index * array->stride);
-            top += layout->slots;
-            NEXT;
-        }
         // `load2` and `index` as one. The run and the index are read out of
         // the slots they are in rather than pushed to be popped.
-        case KEST_OP_INDEX_LL: THREADED(KEST_OP_INDEX_LL) {
-            uint16_t holds = READ_U16();
-            uint16_t at = READ_U16();
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+        case KEST_OP_INDEX_LL:
+            THREADED(KEST_OP_INDEX_LL) {
+                uint16_t holds = READ_U16();
+                uint16_t at = READ_U16();
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, holds, holds + 1u) ||
-                !own_slots(vmp, frame, instruction, at, at + 1u)) {
-                return false;
-            }
+                if (!own_slots(vmp, frame, instruction, holds, holds + 1u) ||
+                    !own_slots(vmp, frame, instruction, at, at + 1u)) {
+                    return false;
+                }
 #endif
-            MOVED(moved_loaded, 2 * sizeof(KestValue));
-            const KestLayout *layout = &module->layouts[of_which];
-            int64_t index = mine[at].integer;
-            const Array *array = mine[holds].object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            IN_ARRAY(index, array);
-            READ_INTO(top, layout,
-                      array->bytes + (size_t)index * array->stride);
-            top += layout->slots;
-            NEXT;
-        }
+                MOVED(moved_loaded, 2 * sizeof(KestValue));
+                const KestLayout *layout = &module->layouts[of_which];
+                int64_t index = mine[at].integer;
+                const Array *array = mine[holds].object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                IN_ARRAY(index, array);
+                READ_INTO(top, layout,
+                          array->bytes + (size_t)index * array->stride);
+                top += layout->slots;
+                NEXT;
+            }
         // `load` and `index` as one: the run is on the stack, where the
         // index before it left it, and the index is read out of its slot.
-        case KEST_OP_INDEX_L: THREADED(KEST_OP_INDEX_L) {
-            uint16_t at = READ_U16();
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+        case KEST_OP_INDEX_L:
+            THREADED(KEST_OP_INDEX_L) {
+                uint16_t at = READ_U16();
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, at, at + 1u)) {
-                return false;
-            }
+                if (!own_slots(vmp, frame, instruction, at, at + 1u)) {
+                    return false;
+                }
 #endif
-            MOVED(moved_loaded, sizeof(KestValue));
-            const KestLayout *layout = &module->layouts[of_which];
-            int64_t index = mine[at].integer;
-            const Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            IN_ARRAY(index, array);
-            READ_INTO(top, layout,
-                      array->bytes + (size_t)index * array->stride);
-            top += layout->slots;
-            NEXT;
-        }
+                MOVED(moved_loaded, sizeof(KestValue));
+                const KestLayout *layout = &module->layouts[of_which];
+                int64_t index = mine[at].integer;
+                const Array *array = (--top)->object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                IN_ARRAY(index, array);
+                READ_INTO(top, layout,
+                          array->bytes + (size_t)index * array->stride);
+                top += layout->slots;
+                NEXT;
+            }
         // The two above, each with the move at the other end taken into it.
         // `index` unpacks a struct onto the stack and the store that follows
         // copies it off again; this writes it where it is going.
-        case KEST_OP_INDEX_TO: THREADED(KEST_OP_INDEX_TO) {
-            uint16_t of_which = READ_U16();
-            uint16_t slot = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            int64_t index = (--top)->integer;
-            const Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            IN_ARRAY(index, array);
+        case KEST_OP_INDEX_TO:
+            THREADED(KEST_OP_INDEX_TO) {
+                uint16_t of_which = READ_U16();
+                uint16_t slot = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                int64_t index = (--top)->integer;
+                const Array *array = (--top)->object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                IN_ARRAY(index, array);
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot,
-                           slot + layout->slots)) {
-                return false;
-            }
-#endif
-            READ_INTO(mine + slot, layout,
-                      array->bytes + (size_t)index * array->stride);
-            NEXT;
-        }
-        case KEST_OP_INDEX_TO_LL: THREADED(KEST_OP_INDEX_TO_LL) {
-            uint16_t of_which = READ_U16();
-            uint16_t slot = READ_U16();
-            uint16_t holds = READ_U16();
-            uint16_t at = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-#if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot,
-                           slot + layout->slots) ||
-                !own_slots(vmp, frame, instruction, holds, holds + 1u) ||
-                !own_slots(vmp, frame, instruction, at, at + 1u)) {
-                return false;
-            }
-#endif
-            MOVED(moved_loaded, 2 * sizeof(KestValue));
-            int64_t index = mine[at].integer;
-            const Array *array = mine[holds].object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            IN_ARRAY(index, array);
-            READ_INTO(mine + slot, layout,
-                      array->bytes + (size_t)index * array->stride);
-            NEXT;
-        }
-        case KEST_OP_ELEM_FROM_LL: THREADED(KEST_OP_ELEM_FROM_LL) {
-            uint16_t offset = READ_U16();
-            uint16_t of_which = READ_U16();
-            uint16_t slot = READ_U16();
-            uint16_t holds = READ_U16();
-            uint16_t at = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-#if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot,
-                           slot + layout->slots) ||
-                !own_slots(vmp, frame, instruction, holds, holds + 1u) ||
-                !own_slots(vmp, frame, instruction, at, at + 1u)) {
-                return false;
-            }
-#endif
-            MOVED(moved_loaded, 2 * sizeof(KestValue));
-            MOVED(moved_packed, layout->size);
-            int64_t index = mine[at].integer;
-            Array *array = mine[holds].object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            IN_ARRAY(index, array);
-            pack(array->bytes + (size_t)index * array->stride + offset, layout,
-                 mine + slot);
-            NEXT;
-        }
-        case KEST_OP_ELEM_FROM: THREADED(KEST_OP_ELEM_FROM) {
-            uint16_t offset = READ_U16();
-            uint16_t of_which = READ_U16();
-            uint16_t slot = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            int64_t index = (--top)->integer;
-            Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            IN_ARRAY(index, array);
-#if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot,
-                           slot + layout->slots)) {
-                return false;
-            }
-#endif
-            MOVED(moved_packed, layout->size);
-            pack(array->bytes + (size_t)index * array->stride + offset, layout,
-                 mine + slot);
-            NEXT;
-        }
-        case KEST_OP_POP_LAST: THREADED(KEST_OP_POP_LAST) {
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            if (array->borrowed) {
-                fail(vmp, frame, instruction, "K0608",
-                     "this array is the host's, so it cannot shrink");
-                return false;
-            }
-            if (array->length == 0) {
-                for (uint16_t i = 0; i < layout->slots; i++) {
-                    top[i].integer = 0;
+                if (!own_slots(vmp, frame, instruction, slot,
+                               slot + layout->slots)) {
+                    return false;
                 }
+#endif
+                READ_INTO(mine + slot, layout,
+                          array->bytes + (size_t)index * array->stride);
+                NEXT;
+            }
+        case KEST_OP_INDEX_TO_LL:
+            THREADED(KEST_OP_INDEX_TO_LL) {
+                uint16_t of_which = READ_U16();
+                uint16_t slot = READ_U16();
+                uint16_t holds = READ_U16();
+                uint16_t at = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+#if KEST_CHECKED
+                if (!own_slots(vmp, frame, instruction, slot,
+                               slot + layout->slots) ||
+                    !own_slots(vmp, frame, instruction, holds, holds + 1u) ||
+                    !own_slots(vmp, frame, instruction, at, at + 1u)) {
+                    return false;
+                }
+#endif
+                MOVED(moved_loaded, 2 * sizeof(KestValue));
+                int64_t index = mine[at].integer;
+                const Array *array = mine[holds].object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                IN_ARRAY(index, array);
+                READ_INTO(mine + slot, layout,
+                          array->bytes + (size_t)index * array->stride);
+                NEXT;
+            }
+        case KEST_OP_ELEM_FROM_LL:
+            THREADED(KEST_OP_ELEM_FROM_LL) {
+                uint16_t offset = READ_U16();
+                uint16_t of_which = READ_U16();
+                uint16_t slot = READ_U16();
+                uint16_t holds = READ_U16();
+                uint16_t at = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+#if KEST_CHECKED
+                if (!own_slots(vmp, frame, instruction, slot,
+                               slot + layout->slots) ||
+                    !own_slots(vmp, frame, instruction, holds, holds + 1u) ||
+                    !own_slots(vmp, frame, instruction, at, at + 1u)) {
+                    return false;
+                }
+#endif
+                MOVED(moved_loaded, 2 * sizeof(KestValue));
+                MOVED(moved_packed, layout->size);
+                int64_t index = mine[at].integer;
+                Array *array = mine[holds].object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                IN_ARRAY(index, array);
+                pack(array->bytes + (size_t)index * array->stride + offset,
+                     layout, mine + slot);
+                NEXT;
+            }
+        case KEST_OP_ELEM_FROM:
+            THREADED(KEST_OP_ELEM_FROM) {
+                uint16_t offset = READ_U16();
+                uint16_t of_which = READ_U16();
+                uint16_t slot = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                int64_t index = (--top)->integer;
+                Array *array = (--top)->object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                IN_ARRAY(index, array);
+#if KEST_CHECKED
+                if (!own_slots(vmp, frame, instruction, slot,
+                               slot + layout->slots)) {
+                    return false;
+                }
+#endif
+                MOVED(moved_packed, layout->size);
+                pack(array->bytes + (size_t)index * array->stride + offset,
+                     layout, mine + slot);
+                NEXT;
+            }
+        case KEST_OP_POP_LAST:
+            THREADED(KEST_OP_POP_LAST) {
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                Array *array = (--top)->object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                if (array->borrowed) {
+                    fail(vmp, frame, instruction, "K0608",
+                         "this array is the host's, so it cannot shrink");
+                    return false;
+                }
+                if (array->length == 0) {
+                    for (uint16_t i = 0; i < layout->slots; i++) {
+                        top[i].integer = 0;
+                    }
+                    top += layout->slots;
+                    (top++)->integer = 0;
+                    break;
+                }
+                array->length--;
+                READ_INTO(top, layout,
+                          array->bytes + (size_t)array->length * array->stride);
                 top += layout->slots;
-                (top++)->integer = 0;
-                break;
+                (top++)->integer = 1;
+                NEXT;
             }
-            array->length--;
-            READ_INTO(top, layout,
-                      array->bytes + (size_t)array->length * array->stride);
-            top += layout->slots;
-            (top++)->integer = 1;
-            NEXT;
-        }
-        case KEST_OP_TAKE: THREADED(KEST_OP_TAKE) {
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            int64_t index = (--top)->integer;
-            Array *array = (--top)->object;
-            KestValue handle = *top;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            if (array->borrowed) {
-                fail(vmp, frame, instruction, "K0608",
-                     "this array is the host's, so it cannot shrink");
-                return false;
+        case KEST_OP_TAKE:
+            THREADED(KEST_OP_TAKE) {
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                int64_t index = (--top)->integer;
+                Array *array = (--top)->object;
+                KestValue handle = *top;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                if (array->borrowed) {
+                    fail(vmp, frame, instruction, "K0608",
+                         "this array is the host's, so it cannot shrink");
+                    return false;
+                }
+                IN_ARRAY(index, array);
+                unsigned char *at =
+                    array->bytes + (size_t)index * array->stride;
+                READ_INTO(top, layout, at);
+                top += layout->slots;
+                // And the taking away, which is the door a body the host's
+                // compiler compiled goes through: one answer about what a run
+                // of elements does when one is taken out of the middle.
+                frame->ip = ip;
+                rt->asked_at = instruction;
+                if (!kest_array_remove(rt, handle, index, KEST_WHERE_RUNNING)) {
+                    return false;
+                }
+                NEXT;
             }
-            IN_ARRAY(index, array);
-            unsigned char *at = array->bytes + (size_t)index * array->stride;
-            READ_INTO(top, layout, at);
-            top += layout->slots;
-            // And the taking away, which is the door a body the host's
-            // compiler compiled goes through: one answer about what a run of
-            // elements does when one is taken out of the middle.
-            frame->ip = ip;
-            rt->asked_at = instruction;
-            if (!kest_array_remove(rt, handle, index,
-                                   KEST_WHERE_RUNNING)) {
-                return false;
+        case KEST_OP_CLEAR:
+            THREADED(KEST_OP_CLEAR) {
+                Array *array = (--top)->object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                if (array->borrowed) {
+                    fail(vmp, frame, instruction, "K0608",
+                         "this array is the host's, so it cannot shrink");
+                    return false;
+                }
+                array->length = 0;
+                NEXT;
             }
-            NEXT;
-        }
-        case KEST_OP_CLEAR: THREADED(KEST_OP_CLEAR) {
-            Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            if (array->borrowed) {
-                fail(vmp, frame, instruction, "K0608",
-                     "this array is the host's, so it cannot shrink");
-                return false;
+        case KEST_OP_ELEM_ADDR:
+            THREADED(KEST_OP_ELEM_ADDR) {
+                READ_U16();
+                int64_t index = (--top)->integer;
+                Array *array = (--top)->object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                IN_ARRAY(index, array);
+                (top++)->object = array->bytes + (size_t)index * array->stride;
+                NEXT;
             }
-            array->length = 0;
-            NEXT;
-        }
-        case KEST_OP_ELEM_ADDR: THREADED(KEST_OP_ELEM_ADDR) {
-            READ_U16();
-            int64_t index = (--top)->integer;
-            Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            IN_ARRAY(index, array);
-            (top++)->object = array->bytes + (size_t)index * array->stride;
-            NEXT;
-        }
         // One of an array at a byte into it, with the array and the index
         // taken away: what `elem.addr` and the `load.at` after it did in two.
         // Reading a field of an element is what a frame does most, and it was
         // the one read of a place that cost two dispatches.
-        case KEST_OP_ELEM_AT: THREADED(KEST_OP_ELEM_AT) {
-            uint16_t offset = READ_U16();
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            int64_t index = (--top)->integer;
-            Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            IN_ARRAY(index, array);
-            READ_INTO(top, layout,
-                      array->bytes + (size_t)index * array->stride + offset);
-            top += layout->slots;
-            NEXT;
-        }
-        case KEST_OP_LOAD_SLOTS: THREADED(KEST_OP_LOAD_SLOTS) {
-            uint16_t base = READ_U16();
-            uint16_t stride = READ_U16();
-            uint16_t count = READ_U16();
-            int64_t index = (--top)->integer;
-            IN_RUN(index, count);
-#if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, base,
-                           (uint32_t)base + (uint32_t)count * stride)) {
-                return false;
+        case KEST_OP_ELEM_AT:
+            THREADED(KEST_OP_ELEM_AT) {
+                uint16_t offset = READ_U16();
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                int64_t index = (--top)->integer;
+                Array *array = (--top)->object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                IN_ARRAY(index, array);
+                READ_INTO(top, layout,
+                          array->bytes + (size_t)index * array->stride +
+                              offset);
+                top += layout->slots;
+                NEXT;
             }
-#endif
-            MOVED(moved_loaded, (uint64_t)stride * sizeof(KestValue));
-            memcpy(top, mine + base + (size_t)index * stride,
-                   sizeof(KestValue) * stride);
-            top += stride;
-            NEXT;
-        }
-        case KEST_OP_STORE_SLOTS: THREADED(KEST_OP_STORE_SLOTS) {
-            uint16_t base = READ_U16();
-            uint16_t stride = READ_U16();
-            uint16_t count = READ_U16();
-            top -= stride;
-            KestValue *value = top;
-            int64_t index = (--top)->integer;
-            IN_RUN(index, count);
+        case KEST_OP_LOAD_SLOTS:
+            THREADED(KEST_OP_LOAD_SLOTS) {
+                uint16_t base = READ_U16();
+                uint16_t stride = READ_U16();
+                uint16_t count = READ_U16();
+                int64_t index = (--top)->integer;
+                IN_RUN(index, count);
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, base,
-                           (uint32_t)base + (uint32_t)count * stride)) {
-                return false;
-            }
+                if (!own_slots(vmp, frame, instruction, base,
+                               (uint32_t)base + (uint32_t)count * stride)) {
+                    return false;
+                }
 #endif
-            MOVED(moved_stored, (uint64_t)stride * sizeof(KestValue));
-            memcpy(mine + base + (size_t)index * stride, value,
-                   sizeof(KestValue) * stride);
-            NEXT;
-        }
-        case KEST_OP_OFFSET_ADDR: THREADED(KEST_OP_OFFSET_ADDR) {
-            uint16_t stride = READ_U16();
-            uint16_t count = READ_U16();
-            int64_t index = (--top)->integer;
-            unsigned char *at = (--top)->object;
-            IN_RUN(index, count);
-            (top++)->object = at + (size_t)index * stride;
-            NEXT;
-        }
-        case KEST_OP_LOAD_AT: THREADED(KEST_OP_LOAD_AT) {
-            uint16_t offset = READ_U16();
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            const unsigned char *at = (--top)->object;
-            READ_INTO(top, layout, at + offset);
-            top += layout->slots;
-            NEXT;
-        }
+                MOVED(moved_loaded, (uint64_t)stride * sizeof(KestValue));
+                memcpy(top, mine + base + (size_t)index * stride,
+                       sizeof(KestValue) * stride);
+                top += stride;
+                NEXT;
+            }
+        case KEST_OP_STORE_SLOTS:
+            THREADED(KEST_OP_STORE_SLOTS) {
+                uint16_t base = READ_U16();
+                uint16_t stride = READ_U16();
+                uint16_t count = READ_U16();
+                top -= stride;
+                KestValue *value = top;
+                int64_t index = (--top)->integer;
+                IN_RUN(index, count);
+#if KEST_CHECKED
+                if (!own_slots(vmp, frame, instruction, base,
+                               (uint32_t)base + (uint32_t)count * stride)) {
+                    return false;
+                }
+#endif
+                MOVED(moved_stored, (uint64_t)stride * sizeof(KestValue));
+                memcpy(mine + base + (size_t)index * stride, value,
+                       sizeof(KestValue) * stride);
+                NEXT;
+            }
+        case KEST_OP_OFFSET_ADDR:
+            THREADED(KEST_OP_OFFSET_ADDR) {
+                uint16_t stride = READ_U16();
+                uint16_t count = READ_U16();
+                int64_t index = (--top)->integer;
+                unsigned char *at = (--top)->object;
+                IN_RUN(index, count);
+                (top++)->object = at + (size_t)index * stride;
+                NEXT;
+            }
+        case KEST_OP_LOAD_AT:
+            THREADED(KEST_OP_LOAD_AT) {
+                uint16_t offset = READ_U16();
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                const unsigned char *at = (--top)->object;
+                READ_INTO(top, layout, at + offset);
+                top += layout->slots;
+                NEXT;
+            }
         // A place in an array, given as the array and the index rather than as
         // an address. `load.elem` leaves the two where they are, because a
         // compound assignment reads before it writes and the write needs them
@@ -4833,583 +4878,629 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // anything at all, including growing that very array -- which used to
         // move the block while an address into it sat on the stack, and the
         // write then went into memory nothing would read again.
-        case KEST_OP_LOAD_ELEM: THREADED(KEST_OP_LOAD_ELEM) {
-            uint16_t offset = READ_U16();
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            int64_t index = top[-1].integer;
-            Array *array = top[-2].object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            IN_ARRAY(index, array);
-            READ_INTO(top, layout,
-                      array->bytes + (size_t)index * array->stride + offset);
-            top += layout->slots;
-            NEXT;
-        }
-        case KEST_OP_STORE_ELEM: THREADED(KEST_OP_STORE_ELEM) {
-            uint16_t offset = READ_U16();
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            top -= layout->slots;
-            KestValue *value = top;
-            int64_t index = (--top)->integer;
-            Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            IN_ARRAY(index, array);
-            MOVED(moved_packed, layout->size);
-            pack(array->bytes + (size_t)index * array->stride + offset, layout,
-                 value);
-            NEXT;
-        }
-        case KEST_OP_NEW_STORE: THREADED(KEST_OP_NEW_STORE) {
-            int64_t room = (--top)->integer;
-            SPEND_WORK(room < 0 ? 0 : (uint64_t)room);
-            // The stride is the layout's, which the door reads: what the
-            // instruction carries is which layout, the same as everywhere
-            // else a shape is named.
-            READ_U16();
-            uint16_t holds = READ_U16();
-            OF_THE_MODULE(holds, module->layout_count, "a layout");
-            frame->ip = ip;
-            rt->asked_at = instruction;
-            // The door is a host's as well, and a host's call leaves where a
-            // walk reads to at the top of what it handed in. Here that is the
-            // body that called in from outside, and every frame this machine
-            // has built above it since -- this one included, which holds the
-            // store made the instruction before -- is above that. So the
-            // walk is told where the stack is now, the way the array doors
-            // are. Found by walking at every allocation.
-            KestValue *was_top = rt->running_top;
-            rt->running_top = top;
-            bool made = kest_store_new(rt, holds, room, KEST_WHERE_RUNNING,
-                                       top);
-            rt->running_top = was_top;
-            if (!made) {
-                return false;
+        case KEST_OP_LOAD_ELEM:
+            THREADED(KEST_OP_LOAD_ELEM) {
+                uint16_t offset = READ_U16();
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                int64_t index = top[-1].integer;
+                Array *array = top[-2].object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                IN_ARRAY(index, array);
+                READ_INTO(top, layout,
+                          array->bytes + (size_t)index * array->stride +
+                              offset);
+                top += layout->slots;
+                NEXT;
             }
-            top++;
-            NEXT;
-        }
-        case KEST_OP_ADD: THREADED(KEST_OP_ADD) {
-            uint16_t stride = READ_U16();
-            top -= stride;
-            KestValue *value = top;
-            Store *store = (--top)->object;
-            HOLD(store, KEST_IS_STORE, "a store");
-            // What is being added is above where the stack now ends, and
-            // until the copy below it is the only thing naming whatever it
-            // holds. A store that grows takes four runs, any of which may set
-            // off a walk, and a walk that read to `top` would find a freshly
-            // made array named by nothing and give it away -- leaving the
-            // copy to put a handle to a place something else now has into the
-            // store. `set` at a position and `push` both read to above the
-            // value for this reason; this one did not.
-            KestValue *reach = value + stride;
+        case KEST_OP_STORE_ELEM:
+            THREADED(KEST_OP_STORE_ELEM) {
+                uint16_t offset = READ_U16();
+                uint16_t of_which = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                top -= layout->slots;
+                KestValue *value = top;
+                int64_t index = (--top)->integer;
+                Array *array = (--top)->object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                IN_ARRAY(index, array);
+                MOVED(moved_packed, layout->size);
+                pack(array->bytes + (size_t)index * array->stride + offset,
+                     layout, value);
+                NEXT;
+            }
+        case KEST_OP_NEW_STORE:
+            THREADED(KEST_OP_NEW_STORE) {
+                int64_t room = (--top)->integer;
+                SPEND_WORK(room < 0 ? 0 : (uint64_t)room);
+                // The stride is the layout's, which the door reads: what the
+                // instruction carries is which layout, the same as everywhere
+                // else a shape is named.
+                READ_U16();
+                uint16_t holds = READ_U16();
+                OF_THE_MODULE(holds, module->layout_count, "a layout");
+                frame->ip = ip;
+                rt->asked_at = instruction;
+                // The door is a host's as well, and a host's call leaves where
+                // a walk reads to at the top of what it handed in. Here that is
+                // the body that called in from outside, and every frame this
+                // machine has built above it since -- this one included, which
+                // holds the store made the instruction before -- is above that.
+                // So the walk is told where the stack is now, the way the array
+                // doors are. Found by walking at every allocation.
+                KestValue *was_top = rt->running_top;
+                rt->running_top = top;
+                bool made =
+                    kest_store_new(rt, holds, room, KEST_WHERE_RUNNING, top);
+                rt->running_top = was_top;
+                if (!made) {
+                    return false;
+                }
+                top++;
+                NEXT;
+            }
+        case KEST_OP_ADD:
+            THREADED(KEST_OP_ADD) {
+                uint16_t stride = READ_U16();
+                top -= stride;
+                KestValue *value = top;
+                Store *store = (--top)->object;
+                HOLD(store, KEST_IS_STORE, "a store");
+                // What is being added is above where the stack now ends, and
+                // until the copy below it is the only thing naming whatever it
+                // holds. A store that grows takes four runs, any of which may
+                // set off a walk, and a walk that read to `top` would find a
+                // freshly made array named by nothing and give it away --
+                // leaving the copy to put a handle to a place something else
+                // now has into the store. `set` at a position and `push` both
+                // read to above the value for this reason; this one did not.
+                KestValue *reach = value + stride;
 
-            uint32_t index;
-            if (store->free_count > 0) {
-                index = store->free_slots[--store->free_count];
-            } else {
-                if (store->used == MAX_COUNTED) {
+                uint32_t index;
+                if (store->free_count > 0) {
+                    index = store->free_slots[--store->free_count];
+                } else {
+                    if (store->used == MAX_COUNTED) {
+                        fail(
+                            vmp, frame, instruction, "K0630",
+                            "this store holds %d, which is all `len` can count",
+                            MAX_COUNTED);
+                        return false;
+                    }
+                    // What a store that has to grow copies, charged before it
+                    // does: four runs of what it holds.
+                    if (store->used == store->capacity) {
+                        SPEND_WORK((uint64_t)store->used);
+                    }
+                    if (store->used == store->capacity &&
+                        !grow_store(rt, reach, store)) {
+                        // A store grows by four runs at once -- what it holds,
+                        // what each has counted, which are live and which are
+                        // free -- so what it was reaching for is wider than one
+                        // of them.
+                        no_room_growing(
+                            vmp, frame, instruction, rt, "a store", store->used,
+                            sizeof(KestValue) * store->stride,
+                            store->capacity == 0 ? 8 : store->capacity * 2);
+                        return false;
+                    }
+                    index = store->used++;
+                    if (index >= store->high) {
+                        store->high = index + 1;
+                    }
+                }
+                // The next handout number there is, taken from the count for
+                // the whole process so that no two places anywhere are ever
+                // stamped the same. A place handed out again gets a new one, so
+                // a reference made before it was given back names a number
+                // nothing carries any more; a store that has never written this
+                // number is a store the reference did not come from; and a
+                // machine made after another one cannot be handed the first
+                // one's numbers, which is what a count of worlds could not
+                // promise.
+                uint64_t handout = next_handout(rt);
+                if (handout > MOST_STAMPS) {
                     fail(vmp, frame, instruction, "K0630",
-                         "this store holds %d, which is all `len` can count",
-                         MAX_COUNTED);
+                         "this process has handed out %llu places in stores, "
+                         "which is all it can tell apart",
+                         (unsigned long long)MOST_STAMPS);
+                    kest_diags_suggest(
+                        vmp->diags, "a place is stamped once for every `add`, "
+                                    "and a number is never handed out twice");
                     return false;
                 }
-                // What a store that has to grow copies, charged before it
-                // does: four runs of what it holds.
-                if (store->used == store->capacity) {
-                    SPEND_WORK((uint64_t)store->used);
-                }
-                if (store->used == store->capacity &&
-                    !grow_store(rt, reach, store)) {
-                    // A store grows by four runs at once -- what it holds, what
-                    // each has counted, which are live and which are free --
-                    // so what it was reaching for is wider than one of them.
-                    no_room_growing(vmp, frame, instruction, rt, "a store",
-                                    store->used,
-                                    sizeof(KestValue) * store->stride,
-                                    store->capacity == 0 ? 8
-                                                         : store->capacity * 2);
+                rt->stamps++;
+                store->serials[index] = handout;
+                mark_live(store, index, true);
+                store->count++;
+                MOVED(moved_payload, (uint64_t)stride * sizeof(KestValue));
+                memcpy(store->elements + (size_t)index * stride, value,
+                       sizeof(KestValue) * stride);
+                (top++)->integer = pack_ref(store->serials[index], index);
+                NEXT;
+            }
+        case KEST_OP_GET:
+            THREADED(KEST_OP_GET) {
+                uint16_t stride = READ_U16();
+                int64_t which = (--top)->integer;
+                KestValue held = *--top;
+                frame->ip = ip;
+                rt->asked_at = instruction;
+                if (!kest_store_get(rt, held, which, stride, top,
+                                    KEST_WHERE_RUNNING)) {
                     return false;
                 }
-                index = store->used++;
-                if (index >= store->high) {
-                    store->high = index + 1;
+                top += stride + 1;
+                NEXT;
+            }
+        case KEST_OP_SET:
+            THREADED(KEST_OP_SET) {
+                uint16_t stride = READ_U16();
+                top -= stride;
+                KestValue *value = top;
+                int64_t which = (--top)->integer;
+                KestValue held = *--top;
+                bool was = false;
+                frame->ip = ip;
+                rt->asked_at = instruction;
+                if (!kest_store_set(rt, held, which, stride, value,
+                                    KEST_WHERE_RUNNING, &was)) {
+                    return false;
                 }
+                (top++)->integer = was;
+                NEXT;
             }
-            // The next handout number there is, taken from the count for the
-            // whole process so that no two places anywhere are ever stamped
-            // the same. A place handed out again gets a new one, so a
-            // reference made before it was given back names a number nothing
-            // carries any more; a store that has never written this number is
-            // a store the reference did not come from; and a machine made
-            // after another one cannot be handed the first one's numbers,
-            // which is what a count of worlds could not promise.
-            uint64_t handout = next_handout(rt);
-            if (handout > MOST_STAMPS) {
-                fail(vmp, frame, instruction, "K0630",
-                     "this process has handed out %llu places in stores, "
-                     "which is all it can tell apart",
-                     (unsigned long long)MOST_STAMPS);
-                kest_diags_suggest(vmp->diags,
-                                   "a place is stamped once for every `add`, "
-                                   "and a number is never handed out twice");
-                return false;
-            }
-            rt->stamps++;
-            store->serials[index] = handout;
-            mark_live(store, index, true);
-            store->count++;
-            MOVED(moved_payload, (uint64_t)stride * sizeof(KestValue));
-            memcpy(store->elements + (size_t)index * stride, value,
-                   sizeof(KestValue) * stride);
-            (top++)->integer =
-                pack_ref(store->serials[index], index);
-            NEXT;
-        }
-        case KEST_OP_GET: THREADED(KEST_OP_GET) {
-            uint16_t stride = READ_U16();
-            int64_t which = (--top)->integer;
-            KestValue held = *--top;
-            frame->ip = ip;
-            rt->asked_at = instruction;
-            if (!kest_store_get(rt, held, which, stride, top,
-                                KEST_WHERE_RUNNING)) {
-                return false;
-            }
-            top += stride + 1;
-            NEXT;
-        }
-        case KEST_OP_SET: THREADED(KEST_OP_SET) {
-            uint16_t stride = READ_U16();
-            top -= stride;
-            KestValue *value = top;
-            int64_t which = (--top)->integer;
-            KestValue held = *--top;
-            bool was = false;
-            frame->ip = ip;
-            rt->asked_at = instruction;
-            if (!kest_store_set(rt, held, which, stride, value,
-                                KEST_WHERE_RUNNING,
-                                &was)) {
-                return false;
-            }
-            (top++)->integer = was;
-            NEXT;
-        }
-        case KEST_OP_REMOVE: THREADED(KEST_OP_REMOVE) {
-            int64_t which = (--top)->integer;
-            KestValue held = *--top;
-            bool was = false;
-            frame->ip = ip;
-            rt->asked_at = instruction;
-            if (!kest_store_remove(rt, held, which,
-                                   KEST_WHERE_RUNNING,
-                                   &was)) {
-                return false;
-            }
-            (top++)->integer = was;
-            NEXT;
-        }
-        case KEST_OP_SEEK_FROM: THREADED(KEST_OP_SEEK_FROM)
-        case KEST_OP_SEEK_NEXT: THREADED(KEST_OP_SEEK_NEXT) {
-            bool first = *instruction == KEST_OP_SEEK_FROM;
-            uint16_t which = READ_U16();
-            uint16_t at = READ_U16();
-            uint16_t away = READ_U16();
-            frame->ip = ip;
-            rt->asked_at = instruction;
-            int64_t found = 0;
-            if (!kest_store_seek(rt, mine[which],
-                                 mine[at].integer + (first ? 0 : 1),
-                                 KEST_WHERE_RUNNING,
-                                 &found)) {
-                return false;
-            }
-            mine[at].integer = found;
-            // The first one leaves when there is none and the ones after go
-            // back while there is one, which is the same shape every other
-            // walk has: a test above the loop and a test at the bottom.
-            if (first) {
-                if (found < 0) {
-                    ip += away;
+        case KEST_OP_REMOVE:
+            THREADED(KEST_OP_REMOVE) {
+                int64_t which = (--top)->integer;
+                KestValue held = *--top;
+                bool was = false;
+                frame->ip = ip;
+                rt->asked_at = instruction;
+                if (!kest_store_remove(rt, held, which, KEST_WHERE_RUNNING,
+                                       &was)) {
+                    return false;
                 }
-            } else if (found >= 0) {
-                SPEND();
-                ip -= away;
+                (top++)->integer = was;
+                NEXT;
             }
-            NEXT;
-        }
-        case KEST_OP_STORE_REF: THREADED(KEST_OP_STORE_REF) {
-            int64_t index = (--top)->integer;
-            KestValue held = *--top;
-            frame->ip = ip;
-            rt->asked_at = instruction;
-            if (!kest_store_ref(rt, held, index,
-                                KEST_WHERE_RUNNING,
-                                &top->integer)) {
-                return false;
+        case KEST_OP_SEEK_FROM:
+            THREADED(KEST_OP_SEEK_FROM)
+        case KEST_OP_SEEK_NEXT:
+            THREADED(KEST_OP_SEEK_NEXT) {
+                bool first = *instruction == KEST_OP_SEEK_FROM;
+                uint16_t which = READ_U16();
+                uint16_t at = READ_U16();
+                uint16_t away = READ_U16();
+                frame->ip = ip;
+                rt->asked_at = instruction;
+                int64_t found = 0;
+                if (!kest_store_seek(rt, mine[which],
+                                     mine[at].integer + (first ? 0 : 1),
+                                     KEST_WHERE_RUNNING, &found)) {
+                    return false;
+                }
+                mine[at].integer = found;
+                // The first one leaves when there is none and the ones after go
+                // back while there is one, which is the same shape every other
+                // walk has: a test above the loop and a test at the bottom.
+                if (first) {
+                    if (found < 0) {
+                        ip += away;
+                    }
+                } else if (found >= 0) {
+                    SPEND();
+                    ip -= away;
+                }
+                NEXT;
             }
-            top++;
-            NEXT;
-        }
-        case KEST_OP_COUNT: THREADED(KEST_OP_COUNT) {
-            frame->ip = ip;
-            rt->asked_at = instruction;
-            if (!kest_store_count(rt, top[-1],
-                                  KEST_WHERE_RUNNING,
-                                  &top[-1].integer)) {
-                return false;
+        case KEST_OP_STORE_REF:
+            THREADED(KEST_OP_STORE_REF) {
+                int64_t index = (--top)->integer;
+                KestValue held = *--top;
+                frame->ip = ip;
+                rt->asked_at = instruction;
+                if (!kest_store_ref(rt, held, index, KEST_WHERE_RUNNING,
+                                    &top->integer)) {
+                    return false;
+                }
+                top++;
+                NEXT;
             }
-            NEXT;
-        }
-        case KEST_OP_TEXT_FLAGS: THREADED(KEST_OP_TEXT_FLAGS)
-        case KEST_OP_TEXT_VALUE: THREADED(KEST_OP_TEXT_VALUE) {
-            // Written the way it is built. Every other value's text is the
-            // source that makes it, and a set of bits and the cases of an enum
-            // are no different.
-            const KestType *type = module->layout_types[READ_U16()];
-            uint16_t held = type->slots;
-            top -= held;
-            size_t length = format_value(NULL, 0, type, top);
-            char *text = take(rt, top + held, length + 1, KEST_GROUND_PLAIN);
-            if (text == NULL) {
-                no_room(vmp, frame, instruction, rt);
-                kest_diags_suggest(vmp->diags,
-                                   "it was writing a value as %zu bytes of "
-                                   "text",
-                                   length);
-                return false;
+        case KEST_OP_COUNT:
+            THREADED(KEST_OP_COUNT) {
+                frame->ip = ip;
+                rt->asked_at = instruction;
+                if (!kest_store_count(rt, top[-1], KEST_WHERE_RUNNING,
+                                      &top[-1].integer)) {
+                    return false;
+                }
+                NEXT;
             }
-            format_value(text, length, type, top);
-            text[length] = '\0';
-            TEXT_ON(text, length);
-            NEXT;
-        }
-        case KEST_OP_TEXT_I: THREADED(KEST_OP_TEXT_I)
-        case KEST_OP_TEXT_U: THREADED(KEST_OP_TEXT_U)
-        case KEST_OP_TEXT_F: THREADED(KEST_OP_TEXT_F)
-        case KEST_OP_TEXT_F32: THREADED(KEST_OP_TEXT_F32)
-        case KEST_OP_TEXT_B: THREADED(KEST_OP_TEXT_B) {
-            char buffer[64];
-            int written;
-            if (instruction[0] == KEST_OP_TEXT_I ||
-                instruction[0] == KEST_OP_TEXT_U) {
-                written = kest_write_whole(buffer, (uint64_t)top[-1].integer,
-                                           instruction[0] == KEST_OP_TEXT_I);
-            } else if (instruction[0] == KEST_OP_TEXT_F ||
-                       instruction[0] == KEST_OP_TEXT_F32) {
-                written = kest_write_real(buffer, sizeof(buffer), top[-1].real,
-                                          instruction[0] == KEST_OP_TEXT_F32);
-            } else {
-                written = snprintf(buffer, sizeof(buffer), "%s",
-                                   top[-1].integer ? "true" : "false");
+        case KEST_OP_TEXT_FLAGS:
+            THREADED(KEST_OP_TEXT_FLAGS)
+        case KEST_OP_TEXT_VALUE:
+            THREADED(KEST_OP_TEXT_VALUE) {
+                // Written the way it is built. Every other value's text is the
+                // source that makes it, and a set of bits and the cases of an
+                // enum are no different.
+                const KestType *type = module->layout_types[READ_U16()];
+                uint16_t held = type->slots;
+                top -= held;
+                size_t length = format_value(NULL, 0, type, top);
+                char *text =
+                    take(rt, top + held, length + 1, KEST_GROUND_PLAIN);
+                if (text == NULL) {
+                    no_room(vmp, frame, instruction, rt);
+                    kest_diags_suggest(vmp->diags,
+                                       "it was writing a value as %zu bytes of "
+                                       "text",
+                                       length);
+                    return false;
+                }
+                format_value(text, length, type, top);
+                text[length] = '\0';
+                TEXT_ON(text, length);
+                NEXT;
             }
-            char *text =
-                take(rt, top, (size_t)written + 1, KEST_GROUND_PLAIN);
-            if (text == NULL) {
-                no_room(vmp, frame, instruction, rt);
-                kest_diags_suggest(vmp->diags,
-                                   "it was writing a number as %d bytes of "
-                                   "text",
-                                   written);
-                return false;
+        case KEST_OP_TEXT_I:
+            THREADED(KEST_OP_TEXT_I)
+        case KEST_OP_TEXT_U:
+            THREADED(KEST_OP_TEXT_U)
+        case KEST_OP_TEXT_F:
+            THREADED(KEST_OP_TEXT_F)
+        case KEST_OP_TEXT_F32:
+            THREADED(KEST_OP_TEXT_F32)
+        case KEST_OP_TEXT_B:
+            THREADED(KEST_OP_TEXT_B) {
+                char buffer[64];
+                int written;
+                if (instruction[0] == KEST_OP_TEXT_I ||
+                    instruction[0] == KEST_OP_TEXT_U) {
+                    written =
+                        kest_write_whole(buffer, (uint64_t)top[-1].integer,
+                                         instruction[0] == KEST_OP_TEXT_I);
+                } else if (instruction[0] == KEST_OP_TEXT_F ||
+                           instruction[0] == KEST_OP_TEXT_F32) {
+                    written =
+                        kest_write_real(buffer, sizeof(buffer), top[-1].real,
+                                        instruction[0] == KEST_OP_TEXT_F32);
+                } else {
+                    written = snprintf(buffer, sizeof(buffer), "%s",
+                                       top[-1].integer ? "true" : "false");
+                }
+                char *text =
+                    take(rt, top, (size_t)written + 1, KEST_GROUND_PLAIN);
+                if (text == NULL) {
+                    no_room(vmp, frame, instruction, rt);
+                    kest_diags_suggest(vmp->diags,
+                                       "it was writing a number as %d bytes of "
+                                       "text",
+                                       written);
+                    return false;
+                }
+                MOVED(moved_text, (uint64_t)written + 1);
+                memcpy(text, buffer, (size_t)written + 1);
+                top--;
+                TEXT_ON(text, written);
+                NEXT;
             }
-            MOVED(moved_text, (uint64_t)written + 1);
-            memcpy(text, buffer, (size_t)written + 1);
-            top--;
-            TEXT_ON(text, written);
-            NEXT;
-        }
-        case KEST_OP_CONCAT: THREADED(KEST_OP_CONCAT) {
-            uint16_t count = READ_U16();
-            top -= (uint32_t)count * 2;
-            size_t length = 0;
-            for (uint16_t i = 0; i < count; i++) {
-                length += said(top + i * 2).length;
+        case KEST_OP_CONCAT:
+            THREADED(KEST_OP_CONCAT) {
+                uint16_t count = READ_U16();
+                top -= (uint32_t)count * 2;
+                size_t length = 0;
+                for (uint16_t i = 0; i < count; i++) {
+                    length += said(top + i * 2).length;
+                }
+                // The same ceiling an array has, and text is where a program
+                // reaches it without meaning to: two of these joined is a new
+                // one as long as both, so a program doubling one arrives here
+                // in thirty steps. `len` counts bytes and gives back an `i32`.
+                if (length > (size_t)MAX_COUNTED) {
+                    fail(vmp, frame, instruction, "K0630",
+                         "this text would hold %zu, which is more than `len` "
+                         "can "
+                         "count",
+                         length);
+                    return false;
+                }
+                SPEND_WORK(length);
+                char *text = take(rt, top + (uint32_t)count * 2, length + 1,
+                                  KEST_GROUND_PLAIN);
+                if (text == NULL) {
+                    no_room(vmp, frame, instruction, rt);
+                    kest_diags_suggest(vmp->diags,
+                                       "it was joining text into %zu bytes",
+                                       length);
+                    return false;
+                }
+                size_t used = 0;
+                for (uint16_t i = 0; i < count; i++) {
+                    Said piece = said(top + i * 2);
+                    MOVED(moved_text, piece.length);
+                    memcpy(text + used, piece.bytes, piece.length);
+                    used += piece.length;
+                }
+                text[used] = '\0';
+                TEXT_ON(text, used);
+                NEXT;
             }
-            // The same ceiling an array has, and text is where a program
-            // reaches it without meaning to: two of these joined is a new one
-            // as long as both, so a program doubling one arrives here in
-            // thirty steps. `len` counts bytes and gives back an `i32`.
-            if (length > (size_t)MAX_COUNTED) {
-                fail(vmp, frame, instruction, "K0630",
-                     "this text would hold %zu, which is more than `len` can "
-                     "count",
-                     length);
-                return false;
+        case KEST_OP_CONCAT_I:
+            THREADED(KEST_OP_CONCAT_I) {
+                uint16_t count = READ_U16();
+                uint16_t which = READ_U16();
+                uint32_t slots = 2u * count - kest_pieces_numbered(which);
+                top -= slots;
+                Numbered numbers;
+                size_t length = numbered_length(top, count, which, &numbers);
+                if (length > (size_t)MAX_COUNTED) {
+                    fail(vmp, frame, instruction, "K0630",
+                         "this text would hold %zu, which is more than `len` "
+                         "can "
+                         "count",
+                         length);
+                    return false;
+                }
+                SPEND_WORK(length);
+                char *text =
+                    take(rt, top + slots, length + 1, KEST_GROUND_PLAIN);
+                if (text == NULL) {
+                    no_room(vmp, frame, instruction, rt);
+                    kest_diags_suggest(vmp->diags,
+                                       "it was joining text into %zu bytes",
+                                       length);
+                    return false;
+                }
+                size_t used = numbered_copy(text, top, count, which, &numbers);
+                MOVED(moved_text, used);
+                TEXT_ON(text, used);
+                NEXT;
             }
-            SPEND_WORK(length);
-            char *text = take(rt, top + (uint32_t)count * 2, length + 1,
-                              KEST_GROUND_PLAIN);
-            if (text == NULL) {
-                no_room(vmp, frame, instruction, rt);
-                kest_diags_suggest(vmp->diags,
-                                   "it was joining text into %zu bytes",
-                                   length);
-                return false;
+        case KEST_OP_TEXT_FROM:
+            THREADED(KEST_OP_TEXT_FROM) {
+                const Array *bytes = (--top)->object;
+                HOLD(bytes, KEST_IS_ARRAY, "an array");
+                SPEND_WORK(bytes->length);
+                char *text =
+                    take(rt, top + 1, bytes->length + 1, KEST_GROUND_PLAIN);
+                if (text == NULL) {
+                    no_room(vmp, frame, instruction, rt);
+                    kest_diags_suggest(
+                        vmp->diags,
+                        "it was making %u bytes of text out of an "
+                        "array",
+                        bytes->length);
+                    return false;
+                }
+                // Text is UTF-8 and a run of bytes is whatever it holds, so
+                // this is the door where the two meet and the one place the
+                // walk is paid for. A nought is fine: it is a character.
+                uint32_t bad = 0;
+                if (!kest_utf8_whole((const char *)bytes->bytes, bytes->length,
+                                     &bad)) {
+                    fail(vmp, frame, instruction, "K0604",
+                         "byte %u begins no character, and text is UTF-8", bad);
+                    return false;
+                }
+                MOVED(moved_text, bytes->length);
+                memcpy(text, bytes->bytes, bytes->length);
+                text[bytes->length] = '\0';
+                TEXT_ON(text, bytes->length);
+                NEXT;
             }
-            size_t used = 0;
-            for (uint16_t i = 0; i < count; i++) {
-                Said piece = said(top + i * 2);
-                MOVED(moved_text, piece.length);
-                memcpy(text + used, piece.bytes, piece.length);
-                used += piece.length;
-            }
-            text[used] = '\0';
-            TEXT_ON(text, used);
-            NEXT;
-        }
-        case KEST_OP_CONCAT_I: THREADED(KEST_OP_CONCAT_I) {
-            uint16_t count = READ_U16();
-            uint16_t which = READ_U16();
-            uint32_t slots = 2u * count - kest_pieces_numbered(which);
-            top -= slots;
-            Numbered numbers;
-            size_t length = numbered_length(top, count, which, &numbers);
-            if (length > (size_t)MAX_COUNTED) {
-                fail(vmp, frame, instruction, "K0630",
-                     "this text would hold %zu, which is more than `len` can "
-                     "count",
-                     length);
-                return false;
-            }
-            SPEND_WORK(length);
-            char *text = take(rt, top + slots, length + 1, KEST_GROUND_PLAIN);
-            if (text == NULL) {
-                no_room(vmp, frame, instruction, rt);
-                kest_diags_suggest(vmp->diags,
-                                   "it was joining text into %zu bytes",
-                                   length);
-                return false;
-            }
-            size_t used = numbered_copy(text, top, count, which, &numbers);
-            MOVED(moved_text, used);
-            TEXT_ON(text, used);
-            NEXT;
-        }
-        case KEST_OP_TEXT_FROM: THREADED(KEST_OP_TEXT_FROM) {
-            const Array *bytes = (--top)->object;
-            HOLD(bytes, KEST_IS_ARRAY, "an array");
-            SPEND_WORK(bytes->length);
-            char *text =
-                take(rt, top + 1, bytes->length + 1, KEST_GROUND_PLAIN);
-            if (text == NULL) {
-                no_room(vmp, frame, instruction, rt);
-                kest_diags_suggest(vmp->diags,
-                                   "it was making %u bytes of text out of an "
-                                   "array",
-                                   bytes->length);
-                return false;
-            }
-            // Text is UTF-8 and a run of bytes is whatever it holds, so this
-            // is the door where the two meet and the one place the walk is
-            // paid for. A nought is fine: it is a character.
-            uint32_t bad = 0;
-            if (!kest_utf8_whole((const char *)bytes->bytes, bytes->length,
-                                 &bad)) {
-                fail(vmp, frame, instruction, "K0604",
-                     "byte %u begins no character, and text is UTF-8", bad);
-                return false;
-            }
-            MOVED(moved_text, bytes->length);
-            memcpy(text, bytes->bytes, bytes->length);
-            text[bytes->length] = '\0';
-            TEXT_ON(text, bytes->length);
-            NEXT;
-        }
         // One round of a mixer over the bits, which is what a table wants of
         // a number that is often small and often consecutive.
-        case KEST_OP_HASH_I: THREADED(KEST_OP_HASH_I)
-        case KEST_OP_HASH_F: THREADED(KEST_OP_HASH_F) {
-            uint64_t bits = (uint64_t)top[-1].integer;
-            if (instruction[0] == KEST_OP_HASH_F && top[-1].real == 0.0) {
-                // Nought and minus nought are one value to `==`, so they are
-                // one value here.
-                bits = 0;
-            } else if (instruction[0] == KEST_OP_HASH_F &&
-                       top[-1].real != top[-1].real) {
-                // And every value that is not a number is one value, for the
-                // reason `float.bits` gives.
-                bits = UINT64_C(0x7FF8000000000000);
+        case KEST_OP_HASH_I:
+            THREADED(KEST_OP_HASH_I)
+        case KEST_OP_HASH_F:
+            THREADED(KEST_OP_HASH_F) {
+                uint64_t bits = (uint64_t)top[-1].integer;
+                if (instruction[0] == KEST_OP_HASH_F && top[-1].real == 0.0) {
+                    // Nought and minus nought are one value to `==`, so they
+                    // are one value here.
+                    bits = 0;
+                } else if (instruction[0] == KEST_OP_HASH_F &&
+                           top[-1].real != top[-1].real) {
+                    // And every value that is not a number is one value, for
+                    // the reason `float.bits` gives.
+                    bits = UINT64_C(0x7FF8000000000000);
+                }
+                top[-1].integer = (int64_t)kest_mix(bits);
+                NEXT;
             }
-            top[-1].integer = (int64_t)kest_mix(bits);
-            NEXT;
-        }
-        case KEST_OP_HASH_T: THREADED(KEST_OP_HASH_T) {
-            // FNV-1a over the bytes, because text is its bytes and two
-            // pieces that compare equal are the same bytes.
-            Said text = TEXT_OFF();
-            uint64_t bits = 0xcbf29ce484222325ULL;
-            for (uint32_t i = 0; i < text.length; i++) {
-                bits ^= (unsigned char)text.bytes[i];
-                bits *= 0x100000001b3ULL;
+        case KEST_OP_HASH_T:
+            THREADED(KEST_OP_HASH_T) {
+                // FNV-1a over the bytes, because text is its bytes and two
+                // pieces that compare equal are the same bytes.
+                Said text = TEXT_OFF();
+                uint64_t bits = 0xcbf29ce484222325ULL;
+                for (uint32_t i = 0; i < text.length; i++) {
+                    bits ^= (unsigned char)text.bytes[i];
+                    bits *= 0x100000001b3ULL;
+                }
+                (top++)->integer = (int64_t)bits;
+                SPEND_WORK(text.length);
+                NEXT;
             }
-            (top++)->integer = (int64_t)bits;
-            SPEND_WORK(text.length);
-            NEXT;
-        }
-        case KEST_OP_HASH_VALUE: THREADED(KEST_OP_HASH_VALUE) {
-            const KestType *type = module->layout_types[READ_U16()];
-            top -= type->slots;
-            uint64_t bits = kest_hash_value(type, top);
-            (top++)->integer = (int64_t)bits;
-            NEXT;
-        }
-        case KEST_OP_EQ_VALUE: THREADED(KEST_OP_EQ_VALUE)
-        case KEST_OP_NE_VALUE: THREADED(KEST_OP_NE_VALUE) {
-            const KestType *type = module->layout_types[READ_U16()];
-            top -= type->slots;
-            const KestValue *right = top;
-            top -= type->slots;
-            bool same = values_equal(type, top, right);
-            (top++)->integer = instruction[0] == KEST_OP_EQ_VALUE ? same : !same;
-            NEXT;
-        }
-        case KEST_OP_TEXT_LEN: THREADED(KEST_OP_TEXT_LEN) {
-            // A read rather than a walk: how many bytes there are is part of
-            // what a piece of text is.
-            Said text = TEXT_OFF();
-            (top++)->integer = (int64_t)text.length;
-            NEXT;
-        }
-        case KEST_OP_TEXT_AT: THREADED(KEST_OP_TEXT_AT) {
-            int64_t index = (--top)->integer;
-            Said text = TEXT_OFF();
-            // How many bytes there are is part of the value, so a byte at a
-            // place is a comparison and a read rather than a walk. What this
-            // used to cost was the walk to the place, which is what made
-            // reading the first byte of a line cost the whole line.
-            if (index < 0 || (uint64_t)index >= text.length) {
-                fail(vmp, frame, instruction, "K0604",
-                     "index %lld is outside text of %u bytes",
-                     (long long)index, text.length);
-                return false;
+        case KEST_OP_HASH_VALUE:
+            THREADED(KEST_OP_HASH_VALUE) {
+                const KestType *type = module->layout_types[READ_U16()];
+                top -= type->slots;
+                uint64_t bits = kest_hash_value(type, top);
+                (top++)->integer = (int64_t)bits;
+                NEXT;
             }
-            (top++)->integer = (unsigned char)text.bytes[index];
-            NEXT;
-        }
-        case KEST_OP_TEXT_IN: THREADED(KEST_OP_TEXT_IN) {
-            const KestValue *held = &mine[READ_U16()];
-            int64_t index = mine[READ_U16()].integer;
-            Said text = said(held);
-            if ((uint64_t)index >= text.length) {
-                return walked_past(vmp, frame, instruction, index, text.length);
+        case KEST_OP_EQ_VALUE:
+            THREADED(KEST_OP_EQ_VALUE)
+        case KEST_OP_NE_VALUE:
+            THREADED(KEST_OP_NE_VALUE) {
+                const KestType *type = module->layout_types[READ_U16()];
+                top -= type->slots;
+                const KestValue *right = top;
+                top -= type->slots;
+                bool same = values_equal(type, top, right);
+                (top++)->integer =
+                    instruction[0] == KEST_OP_EQ_VALUE ? same : !same;
+                NEXT;
             }
-            (top++)->integer = (unsigned char)text.bytes[index];
-            NEXT;
-        }
-        case KEST_OP_TEXT_SLICE: THREADED(KEST_OP_TEXT_SLICE) {
-            int64_t count = (--top)->integer;
-            int64_t from = (--top)->integer;
-            Said text = TEXT_OFF();
-            // A cut is a place inside what it was cut from and how many bytes
-            // of it: nothing is copied and nothing reaches the heap, which is
-            // what makes a walk over text free. Text that had to end in a
-            // nought would cost a copy here.
-            if (from < 0 || count < 0 ||
-                (uint64_t)from + (uint64_t)count > text.length) {
-                fail(vmp, frame, instruction, "K0604",
-                     "%lld bytes from %lld is outside text of %u bytes",
-                     (long long)count, (long long)from, text.length);
-                return false;
+        case KEST_OP_TEXT_LEN:
+            THREADED(KEST_OP_TEXT_LEN) {
+                // A read rather than a walk: how many bytes there are is part
+                // of what a piece of text is.
+                Said text = TEXT_OFF();
+                (top++)->integer = (int64_t)text.length;
+                NEXT;
             }
-            // Empty text may have no bytes at all, and then `from` is nought:
-            // no offset is taken from a null pointer.
-            TEXT_ON(from == 0 ? text.bytes : text.bytes + from, count);
-            NEXT;
-        }
-        case KEST_OP_TEXT_REST: THREADED(KEST_OP_TEXT_REST) {
-            int64_t at = (--top)->integer;
-            Said text = TEXT_OFF();
-            if (at < 0 || (uint64_t)at > text.length) {
-                fail(vmp, frame, instruction, "K0604",
-                     "the rest from %lld is outside text of %u bytes",
-                     (long long)at, text.length);
-                return false;
+        case KEST_OP_TEXT_AT:
+            THREADED(KEST_OP_TEXT_AT) {
+                int64_t index = (--top)->integer;
+                Said text = TEXT_OFF();
+                // How many bytes there are is part of the value, so a byte at a
+                // place is a comparison and a read rather than a walk. What
+                // this used to cost was the walk to the place, which is what
+                // made reading the first byte of a line cost the whole line.
+                if (index < 0 || (uint64_t)index >= text.length) {
+                    fail(vmp, frame, instruction, "K0604",
+                         "index %lld is outside text of %u bytes",
+                         (long long)index, text.length);
+                    return false;
+                }
+                (top++)->integer = (unsigned char)text.bytes[index];
+                NEXT;
             }
-            TEXT_ON(at == 0 ? text.bytes : text.bytes + at,
-                    text.length - (uint32_t)at);
-            NEXT;
-        }
-        case KEST_OP_TEXT_MATCHES: THREADED(KEST_OP_TEXT_MATCHES) {
-            Said needle = TEXT_OFF();
-            int64_t at = (--top)->integer;
-            Said text = TEXT_OFF();
-            if (at < 0 || (uint64_t)at > text.length) {
-                fail(vmp, frame, instruction, "K0604",
-                     "looking at %lld, which is outside text of %u bytes",
-                     (long long)at, text.length);
-                return false;
+        case KEST_OP_TEXT_IN:
+            THREADED(KEST_OP_TEXT_IN) {
+                const KestValue *held = &mine[READ_U16()];
+                int64_t index = mine[READ_U16()].integer;
+                Said text = said(held);
+                if ((uint64_t)index >= text.length) {
+                    return walked_past(vmp, frame, instruction, index,
+                                       text.length);
+                }
+                (top++)->integer = (unsigned char)text.bytes[index];
+                NEXT;
             }
-            bool same = (uint64_t)at + needle.length <= text.length;
-            uint32_t read = 0;
-            while (same && read < needle.length &&
-                   text.bytes[at + read] == needle.bytes[read]) {
-                read++;
+        case KEST_OP_TEXT_SLICE:
+            THREADED(KEST_OP_TEXT_SLICE) {
+                int64_t count = (--top)->integer;
+                int64_t from = (--top)->integer;
+                Said text = TEXT_OFF();
+                // A cut is a place inside what it was cut from and how many
+                // bytes of it: nothing is copied and nothing reaches the heap,
+                // which is what makes a walk over text free. Text that had to
+                // end in a nought would cost a copy here.
+                if (from < 0 || count < 0 ||
+                    (uint64_t)from + (uint64_t)count > text.length) {
+                    fail(vmp, frame, instruction, "K0604",
+                         "%lld bytes from %lld is outside text of %u bytes",
+                         (long long)count, (long long)from, text.length);
+                    return false;
+                }
+                // Empty text may have no bytes at all, and then `from` is
+                // nought: no offset is taken from a null pointer.
+                TEXT_ON(from == 0 ? text.bytes : text.bytes + from, count);
+                NEXT;
             }
-            (top++)->integer = same && read == needle.length;
-            SPEND_WORK(read);
-            NEXT;
-        }
-        case KEST_OP_TEXT_FIND: THREADED(KEST_OP_TEXT_FIND) {
-            int64_t from = (--top)->integer;
-            Said needle = TEXT_OFF();
-            Said haystack = TEXT_OFF();
-            // Looking from the end of a text finds nothing, which is an answer
-            // rather than a mistake.
-            if (from < 0 || (uint64_t)from > haystack.length) {
-                fail(vmp, frame, instruction, "K0604",
-                     "looking from %lld, which is outside text of %u bytes",
-                     (long long)from, haystack.length);
-                return false;
+        case KEST_OP_TEXT_REST:
+            THREADED(KEST_OP_TEXT_REST) {
+                int64_t at = (--top)->integer;
+                Said text = TEXT_OFF();
+                if (at < 0 || (uint64_t)at > text.length) {
+                    fail(vmp, frame, instruction, "K0604",
+                         "the rest from %lld is outside text of %u bytes",
+                         (long long)at, text.length);
+                    return false;
+                }
+                TEXT_ON(at == 0 ? text.bytes : text.bytes + at,
+                        text.length - (uint32_t)at);
+                NEXT;
             }
-            int64_t found = found_at(haystack.bytes, haystack.length,
-                                     needle.bytes, needle.length, from);
-            // What it read is as far as it had to go: to the end of what it
-            // found, or to the end of the text.
-            uint64_t read =
-                (uint64_t)((found < 0 ? (int64_t)haystack.length
-                                      : found + (int64_t)needle.length) -
-                           from);
-            (top++)->integer = found < 0 ? 0 : found;
-            (top++)->integer = found >= 0;
-            SPEND_WORK(read);
-            NEXT;
-        }
-        case KEST_OP_LEN: THREADED(KEST_OP_LEN) {
-            const Array *array = top[-1].object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-            top[-1].integer = array->length;
-            NEXT;
-        }
-        case KEST_OP_TRUE: THREADED(KEST_OP_TRUE)
+        case KEST_OP_TEXT_MATCHES:
+            THREADED(KEST_OP_TEXT_MATCHES) {
+                Said needle = TEXT_OFF();
+                int64_t at = (--top)->integer;
+                Said text = TEXT_OFF();
+                if (at < 0 || (uint64_t)at > text.length) {
+                    fail(vmp, frame, instruction, "K0604",
+                         "looking at %lld, which is outside text of %u bytes",
+                         (long long)at, text.length);
+                    return false;
+                }
+                bool same = (uint64_t)at + needle.length <= text.length;
+                uint32_t read = 0;
+                while (same && read < needle.length &&
+                       text.bytes[at + read] == needle.bytes[read]) {
+                    read++;
+                }
+                (top++)->integer = same && read == needle.length;
+                SPEND_WORK(read);
+                NEXT;
+            }
+        case KEST_OP_TEXT_FIND:
+            THREADED(KEST_OP_TEXT_FIND) {
+                int64_t from = (--top)->integer;
+                Said needle = TEXT_OFF();
+                Said haystack = TEXT_OFF();
+                // Looking from the end of a text finds nothing, which is an
+                // answer rather than a mistake.
+                if (from < 0 || (uint64_t)from > haystack.length) {
+                    fail(vmp, frame, instruction, "K0604",
+                         "looking from %lld, which is outside text of %u bytes",
+                         (long long)from, haystack.length);
+                    return false;
+                }
+                int64_t found = found_at(haystack.bytes, haystack.length,
+                                         needle.bytes, needle.length, from);
+                // What it read is as far as it had to go: to the end of what it
+                // found, or to the end of the text.
+                uint64_t read =
+                    (uint64_t)((found < 0 ? (int64_t)haystack.length
+                                          : found + (int64_t)needle.length) -
+                               from);
+                (top++)->integer = found < 0 ? 0 : found;
+                (top++)->integer = found >= 0;
+                SPEND_WORK(read);
+                NEXT;
+            }
+        case KEST_OP_LEN:
+            THREADED(KEST_OP_LEN) {
+                const Array *array = top[-1].object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                top[-1].integer = array->length;
+                NEXT;
+            }
+        case KEST_OP_TRUE:
+            THREADED(KEST_OP_TRUE)
             (top++)->integer = 1;
             NEXT;
-        case KEST_OP_FALSE: THREADED(KEST_OP_FALSE)
+        case KEST_OP_FALSE:
+            THREADED(KEST_OP_FALSE)
             MOVED(moved_held, sizeof(KestValue));
             (top++)->integer = 0;
             NEXT;
-        case KEST_OP_POP: THREADED(KEST_OP_POP)
+        case KEST_OP_POP:
+            THREADED(KEST_OP_POP)
             top--;
             NEXT;
-        case KEST_OP_POPN: THREADED(KEST_OP_POPN)
+        case KEST_OP_POPN:
+            THREADED(KEST_OP_POPN)
             top -= READ_U16();
             NEXT;
-        case KEST_OP_ROTATE: THREADED(KEST_OP_ROTATE) {
-            // The last slot is the tag and belongs first, so the run is
-            // rolled by one rather than reversed.
-            uint16_t count = READ_U16();
-            KestValue tag = top[-1];
-            MOVED(moved_shuffled, (uint64_t)count * sizeof(KestValue));
-            memmove(top - count + 1, top - count,
-                    sizeof(KestValue) * (size_t)(count - 1));
-            top[-count] = tag;
-            NEXT;
-        }
+        case KEST_OP_ROTATE:
+            THREADED(KEST_OP_ROTATE) {
+                // The last slot is the tag and belongs first, so the run is
+                // rolled by one rather than reversed.
+                uint16_t count = READ_U16();
+                KestValue tag = top[-1];
+                MOVED(moved_shuffled, (uint64_t)count * sizeof(KestValue));
+                memmove(top - count + 1, top - count,
+                        sizeof(KestValue) * (size_t)(count - 1));
+                top[-count] = tag;
+                NEXT;
+            }
 
         // Worked out unsigned and read back signed. What this language says
         // arithmetic does at the end of a width is wrap, and a signed overflow
@@ -5417,15 +5508,18 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // one the day a program in the library multiplied two large numbers on
         // purpose. The bits are the same either way on every machine this
         // targets; what changes is that the machine is now doing what it says.
-        case KEST_OP_ADD_I: THREADED(KEST_OP_ADD_I)
+        case KEST_OP_ADD_I:
+            THREADED(KEST_OP_ADD_I)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer +
                                         (uint64_t)right.integer));
             NEXT;
-        case KEST_OP_SUB_I: THREADED(KEST_OP_SUB_I)
+        case KEST_OP_SUB_I:
+            THREADED(KEST_OP_SUB_I)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer -
                                         (uint64_t)right.integer));
             NEXT;
-        case KEST_OP_MUL_I: THREADED(KEST_OP_MUL_I)
+        case KEST_OP_MUL_I:
+            THREADED(KEST_OP_MUL_I)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer *
                                         (uint64_t)right.integer));
             NEXT;
@@ -5436,24 +5530,26 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         fail(vmp, frame, instruction, "K0601", "division by zero");            \
         return false;                                                          \
     } while (0)
-        case KEST_OP_DIV_I: THREADED(KEST_OP_DIV_I)
-        case KEST_OP_MOD_I: THREADED(KEST_OP_MOD_I) {
-            KestValue right = *--top;
-            KestValue left = *--top;
-            if (right.integer == 0) {
-                BY_NOUGHT();
+        case KEST_OP_DIV_I:
+            THREADED(KEST_OP_DIV_I)
+        case KEST_OP_MOD_I:
+            THREADED(KEST_OP_MOD_I) {
+                KestValue right = *--top;
+                KestValue left = *--top;
+                if (right.integer == 0) {
+                    BY_NOUGHT();
+                }
+                // The one pair of operands whose quotient does not fit, which
+                // on most machines traps rather than wrapping.
+                if (left.integer == INT64_MIN && right.integer == -1) {
+                    (top++)->integer =
+                        instruction[0] == KEST_OP_DIV_I ? INT64_MIN : 0;
+                    break;
+                }
+                (top++)->integer = divided(left.integer, right.integer,
+                                           instruction[0] == KEST_OP_DIV_I);
+                NEXT;
             }
-            // The one pair of operands whose quotient does not fit, which on
-            // most machines traps rather than wrapping.
-            if (left.integer == INT64_MIN && right.integer == -1) {
-                (top++)->integer =
-                    instruction[0] == KEST_OP_DIV_I ? INT64_MIN : 0;
-                break;
-            }
-            (top++)->integer = divided(left.integer, right.integer,
-                                       instruction[0] == KEST_OP_DIV_I);
-            NEXT;
-        }
 // Whole-number arithmetic with a constant on its right, written out one case
 // an instruction so that each is the arithmetic and nothing deciding which it
 // is: `LEFT` is the left side, `DOES` what is made of it.
@@ -5477,153 +5573,176 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     } while (0)
 #define CUT(KIND, MADE)                                                        \
     ((top++)->integer = kest_narrow_to((KIND), (int64_t)(MADE)))
-        case KEST_OP_MOD_I_C: THREADED(KEST_OP_MOD_I_C)
+        case KEST_OP_MOD_I_C:
+            THREADED(KEST_OP_MOD_I_C)
             BY_CONSTANT((--top)->integer, DIVIDED(false));
             NEXT;
-        case KEST_OP_DIV_I_C: THREADED(KEST_OP_DIV_I_C)
+        case KEST_OP_DIV_I_C:
+            THREADED(KEST_OP_DIV_I_C)
             BY_CONSTANT((--top)->integer, DIVIDED(true));
             NEXT;
-        case KEST_OP_MOD_I_K: THREADED(KEST_OP_MOD_I_K) {
-            uint16_t slot = READ_U16();
-            OWN_SLOT(slot);
-            MOVED(moved_loaded, sizeof(KestValue));
-            BY_CONSTANT(mine[slot].integer, DIVIDED(false));
-            NEXT;
-        }
-        case KEST_OP_DIV_I_K: THREADED(KEST_OP_DIV_I_K) {
-            uint16_t slot = READ_U16();
-            OWN_SLOT(slot);
-            MOVED(moved_loaded, sizeof(KestValue));
-            BY_CONSTANT(mine[slot].integer, DIVIDED(true));
-            NEXT;
-        }
-        case KEST_OP_ADD_I_NARROW_C: THREADED(KEST_OP_ADD_I_NARROW_C) {
-            uint16_t kind = READ_U16();
-            BY_CONSTANT((--top)->integer,
-                        CUT(kind, (uint64_t)left + (uint64_t)right));
-            NEXT;
-        }
-        case KEST_OP_SUB_I_NARROW_C: THREADED(KEST_OP_SUB_I_NARROW_C) {
-            uint16_t kind = READ_U16();
-            BY_CONSTANT((--top)->integer,
-                        CUT(kind, (uint64_t)left - (uint64_t)right));
-            NEXT;
-        }
-        case KEST_OP_MUL_I_NARROW_C: THREADED(KEST_OP_MUL_I_NARROW_C) {
-            uint16_t kind = READ_U16();
-            BY_CONSTANT((--top)->integer,
-                        CUT(kind, (uint64_t)left * (uint64_t)right));
-            NEXT;
-        }
-        case KEST_OP_ADD_I_NARROW_K: THREADED(KEST_OP_ADD_I_NARROW_K) {
-            uint16_t kind = READ_U16();
-            uint16_t slot = READ_U16();
-            OWN_SLOT(slot);
-            MOVED(moved_loaded, sizeof(KestValue));
-            BY_CONSTANT(mine[slot].integer,
-                        CUT(kind, (uint64_t)left + (uint64_t)right));
-            NEXT;
-        }
-        case KEST_OP_SUB_I_NARROW_K: THREADED(KEST_OP_SUB_I_NARROW_K) {
-            uint16_t kind = READ_U16();
-            uint16_t slot = READ_U16();
-            OWN_SLOT(slot);
-            MOVED(moved_loaded, sizeof(KestValue));
-            BY_CONSTANT(mine[slot].integer,
-                        CUT(kind, (uint64_t)left - (uint64_t)right));
-            NEXT;
-        }
-        case KEST_OP_MUL_I_NARROW_K: THREADED(KEST_OP_MUL_I_NARROW_K) {
-            uint16_t kind = READ_U16();
-            uint16_t slot = READ_U16();
-            OWN_SLOT(slot);
-            MOVED(moved_loaded, sizeof(KestValue));
-            BY_CONSTANT(mine[slot].integer,
-                        CUT(kind, (uint64_t)left * (uint64_t)right));
-            NEXT;
-        }
+        case KEST_OP_MOD_I_K:
+            THREADED(KEST_OP_MOD_I_K) {
+                uint16_t slot = READ_U16();
+                OWN_SLOT(slot);
+                MOVED(moved_loaded, sizeof(KestValue));
+                BY_CONSTANT(mine[slot].integer, DIVIDED(false));
+                NEXT;
+            }
+        case KEST_OP_DIV_I_K:
+            THREADED(KEST_OP_DIV_I_K) {
+                uint16_t slot = READ_U16();
+                OWN_SLOT(slot);
+                MOVED(moved_loaded, sizeof(KestValue));
+                BY_CONSTANT(mine[slot].integer, DIVIDED(true));
+                NEXT;
+            }
+        case KEST_OP_ADD_I_NARROW_C:
+            THREADED(KEST_OP_ADD_I_NARROW_C) {
+                uint16_t kind = READ_U16();
+                BY_CONSTANT((--top)->integer,
+                            CUT(kind, (uint64_t)left + (uint64_t)right));
+                NEXT;
+            }
+        case KEST_OP_SUB_I_NARROW_C:
+            THREADED(KEST_OP_SUB_I_NARROW_C) {
+                uint16_t kind = READ_U16();
+                BY_CONSTANT((--top)->integer,
+                            CUT(kind, (uint64_t)left - (uint64_t)right));
+                NEXT;
+            }
+        case KEST_OP_MUL_I_NARROW_C:
+            THREADED(KEST_OP_MUL_I_NARROW_C) {
+                uint16_t kind = READ_U16();
+                BY_CONSTANT((--top)->integer,
+                            CUT(kind, (uint64_t)left * (uint64_t)right));
+                NEXT;
+            }
+        case KEST_OP_ADD_I_NARROW_K:
+            THREADED(KEST_OP_ADD_I_NARROW_K) {
+                uint16_t kind = READ_U16();
+                uint16_t slot = READ_U16();
+                OWN_SLOT(slot);
+                MOVED(moved_loaded, sizeof(KestValue));
+                BY_CONSTANT(mine[slot].integer,
+                            CUT(kind, (uint64_t)left + (uint64_t)right));
+                NEXT;
+            }
+        case KEST_OP_SUB_I_NARROW_K:
+            THREADED(KEST_OP_SUB_I_NARROW_K) {
+                uint16_t kind = READ_U16();
+                uint16_t slot = READ_U16();
+                OWN_SLOT(slot);
+                MOVED(moved_loaded, sizeof(KestValue));
+                BY_CONSTANT(mine[slot].integer,
+                            CUT(kind, (uint64_t)left - (uint64_t)right));
+                NEXT;
+            }
+        case KEST_OP_MUL_I_NARROW_K:
+            THREADED(KEST_OP_MUL_I_NARROW_K) {
+                uint16_t kind = READ_U16();
+                uint16_t slot = READ_U16();
+                OWN_SLOT(slot);
+                MOVED(moved_loaded, sizeof(KestValue));
+                BY_CONSTANT(mine[slot].integer,
+                            CUT(kind, (uint64_t)left * (uint64_t)right));
+                NEXT;
+            }
 #undef BY_CONSTANT
 #undef DIVIDED
 #undef CUT
-        case KEST_OP_DIV_U: THREADED(KEST_OP_DIV_U)
-        case KEST_OP_MOD_U: THREADED(KEST_OP_MOD_U) {
-            KestValue right = *--top;
-            KestValue left = *--top;
-            if (right.integer == 0) {
-                BY_NOUGHT();
+        case KEST_OP_DIV_U:
+            THREADED(KEST_OP_DIV_U)
+        case KEST_OP_MOD_U:
+            THREADED(KEST_OP_MOD_U) {
+                KestValue right = *--top;
+                KestValue left = *--top;
+                if (right.integer == 0) {
+                    BY_NOUGHT();
+                }
+                uint64_t a = (uint64_t)left.integer;
+                uint64_t b = (uint64_t)right.integer;
+                (top++)->integer =
+                    (int64_t)(instruction[0] == KEST_OP_DIV_U ? a / b : a % b);
+                NEXT;
             }
-            uint64_t a = (uint64_t)left.integer;
-            uint64_t b = (uint64_t)right.integer;
-            (top++)->integer =
-                (int64_t)(instruction[0] == KEST_OP_DIV_U ? a / b : a % b);
-            NEXT;
-        }
-        case KEST_OP_AND_I: THREADED(KEST_OP_AND_I)
+        case KEST_OP_AND_I:
+            THREADED(KEST_OP_AND_I)
             top--;
             top[-1].integer &= top[0].integer;
             NEXT;
-        case KEST_OP_OR_I: THREADED(KEST_OP_OR_I)
+        case KEST_OP_OR_I:
+            THREADED(KEST_OP_OR_I)
             top--;
             top[-1].integer |= top[0].integer;
             NEXT;
-        case KEST_OP_XOR_I: THREADED(KEST_OP_XOR_I)
+        case KEST_OP_XOR_I:
+            THREADED(KEST_OP_XOR_I)
             top--;
             top[-1].integer ^= top[0].integer;
             NEXT;
-        case KEST_OP_NOT_I: THREADED(KEST_OP_NOT_I)
+        case KEST_OP_NOT_I:
+            THREADED(KEST_OP_NOT_I)
             top[-1].integer = ~top[-1].integer;
             NEXT;
         // A shift is done in a slot and narrowed after, the same way every
         // other arithmetic is. A count past the width of the slot has
         // no meaning in C, so it is answered here rather than left to the
         // machine: everything shifts out.
-        case KEST_OP_SHL: THREADED(KEST_OP_SHL) {
-            int64_t by = (--top)->integer;
-            if (by < 0) {
-                fail(vmp, frame, instruction, "K0604",
-                     "a shift of %lld is not a count", (long long)by);
-                return false;
+        case KEST_OP_SHL:
+            THREADED(KEST_OP_SHL) {
+                int64_t by = (--top)->integer;
+                if (by < 0) {
+                    fail(vmp, frame, instruction, "K0604",
+                         "a shift of %lld is not a count", (long long)by);
+                    return false;
+                }
+                top[-1].integer =
+                    by >= 64 ? 0 : (int64_t)((uint64_t)top[-1].integer << by);
+                NEXT;
             }
-            top[-1].integer =
-                by >= 64 ? 0 : (int64_t)((uint64_t)top[-1].integer << by);
-            NEXT;
-        }
-        case KEST_OP_SHR_I: THREADED(KEST_OP_SHR_I) {
-            int64_t by = (--top)->integer;
-            if (by < 0) {
-                fail(vmp, frame, instruction, "K0604",
-                     "a shift of %lld is not a count", (long long)by);
-                return false;
+        case KEST_OP_SHR_I:
+            THREADED(KEST_OP_SHR_I) {
+                int64_t by = (--top)->integer;
+                if (by < 0) {
+                    fail(vmp, frame, instruction, "K0604",
+                         "a shift of %lld is not a count", (long long)by);
+                    return false;
+                }
+                // Signed, so the sign is what shifts in and a negative number
+                // stays negative however far it goes.
+                int64_t value = top[-1].integer;
+                top[-1].integer = by >= 64 ? (value < 0 ? -1 : 0) : value >> by;
+                NEXT;
             }
-            // Signed, so the sign is what shifts in and a negative number
-            // stays negative however far it goes.
-            int64_t value = top[-1].integer;
-            top[-1].integer = by >= 64 ? (value < 0 ? -1 : 0) : value >> by;
-            NEXT;
-        }
-        case KEST_OP_SHR_U: THREADED(KEST_OP_SHR_U) {
-            int64_t by = (--top)->integer;
-            if (by < 0) {
-                fail(vmp, frame, instruction, "K0604",
-                     "a shift of %lld is not a count", (long long)by);
-                return false;
+        case KEST_OP_SHR_U:
+            THREADED(KEST_OP_SHR_U) {
+                int64_t by = (--top)->integer;
+                if (by < 0) {
+                    fail(vmp, frame, instruction, "K0604",
+                         "a shift of %lld is not a count", (long long)by);
+                    return false;
+                }
+                uint64_t value = (uint64_t)top[-1].integer;
+                top[-1].integer = by >= 64 ? 0 : (int64_t)(value >> by);
+                NEXT;
             }
-            uint64_t value = (uint64_t)top[-1].integer;
-            top[-1].integer = by >= 64 ? 0 : (int64_t)(value >> by);
-            NEXT;
-        }
-        case KEST_OP_NEG_I: THREADED(KEST_OP_NEG_I)
+        case KEST_OP_NEG_I:
+            THREADED(KEST_OP_NEG_I)
             // The smallest number negated is itself, which is what wrapping
             // says and what negating it signed would be undefined.
             top[-1].integer = (int64_t)(0 - (uint64_t)top[-1].integer);
             NEXT;
-        case KEST_OP_I2F: THREADED(KEST_OP_I2F)
+        case KEST_OP_I2F:
+            THREADED(KEST_OP_I2F)
             top[-1].real = (double)top[-1].integer;
             NEXT;
-        case KEST_OP_U2F: THREADED(KEST_OP_U2F)
+        case KEST_OP_U2F:
+            THREADED(KEST_OP_U2F)
             top[-1].real = (double)(uint64_t)top[-1].integer;
             NEXT;
-        case KEST_OP_TO_F32: THREADED(KEST_OP_TO_F32)
+        case KEST_OP_TO_F32:
+            THREADED(KEST_OP_TO_F32)
             top[-1].real = (double)(float)top[-1].real;
             NEXT;
         // A float as its bits. What is not a number is one value, whatever
@@ -5631,33 +5750,37 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // makes `inf - inf` with the sign set and arm64 without it, and a
         // program that could read the difference would answer differently on
         // the two.
-        case KEST_OP_FLOAT_BITS: THREADED(KEST_OP_FLOAT_BITS) {
-            uint16_t width = READ_U16();
-            if (width == 32) {
-                float narrow = (float)top[-1].real;
-                uint32_t bits = UINT32_C(0x7FC00000);
-                if (narrow == narrow) {
-                    memcpy(&bits, &narrow, sizeof bits);
+        case KEST_OP_FLOAT_BITS:
+            THREADED(KEST_OP_FLOAT_BITS) {
+                uint16_t width = READ_U16();
+                if (width == 32) {
+                    float narrow = (float)top[-1].real;
+                    uint32_t bits = UINT32_C(0x7FC00000);
+                    if (narrow == narrow) {
+                        memcpy(&bits, &narrow, sizeof bits);
+                    }
+                    top[-1].integer = bits;
+                } else if (top[-1].real != top[-1].real) {
+                    top[-1].integer = (int64_t)UINT64_C(0x7FF8000000000000);
                 }
-                top[-1].integer = bits;
-            } else if (top[-1].real != top[-1].real) {
-                top[-1].integer = (int64_t)UINT64_C(0x7FF8000000000000);
+                NEXT;
             }
-            NEXT;
-        }
-        case KEST_OP_BITS_F32: THREADED(KEST_OP_BITS_F32) {
-            uint32_t bits = (uint32_t)top[-1].integer;
-            float narrow;
-            memcpy(&narrow, &bits, sizeof narrow);
-            top[-1].real = narrow;
-            NEXT;
-        }
-        case KEST_OP_F2I: THREADED(KEST_OP_F2I)
+        case KEST_OP_BITS_F32:
+            THREADED(KEST_OP_BITS_F32) {
+                uint32_t bits = (uint32_t)top[-1].integer;
+                float narrow;
+                memcpy(&narrow, &bits, sizeof narrow);
+                top[-1].real = narrow;
+                NEXT;
+            }
+        case KEST_OP_F2I:
+            THREADED(KEST_OP_F2I)
             // Where a number outside the width stops, which the type layer
             // works out for a constant as well: one answer, in one place.
             top[-1].integer = kest_real_to_int(READ_U16(), top[-1].real);
             NEXT;
-        case KEST_OP_NARROW: THREADED(KEST_OP_NARROW)
+        case KEST_OP_NARROW:
+            THREADED(KEST_OP_NARROW)
             // Every integer in a slot is kept at its declared width, sign
             // extended or zero extended, so a comparison and a division do not
             // each need to know how wide it is.
@@ -5668,17 +5791,20 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // out rather than falling through a shared macro because the whole
         // point of them is that there is one dispatch and one read of the
         // width between the operands and the answer.
-        case KEST_OP_ADD_I_NARROW: THREADED(KEST_OP_ADD_I_NARROW)
+        case KEST_OP_ADD_I_NARROW:
+            THREADED(KEST_OP_ADD_I_NARROW)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer +
                                         (uint64_t)right.integer));
             top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
             NEXT;
-        case KEST_OP_SUB_I_NARROW: THREADED(KEST_OP_SUB_I_NARROW)
+        case KEST_OP_SUB_I_NARROW:
+            THREADED(KEST_OP_SUB_I_NARROW)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer -
                                         (uint64_t)right.integer));
             top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
             NEXT;
-        case KEST_OP_MUL_I_NARROW: THREADED(KEST_OP_MUL_I_NARROW)
+        case KEST_OP_MUL_I_NARROW:
+            THREADED(KEST_OP_MUL_I_NARROW)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer *
                                         (uint64_t)right.integer));
             top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
@@ -5687,83 +5813,90 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // The same four with the store they were feeding taken in. What goes
         // is the push and the pop between them, which is a dependency through
         // memory rather than two instructions standing beside each other.
-        case KEST_OP_ADD_I_NARROW_TO: THREADED(KEST_OP_ADD_I_NARROW_TO) {
-            uint16_t kind = READ_U16();
-            uint16_t slot = READ_U16();
-            KestValue right = *--top;
-            KestValue left = *--top;
+        case KEST_OP_ADD_I_NARROW_TO:
+            THREADED(KEST_OP_ADD_I_NARROW_TO) {
+                uint16_t kind = READ_U16();
+                uint16_t slot = READ_U16();
+                KestValue right = *--top;
+                KestValue left = *--top;
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
-                return false;
-            }
+                if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
+                    return false;
+                }
 #endif
-            MOVED(moved_stored, sizeof(KestValue));
-            mine[slot].integer = kest_narrow_to(
-                kind, (int64_t)((uint64_t)left.integer +
-                                (uint64_t)right.integer));
-            NEXT;
-        }
+                MOVED(moved_stored, sizeof(KestValue));
+                mine[slot].integer =
+                    kest_narrow_to(kind, (int64_t)((uint64_t)left.integer +
+                                                   (uint64_t)right.integer));
+                NEXT;
+            }
         // A constant written into a local.
-        case KEST_OP_STORE_K: THREADED(KEST_OP_STORE_K) {
-            uint16_t slot = READ_U16();
-            uint16_t which = READ_U16();
-            OWN_SLOT_AND_CONSTANT(slot, which);
-            MOVED(moved_held, sizeof(KestValue));
-            MOVED(moved_stored, sizeof(KestValue));
-            mine[slot] = constants[which];
-            NEXT;
-        }
+        case KEST_OP_STORE_K:
+            THREADED(KEST_OP_STORE_K) {
+                uint16_t slot = READ_U16();
+                uint16_t which = READ_U16();
+                OWN_SLOT_AND_CONSTANT(slot, which);
+                MOVED(moved_held, sizeof(KestValue));
+                MOVED(moved_stored, sizeof(KestValue));
+                mine[slot] = constants[which];
+                NEXT;
+            }
         // A local moved by a constant where it is.
         // One case for both ways round, which is measured rather than
         // preferred: the two written apart made `rules` five per cent slower
         // in cycles for fewer instructions, where the compiler put the rest
         // of the loop.
-        case KEST_OP_ADD_K_SELF: THREADED(KEST_OP_ADD_K_SELF)
-        case KEST_OP_SUB_K_SELF: THREADED(KEST_OP_SUB_K_SELF) {
-            uint8_t which_way = *instruction;
-            uint16_t kind = READ_U16();
-            uint16_t slot = READ_U16();
-            uint16_t which = READ_U16();
-            OWN_SLOT_AND_CONSTANT(slot, which);
-            MOVED(moved_loaded, sizeof(KestValue));
-            MOVED(moved_held, sizeof(KestValue));
-            MOVED(moved_stored, sizeof(KestValue));
-            uint64_t by = (uint64_t)constants[which].integer;
-            uint64_t was = (uint64_t)mine[slot].integer;
-            mine[slot].integer = kest_narrow_to(
-                kind, (int64_t)(which_way == KEST_OP_ADD_K_SELF ? was + by
-                                                               : was - by));
-            NEXT;
-        }
-        case KEST_OP_SUB_I_NARROW_TO: THREADED(KEST_OP_SUB_I_NARROW_TO) {
-            uint16_t kind = READ_U16();
-            uint16_t slot = READ_U16();
-            KestValue right = *--top;
-            KestValue left = *--top;
-#if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
-                return false;
+        case KEST_OP_ADD_K_SELF:
+            THREADED(KEST_OP_ADD_K_SELF)
+        case KEST_OP_SUB_K_SELF:
+            THREADED(KEST_OP_SUB_K_SELF) {
+                uint8_t which_way = *instruction;
+                uint16_t kind = READ_U16();
+                uint16_t slot = READ_U16();
+                uint16_t which = READ_U16();
+                OWN_SLOT_AND_CONSTANT(slot, which);
+                MOVED(moved_loaded, sizeof(KestValue));
+                MOVED(moved_held, sizeof(KestValue));
+                MOVED(moved_stored, sizeof(KestValue));
+                uint64_t by = (uint64_t)constants[which].integer;
+                uint64_t was = (uint64_t)mine[slot].integer;
+                mine[slot].integer = kest_narrow_to(
+                    kind,
+                    (int64_t)(which_way == KEST_OP_ADD_K_SELF ? was + by
+                                                              : was - by));
+                NEXT;
             }
-#endif
-            MOVED(moved_stored, sizeof(KestValue));
-            mine[slot].integer = kest_narrow_to(
-                kind, (int64_t)((uint64_t)left.integer -
-                                (uint64_t)right.integer));
-            NEXT;
-        }
-        case KEST_OP_ADD_F_TO: THREADED(KEST_OP_ADD_F_TO) {
-            uint16_t slot = READ_U16();
-            KestValue right = *--top;
-            KestValue left = *--top;
+        case KEST_OP_SUB_I_NARROW_TO:
+            THREADED(KEST_OP_SUB_I_NARROW_TO) {
+                uint16_t kind = READ_U16();
+                uint16_t slot = READ_U16();
+                KestValue right = *--top;
+                KestValue left = *--top;
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
-                return false;
-            }
+                if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
+                    return false;
+                }
 #endif
-            MOVED(moved_stored, sizeof(KestValue));
-            mine[slot].real = left.real + right.real;
-            NEXT;
-        }
+                MOVED(moved_stored, sizeof(KestValue));
+                mine[slot].integer =
+                    kest_narrow_to(kind, (int64_t)((uint64_t)left.integer -
+                                                   (uint64_t)right.integer));
+                NEXT;
+            }
+        case KEST_OP_ADD_F_TO:
+            THREADED(KEST_OP_ADD_F_TO) {
+                uint16_t slot = READ_U16();
+                KestValue right = *--top;
+                KestValue left = *--top;
+#if KEST_CHECKED
+                if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
+                    return false;
+                }
+#endif
+                MOVED(moved_stored, sizeof(KestValue));
+                mine[slot].real = left.real + right.real;
+                NEXT;
+            }
 // Two float locals made into a third, one case each way round.
 #define TWO_LOCALS(OP)                                                         \
     do {                                                                       \
@@ -5777,172 +5910,215 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         MOVED(moved_stored, sizeof(KestValue));                                \
         mine[slot].real = mine[first].real OP mine[second].real;               \
     } while (0)
-        case KEST_OP_ADD_F_LL: THREADED(KEST_OP_ADD_F_LL)
+        case KEST_OP_ADD_F_LL:
+            THREADED(KEST_OP_ADD_F_LL)
             TWO_LOCALS(+);
             NEXT;
-        case KEST_OP_SUB_F_LL: THREADED(KEST_OP_SUB_F_LL)
+        case KEST_OP_SUB_F_LL:
+            THREADED(KEST_OP_SUB_F_LL)
             TWO_LOCALS(-);
             NEXT;
 #undef TWO_LOCALS
-        case KEST_OP_SUB_F_TO: THREADED(KEST_OP_SUB_F_TO) {
-            uint16_t slot = READ_U16();
-            KestValue right = *--top;
-            KestValue left = *--top;
+        case KEST_OP_SUB_F_TO:
+            THREADED(KEST_OP_SUB_F_TO) {
+                uint16_t slot = READ_U16();
+                KestValue right = *--top;
+                KestValue left = *--top;
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
-                return false;
-            }
+                if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
+                    return false;
+                }
 #endif
-            MOVED(moved_stored, sizeof(KestValue));
-            mine[slot].real = left.real - right.real;
-            NEXT;
-        }
-        case KEST_OP_ADD_F: THREADED(KEST_OP_ADD_F)
+                MOVED(moved_stored, sizeof(KestValue));
+                mine[slot].real = left.real - right.real;
+                NEXT;
+            }
+        case KEST_OP_ADD_F:
+            THREADED(KEST_OP_ADD_F)
             BINARY_I(real, left.real + right.real);
             NEXT;
-        case KEST_OP_SUB_F: THREADED(KEST_OP_SUB_F)
+        case KEST_OP_SUB_F:
+            THREADED(KEST_OP_SUB_F)
             BINARY_I(real, left.real - right.real);
             NEXT;
-        case KEST_OP_MUL_F: THREADED(KEST_OP_MUL_F)
+        case KEST_OP_MUL_F:
+            THREADED(KEST_OP_MUL_F)
             BINARY_I(real, left.real * right.real);
             NEXT;
-        case KEST_OP_DIV_F: THREADED(KEST_OP_DIV_F)
+        case KEST_OP_DIV_F:
+            THREADED(KEST_OP_DIV_F)
             BINARY_I(real, left.real / right.real);
             NEXT;
-        case KEST_OP_MOD_F: THREADED(KEST_OP_MOD_F)
+        case KEST_OP_MOD_F:
+            THREADED(KEST_OP_MOD_F)
             // Nought on the right is not stopped here the way it is for a
             // whole number: the answer is what is not a number, which is what
             // `/` already gives beside it.
             BINARY_I(real, kest_left_over(left.real, right.real));
             NEXT;
-        case KEST_OP_NEG_F: THREADED(KEST_OP_NEG_F)
+        case KEST_OP_NEG_F:
+            THREADED(KEST_OP_NEG_F)
             top[-1].real = -top[-1].real;
             NEXT;
 
-        case KEST_OP_ADD_F32: THREADED(KEST_OP_ADD_F32)
+        case KEST_OP_ADD_F32:
+            THREADED(KEST_OP_ADD_F32)
             BINARY_I(real, (double)((float)left.real + (float)right.real));
             NEXT;
-        case KEST_OP_SUB_F32: THREADED(KEST_OP_SUB_F32)
+        case KEST_OP_SUB_F32:
+            THREADED(KEST_OP_SUB_F32)
             BINARY_I(real, (double)((float)left.real - (float)right.real));
             NEXT;
-        case KEST_OP_MUL_F32: THREADED(KEST_OP_MUL_F32)
+        case KEST_OP_MUL_F32:
+            THREADED(KEST_OP_MUL_F32)
             BINARY_I(real, (double)((float)left.real * (float)right.real));
             NEXT;
-        case KEST_OP_DIV_F32: THREADED(KEST_OP_DIV_F32)
+        case KEST_OP_DIV_F32:
+            THREADED(KEST_OP_DIV_F32)
             BINARY_I(real, (double)((float)left.real / (float)right.real));
             NEXT;
-        case KEST_OP_MOD_F32: THREADED(KEST_OP_MOD_F32)
-            BINARY_I(real, (double)(float)kest_left_over(
-                               (double)(float)left.real,
-                               (double)(float)right.real));
+        case KEST_OP_MOD_F32:
+            THREADED(KEST_OP_MOD_F32)
+            BINARY_I(real,
+                     (double)(float)kest_left_over((double)(float)left.real,
+                                                   (double)(float)right.real));
             NEXT;
-        case KEST_OP_NEG_F32: THREADED(KEST_OP_NEG_F32)
+        case KEST_OP_NEG_F32:
+            THREADED(KEST_OP_NEG_F32)
             top[-1].real = (double)(-(float)top[-1].real);
             NEXT;
-        case KEST_OP_SIN_F: THREADED(KEST_OP_SIN_F)
+        case KEST_OP_SIN_F:
+            THREADED(KEST_OP_SIN_F)
             top[-1].real = kest_fdlibm_sin(top[-1].real);
             NEXT;
-        case KEST_OP_COS_F: THREADED(KEST_OP_COS_F)
+        case KEST_OP_COS_F:
+            THREADED(KEST_OP_COS_F)
             top[-1].real = kest_fdlibm_cos(top[-1].real);
             NEXT;
 
-        case KEST_OP_LT_I: THREADED(KEST_OP_LT_I)
+        case KEST_OP_LT_I:
+            THREADED(KEST_OP_LT_I)
             BINARY_I(integer, left.integer < right.integer);
             NEXT;
-        case KEST_OP_LE_I: THREADED(KEST_OP_LE_I)
+        case KEST_OP_LE_I:
+            THREADED(KEST_OP_LE_I)
             BINARY_I(integer, left.integer <= right.integer);
             NEXT;
-        case KEST_OP_GT_I: THREADED(KEST_OP_GT_I)
+        case KEST_OP_GT_I:
+            THREADED(KEST_OP_GT_I)
             BINARY_I(integer, left.integer > right.integer);
             NEXT;
-        case KEST_OP_GE_I: THREADED(KEST_OP_GE_I)
+        case KEST_OP_GE_I:
+            THREADED(KEST_OP_GE_I)
             BINARY_I(integer, left.integer >= right.integer);
             NEXT;
-        case KEST_OP_LT_U: THREADED(KEST_OP_LT_U)
+        case KEST_OP_LT_U:
+            THREADED(KEST_OP_LT_U)
             BINARY_I(integer, (uint64_t)left.integer < (uint64_t)right.integer);
             NEXT;
-        case KEST_OP_LE_U: THREADED(KEST_OP_LE_U)
+        case KEST_OP_LE_U:
+            THREADED(KEST_OP_LE_U)
             BINARY_I(integer,
                      (uint64_t)left.integer <= (uint64_t)right.integer);
             NEXT;
-        case KEST_OP_GT_U: THREADED(KEST_OP_GT_U)
+        case KEST_OP_GT_U:
+            THREADED(KEST_OP_GT_U)
             BINARY_I(integer, (uint64_t)left.integer > (uint64_t)right.integer);
             NEXT;
-        case KEST_OP_GE_U: THREADED(KEST_OP_GE_U)
+        case KEST_OP_GE_U:
+            THREADED(KEST_OP_GE_U)
             BINARY_I(integer,
                      (uint64_t)left.integer >= (uint64_t)right.integer);
             NEXT;
-        case KEST_OP_LT_F: THREADED(KEST_OP_LT_F)
+        case KEST_OP_LT_F:
+            THREADED(KEST_OP_LT_F)
             BINARY_I(integer, left.real < right.real);
             NEXT;
-        case KEST_OP_LE_F: THREADED(KEST_OP_LE_F)
+        case KEST_OP_LE_F:
+            THREADED(KEST_OP_LE_F)
             BINARY_I(integer, left.real <= right.real);
             NEXT;
-        case KEST_OP_GT_F: THREADED(KEST_OP_GT_F)
+        case KEST_OP_GT_F:
+            THREADED(KEST_OP_GT_F)
             BINARY_I(integer, left.real > right.real);
             NEXT;
-        case KEST_OP_GE_F: THREADED(KEST_OP_GE_F)
+        case KEST_OP_GE_F:
+            THREADED(KEST_OP_GE_F)
             BINARY_I(integer, left.real >= right.real);
             NEXT;
 
-        case KEST_OP_EQ_I: THREADED(KEST_OP_EQ_I)
+        case KEST_OP_EQ_I:
+            THREADED(KEST_OP_EQ_I)
             BINARY_I(integer, left.integer == right.integer);
             NEXT;
-        case KEST_OP_NE_I: THREADED(KEST_OP_NE_I)
+        case KEST_OP_NE_I:
+            THREADED(KEST_OP_NE_I)
             BINARY_I(integer, left.integer != right.integer);
             NEXT;
-        case KEST_OP_EQ_F: THREADED(KEST_OP_EQ_F)
+        case KEST_OP_EQ_F:
+            THREADED(KEST_OP_EQ_F)
             BINARY_I(integer, left.real == right.real);
             NEXT;
-        case KEST_OP_NE_F: THREADED(KEST_OP_NE_F)
+        case KEST_OP_NE_F:
+            THREADED(KEST_OP_NE_F)
             BINARY_I(integer, left.real != right.real);
             NEXT;
-        case KEST_OP_EQ_T: THREADED(KEST_OP_EQ_T)
+        case KEST_OP_EQ_T:
+            THREADED(KEST_OP_EQ_T)
             TEXT_ORDER(order == 0);
             NEXT;
-        case KEST_OP_NE_T: THREADED(KEST_OP_NE_T)
+        case KEST_OP_NE_T:
+            THREADED(KEST_OP_NE_T)
             TEXT_ORDER(order != 0);
             NEXT;
 
-        case KEST_OP_LT_T: THREADED(KEST_OP_LT_T)
+        case KEST_OP_LT_T:
+            THREADED(KEST_OP_LT_T)
             TEXT_ORDER(order < 0);
             NEXT;
-        case KEST_OP_LE_T: THREADED(KEST_OP_LE_T)
+        case KEST_OP_LE_T:
+            THREADED(KEST_OP_LE_T)
             TEXT_ORDER(order <= 0);
             NEXT;
-        case KEST_OP_GT_T: THREADED(KEST_OP_GT_T)
+        case KEST_OP_GT_T:
+            THREADED(KEST_OP_GT_T)
             TEXT_ORDER(order > 0);
             NEXT;
-        case KEST_OP_GE_T: THREADED(KEST_OP_GE_T)
+        case KEST_OP_GE_T:
+            THREADED(KEST_OP_GE_T)
             TEXT_ORDER(order >= 0);
             NEXT;
 
-        case KEST_OP_NOT: THREADED(KEST_OP_NOT)
+        case KEST_OP_NOT:
+            THREADED(KEST_OP_NOT)
             top[-1].integer = !top[-1].integer;
             NEXT;
 
-        case KEST_OP_JUMP: THREADED(KEST_OP_JUMP) {
-            // Read the distance before moving, because the read moves too.
-            uint16_t distance = READ_U16();
-            ip += distance;
-            NEXT;
-        }
-        case KEST_OP_JUMP_FALSE: THREADED(KEST_OP_JUMP_FALSE) {
-            uint16_t distance = READ_U16();
-            if ((--top)->integer == 0) {
+        case KEST_OP_JUMP:
+            THREADED(KEST_OP_JUMP) {
+                // Read the distance before moving, because the read moves too.
+                uint16_t distance = READ_U16();
                 ip += distance;
+                NEXT;
             }
-            NEXT;
-        }
-        case KEST_OP_JUMP_TRUE: THREADED(KEST_OP_JUMP_TRUE) {
-            uint16_t distance = READ_U16();
-            if ((--top)->integer != 0) {
-                ip += distance;
+        case KEST_OP_JUMP_FALSE:
+            THREADED(KEST_OP_JUMP_FALSE) {
+                uint16_t distance = READ_U16();
+                if ((--top)->integer == 0) {
+                    ip += distance;
+                }
+                NEXT;
             }
-            NEXT;
-        }
-        // The compare and the branch in one. The operands are whole numbers
-        // because that is the only pair the compiler fuses.
+        case KEST_OP_JUMP_TRUE:
+            THREADED(KEST_OP_JUMP_TRUE) {
+                uint16_t distance = READ_U16();
+                if ((--top)->integer != 0) {
+                    ip += distance;
+                }
+                NEXT;
+            }
+            // The compare and the branch in one. The operands are whole numbers
+            // because that is the only pair the compiler fuses.
 #define JUMP_UNLESS(expression)                                                \
     do {                                                                       \
         uint16_t distance = READ_U16();                                        \
@@ -6012,7 +6188,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         const Array *array = mine[holds].object;                               \
         HOLD(array, KEST_IS_ARRAY, "an array");                                \
         IN_ARRAY(index, array);                                                \
-        /* Two, because a read of a piece is written for text as well. */    \
+        /* Two, because a read of a piece is written for text as well. */      \
         KestValue element[2];                                                  \
         READ_INTO(element, layout,                                             \
                   array->bytes + (size_t)index * array->stride);               \
@@ -6023,40 +6199,52 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }                                                                      \
     } while (0)
 
-        case KEST_OP_JUMP_FALSE_LT_E: THREADED(KEST_OP_JUMP_FALSE_LT_E)
+        case KEST_OP_JUMP_FALSE_LT_E:
+            THREADED(KEST_OP_JUMP_FALSE_LT_E)
             JUMP_UNLESS_E(left < right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_LE_E: THREADED(KEST_OP_JUMP_FALSE_LE_E)
+        case KEST_OP_JUMP_FALSE_LE_E:
+            THREADED(KEST_OP_JUMP_FALSE_LE_E)
             JUMP_UNLESS_E(left <= right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_GT_E: THREADED(KEST_OP_JUMP_FALSE_GT_E)
+        case KEST_OP_JUMP_FALSE_GT_E:
+            THREADED(KEST_OP_JUMP_FALSE_GT_E)
             JUMP_UNLESS_E(left > right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_GE_E: THREADED(KEST_OP_JUMP_FALSE_GE_E)
+        case KEST_OP_JUMP_FALSE_GE_E:
+            THREADED(KEST_OP_JUMP_FALSE_GE_E)
             JUMP_UNLESS_E(left >= right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_EQ_E: THREADED(KEST_OP_JUMP_FALSE_EQ_E)
+        case KEST_OP_JUMP_FALSE_EQ_E:
+            THREADED(KEST_OP_JUMP_FALSE_EQ_E)
             JUMP_UNLESS_E(left == right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_NE_E: THREADED(KEST_OP_JUMP_FALSE_NE_E)
+        case KEST_OP_JUMP_FALSE_NE_E:
+            THREADED(KEST_OP_JUMP_FALSE_NE_E)
             JUMP_UNLESS_E(left != right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_LT_C: THREADED(KEST_OP_JUMP_FALSE_LT_C)
+        case KEST_OP_JUMP_FALSE_LT_C:
+            THREADED(KEST_OP_JUMP_FALSE_LT_C)
             JUMP_UNLESS_C(left < right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_LE_C: THREADED(KEST_OP_JUMP_FALSE_LE_C)
+        case KEST_OP_JUMP_FALSE_LE_C:
+            THREADED(KEST_OP_JUMP_FALSE_LE_C)
             JUMP_UNLESS_C(left <= right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_GT_C: THREADED(KEST_OP_JUMP_FALSE_GT_C)
+        case KEST_OP_JUMP_FALSE_GT_C:
+            THREADED(KEST_OP_JUMP_FALSE_GT_C)
             JUMP_UNLESS_C(left > right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_GE_C: THREADED(KEST_OP_JUMP_FALSE_GE_C)
+        case KEST_OP_JUMP_FALSE_GE_C:
+            THREADED(KEST_OP_JUMP_FALSE_GE_C)
             JUMP_UNLESS_C(left >= right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_EQ_C: THREADED(KEST_OP_JUMP_FALSE_EQ_C)
+        case KEST_OP_JUMP_FALSE_EQ_C:
+            THREADED(KEST_OP_JUMP_FALSE_EQ_C)
             JUMP_UNLESS_C(left == right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_NE_C: THREADED(KEST_OP_JUMP_FALSE_NE_C)
+        case KEST_OP_JUMP_FALSE_NE_C:
+            THREADED(KEST_OP_JUMP_FALSE_NE_C)
             JUMP_UNLESS_C(left != right);
             NEXT;
 // A float local against a constant and the jump, taken when the answer is
@@ -6075,62 +6263,80 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             ip += distance;                                                    \
         }                                                                      \
     } while (0)
-        case KEST_OP_JUMP_FALSE_LT_FK: THREADED(KEST_OP_JUMP_FALSE_LT_FK)
+        case KEST_OP_JUMP_FALSE_LT_FK:
+            THREADED(KEST_OP_JUMP_FALSE_LT_FK)
             JUMP_ON_FK(false, left < right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_LE_FK: THREADED(KEST_OP_JUMP_FALSE_LE_FK)
+        case KEST_OP_JUMP_FALSE_LE_FK:
+            THREADED(KEST_OP_JUMP_FALSE_LE_FK)
             JUMP_ON_FK(false, left <= right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_GT_FK: THREADED(KEST_OP_JUMP_FALSE_GT_FK)
+        case KEST_OP_JUMP_FALSE_GT_FK:
+            THREADED(KEST_OP_JUMP_FALSE_GT_FK)
             JUMP_ON_FK(false, left > right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_GE_FK: THREADED(KEST_OP_JUMP_FALSE_GE_FK)
+        case KEST_OP_JUMP_FALSE_GE_FK:
+            THREADED(KEST_OP_JUMP_FALSE_GE_FK)
             JUMP_ON_FK(false, left >= right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_EQ_FK: THREADED(KEST_OP_JUMP_FALSE_EQ_FK)
+        case KEST_OP_JUMP_FALSE_EQ_FK:
+            THREADED(KEST_OP_JUMP_FALSE_EQ_FK)
             JUMP_ON_FK(false, left == right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_NE_FK: THREADED(KEST_OP_JUMP_FALSE_NE_FK)
+        case KEST_OP_JUMP_FALSE_NE_FK:
+            THREADED(KEST_OP_JUMP_FALSE_NE_FK)
             JUMP_ON_FK(false, left != right);
             NEXT;
-        case KEST_OP_JUMP_TRUE_LT_FK: THREADED(KEST_OP_JUMP_TRUE_LT_FK)
+        case KEST_OP_JUMP_TRUE_LT_FK:
+            THREADED(KEST_OP_JUMP_TRUE_LT_FK)
             JUMP_ON_FK(true, left < right);
             NEXT;
-        case KEST_OP_JUMP_TRUE_LE_FK: THREADED(KEST_OP_JUMP_TRUE_LE_FK)
+        case KEST_OP_JUMP_TRUE_LE_FK:
+            THREADED(KEST_OP_JUMP_TRUE_LE_FK)
             JUMP_ON_FK(true, left <= right);
             NEXT;
-        case KEST_OP_JUMP_TRUE_GT_FK: THREADED(KEST_OP_JUMP_TRUE_GT_FK)
+        case KEST_OP_JUMP_TRUE_GT_FK:
+            THREADED(KEST_OP_JUMP_TRUE_GT_FK)
             JUMP_ON_FK(true, left > right);
             NEXT;
-        case KEST_OP_JUMP_TRUE_GE_FK: THREADED(KEST_OP_JUMP_TRUE_GE_FK)
+        case KEST_OP_JUMP_TRUE_GE_FK:
+            THREADED(KEST_OP_JUMP_TRUE_GE_FK)
             JUMP_ON_FK(true, left >= right);
             NEXT;
-        case KEST_OP_JUMP_TRUE_EQ_FK: THREADED(KEST_OP_JUMP_TRUE_EQ_FK)
+        case KEST_OP_JUMP_TRUE_EQ_FK:
+            THREADED(KEST_OP_JUMP_TRUE_EQ_FK)
             JUMP_ON_FK(true, left == right);
             NEXT;
-        case KEST_OP_JUMP_TRUE_NE_FK: THREADED(KEST_OP_JUMP_TRUE_NE_FK)
+        case KEST_OP_JUMP_TRUE_NE_FK:
+            THREADED(KEST_OP_JUMP_TRUE_NE_FK)
             JUMP_ON_FK(true, left != right);
             NEXT;
 #undef JUMP_ON_FK
-        case KEST_OP_JUMP_FALSE_LT_K: THREADED(KEST_OP_JUMP_FALSE_LT_K)
+        case KEST_OP_JUMP_FALSE_LT_K:
+            THREADED(KEST_OP_JUMP_FALSE_LT_K)
             JUMP_UNLESS_K(left < right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_LE_K: THREADED(KEST_OP_JUMP_FALSE_LE_K)
+        case KEST_OP_JUMP_FALSE_LE_K:
+            THREADED(KEST_OP_JUMP_FALSE_LE_K)
             JUMP_UNLESS_K(left <= right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_GT_K: THREADED(KEST_OP_JUMP_FALSE_GT_K)
+        case KEST_OP_JUMP_FALSE_GT_K:
+            THREADED(KEST_OP_JUMP_FALSE_GT_K)
             JUMP_UNLESS_K(left > right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_GE_K: THREADED(KEST_OP_JUMP_FALSE_GE_K)
+        case KEST_OP_JUMP_FALSE_GE_K:
+            THREADED(KEST_OP_JUMP_FALSE_GE_K)
             JUMP_UNLESS_K(left >= right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_EQ_K: THREADED(KEST_OP_JUMP_FALSE_EQ_K)
+        case KEST_OP_JUMP_FALSE_EQ_K:
+            THREADED(KEST_OP_JUMP_FALSE_EQ_K)
             JUMP_UNLESS_K(left == right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_NE_K: THREADED(KEST_OP_JUMP_FALSE_NE_K)
+        case KEST_OP_JUMP_FALSE_NE_K:
+            THREADED(KEST_OP_JUMP_FALSE_NE_K)
             JUMP_UNLESS_K(left != right);
             NEXT;
-        // Two locals, each read where it is.
+            // Two locals, each read where it is.
 #define JUMP_UNLESS_LL(test)                                                   \
     do {                                                                       \
         uint16_t first = READ_U16();                                           \
@@ -6145,516 +6351,565 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             ip += distance;                                                    \
         }                                                                      \
     } while (0)
-        case KEST_OP_JUMP_FALSE_LT_LL: THREADED(KEST_OP_JUMP_FALSE_LT_LL)
+        case KEST_OP_JUMP_FALSE_LT_LL:
+            THREADED(KEST_OP_JUMP_FALSE_LT_LL)
             JUMP_UNLESS_LL(left < right);
             NEXT;
-        case KEST_OP_JUMP_FALSE_LE_LL: THREADED(KEST_OP_JUMP_FALSE_LE_LL)
+        case KEST_OP_JUMP_FALSE_LE_LL:
+            THREADED(KEST_OP_JUMP_FALSE_LE_LL)
             JUMP_UNLESS_LL(left <= right);
             NEXT;
 #undef JUMP_UNLESS_LL
-        case KEST_OP_JUMP_FALSE_LT_I: THREADED(KEST_OP_JUMP_FALSE_LT_I)
+        case KEST_OP_JUMP_FALSE_LT_I:
+            THREADED(KEST_OP_JUMP_FALSE_LT_I)
             JUMP_UNLESS(left.integer < right.integer);
             NEXT;
-        case KEST_OP_JUMP_FALSE_LE_I: THREADED(KEST_OP_JUMP_FALSE_LE_I)
+        case KEST_OP_JUMP_FALSE_LE_I:
+            THREADED(KEST_OP_JUMP_FALSE_LE_I)
             JUMP_UNLESS(left.integer <= right.integer);
             NEXT;
-        case KEST_OP_JUMP_FALSE_GT_I: THREADED(KEST_OP_JUMP_FALSE_GT_I)
+        case KEST_OP_JUMP_FALSE_GT_I:
+            THREADED(KEST_OP_JUMP_FALSE_GT_I)
             JUMP_UNLESS(left.integer > right.integer);
             NEXT;
-        case KEST_OP_JUMP_FALSE_GE_I: THREADED(KEST_OP_JUMP_FALSE_GE_I)
+        case KEST_OP_JUMP_FALSE_GE_I:
+            THREADED(KEST_OP_JUMP_FALSE_GE_I)
             JUMP_UNLESS(left.integer >= right.integer);
             NEXT;
-        case KEST_OP_JUMP_FALSE_EQ_I: THREADED(KEST_OP_JUMP_FALSE_EQ_I)
+        case KEST_OP_JUMP_FALSE_EQ_I:
+            THREADED(KEST_OP_JUMP_FALSE_EQ_I)
             JUMP_UNLESS(left.integer == right.integer);
             NEXT;
-        case KEST_OP_JUMP_FALSE_NE_I: THREADED(KEST_OP_JUMP_FALSE_NE_I)
+        case KEST_OP_JUMP_FALSE_NE_I:
+            THREADED(KEST_OP_JUMP_FALSE_NE_I)
             JUMP_UNLESS(left.integer != right.integer);
             NEXT;
-        case KEST_OP_JUMP_TRUE_LT_I: THREADED(KEST_OP_JUMP_TRUE_LT_I)
+        case KEST_OP_JUMP_TRUE_LT_I:
+            THREADED(KEST_OP_JUMP_TRUE_LT_I)
             JUMP_IF(left.integer < right.integer);
             NEXT;
-        case KEST_OP_JUMP_TRUE_LE_I: THREADED(KEST_OP_JUMP_TRUE_LE_I)
+        case KEST_OP_JUMP_TRUE_LE_I:
+            THREADED(KEST_OP_JUMP_TRUE_LE_I)
             JUMP_IF(left.integer <= right.integer);
             NEXT;
-        case KEST_OP_JUMP_TRUE_GT_I: THREADED(KEST_OP_JUMP_TRUE_GT_I)
+        case KEST_OP_JUMP_TRUE_GT_I:
+            THREADED(KEST_OP_JUMP_TRUE_GT_I)
             JUMP_IF(left.integer > right.integer);
             NEXT;
-        case KEST_OP_JUMP_TRUE_GE_I: THREADED(KEST_OP_JUMP_TRUE_GE_I)
+        case KEST_OP_JUMP_TRUE_GE_I:
+            THREADED(KEST_OP_JUMP_TRUE_GE_I)
             JUMP_IF(left.integer >= right.integer);
             NEXT;
-        case KEST_OP_JUMP_TRUE_EQ_I: THREADED(KEST_OP_JUMP_TRUE_EQ_I)
+        case KEST_OP_JUMP_TRUE_EQ_I:
+            THREADED(KEST_OP_JUMP_TRUE_EQ_I)
             JUMP_IF(left.integer == right.integer);
             NEXT;
-        case KEST_OP_JUMP_TRUE_NE_I: THREADED(KEST_OP_JUMP_TRUE_NE_I)
+        case KEST_OP_JUMP_TRUE_NE_I:
+            THREADED(KEST_OP_JUMP_TRUE_NE_I)
             JUMP_IF(left.integer != right.integer);
             NEXT;
-        case KEST_OP_JUMP_FALSE_LT_F: THREADED(KEST_OP_JUMP_FALSE_LT_F)
+        case KEST_OP_JUMP_FALSE_LT_F:
+            THREADED(KEST_OP_JUMP_FALSE_LT_F)
             JUMP_UNLESS(left.real < right.real);
             NEXT;
-        case KEST_OP_JUMP_FALSE_LE_F: THREADED(KEST_OP_JUMP_FALSE_LE_F)
+        case KEST_OP_JUMP_FALSE_LE_F:
+            THREADED(KEST_OP_JUMP_FALSE_LE_F)
             JUMP_UNLESS(left.real <= right.real);
             NEXT;
-        case KEST_OP_JUMP_FALSE_GT_F: THREADED(KEST_OP_JUMP_FALSE_GT_F)
+        case KEST_OP_JUMP_FALSE_GT_F:
+            THREADED(KEST_OP_JUMP_FALSE_GT_F)
             JUMP_UNLESS(left.real > right.real);
             NEXT;
-        case KEST_OP_JUMP_FALSE_GE_F: THREADED(KEST_OP_JUMP_FALSE_GE_F)
+        case KEST_OP_JUMP_FALSE_GE_F:
+            THREADED(KEST_OP_JUMP_FALSE_GE_F)
             JUMP_UNLESS(left.real >= right.real);
             NEXT;
-        case KEST_OP_JUMP_FALSE_EQ_F: THREADED(KEST_OP_JUMP_FALSE_EQ_F)
+        case KEST_OP_JUMP_FALSE_EQ_F:
+            THREADED(KEST_OP_JUMP_FALSE_EQ_F)
             JUMP_UNLESS(left.real == right.real);
             NEXT;
-        case KEST_OP_JUMP_FALSE_NE_F: THREADED(KEST_OP_JUMP_FALSE_NE_F)
+        case KEST_OP_JUMP_FALSE_NE_F:
+            THREADED(KEST_OP_JUMP_FALSE_NE_F)
             JUMP_UNLESS(left.real != right.real);
             NEXT;
-        case KEST_OP_JUMP_TRUE_LT_F: THREADED(KEST_OP_JUMP_TRUE_LT_F)
+        case KEST_OP_JUMP_TRUE_LT_F:
+            THREADED(KEST_OP_JUMP_TRUE_LT_F)
             JUMP_IF(left.real < right.real);
             NEXT;
-        case KEST_OP_JUMP_TRUE_LE_F: THREADED(KEST_OP_JUMP_TRUE_LE_F)
+        case KEST_OP_JUMP_TRUE_LE_F:
+            THREADED(KEST_OP_JUMP_TRUE_LE_F)
             JUMP_IF(left.real <= right.real);
             NEXT;
-        case KEST_OP_JUMP_TRUE_GT_F: THREADED(KEST_OP_JUMP_TRUE_GT_F)
+        case KEST_OP_JUMP_TRUE_GT_F:
+            THREADED(KEST_OP_JUMP_TRUE_GT_F)
             JUMP_IF(left.real > right.real);
             NEXT;
-        case KEST_OP_JUMP_TRUE_GE_F: THREADED(KEST_OP_JUMP_TRUE_GE_F)
+        case KEST_OP_JUMP_TRUE_GE_F:
+            THREADED(KEST_OP_JUMP_TRUE_GE_F)
             JUMP_IF(left.real >= right.real);
             NEXT;
-        case KEST_OP_JUMP_TRUE_EQ_F: THREADED(KEST_OP_JUMP_TRUE_EQ_F)
+        case KEST_OP_JUMP_TRUE_EQ_F:
+            THREADED(KEST_OP_JUMP_TRUE_EQ_F)
             JUMP_IF(left.real == right.real);
             NEXT;
-        case KEST_OP_JUMP_TRUE_NE_F: THREADED(KEST_OP_JUMP_TRUE_NE_F)
+        case KEST_OP_JUMP_TRUE_NE_F:
+            THREADED(KEST_OP_JUMP_TRUE_NE_F)
             JUMP_IF(left.real != right.real);
             NEXT;
 #undef JUMP_UNLESS
 #undef JUMP_IF
 
-        case KEST_OP_LOOP: THREADED(KEST_OP_LOOP) {
-            uint16_t distance = READ_U16();
-            SPEND();
-            ip -= distance;
-            NEXT;
-        }
-
-        case KEST_OP_NEXT_LESS_I: THREADED(KEST_OP_NEXT_LESS_I) {
-            uint16_t slot = READ_U16();
-            uint16_t limit = READ_U16();
-            uint16_t distance = READ_U16();
-#if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot, slot + 1u) ||
-                !own_slots(vmp, frame, instruction, limit, limit + 1u)) {
-                return false;
-            }
-#endif
-            if (++mine[slot].integer < mine[limit].integer) {
+        case KEST_OP_LOOP:
+            THREADED(KEST_OP_LOOP) {
+                uint16_t distance = READ_U16();
                 SPEND();
                 ip -= distance;
+                NEXT;
             }
-            NEXT;
-        }
 
-        case KEST_OP_NEXT_LESS_U: THREADED(KEST_OP_NEXT_LESS_U) {
-            uint16_t slot = READ_U16();
-            uint16_t limit = READ_U16();
-            uint16_t distance = READ_U16();
+        case KEST_OP_NEXT_LESS_I:
+            THREADED(KEST_OP_NEXT_LESS_I) {
+                uint16_t slot = READ_U16();
+                uint16_t limit = READ_U16();
+                uint16_t distance = READ_U16();
 #if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot, slot + 1u) ||
-                !own_slots(vmp, frame, instruction, limit, limit + 1u)) {
-                return false;
-            }
+                if (!own_slots(vmp, frame, instruction, slot, slot + 1u) ||
+                    !own_slots(vmp, frame, instruction, limit, limit + 1u)) {
+                    return false;
+                }
 #endif
-            // Counted on as the unsigned number it is: a walk of `u64`s goes
-            // past the top of the signed range, and one more than that as a
-            // signed number is not a wrapped number but no number C
-            // promises anything about.
-            uint64_t next = (uint64_t)mine[slot].integer + 1u;
-            mine[slot].integer = (int64_t)next;
-            if (next < (uint64_t)mine[limit].integer) {
-                SPEND();
-                ip -= distance;
-            }
-            NEXT;
-        }
-
-        case KEST_OP_SCRATCH: THREADED(KEST_OP_SCRATCH) {
-            uint16_t where = READ_U16();
-            // The door both engines go through, so working memory is opened
-            // one way and says one thing when it cannot be.
-            frame->ip = ip;
-            rt->asked_at = instruction;
-            int64_t opened = 0;
-            if (!kest_region_open(rt, KEST_WHERE_RUNNING, &opened)) {
-                return false;
-            }
-            mine[where].integer = opened;
-            NEXT;
-        }
-        case KEST_OP_UNSCRATCH: THREADED(KEST_OP_UNSCRATCH) {
-            uint16_t where = READ_U16();
-            frame->ip = ip;
-            rt->asked_at = instruction;
-            if (!kest_region_close(rt, mine[where].integer,
-                                   KEST_WHERE_RUNNING)) {
-                return false;
-            }
-            NEXT;
-        }
-        case KEST_OP_CALL: THREADED(KEST_OP_CALL) {
-            SPEND();
-            uint16_t index = READ_U16();
-            uint16_t argument_slots = READ_U16();
-            OF_THE_MODULE(index, module->count, "a function");
-            const KestChunk *callee = module->functions[index];
-            if (rt->entered != NULL && index < rt->entered_room) {
-                rt->entered[index]++;
+                if (++mine[slot].integer < mine[limit].integer) {
+                    SPEND();
+                    ip -= distance;
+                }
+                NEXT;
             }
 
-            if (rt->frame_count == rt->call_depth) {
-                fail(vmp, frame, instruction, "K0602",
-                     "calls nest more than %u deep", rt->call_depth);
-                what_it_needed(vmp, rt, entry);
-                return false;
-            }
-            KestValue *base = top - argument_slots;
+        case KEST_OP_NEXT_LESS_U:
+            THREADED(KEST_OP_NEXT_LESS_U) {
+                uint16_t slot = READ_U16();
+                uint16_t limit = READ_U16();
+                uint16_t distance = READ_U16();
 #if KEST_CHECKED
-            // What a call hands over, held against what it is entering and
-            // against what the caller had to hand. The shape of a call is the
-            // checker's and this is the compiler's arithmetic: a count one
-            // slot out puts the callee's names over the caller's, and every
-            // slot it reads is somebody else's while the program keeps
-            // running. `call.value` is held to the first of these, because that
-            // is the call the promise's second proof cannot see through; this
-            // is the one it can.
-            rt->guarded++;
-            if (argument_slots != callee->param_slots ||
-                base < mine + frame->chunk->slot_count) {
-                fail(vmp, frame, instruction, "K0655",
-                     "this call hands over %u slot(s) from %d above its own "
-                     "names, and `%s` takes %u",
-                     argument_slots,
-                     (int)(top - mine - frame->chunk->slot_count),
-                     callee->wrote, callee->param_slots);
-                kest_diags_fault(vmp->diags,
-                                 "the compiler's count of the operand stack "
-                                 "and what the machine moved disagree");
-                return false;
+                if (!own_slots(vmp, frame, instruction, slot, slot + 1u) ||
+                    !own_slots(vmp, frame, instruction, limit, limit + 1u)) {
+                    return false;
+                }
+#endif
+                // Counted on as the unsigned number it is: a walk of `u64`s
+                // goes past the top of the signed range, and one more than that
+                // as a signed number is not a wrapped number but no number C
+                // promises anything about.
+                uint64_t next = (uint64_t)mine[slot].integer + 1u;
+                mine[slot].integer = (int64_t)next;
+                if (next < (uint64_t)mine[limit].integer) {
+                    SPEND();
+                    ip -= distance;
+                }
+                NEXT;
             }
-            // And what is in them, which the count says nothing about. A body
-            // says what each argument is made of, a piece a slot, and that is
-            // what a host is held to at a crossing -- a host is asked and the
-            // compiler is trusted, which is the same division `handed_well`
-            // draws from the other side. Turned inward: the slots the caller
-            // pushed, held to the kinds the callee declares. A value with a
-            // tag in it is left out, because what its slots hold is the tag's
-            // to say and the pieces of one are not a run.
-            {
-                uint32_t slot = 0;
+
+        case KEST_OP_SCRATCH:
+            THREADED(KEST_OP_SCRATCH) {
+                uint16_t where = READ_U16();
+                // The door both engines go through, so working memory is opened
+                // one way and says one thing when it cannot be.
+                frame->ip = ip;
+                rt->asked_at = instruction;
+                int64_t opened = 0;
+                if (!kest_region_open(rt, KEST_WHERE_RUNNING, &opened)) {
+                    return false;
+                }
+                mine[where].integer = opened;
+                NEXT;
+            }
+        case KEST_OP_UNSCRATCH:
+            THREADED(KEST_OP_UNSCRATCH) {
+                uint16_t where = READ_U16();
+                frame->ip = ip;
+                rt->asked_at = instruction;
+                if (!kest_region_close(rt, mine[where].integer,
+                                       KEST_WHERE_RUNNING)) {
+                    return false;
+                }
+                NEXT;
+            }
+        case KEST_OP_CALL:
+            THREADED(KEST_OP_CALL) {
+                SPEND();
+                uint16_t index = READ_U16();
+                uint16_t argument_slots = READ_U16();
+                OF_THE_MODULE(index, module->count, "a function");
+                const KestChunk *callee = module->functions[index];
+                if (rt->entered != NULL && index < rt->entered_room) {
+                    rt->entered[index]++;
+                }
+
+                if (rt->frame_count == rt->call_depth) {
+                    fail(vmp, frame, instruction, "K0602",
+                         "calls nest more than %u deep", rt->call_depth);
+                    what_it_needed(vmp, rt, entry);
+                    return false;
+                }
+                KestValue *base = top - argument_slots;
+#if KEST_CHECKED
+                // What a call hands over, held against what it is entering and
+                // against what the caller had to hand. The shape of a call is
+                // the checker's and this is the compiler's arithmetic: a count
+                // one slot out puts the callee's names over the caller's, and
+                // every slot it reads is somebody else's while the program
+                // keeps running. `call.value` is held to the first of these,
+                // because that is the call the promise's second proof cannot
+                // see through; this is the one it can.
                 rt->guarded++;
-                for (uint16_t which = 0;
-                     which < callee->takes_count && slot < argument_slots;
-                     which++) {
-                    const KestLayout *what =
-                        &module->layouts[callee->takes[which]];
-                    for (uint16_t piece = 0;
-                         piece < what->count && slot < argument_slots;
-                         piece++,
-                                  slot += what->pieces[piece - 1].kind ==
-                                                  KEST_L_TEXT
-                                              ? 2
-                                              : 1) {
-                        if (what->tagged ||
-                            fits_the_piece(what->pieces[piece].kind,
-                                           base[slot])) {
-                            continue;
+                if (argument_slots != callee->param_slots ||
+                    base < mine + frame->chunk->slot_count) {
+                    fail(
+                        vmp, frame, instruction, "K0655",
+                        "this call hands over %u slot(s) from %d above its own "
+                        "names, and `%s` takes %u",
+                        argument_slots,
+                        (int)(top - mine - frame->chunk->slot_count),
+                        callee->wrote, callee->param_slots);
+                    kest_diags_fault(
+                        vmp->diags, "the compiler's count of the operand stack "
+                                    "and what the machine moved disagree");
+                    return false;
+                }
+                // And what is in them, which the count says nothing about. A
+                // body says what each argument is made of, a piece a slot, and
+                // that is what a host is held to at a crossing -- a host is
+                // asked and the compiler is trusted, which is the same division
+                // `handed_well` draws from the other side. Turned inward: the
+                // slots the caller pushed, held to the kinds the callee
+                // declares. A value with a tag in it is left out, because what
+                // its slots hold is the tag's to say and the pieces of one are
+                // not a run.
+                {
+                    uint32_t slot = 0;
+                    rt->guarded++;
+                    for (uint16_t which = 0;
+                         which < callee->takes_count && slot < argument_slots;
+                         which++) {
+                        const KestLayout *what =
+                            &module->layouts[callee->takes[which]];
+                        for (uint16_t piece = 0;
+                             piece < what->count && slot < argument_slots;
+                             piece++, slot += what->pieces[piece - 1].kind ==
+                                                      KEST_L_TEXT
+                                                  ? 2
+                                                  : 1) {
+                            if (what->tagged ||
+                                fits_the_piece(what->pieces[piece].kind,
+                                               base[slot])) {
+                                continue;
+                            }
+                            fail(vmp, frame, instruction, "K0655",
+                                 "this call hands `%s` something in slot %u "
+                                 "that "
+                                 "no `%s` holds",
+                                 callee->wrote, slot,
+                                 the_width_of(what->pieces[piece].kind));
+                            kest_diags_fault(
+                                vmp->diags, "what the compiler put in a frame "
+                                            "and what the body takes disagree");
+                            return false;
                         }
-                        fail(vmp, frame, instruction, "K0655",
-                             "this call hands `%s` something in slot %u that "
-                             "no `%s` holds",
-                             callee->wrote, slot,
-                             the_width_of(what->pieces[piece].kind));
-                        kest_diags_fault(vmp->diags,
-                                         "what the compiler put in a frame "
-                                         "and what the body takes disagree");
-                        return false;
                     }
                 }
-            }
 #endif
-            if (base + callee->slot_count + callee->stack_needed > rt->limit) {
-                // With the number, because `out of stack` on its own tells
-                // a reader nothing about how much there was: the two ways to
-                // answer it are fewer frames and a host that asks for more,
-                // and both need the number.
-                fail(vmp, frame, instruction, "K0602",
-                     "this call wants more than the %u slots of stack there "
-                     "are", rt->stack_slots);
-                what_it_needed(vmp, rt, entry);
-                return false;
-            }
+                if (base + callee->slot_count + callee->stack_needed >
+                    rt->limit) {
+                    // With the number, because `out of stack` on its own tells
+                    // a reader nothing about how much there was: the two ways
+                    // to answer it are fewer frames and a host that asks for
+                    // more, and both need the number.
+                    fail(
+                        vmp, frame, instruction, "K0602",
+                        "this call wants more than the %u slots of stack there "
+                        "are",
+                        rt->stack_slots);
+                    what_it_needed(vmp, rt, entry);
+                    return false;
+                }
 
-            // Where the caller is, written back before the callee stands on
-            // top of it: a fault inside the callee reads it to say where the
-            // call was written, and a `return` comes back to it.
-            frame->ip = ip;
-            // A body the host's compiler compiled runs here instead of the
-            // instructions under it. Everything around the call is the same:
-            // it is handed the frame where the caller left the arguments, it
-            // writes its answer where a `return` would, and a frame is pushed
-            // for it so that what is deep in a run, what a fault says it was
-            // called from, and what a machine says it needs are all still
-            // true of it.
-            if (callee->native != NULL && !rt->untrusted) {
+                // Where the caller is, written back before the callee stands on
+                // top of it: a fault inside the callee reads it to say where
+                // the call was written, and a `return` comes back to it.
+                frame->ip = ip;
+                // A body the host's compiler compiled runs here instead of the
+                // instructions under it. Everything around the call is the
+                // same: it is handed the frame where the caller left the
+                // arguments, it writes its answer where a `return` would, and a
+                // frame is pushed for it so that what is deep in a run, what a
+                // fault says it was called from, and what a machine says it
+                // needs are all still true of it.
+                if (callee->native != NULL && !rt->untrusted) {
+                    frame = &rt->frames[rt->frame_count++];
+                    FRESH(frame);
+                    frame->chunk = callee;
+                    frame->ip = callee->code;
+                    frame->base = base;
+                    frame->said_at = 0;
+                    uint16_t gave = 0;
+                    // Where the machine's stack has got to, for the collector:
+                    // a body written in C keeps what it is working on in the
+                    // frame it was handed, and a walk of the stack has to reach
+                    // the end of it. What it was is put back, because a native
+                    // called from inside a host call is standing on one.
+                    KestValue *was_top = rt->running_top;
+                    rt->running_top =
+                        base + callee->slot_count + callee->stack_needed;
+                    bool went = callee->native(rt, base, &gave);
+                    rt->running_top = was_top;
+                    rt->frame_count--;
+                    frame = &rt->frames[rt->frame_count - 1];
+                    if (!went) {
+                        return false;
+                    }
+                    top = base + gave;
+                    break;
+                }
                 frame = &rt->frames[rt->frame_count++];
                 FRESH(frame);
                 frame->chunk = callee;
                 frame->ip = callee->code;
                 frame->base = base;
                 frame->said_at = 0;
-                uint16_t gave = 0;
-                // Where the machine's stack has got to, for the collector: a
-                // body written in C keeps what it is working on in the frame
-                // it was handed, and a walk of the stack has to reach the end
-                // of it. What it was is put back, because a native called
-                // from inside a host call is standing on one.
-                KestValue *was_top = rt->running_top;
-                rt->running_top = base + callee->slot_count +
-                                  callee->stack_needed;
-                bool went = callee->native(rt, base, &gave);
-                rt->running_top = was_top;
-                rt->frame_count--;
-                frame = &rt->frames[rt->frame_count - 1];
-                if (!went) {
+                ip = callee->code;
+                mine = base;
+                constants = callee->constants;
+                top = base + callee->slot_count;
+                NEXT;
+            }
+
+        case KEST_OP_CALL_VALUE:
+            THREADED(KEST_OP_CALL_VALUE) {
+                SPEND();
+                uint16_t argument_slots = READ_U16();
+                uint16_t coming_back = READ_U16();
+                int64_t which = (--top)->integer;
+                // The three questions in front of this call, asked in the one
+                // place a body the host's compiler compiled asks them too.
+                const char *code = NULL;
+                char said[160];
+                const char *suggest = NULL;
+                const char *fault = NULL;
+                const KestChunk *callee = the_function(
+                    module, frame->chunk, which, argument_slots, coming_back,
+                    &code, said, sizeof said, &suggest, &fault);
+                if (callee == NULL) {
+                    fail(vmp, frame, instruction, code, "%s", said);
+                    if (suggest != NULL) {
+                        kest_diags_suggest(vmp->diags, "%s", suggest);
+                    }
+                    if (fault != NULL) {
+                        kest_diags_fault(vmp->diags, fault);
+                    }
                     return false;
                 }
-                top = base + gave;
-                break;
-            }
-            frame = &rt->frames[rt->frame_count++];
-            FRESH(frame);
-            frame->chunk = callee;
-            frame->ip = callee->code;
-            frame->base = base;
-            frame->said_at = 0;
-            ip = callee->code;
-            mine = base;
-            constants = callee->constants;
-            top = base + callee->slot_count;
-            NEXT;
-        }
 
-        case KEST_OP_CALL_VALUE: THREADED(KEST_OP_CALL_VALUE) {
-            SPEND();
-            uint16_t argument_slots = READ_U16();
-            uint16_t coming_back = READ_U16();
-            int64_t which = (--top)->integer;
-            // The three questions in front of this call, asked in the one
-            // place a body the host's compiler compiled asks them too.
-            const char *code = NULL;
-            char said[160];
-            const char *suggest = NULL;
-            const char *fault = NULL;
-            const KestChunk *callee =
-                the_function(module, frame->chunk, which, argument_slots,
-                             coming_back, &code, said, sizeof said, &suggest,
-                             &fault);
-            if (callee == NULL) {
-                fail(vmp, frame, instruction, code, "%s", said);
-                if (suggest != NULL) {
-                    kest_diags_suggest(vmp->diags, "%s", suggest);
+                if (rt->frame_count == rt->call_depth) {
+                    fail(vmp, frame, instruction, "K0602",
+                         "calls nest more than %u deep", rt->call_depth);
+                    what_it_needed(vmp, rt, entry);
+                    return false;
                 }
-                if (fault != NULL) {
-                    kest_diags_fault(vmp->diags, fault);
+                KestValue *base = top - argument_slots;
+                if (base + callee->slot_count + callee->stack_needed >
+                    rt->limit) {
+                    // The same sentence in front of the other call instruction,
+                    // so the two read alike.
+                    fail(
+                        vmp, frame, instruction, "K0602",
+                        "this call wants more than the %u slots of stack there "
+                        "are",
+                        rt->stack_slots);
+                    what_it_needed(vmp, rt, entry);
+                    return false;
                 }
-                return false;
+
+                frame->ip = ip;
+                frame = &rt->frames[rt->frame_count++];
+                FRESH(frame);
+                frame->chunk = callee;
+                frame->ip = callee->code;
+                frame->base = base;
+                ip = callee->code;
+                mine = base;
+                constants = callee->constants;
+                top = base + callee->slot_count;
+                NEXT;
             }
 
-            if (rt->frame_count == rt->call_depth) {
-                fail(vmp, frame, instruction, "K0602",
-                     "calls nest more than %u deep", rt->call_depth);
-                what_it_needed(vmp, rt, entry);
-                return false;
+        case KEST_OP_CALL_HOST:
+            THREADED(KEST_OP_CALL_HOST) {
+                SPEND();
+                uint16_t index = READ_U16();
+                uint16_t argument_slots = READ_U16();
+                uint16_t result_slots = READ_U16();
+                OF_THE_MODULE(index, module->extern_count,
+                              "a door of the host");
+                KestValue *base = top - argument_slots;
+                // A host may call back in, and what it calls stands on frames
+                // this one is under: where this frame is has to be in the frame
+                // before the host runs.
+                frame->ip = ip;
+                rt->asked_at = instruction;
+                // And the budget, which is held in a register while this body
+                // runs and is nobody else's until it is put back. A host may
+                // call in again from in there: what that call could see was the
+                // budget minus this body's whole slice, so an outer call given
+                // three hundred steps took all three hundred and the call
+                // inside it was refused after fifty. Put back here and taken
+                // again below, so the number a reentrant call reads is the
+                // number that is left. A machine with no budget has nothing to
+                // put back, and the slice is only how soon it looks for a host
+                // asking it to stop, which is the same thousand instructions
+                // either side of a crossing: taking another after every one was
+                // a call a crossing.
+                if (rt->fuel_bounded) {
+                    rt->fuel_left += slice;
+                    slice = 0;
+                }
+                // And the crossing itself, which is the door a body the host's
+                // compiler compiled goes through as well: everything the
+                // boundary asks is asked in one place, and both engines cross
+                // the same way.
+                if (!kest_call_host(rt, index, base, argument_slots,
+                                    result_slots, KEST_WHERE_RUNNING)) {
+                    return false;
+                }
+                top = base + result_slots;
+                NEXT;
             }
-            KestValue *base = top - argument_slots;
-            if (base + callee->slot_count + callee->stack_needed > rt->limit) {
-                // The same sentence in front of the other call instruction,
-                // so the two read alike.
-                fail(vmp, frame, instruction, "K0602",
-                     "this call wants more than the %u slots of stack there "
-                     "are", rt->stack_slots);
-                what_it_needed(vmp, rt, entry);
-                return false;
-            }
-
-            frame->ip = ip;
-            frame = &rt->frames[rt->frame_count++];
-            FRESH(frame);
-            frame->chunk = callee;
-            frame->ip = callee->code;
-            frame->base = base;
-            ip = callee->code;
-            mine = base;
-            constants = callee->constants;
-            top = base + callee->slot_count;
-            NEXT;
-        }
-
-        case KEST_OP_CALL_HOST: THREADED(KEST_OP_CALL_HOST) {
-            SPEND();
-            uint16_t index = READ_U16();
-            uint16_t argument_slots = READ_U16();
-            uint16_t result_slots = READ_U16();
-            OF_THE_MODULE(index, module->extern_count, "a door of the host");
-            KestValue *base = top - argument_slots;
-            // A host may call back in, and what it calls stands on frames
-            // this one is under: where this frame is has to be in the frame
-            // before the host runs.
-            frame->ip = ip;
-            rt->asked_at = instruction;
-            // And the budget, which is held in a register while this body
-            // runs and is nobody else's until it is put back. A host may call
-            // in again from in there: what that call could see was the budget
-            // minus this body's whole slice, so an outer call given three
-            // hundred steps took all three hundred and the call inside it was
-            // refused after fifty. Put back here and taken again below, so
-            // the number a reentrant call reads is the number that is left.
-            // A machine with no budget has nothing to put back,
-            // and the slice is only how soon it looks for a host asking it
-            // to stop, which is the same thousand instructions either side
-            // of a crossing: taking another after every one was a call a
-            // crossing.
-            if (rt->fuel_bounded) {
-                rt->fuel_left += slice;
-                slice = 0;
-            }
-            // And the crossing itself, which is the door a body the host's
-            // compiler compiled goes through as well: everything the boundary
-            // asks is asked in one place, and both engines cross the same
-            // way.
-            if (!kest_call_host(rt, index, base, argument_slots, result_slots,
-                                KEST_WHERE_RUNNING)) {
-                return false;
-            }
-            top = base + result_slots;
-            NEXT;
-        }
 
         // A breakpoint. The machine stops where it is: the frame keeps the
         // instruction the byte was written over and where the operand stack
         // had got to, so `kest_resume` picks both up and carries on. Nothing
         // is unwound and nothing is said -- a stop is not a refusal.
-        case KEST_OP_STOP: THREADED(KEST_OP_STOP) {
-            // Unless the run this is in is one the host made from inside a
-            // call of its own. A stop keeps the frames where they are so that
-            // `kest_resume` can carry on, and there is nothing to carry on
-            // into here: what this run is standing under is a C frame of the
-            // host's, and by the time a host could ask, that function has
-            // returned. So it is a refusal, said where it happened, rather
-            // than a stop that leaves the call the host is in the middle of
-            // answering a number that is nothing.
-            if (rt->running_top != NULL) {
-                fail(vmp, frame, instruction, "K0708",
-                     "this machine cannot stop in a call the host made back "
-                     "in");
-                kest_diags_suggest(rt->diags,
-                                   "take the breakpoint out of what a bound "
+        case KEST_OP_STOP:
+            THREADED(KEST_OP_STOP) {
+                // Unless the run this is in is one the host made from inside a
+                // call of its own. A stop keeps the frames where they are so
+                // that `kest_resume` can carry on, and there is nothing to
+                // carry on into here: what this run is standing under is a C
+                // frame of the host's, and by the time a host could ask, that
+                // function has returned. So it is a refusal, said where it
+                // happened, rather than a stop that leaves the call the host is
+                // in the middle of answering a number that is nothing.
+                if (rt->running_top != NULL) {
+                    fail(
+                        vmp, frame, instruction, "K0708",
+                        "this machine cannot stop in a call the host made back "
+                        "in");
+                    kest_diags_suggest(
+                        rt->diags, "take the breakpoint out of what a bound "
                                    "function calls, or write one in the call "
                                    "the host makes from outside");
-                return false;
-            }
-            frame->ip = instruction;
-            rt->stopped_top = top;
-            rt->stopped_at = instruction;
-            rt->running_frames = 0;
-            rt->running_top = NULL;
-            return false;
-        }
-
-        case KEST_OP_RETURN: THREADED(KEST_OP_RETURN) {
-            uint16_t count = READ_U16();
-#if KEST_CHECKED
-            // And what a body leaves behind when it goes. The guard at the top
-            // of this loop says a body never went deeper than it was given;
-            // this says it comes back with nothing over, which is the other
-            // end of the same count and the one the machine can be sure of
-            // rather than bounded by. A body that leaks an operand is a body
-            // whose every statement after the leak worked at the wrong depth,
-            // and nothing was wrong enough to be noticed: `return` moves the
-            // result to the bottom of the frame either way, so the caller is
-            // handed the right answer out of a body that lost count, so the
-            // machine asks.
-            rt->guarded++;
-            if (top - count != mine + frame->chunk->slot_count) {
-                fail(vmp, frame, instruction, "K0655",
-                     "this body gives back %u slot(s) and has %d more than it "
-                     "was given",
-                     count,
-                     (int)(top - count - mine - frame->chunk->slot_count));
-                kest_diags_fault(vmp->diags,
-                                 "the compiler's count of the operand stack "
-                                 "and what the machine moved disagree");
-                return false;
-            }
-            // And what is in what it hands back. A chunk says what it gives
-            // the same way it says what it takes -- a layout, a piece a slot
-            // -- and the slots a call hands over are held to the callee's.
-            // This is the other end of the same journey, and the last of the
-            // four things the boundary asks a host that the machine did not
-            // ask itself. A value with a tag in it is left out, because what a
-            // case carries sits where its own case says and is not a run.
-            if (frame->chunk->returns_value && count > 0) {
-                rt->guarded++;
-                const KestLayout *given =
-                    &module->layouts[frame->chunk->gives];
-                uint16_t slot = 0;
-                for (uint16_t piece = 0;
-                     !given->tagged && piece < given->count && slot < count;
-                     piece++,
-                              slot = (uint16_t)(slot +
-                                                (given->pieces[piece - 1]
-                                                         .kind == KEST_L_TEXT
-                                                     ? 2
-                                                     : 1))) {
-                    if (fits_the_piece(given->pieces[piece].kind,
-                                       (top - count)[slot])) {
-                        continue;
-                    }
-                    fail(vmp, frame, instruction, "K0655",
-                         "this gives back something in slot %u that no `%s` "
-                         "holds",
-                         slot, the_width_of(given->pieces[piece].kind));
-                    kest_diags_fault(vmp->diags,
-                                     "what the compiler put in a frame and "
-                                     "what the body gives back disagree");
                     return false;
                 }
-            }
-#endif
-            // The result lands where the arguments were, which is where the
-            // caller left room for it. One slot is most answers, and moved
-            // without a call into the C library.
-            KestValue *base = mine;
-            if (count == 1) {
-                base[0] = top[-1];
-            } else {
-                memmove(base, top - count, sizeof(KestValue) * count);
+                frame->ip = instruction;
+                rt->stopped_top = top;
+                rt->stopped_at = instruction;
+                rt->running_frames = 0;
+                rt->running_top = NULL;
+                return false;
             }
 
-            rt->frame_count--;
-            if (rt->frame_count == under) {
-                *returned = count;
-                // What this run took and did not spend. Without this a host
-                // that gives a thousand and calls something that runs ten is
-                // told it has nothing left.
-                if (rt->fuel_bounded) {
-                    rt->fuel_left += slice;
+        case KEST_OP_RETURN:
+            THREADED(KEST_OP_RETURN) {
+                uint16_t count = READ_U16();
+#if KEST_CHECKED
+                // And what a body leaves behind when it goes. The guard at the
+                // top of this loop says a body never went deeper than it was
+                // given; this says it comes back with nothing over, which is
+                // the other end of the same count and the one the machine can
+                // be sure of rather than bounded by. A body that leaks an
+                // operand is a body whose every statement after the leak worked
+                // at the wrong depth, and nothing was wrong enough to be
+                // noticed: `return` moves the result to the bottom of the frame
+                // either way, so the caller is handed the right answer out of a
+                // body that lost count, so the machine asks.
+                rt->guarded++;
+                if (top - count != mine + frame->chunk->slot_count) {
+                    fail(vmp, frame, instruction, "K0655",
+                         "this body gives back %u slot(s) and has %d more than "
+                         "it "
+                         "was given",
+                         count,
+                         (int)(top - count - mine - frame->chunk->slot_count));
+                    kest_diags_fault(
+                        vmp->diags, "the compiler's count of the operand stack "
+                                    "and what the machine moved disagree");
+                    return false;
                 }
-                return true;
+                // And what is in what it hands back. A chunk says what it gives
+                // the same way it says what it takes -- a layout, a piece a
+                // slot
+                // -- and the slots a call hands over are held to the callee's.
+                // This is the other end of the same journey, and the last of
+                // the four things the boundary asks a host that the machine did
+                // not ask itself. A value with a tag in it is left out, because
+                // what a case carries sits where its own case says and is not a
+                // run.
+                if (frame->chunk->returns_value && count > 0) {
+                    rt->guarded++;
+                    const KestLayout *given =
+                        &module->layouts[frame->chunk->gives];
+                    uint16_t slot = 0;
+                    for (uint16_t piece = 0;
+                         !given->tagged && piece < given->count && slot < count;
+                         piece++, slot = (uint16_t)(slot +
+                                                    (given->pieces[piece - 1]
+                                                                 .kind ==
+                                                             KEST_L_TEXT
+                                                         ? 2
+                                                         : 1))) {
+                        if (fits_the_piece(given->pieces[piece].kind,
+                                           (top - count)[slot])) {
+                            continue;
+                        }
+                        fail(
+                            vmp, frame, instruction, "K0655",
+                            "this gives back something in slot %u that no `%s` "
+                            "holds",
+                            slot, the_width_of(given->pieces[piece].kind));
+                        kest_diags_fault(vmp->diags,
+                                         "what the compiler put in a frame and "
+                                         "what the body gives back disagree");
+                        return false;
+                    }
+                }
+#endif
+                // The result lands where the arguments were, which is where the
+                // caller left room for it. One slot is most answers, and moved
+                // without a call into the C library.
+                KestValue *base = mine;
+                if (count == 1) {
+                    base[0] = top[-1];
+                } else {
+                    memmove(base, top - count, sizeof(KestValue) * count);
+                }
+
+                rt->frame_count--;
+                if (rt->frame_count == under) {
+                    *returned = count;
+                    // What this run took and did not spend. Without this a host
+                    // that gives a thousand and calls something that runs ten
+                    // is told it has nothing left.
+                    if (rt->fuel_bounded) {
+                        rt->fuel_left += slice;
+                    }
+                    return true;
+                }
+                frame = &rt->frames[rt->frame_count - 1];
+                ip = frame->ip;
+                mine = frame->base;
+                constants = frame->chunk->constants;
+                top = base + count;
+                NEXT;
             }
-            frame = &rt->frames[rt->frame_count - 1];
-            ip = frame->ip;
-            mine = frame->base;
-            constants = frame->chunk->constants;
-            top = base + count;
-            NEXT;
-        }
 #if KEST_THREADED
         // A byte no instruction is, which the switch would step over.
         thread_nothing:
@@ -6714,8 +6969,8 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 // worlds of one program rather than two programs counting from one.
 KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
                               const KestHost *host, KestDiags *diags,
-                              const KestLimits *limits,
-                              const KestWalk *walked, bool untrusted) {
+                              const KestLimits *limits, const KestWalk *walked,
+                              bool untrusted) {
     // The machine's own arena, made by whoever asked for the machine: the
     // report is in it and the report is written before there is a machine to
     // hold it, so the two cannot be made in that order here.
@@ -6778,10 +7033,9 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
     // program's.
     if (getenv("KEST_DEEP") != NULL) {
         rt->ran_checked = KEST_ARENA_ARRAY(own, uint64_t, KEST_OP_RETURN + 1);
-        rt->pairs_checked =
-            KEST_ARENA_ARRAY(own, uint64_t,
-                             ((size_t)KEST_OP_RETURN + 1) *
-                                 ((size_t)KEST_OP_RETURN + 1));
+        rt->pairs_checked = KEST_ARENA_ARRAY(own, uint64_t,
+                                             ((size_t)KEST_OP_RETURN + 1) *
+                                                 ((size_t)KEST_OP_RETURN + 1));
     }
 #endif
     if (rt->host_measured && reached + rt->host_slots > 0) {
@@ -6804,9 +7058,8 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
         // program whose loop is its widest body is smaller by the first, and
         // one whose loop is narrow and whose bodies are many is smaller by
         // the second. Both are true, so the smaller is.
-        uint64_t a_turn_each =
-            (uint64_t)walked->off_the_turns +
-            (uint64_t)walked->in_a_turn * rt->call_depth;
+        uint64_t a_turn_each = (uint64_t)walked->off_the_turns +
+                               (uint64_t)walked->in_a_turn * rt->call_depth;
         if (walked->in_a_turn > 0 && a_turn_each < a_frame_each) {
             a_frame_each = a_turn_each;
         }
@@ -6819,8 +7072,7 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
                           : limits->stack_slots;
     rt->stack = KEST_ARENA_ARRAY(own, KestValue, rt->stack_slots);
     rt->frames = KEST_ARENA_ARRAY(own, Frame, rt->call_depth);
-    rt->natives =
-        KEST_ARENA_ARRAY(own, KestNative, module->extern_count + 1);
+    rt->natives = KEST_ARENA_ARRAY(own, KestNative, module->extern_count + 1);
     rt->contexts = KEST_ARENA_ARRAY(own, void *, module->extern_count + 1);
     rt->said_extern = KEST_ARENA_ARRAY(own, uint8_t, module->extern_count + 1);
     rt->said_copy = KEST_ARENA_ARRAY(own, uint8_t, module->count + 1);
@@ -6903,16 +7155,15 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
     bool unbound = false;
     rt->untrusted = untrusted;
     for (uint32_t i = 0; i < module->extern_count; i++) {
-        rt->natives[i] =
-            host == NULL ? NULL
-                         : kest_host_find(host, module->externs[i].name,
-                                          &rt->contexts[i]);
+        rt->natives[i] = host == NULL
+                             ? NULL
+                             : kest_host_find(host, module->externs[i].name,
+                                              &rt->contexts[i]);
         if (rt->natives[i] == NULL) {
             kest_diags_in(diags, module->externs[i].source);
-            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0606",
-                           module->externs[i].span,
-                           "the host does not provide `%s`",
-                           module->externs[i].name);
+            kest_diags_add(
+                diags, KEST_SEVERITY_ERROR, "K0606", module->externs[i].span,
+                "the host does not provide `%s`", module->externs[i].name);
             unbound = true;
         } else if (untrusted &&
                    !kest_host_opened(host, module->externs[i].name)) {
@@ -7009,8 +7260,7 @@ bool kest_runtime_free(KestRuntime *runtime) {
     if (getenv("KEST_DEEP") != NULL && runtime->went_slots > 0) {
         fprintf(stderr, "run %s asked %u slots %u frames went %u %u\n",
                 runtime->had_least ? "least" : "bound", runtime->stack_slots,
-                runtime->call_depth, runtime->went_slots,
-                runtime->went_frames);
+                runtime->call_depth, runtime->went_slots, runtime->went_frames);
         // And what it ran on the way, the ones it ran at all and in the order
         // the machine holds them, because an order chosen here would be a
         // second thing to keep in step with the list. Whoever reads this can
@@ -7024,8 +7274,8 @@ bool kest_runtime_free(KestRuntime *runtime) {
             uint32_t widths[32];
             uint64_t taken[32];
             uint64_t kinds[4];
-            uint32_t rungs = kest_ground_widths(runtime->ground, widths, taken,
-                                                32, kinds);
+            uint32_t rungs =
+                kest_ground_widths(runtime->ground, widths, taken, 32, kinds);
             fprintf(stderr,
                     "took plain %llu array %llu elems %llu store %llu\n",
                     (unsigned long long)kinds[0], (unsigned long long)kinds[1],
@@ -7053,9 +7303,8 @@ bool kest_runtime_free(KestRuntime *runtime) {
                 (unsigned long long)runtime->moved_payload,
                 (unsigned long long)runtime->moved_text,
                 (unsigned long long)runtime->moved_shuffled);
-        for (uint32_t op = 0; runtime->ran_checked != NULL &&
-                              op <= KEST_OP_RETURN;
-             op++) {
+        for (uint32_t op = 0;
+             runtime->ran_checked != NULL && op <= KEST_OP_RETURN; op++) {
             if (runtime->ran_checked[op] > 0) {
                 fprintf(stderr, "ran %s %llu\n", kest_op_name((uint8_t)op),
                         (unsigned long long)runtime->ran_checked[op]);
@@ -7069,9 +7318,9 @@ bool kest_runtime_free(KestRuntime *runtime) {
              first++) {
             for (uint32_t then = 0; then <= KEST_OP_RETURN; then++) {
                 uint64_t many =
-                    runtime->pairs_checked[(size_t)first *
-                                               (KEST_OP_RETURN + 1) +
-                                           then];
+                    runtime
+                        ->pairs_checked[(size_t)first * (KEST_OP_RETURN + 1) +
+                                        then];
                 if (many > 0) {
                     fprintf(stderr, "pair %s %s %llu\n",
                             kest_op_name((uint8_t)first),
@@ -7111,8 +7360,7 @@ void kest_fuel_set(KestRuntime *runtime, uint64_t instructions) {
     }
     runtime->fuel_given = instructions;
     runtime->fuel_bounded = instructions != KEST_FUEL_UNLIMITED;
-    runtime->fuel_left =
-        runtime->fuel_bounded ? instructions : UINT64_MAX;
+    runtime->fuel_left = runtime->fuel_bounded ? instructions : UINT64_MAX;
     // Giving fuel is what takes a cancel back. The two are one counter and a
     // flag, so a machine given fuel with the flag still set would run one
     // instruction and stop again saying somebody had asked it to.
@@ -7127,8 +7375,8 @@ void kest_fuel_spend(KestRuntime *runtime, uint64_t work) {
     // spending one currency: a unit for the crossing, and one for every
     // sixty-four bytes or elements of what the door did.
     uint64_t owed = 1 + work / FUEL_PER_UNIT;
-    runtime->fuel_left = runtime->fuel_left > owed ? runtime->fuel_left - owed
-                                                  : 0;
+    runtime->fuel_left =
+        runtime->fuel_left > owed ? runtime->fuel_left - owed : 0;
 }
 
 uint64_t kest_fuel_left(const KestRuntime *runtime) {
@@ -7276,8 +7524,7 @@ uint8_t *kest_code_of(KestRuntime *runtime, int32_t entry, uint32_t *count) {
     return chunk->code;
 }
 
-int64_t kest_came_from(const KestRuntime *runtime, int32_t entry,
-                       uint32_t at) {
+int64_t kest_came_from(const KestRuntime *runtime, int32_t entry, uint32_t at) {
     if (runtime == NULL || entry < 0 ||
         (uint32_t)entry >= runtime->module->count) {
         return -1;
@@ -7306,8 +7553,7 @@ bool kest_locate(const KestRuntime *runtime, int32_t entry, uint32_t offset,
     // The file the body was compiled from, which is the one a refusal while
     // it runs is reported against, counted the way every message counts.
     const KestSource *source = runtime->module->functions[entry]->source;
-    if (source == NULL || source->line_count == 0 ||
-        offset > source->length) {
+    if (source == NULL || source->line_count == 0 || offset > source->length) {
         return false;
     }
     kest_source_locate(source, offset, line, column);
@@ -7405,8 +7651,8 @@ static KestProved frame_proved(const KestRuntime *runtime, uint32_t deep,
     if (in < 0 || at < 0) {
         return KEST_PROVED_UNKNOWN;
     }
-    return kest_module_proved(runtime->module, (uint32_t)in, (uint32_t)at,
-                              slot, runtime->own);
+    return kest_module_proved(runtime->module, (uint32_t)in, (uint32_t)at, slot,
+                              runtime->own);
 }
 
 bool kest_frame_written(const KestRuntime *runtime, uint32_t deep,
@@ -7708,8 +7954,7 @@ bool kest_scratch_rewind(KestRuntime *runtime, uint32_t mark) {
     KestSpan nowhere = {0, 0};
     kest_diags_in(runtime->diags, NULL);
     kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
-                   "this machine has no mark %u to put the heap back to",
-                   mark);
+                   "this machine has no mark %u to put the heap back to", mark);
     kest_diags_suggest(runtime->diags,
                        "a mark is answered by `kest_scratch_mark` and is used "
                        "once; a heap thrown away takes every one of them");
@@ -7817,7 +8062,8 @@ static bool explain_entry(KestRuntime *runtime, const char *name) {
         kest_diags_in(runtime->diags, module->externs[i].source);
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0614",
                        module->externs[i].span,
-                       "`%s` is a function the program asks the host for", name);
+                       "`%s` is a function the program asks the host for",
+                       name);
         kest_diags_suggest(runtime->diags,
                            "this one crosses the other way: the host binds it "
                            "and the program calls it");
@@ -7951,7 +8197,8 @@ int32_t kest_entry(KestRuntime *runtime, const char *name) {
     const char *alias = runtime->module->alias;
     size_t prefix = alias == NULL ? 0 : strlen(alias);
     char qualified[256];
-    bool composed = prefix != 0 && prefix + strlen(name) + 2 <= sizeof(qualified);
+    bool composed =
+        prefix != 0 && prefix + strlen(name) + 2 <= sizeof(qualified);
     if (composed) {
         memcpy(qualified, alias, prefix);
         qualified[prefix] = '.';
@@ -8065,7 +8312,8 @@ static bool missing_text(const KestType *type, const KestValue *slots) {
         }
         const KestVariantType *variant = &type->cases[which];
         for (uint32_t p = 0; p < variant->payload_count; p++) {
-            if (missing_text(variant->payload[p], slots + variant->offsets[p])) {
+            if (missing_text(variant->payload[p],
+                             slots + variant->offsets[p])) {
                 return true;
             }
         }
@@ -8211,8 +8459,8 @@ const KestLayout *kest_frame_layout(KestRuntime *runtime, int32_t entry,
 // one and what comes back in the other, and the words are what differ.
 static bool frame_agrees(KestRuntime *runtime, const KestChunk *chunk,
                          const uint16_t *which, uint32_t layouts,
-                         const uint8_t *kinds, uint32_t count,
-                         const char *said, const char *ask) {
+                         const uint8_t *kinds, uint32_t count, const char *said,
+                         const char *ask) {
     KestSpan nowhere = {0, 0};
     const char *name = chunk->wrote;
 
@@ -8244,13 +8492,12 @@ static bool frame_agrees(KestRuntime *runtime, const KestChunk *chunk,
         const KestLayout *layout = &runtime->module->layouts[which[i]];
         for (uint16_t p = 0; p < layout->count; p++) {
             if (kinds[at] != layout->pieces[p].kind) {
-                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634",
-                               nowhere,
-                               "`%s` %s `%s` in slot %u and this host says "
-                               "`%s`",
-                               name, said,
-                               kest_scalar_name(layout->pieces[p].kind), at,
-                               kest_scalar_name(kinds[at]));
+                kest_diags_add(
+                    runtime->diags, KEST_SEVERITY_ERROR, "K0634", nowhere,
+                    "`%s` %s `%s` in slot %u and this host says "
+                    "`%s`",
+                    name, said, kest_scalar_name(layout->pieces[p].kind), at,
+                    kest_scalar_name(kinds[at]));
                 // The words are the caller's and the numbers are none, which
                 // is the one shape a message can have that says nothing about
                 // what to put where.
@@ -8314,20 +8561,20 @@ static const KestChunk *frame_of(KestRuntime *runtime, int32_t entry,
     return runtime->module->functions[entry];
 }
 
-bool kest_frame_fills(KestRuntime *runtime, int32_t entry,
-                      const uint8_t *kinds, uint32_t count) {
+bool kest_frame_fills(KestRuntime *runtime, int32_t entry, const uint8_t *kinds,
+                      uint32_t count) {
     const KestChunk *chunk = frame_of(runtime, entry, kinds, count);
     if (chunk == NULL) {
         return false;
     }
-    return frame_agrees(runtime, chunk, chunk->takes, chunk->takes_count,
-                        kinds, count, "takes",
+    return frame_agrees(runtime, chunk, chunk->takes, chunk->takes_count, kinds,
+                        count, "takes",
                         "`kest_frame_layout` says what each argument is made "
                         "of, a piece a slot");
 }
 
-bool kest_frame_reads(KestRuntime *runtime, int32_t entry,
-                      const uint8_t *kinds, uint32_t count) {
+bool kest_frame_reads(KestRuntime *runtime, int32_t entry, const uint8_t *kinds,
+                      uint32_t count) {
     const KestChunk *chunk = frame_of(runtime, entry, kinds, count);
     if (chunk == NULL) {
         return false;
@@ -8343,8 +8590,7 @@ bool kest_frame_reads(KestRuntime *runtime, int32_t entry,
 }
 
 bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
-                     uint32_t slots, const char *const *words,
-                     uint32_t count) {
+                     uint32_t slots, const char *const *words, uint32_t count) {
     KestSpan nowhere = {0, 0};
     const KestChunk *chunk = frame_of(runtime, entry, NULL, 0);
     if (chunk == NULL) {
@@ -8376,8 +8622,7 @@ bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
 
     uint32_t at = 0;
     for (uint32_t i = 0; i < count; i++) {
-        const KestLayout *layout =
-            &runtime->module->layouts[chunk->takes[i]];
+        const KestLayout *layout = &runtime->module->layouts[chunk->takes[i]];
         const KestType *type = layout->type;
         const char *why = NULL;
         // Text is the one of them a host cannot hand over by pointing at its
@@ -8391,8 +8636,8 @@ bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
         } else if (!kest_value_read(runtime->diags->arena, words[i], type,
                                     &frame[at], &why)) {
             kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0635",
-                           nowhere, "`%s` %s, and `%s` takes it", words[i],
-                           why, name);
+                           nowhere, "`%s` %s, and `%s` takes it", words[i], why,
+                           name);
             kest_diags_suggest(runtime->diags,
                                "a word is read as the type the declaration "
                                "says, the way the language writes one");
@@ -8478,8 +8723,8 @@ bool kest_keeps(KestRuntime *runtime, KestValue kept) {
     }
     if (runtime->held_count == runtime->held_room) {
         uint32_t bigger = runtime->held_room == 0 ? 8 : runtime->held_room * 2;
-        KestValue *grown = realloc(runtime->held_by_host,
-                                   (size_t)bigger * sizeof(KestValue));
+        KestValue *grown =
+            realloc(runtime->held_by_host, (size_t)bigger * sizeof(KestValue));
         if (grown == NULL) {
             runtime->ran_out++;
             KestSpan nowhere = {0, 0};
@@ -8698,15 +8943,15 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
             // so the walk counts the slots as it goes.
             uint16_t slot = 0;
             for (uint16_t p = 0; p < layout->count; p++) {
-                if (!fits_the_piece(layout->pieces[p].kind,
-                                    frame[at + slot])) {
+                if (!fits_the_piece(layout->pieces[p].kind, frame[at + slot])) {
                     narrower_than_that(runtime, name, at + slot,
                                        layout->pieces[p].kind,
                                        frame[at + slot]);
                     return false;
                 }
-                slot = (uint16_t)(slot +
-                          (layout->pieces[p].kind == KEST_L_TEXT ? 2 : 1));
+                slot =
+                    (uint16_t)(slot +
+                               (layout->pieces[p].kind == KEST_L_TEXT ? 2 : 1));
             }
             at += layout->slots;
             continue;
@@ -8719,8 +8964,8 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
 
     // The arguments go where the callee's slots are, which is where its result
     // will be, which is where the caller's frame already holds them.
-    KestValue *floor = runtime->running_top != NULL ? runtime->running_top
-                                                    : runtime->stack;
+    KestValue *floor =
+        runtime->running_top != NULL ? runtime->running_top : runtime->stack;
     // And whether there is anywhere to put them, asked before a byte moves.
     // `execute` asks the same thing and used to be the only one that did, so a
     // call wider than the stack copied its arguments past the end and then
@@ -8806,7 +9051,9 @@ static void *the_handle(KestRuntime *rt, KestValue handle, uint32_t what,
 
 unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,
                             int64_t index, uint16_t offset, uint32_t where) {
-    Array *array = runtime == NULL ? NULL : the_handle(runtime, handle, KEST_IS_ARRAY, "an array", where);
+    Array *array = runtime == NULL ? NULL
+                                   : the_handle(runtime, handle, KEST_IS_ARRAY,
+                                                "an array", where);
     if (array == NULL) {
         return NULL;
     }
@@ -8824,7 +9071,9 @@ unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,
 
 bool kest_elem_count(KestRuntime *runtime, KestValue handle, uint32_t where,
                      int64_t *into) {
-    Array *array = runtime == NULL ? NULL : the_handle(runtime, handle, KEST_IS_ARRAY, "an array", where);
+    Array *array = runtime == NULL ? NULL
+                                   : the_handle(runtime, handle, KEST_IS_ARRAY,
+                                                "an array", where);
     if (array == NULL || into == NULL) {
         return false;
     }
@@ -9033,11 +9282,10 @@ bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
         // host's compiler compiled cannot, because entering one raises
         // `running_top` to the top of its frame so that the collector reaches
         // what it is holding. The frame says it either way.
-        const KestValue *bottom =
-            rt->frame_count > rt->running_frames
-                ? rt->frames[rt->running_frames].base
-            : rt->running_top != NULL ? rt->running_top
-                                      : rt->stack;
+        const KestValue *bottom = rt->frame_count > rt->running_frames
+                                      ? rt->frames[rt->running_frames].base
+                                  : rt->running_top != NULL ? rt->running_top
+                                                            : rt->stack;
         uint32_t deep = rt->frame_count - rt->running_frames;
         uint32_t wide = (uint32_t)(top - bottom);
         if (deep > rt->host_frames || wide > rt->host_slots) {
@@ -9214,7 +9462,6 @@ static void kest_native_left(KestRuntime *runtime, uint32_t was) {
     }
 }
 
-
 // The array operations a body the host's compiler compiled reaches, each one
 // what the instruction of the same name does and each one called by that
 // instruction as well: `push` is one answer, and two would be two the day
@@ -9297,11 +9544,10 @@ bool kest_region_close(KestRuntime *rt, int64_t was, uint32_t where) {
     return true;
 }
 
-
 bool kest_array_new(KestRuntime *rt, uint16_t layout, int64_t count,
                     const KestValue *fill, uint32_t where, KestValue *into) {
-    if (rt == NULL || rt->module == NULL || layout >= rt->module->layout_count ||
-        into == NULL) {
+    if (rt == NULL || rt->module == NULL ||
+        layout >= rt->module->layout_count || into == NULL) {
         return false;
     }
     const KestLayout *what = &rt->module->layouts[layout];
@@ -9345,7 +9591,6 @@ bool kest_array_new(KestRuntime *rt, uint16_t layout, int64_t count,
     return true;
 }
 
-
 // A run of elements the host lent, which a program may read and write and may
 // not make longer or shorter: what a host lends is as long as the host said,
 // and growing one would move the elements somewhere the host does not know
@@ -9364,7 +9609,8 @@ static bool it_is_lent(KestRuntime *rt, const Array *array, uint32_t where,
 
 bool kest_array_push(KestRuntime *rt, KestValue handle, uint16_t layout,
                      const KestValue *value, uint32_t where) {
-    if (rt == NULL || rt->module == NULL || layout >= rt->module->layout_count) {
+    if (rt == NULL || rt->module == NULL ||
+        layout >= rt->module->layout_count) {
         return false;
     }
     Array *array = the_handle(rt, handle, KEST_IS_ARRAY, "an array", where);
@@ -9397,8 +9643,8 @@ bool kest_array_push(KestRuntime *rt, KestValue handle, uint16_t layout,
             (((Elems *)(void *)grown) - 1)->places = capacity;
         }
         if (grown == NULL) {
-            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt, "an array",
-                               array->length, what->size, capacity);
+            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt,
+                               "an array", array->length, what->size, capacity);
             return false;
         }
         if (grown != was) {
@@ -9416,7 +9662,6 @@ bool kest_array_push(KestRuntime *rt, KestValue handle, uint16_t layout,
     array->length++;
     return true;
 }
-
 
 // Room for what is coming, in the one thing that has room or the other: a
 // store is made with room by `store(n)` and an array by `array(n, v)`, and
@@ -9439,8 +9684,8 @@ bool kest_array_room(KestRuntime *rt, KestValue handle, uint16_t layout,
         }
         if (wanted > (int64_t)store->capacity &&
             !room_for(rt, NULL, store, (uint32_t)wanted)) {
-            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt, "a store",
-                               store->used,
+            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt,
+                               "a store", store->used,
                                (uint32_t)(sizeof(KestValue) * store->stride),
                                (uint32_t)wanted);
             return false;
@@ -9465,8 +9710,8 @@ bool kest_array_room(KestRuntime *rt, KestValue handle, uint16_t layout,
         uint32_t capacity = (uint32_t)wanted;
         unsigned char *grown = elements_grown(rt, NULL, array, what, capacity);
         if (grown == NULL) {
-            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt, "an array",
-                               array->length, what->size, capacity);
+            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt,
+                               "an array", array->length, what->size, capacity);
             return false;
         }
         array->bytes = grown;
@@ -9519,7 +9764,8 @@ bool kest_array_pop(KestRuntime *rt, KestValue handle, uint32_t where,
 // header, because a walk set off by taking the header would find elements
 // nothing names.
 bool kest_array_written(KestRuntime *rt, uint16_t layout, uint16_t count,
-                   const KestValue *values, uint32_t where, KestValue *into) {
+                        const KestValue *values, uint32_t where,
+                        KestValue *into) {
     if (rt == NULL || rt->module == NULL ||
         layout >= rt->module->layout_count || into == NULL) {
         return false;
@@ -9613,8 +9859,8 @@ bool kest_array_push_text(KestRuntime *rt, KestValue handle, uint16_t layout,
         unsigned char *was = array->bytes;
         unsigned char *grown = elements_grown(rt, NULL, array, what, capacity);
         if (grown == NULL) {
-            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt, "an array",
-                               array->length, what->size, capacity);
+            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt,
+                               "an array", array->length, what->size, capacity);
             return false;
         }
         capacity = all_it_holds(rt, grown, what, capacity);
@@ -9665,7 +9911,9 @@ bool kest_array_fit_text(KestRuntime *rt, KestValue handle, const char *bytes,
 
 bool kest_array_remove(KestRuntime *rt, KestValue handle, int64_t index,
                        uint32_t where) {
-    Array *array = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_ARRAY, "an array", where);
+    Array *array =
+        rt == NULL ? NULL
+                   : the_handle(rt, handle, KEST_IS_ARRAY, "an array", where);
     if (array == NULL) {
         return false;
     }
@@ -9680,14 +9928,12 @@ bool kest_array_remove(KestRuntime *rt, KestValue handle, int64_t index,
     // What is after it keeps its order, which is the whole difference between
     // this and a store: a position here means something.
     unsigned char *at = array->bytes + (size_t)index * array->stride;
-    MOVED(moved_shifted,
-          (uint64_t)(array->length - index - 1) * array->stride);
+    MOVED(moved_shifted, (uint64_t)(array->length - index - 1) * array->stride);
     memmove(at, at + array->stride,
             (size_t)(array->length - index - 1) * array->stride);
     array->length--;
     return true;
 }
-
 
 // A store and what a program asks of one: made, added to, read, written,
 // taken from, counted, walked. Each is what the instruction of that name
@@ -9707,8 +9953,8 @@ bool kest_store_new(KestRuntime *rt, uint16_t layout, int64_t room,
                               (long long)room);
     }
     uint32_t hands = rt->hands;
-    Store *store = in_hand(rt, take(rt, NULL, sizeof(Store),
-                                    KEST_GROUND_STORE));
+    Store *store =
+        in_hand(rt, take(rt, NULL, sizeof(Store), KEST_GROUND_STORE));
     if (store == NULL) {
         hands_off(rt, hands);
         no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
@@ -9734,10 +9980,11 @@ bool kest_store_new(KestRuntime *rt, uint16_t layout, int64_t room,
     return true;
 }
 
-
 bool kest_store_add(KestRuntime *rt, KestValue handle, uint16_t stride,
                     const KestValue *value, uint32_t where, int64_t *into) {
-    Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    Store *store =
+        rt == NULL ? NULL
+                   : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
     if (store == NULL || into == NULL) {
         return false;
     }
@@ -9758,10 +10005,10 @@ bool kest_store_add(KestRuntime *rt, KestValue handle, uint16_t stride,
         if (store->used == store->capacity && !grow_store(rt, NULL, store)) {
             // A store grows by four runs at once, so what it was reaching for
             // is wider than one of them.
-            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt, "a store",
-                               store->used, sizeof(KestValue) * store->stride,
-                               store->capacity == 0 ? 8
-                                                    : store->capacity * 2);
+            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt,
+                               "a store", store->used,
+                               sizeof(KestValue) * store->stride,
+                               store->capacity == 0 ? 8 : store->capacity * 2);
             return false;
         }
         index = store->used++;
@@ -9795,7 +10042,9 @@ bool kest_store_add(KestRuntime *rt, KestValue handle, uint16_t stride,
 
 bool kest_store_get(KestRuntime *rt, KestValue handle, int64_t which,
                     uint16_t stride, KestValue *into, uint32_t where) {
-    Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    Store *store =
+        rt == NULL ? NULL
+                   : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
     if (store == NULL || into == NULL) {
         return false;
     }
@@ -9816,7 +10065,9 @@ bool kest_store_get(KestRuntime *rt, KestValue handle, int64_t which,
 bool kest_store_set(KestRuntime *rt, KestValue handle, int64_t which,
                     uint16_t stride, const KestValue *value, uint32_t where,
                     bool *was) {
-    Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    Store *store =
+        rt == NULL ? NULL
+                   : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
     if (store == NULL || was == NULL) {
         return false;
     }
@@ -9831,7 +10082,9 @@ bool kest_store_set(KestRuntime *rt, KestValue handle, int64_t which,
 
 bool kest_store_remove(KestRuntime *rt, KestValue handle, int64_t which,
                        uint32_t where, bool *was) {
-    Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    Store *store =
+        rt == NULL ? NULL
+                   : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
     if (store == NULL || was == NULL) {
         return false;
     }
@@ -9856,7 +10109,9 @@ bool kest_store_remove(KestRuntime *rt, KestValue handle, int64_t which,
 
 bool kest_store_count(KestRuntime *rt, KestValue handle, uint32_t where,
                       int64_t *into) {
-    const Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    const Store *store =
+        rt == NULL ? NULL
+                   : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
     if (store == NULL || into == NULL) {
         return false;
     }
@@ -9866,7 +10121,9 @@ bool kest_store_count(KestRuntime *rt, KestValue handle, uint32_t where,
 
 bool kest_store_ref(KestRuntime *rt, KestValue handle, int64_t index,
                     uint32_t where, int64_t *into) {
-    const Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    const Store *store =
+        rt == NULL ? NULL
+                   : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
     if (store == NULL || into == NULL || index < 0) {
         return false;
     }
@@ -9876,7 +10133,9 @@ bool kest_store_ref(KestRuntime *rt, KestValue handle, int64_t index,
 
 bool kest_store_seek(KestRuntime *rt, KestValue handle, int64_t from,
                      uint32_t where, int64_t *found) {
-    const Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    const Store *store =
+        rt == NULL ? NULL
+                   : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
     if (store == NULL || found == NULL) {
         return false;
     }
@@ -9948,8 +10207,8 @@ bool kest_text_in(KestRuntime *runtime, const char *bytes, int64_t length,
 }
 
 bool kest_text_cut(KestRuntime *runtime, const char *bytes, int64_t length,
-                   int64_t from, int64_t count, uint32_t where,
-                   const char **at, int64_t *many) {
+                   int64_t from, int64_t count, uint32_t where, const char **at,
+                   int64_t *many) {
     if (runtime == NULL || at == NULL || many == NULL) {
         return false;
     }
@@ -9995,8 +10254,7 @@ bool kest_text_matches(KestRuntime *runtime, const char *bytes, int64_t length,
     }
     bool same = at + needle_length <= length;
     int64_t read = 0;
-    while (same && read < needle_length &&
-           bytes[at + read] == needle[read]) {
+    while (same && read < needle_length && bytes[at + read] == needle[read]) {
         read++;
     }
     *into = same && read == needle_length;
@@ -10057,8 +10315,8 @@ static void text_lands(KestValue *into, const char *bytes, size_t length) {
     into[1].integer = (int64_t)length;
 }
 
-bool kest_text_of(KestRuntime *rt, uint8_t how, KestValue value,
-                  uint32_t where, KestValue *into) {
+bool kest_text_of(KestRuntime *rt, uint8_t how, KestValue value, uint32_t where,
+                  KestValue *into) {
     if (rt == NULL || into == NULL) {
         return false;
     }
@@ -10085,9 +10343,8 @@ bool kest_text_of(KestRuntime *rt, uint8_t how, KestValue value,
     char *text = take(rt, NULL, (size_t)written + 1, KEST_GROUND_PLAIN);
     if (text == NULL) {
         no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
-        kest_diags_suggest(rt->diags,
-                           "it was writing a number as %d bytes of text",
-                           written);
+        kest_diags_suggest(
+            rt->diags, "it was writing a number as %d bytes of text", written);
         return false;
     }
     MOVED(moved_text, (uint64_t)written + 1);
@@ -10107,9 +10364,8 @@ bool kest_text_of_value(KestRuntime *rt, uint16_t layout,
     char *text = take(rt, NULL, length + 1, KEST_GROUND_PLAIN);
     if (text == NULL) {
         no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
-        kest_diags_suggest(rt->diags,
-                           "it was writing a value as %zu bytes of text",
-                           length);
+        kest_diags_suggest(
+            rt->diags, "it was writing a value as %zu bytes of text", length);
         return false;
     }
     format_value(text, length, type, slots);
@@ -10158,9 +10414,8 @@ bool kest_text_from(KestRuntime *rt, KestValue handle, uint32_t where,
     char *text = take(rt, NULL, (size_t)many + 1, KEST_GROUND_PLAIN);
     if (text == NULL) {
         no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
-        kest_diags_suggest(rt->diags,
-                           "it was making %u bytes of text out of an array",
-                           many);
+        kest_diags_suggest(
+            rt->diags, "it was making %u bytes of text out of an array", many);
         return false;
     }
     // Text is UTF-8 and a run of bytes is whatever it holds, so this is the

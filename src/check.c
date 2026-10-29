@@ -151,8 +151,8 @@ static bool written_number(Checker *checker, const KestExpr *expr,
     KestValue held = {0};
     const char *unfoldable = NULL;
     if (expr == NULL || expr->type == NULL || expr->type->tag != KEST_T_INT ||
-        kest_fold_const(checker->program, expr, &held, 1, &unfoldable,
-                        NULL) != 1) {
+        kest_fold_const(checker->program, expr, &held, 1, &unfoldable, NULL) !=
+            1) {
         return false;
     }
     *value = held.integer;
@@ -239,8 +239,7 @@ static void expected_but(Checker *checker, KestSpan span, const KestType *want,
                          const KestType *got, const char *where) {
     report(checker, span, "K0310", "%s expects `%s`, found `%s`", where,
            type_name(checker, want), type_name(checker, got));
-    if (!say_if_let(checker, got, want) &&
-        !say_made_text(checker, got, want)) {
+    if (!say_if_let(checker, got, want) && !say_made_text(checker, got, want)) {
         say_wrapped_once(checker, got, want);
     }
 }
@@ -252,8 +251,7 @@ static void expected_called(Checker *checker, KestSpan span,
                             const char *called) {
     report(checker, span, "K0310", "`%s` expects `%s`, found `%s`", called,
            type_name(checker, want), type_name(checker, got));
-    if (!say_if_let(checker, got, want) &&
-        !say_made_text(checker, got, want)) {
+    if (!say_if_let(checker, got, want) && !say_made_text(checker, got, want)) {
         say_wrapped_once(checker, got, want);
     }
 }
@@ -274,8 +272,7 @@ static void expected_for(Checker *checker, KestSpan span, const KestType *want,
     report(checker, span, "K0310", "`%.*s` expects `%s`, found `%s`",
            (int)name.length, kest_span_text(declared_in, name),
            type_name(checker, want), type_name(checker, got));
-    if (!say_if_let(checker, got, want) &&
-        !say_made_text(checker, got, want)) {
+    if (!say_if_let(checker, got, want) && !say_made_text(checker, got, want)) {
         say_wrapped_once(checker, got, want);
     }
 }
@@ -327,7 +324,8 @@ static void drop_locals(Checker *checker, uint32_t mark) {
             kest_diags_add(checker->program->diags, KEST_SEVERITY_WARNING,
                            "K0347", local->span,
                            "`%s` has no room, so every `fit` into it writes "
-                           "nothing", local->name);
+                           "nothing",
+                           local->name);
             kest_diags_suggest(checker->program->diags,
                                "make room for what is coming: `room(xs, n)` "
                                "after it, or `array(n, v)` instead of "
@@ -401,9 +399,9 @@ static void declare_local(Checker *checker, KestSpan span, KestType *type) {
     // clearing what is past it -- so a field this forgets is one the last name
     // at that place left behind, and the last name at that place was read.
     Local *local = &checker->locals[checker->local_count++];
-    Local fresh = {name, type, span, checker->depth, false, false, false,
-                   false, false, false, false, false, NULL,
-                   false, false, false};
+    Local fresh = {name,  type,  span,  checker->depth, false, false,
+                   false, false, false, false,          false, false,
+                   NULL,  false, false, false};
     *local = fresh;
 }
 
@@ -636,9 +634,9 @@ static const char *takes_called(const char *name, uint32_t nth) {
 }
 
 static const char *const BUILTINS[] = {
-    "add", "array", "bits", "clear", "find",  "float", "get",   "hash",
-    "len", "matches", "fit", "pop",   "push",   "remove", "rest", "room",
-    "set", "slice", "store",
+    "add",  "array", "bits",    "clear", "find",  "float", "get",
+    "hash", "len",   "matches", "fit",   "pop",   "push",  "remove",
+    "rest", "room",  "set",     "slice", "store",
 };
 
 // The nearest thing a reader could have meant by a name that is not there: a
@@ -710,8 +708,8 @@ static const char *nearest_name(Checker *checker, const char *name,
     }
     for (uint32_t i = 0; i < sizeof(BUILTINS) / sizeof(BUILTINS[0]); i++) {
         offer(&found, BUILTINS[i],
-              kest_word_distance(name, length, BUILTINS[i],
-                                 strlen(BUILTINS[i]), limit));
+              kest_word_distance(name, length, BUILTINS[i], strlen(BUILTINS[i]),
+                                 limit));
     }
 
     bool written_plain = memchr(name, '.', length) == NULL;
@@ -735,9 +733,9 @@ static const char *nearest_name(Checker *checker, const char *name,
             kest_lookup_global(checker->program, tail, strlen(tail)) != NULL
                 ? tail
                 : as_written;
-        offer(&found, written,
-              kest_word_distance(name, length, against, strlen(against),
-                                 limit));
+        offer(
+            &found, written,
+            kest_word_distance(name, length, against, strlen(against), limit));
     }
 
     // And the modules themselves, which are names a file writes as often as it
@@ -765,8 +763,7 @@ static const char *nearest_name(Checker *checker, const char *name,
                 }
             }
             const char *module = kest_arena_strndup(checker->program->arena,
-                                                    from,
-                                                    (size_t)(dot - from));
+                                                    from, (size_t)(dot - from));
             // A name written into the arena, so when there is no room there
             // is no name. A suggestion is the one thing a compiler with
             // nothing left can do without, so this one is left out rather
@@ -818,9 +815,8 @@ static bool has_order(const KestProgram *program, const KestType *type) {
 // body was checked against those words where it was written, so this is the
 // other half of the same contract and the place a reader meets it: the line
 // that asked, rather than a line inside somebody else's library.
-static bool wants_met(Checker *checker, const KestType *callee,
-                      KestSpan named, KestType **bindings,
-                      uint32_t generics, KestSpan where) {
+static bool wants_met(Checker *checker, const KestType *callee, KestSpan named,
+                      KestType **bindings, uint32_t generics, KestSpan where) {
     if (callee->type_param_wants == NULL) {
         return true;
     }
@@ -832,10 +828,10 @@ static bool wants_met(Checker *checker, const KestType *callee,
                 continue;
             }
             const KestType *without = NULL;
-            bool has = kest_capability(at)->bit == KEST_WANTS_COMPARES
-                           ? has_equality(checker->program, bindings[g],
-                                          &without)
-                           : has_order(checker->program, bindings[g]);
+            bool has =
+                kest_capability(at)->bit == KEST_WANTS_COMPARES
+                    ? has_equality(checker->program, bindings[g], &without)
+                    : has_order(checker->program, bindings[g]);
             if (has || is_error(bindings[g])) {
                 continue;
             }
@@ -857,8 +853,7 @@ static bool wants_met(Checker *checker, const KestType *callee,
                         type_name(checker, bindings[g]));
             }
             if (callee->decl != NULL && callee->unit != NULL) {
-                kest_diags_note(checker->program->diags,
-                                &callee->unit->source,
+                kest_diags_note(checker->program->diags, &callee->unit->source,
                                 callee->decl->type_params[g].name,
                                 "`%s` is written here",
                                 kest_capability(at)->word);
@@ -956,7 +951,8 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     }
 
     KestType *chosen = named_function(checker, name, length, expected);
-    if (chosen != NULL && kest_takes_a_block(chosen) && !checker->naming_callee) {
+    if (chosen != NULL && kest_takes_a_block(chosen) &&
+        !checker->naming_callee) {
         report(checker, expr->span, "K0367",
                "`%.*s` takes a block, so it is written into where it is called "
                "and is not a value",
@@ -984,8 +980,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         if (!checker->naming_callee && global->type->tag == KEST_T_FN &&
             global->type->type_param_count > 0) {
             KestType *copy =
-                copy_for_shape(checker, global->type, expected,
-                               expr->span);
+                copy_for_shape(checker, global->type, expected, expr->span);
             if (copy != NULL) {
                 return copy;
             }
@@ -1057,12 +1052,12 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     // goes, is refused just above.
     if (kest_module_named(checker->program, name, length)) {
         report(checker, expr->span, "K0358",
-               "`%.*s` is a module, and this wants a value", (int)length,
-               name);
+               "`%.*s` is a module, and this wants a value", (int)length, name);
         // Naming it is writing to it, so the import it came through is not an
         // import nothing writes.
         kest_import_reached_by(checker->program, name, length);
-        const KestSymbol *under = kest_first_under(checker->program, name, length);
+        const KestSymbol *under =
+            kest_first_under(checker->program, name, length);
         if (under != NULL) {
             suggest(checker,
                     "a module is a place to look and not a value: `%s` is one "
@@ -1097,12 +1092,11 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         // what a reader would write for that is `math.Math.floor` rather than
         // `floor`. So the tail is matched and the head is whatever is left.
         size_t reach = strlen(whole);
-        const char *dot = reach > length + 1 &&
-                                  whole[reach - length - 1] == '.' &&
-                                  kest_word_same(whole + reach - length, name,
-                                                 length)
-                              ? whole + reach - length - 1
-                              : NULL;
+        const char *dot =
+            reach > length + 1 && whole[reach - length - 1] == '.' &&
+                    kest_word_same(whole + reach - length, name, length)
+                ? whole + reach - length - 1
+                : NULL;
         if (dot == NULL ||
             !kest_needs_import(checker->program, whole, strlen(whole))) {
             continue;
@@ -1166,7 +1160,8 @@ static void report_unimported(Checker *checker, KestSpan name) {
                         "declared here");
         return;
     }
-    KestSymbol *symbol = kest_lookup_global(checker->program, text, name.length);
+    KestSymbol *symbol =
+        kest_lookup_global(checker->program, text, name.length);
     if (symbol != NULL && symbol->source != NULL) {
         kest_diags_note(checker->program->diags, symbol->source, symbol->span,
                         "declared here");
@@ -1198,8 +1193,8 @@ static const char *nearest_case(const KestType *choice, const char *name,
     return best;
 }
 
-static const KestVariantType *find_case(Checker *checker, const KestType *choice,
-                                        KestSpan name) {
+static const KestVariantType *find_case(Checker *checker,
+                                        const KestType *choice, KestSpan name) {
     const char *text = span_text(checker, name);
     for (uint32_t i = 0; i < choice->case_count; i++) {
         if (kest_word_same(choice->cases[i].name, text, name.length)) {
@@ -1325,9 +1320,9 @@ static bool reaches_own(const Checker *checker, const KestType *type) {
 }
 
 // A field the module that declared it keeps to itself. Reading is what is
-// refused rather than writing, because reading is the whole of it: `pop(t.keys)`
-// reads the field and changes what it names through the handle it was given,
-// so a field that can be read is a field that can be written.
+// refused rather than writing, because reading is the whole of it:
+// `pop(t.keys)` reads the field and changes what it names through the handle it
+// was given, so a field that can be read is a field that can be written.
 static void refuse_own(Checker *checker, KestSpan where, const KestType *type,
                        const KestMember *member) {
     report(checker, where, "K0365", "`%s` is `%s`'s own", member->name,
@@ -1358,8 +1353,8 @@ static KestType *check_construction(Checker *checker, KestExpr *expr,
     }
 
     if (expr->call.arg_count != type->member_count) {
-        report(checker, expr->span, "K0309",
-               "`%s` has %u field%s, found %u", type->name, type->member_count,
+        report(checker, expr->span, "K0309", "`%s` has %u field%s, found %u",
+               type->name, type->member_count,
                type->member_count == 1 ? "" : "s", expr->call.arg_count);
         // A vector was declared by nobody, so there is nowhere to point at:
         // what it is made of is said instead.
@@ -1617,7 +1612,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
 }
 
 static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
-                               const KestType *expected, bool *handled) {
+                                    const KestType *expected, bool *handled) {
     *handled = true;
     KestSpan name = expr->call.callee->span;
 
@@ -1642,8 +1637,7 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
             if (written_number(checker, expr->call.args[0], &written) &&
                 written < 0) {
                 report(checker, expr->call.args[0]->span, "K0351",
-                       "a store cannot have room for %lld",
-                       (long long)written);
+                       "a store cannot have room for %lld", (long long)written);
                 suggest(checker, "a count is nought or more, and nought is a "
                                  "store with no room made yet");
             }
@@ -1678,8 +1672,8 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
             }
             return error_type(checker);
         }
-        KestType *count = check_expr(checker, expr->call.args[0],
-                                     builtin(checker, "i32"));
+        KestType *count =
+            check_expr(checker, expr->call.args[0], builtin(checker, "i32"));
         if (!is_error(count) && count->tag != KEST_T_INT) {
             report(checker, expr->call.args[0]->span, "K0310",
                    "a count is an integer, found `%s`",
@@ -1834,7 +1828,8 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
     // Taking things out of an array. A store answers this with `remove` and a
     // reference; here a position means something, so what is after what went
     // keeps its order and the cost of that is on `remove` where it is written.
-    if (is_builtin(checker, expr, name, "pop") || is_builtin(checker, expr, name, "remove") ||
+    if (is_builtin(checker, expr, name, "pop") ||
+        is_builtin(checker, expr, name, "remove") ||
         is_builtin(checker, expr, name, "clear")) {
         bool taking = is_builtin(checker, expr, name, "remove");
         bool emptying = is_builtin(checker, expr, name, "clear");
@@ -1900,8 +1895,8 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
                 // The words the reference prints for it: `matches(t, at,
                 // needle)`. A reader who has read that line knows which one
                 // this is without counting along the call.
-                expected_called(checker, expr->call.args[1]->span, place,
-                                given, takes_called("matches", 1));
+                expected_called(checker, expr->call.args[1]->span, place, given,
+                                takes_called("matches", 1));
             }
             written_place(checker, expr->call.args[1], true, NULL);
             const KestType *piece = builtin(checker, "text");
@@ -1933,8 +1928,8 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
             const KestType *want = builtin(checker, "i32");
             KestType *given = check_expr(checker, expr->call.args[1], want);
             if (!kest_type_equal(given, want)) {
-                expected_called(checker, expr->call.args[1]->span, want,
-                                given, takes_called("rest", 1));
+                expected_called(checker, expr->call.args[1]->span, want, given,
+                                takes_called("rest", 1));
             }
             written_place(checker, expr->call.args[1], true, NULL);
         }
@@ -1944,13 +1939,13 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
         return builtin(checker, "text");
     }
 
-    if (is_builtin(checker, expr, name, "slice") || is_builtin(checker, expr, name, "find")) {
+    if (is_builtin(checker, expr, name, "slice") ||
+        is_builtin(checker, expr, name, "find")) {
         bool slicing = is_builtin(checker, expr, name, "slice");
         // `find` takes where to start looking, or starts at the beginning.
         // Scanning a piece of text for every place something is in it is then
         // a walk rather than a slice per step, and a slice reaches the heap.
-        uint32_t wanted =
-            slicing ? 3 : (expr->call.arg_count > 2 ? 3 : 2);
+        uint32_t wanted = slicing ? 3 : (expr->call.arg_count > 2 ? 3 : 2);
         if (check_arity(checker, expr, wanted) < wanted) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
                 check_expr(checker, expr->call.args[i], NULL);
@@ -1971,8 +1966,7 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
                                                     : builtin(checker, "text");
             KestType *given = check_expr(checker, expr->call.args[i], want);
             if (!kest_type_equal(given, want)) {
-                expected_called(checker, expr->call.args[i]->span, want,
-                                given,
+                expected_called(checker, expr->call.args[i]->span, want, given,
                                 takes_called(slicing ? "slice" : "find", i));
             }
             // Where it starts and how many bytes, both written down as often
@@ -2101,7 +2095,8 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
             check_expr(checker, expr->call.args[1], NULL);
             return error_type(checker);
         }
-        KestType *value = check_expr(checker, expr->call.args[1], store->element);
+        KestType *value =
+            check_expr(checker, expr->call.args[1], store->element);
         if (!kest_type_equal(value, store->element)) {
             expected_but(checker, expr->call.args[1]->span, store->element,
                          value, "this value");
@@ -2144,7 +2139,8 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
             return error_type(checker);
         }
         check_ref_argument(checker, expr, 1, store);
-        KestType *value = check_expr(checker, expr->call.args[2], store->element);
+        KestType *value =
+            check_expr(checker, expr->call.args[2], store->element);
         if (!kest_type_equal(value, store->element)) {
             expected_but(checker, expr->call.args[2]->span, store->element,
                          value, "this value");
@@ -2182,7 +2178,8 @@ static uint32_t find_callable(Checker *checker, const KestExpr *expr,
             }
         }
     }
-    uint32_t count = kest_overloads(checker->program, text, length, found, room);
+    uint32_t count =
+        kest_overloads(checker->program, text, length, found, room);
     if (count > 0) {
         // A name with a dot in it, resolved: the other way a module is
         // reached, and the one a name several functions share takes -- the
@@ -2200,7 +2197,6 @@ static KestType *check_arguments(Checker *checker, KestExpr *expr,
                                  const KestType *callee);
 static KestType *arguments_checked(Checker *checker, KestExpr *expr,
                                    const KestType *callee);
-
 
 // What a literal is when nothing says otherwise: a whole number is an `i32`,
 // and a number with a fraction is an `f32`, which is the working precision of
@@ -2234,8 +2230,8 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
     KestDiags *diags = checker->program->diags;
     kest_diags_mute(diags, true);
     KestType *given[16];
-    uint32_t argument_count = expr->call.arg_count < 16 ? expr->call.arg_count
-                                                        : 16;
+    uint32_t argument_count =
+        expr->call.arg_count < 16 ? expr->call.arg_count : 16;
     for (uint32_t i = 0; i < argument_count; i++) {
         given[i] = check_expr(checker, expr->call.args[i], NULL);
     }
@@ -2272,10 +2268,10 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
                     // takes the shape of the place it is going, so it is
                     // asked again with that shape in hand.
                     kest_diags_mute(diags, true);
-                    fits = kest_type_equal(
-                        check_expr(checker, expr->call.args[i],
-                                   type->params[i]),
-                        type->params[i]);
+                    fits =
+                        kest_type_equal(check_expr(checker, expr->call.args[i],
+                                                   type->params[i]),
+                                        type->params[i]);
                     kest_diags_mute(diags, false);
                 } else {
                     fits = kest_type_equal(given[i], type->params[i]);
@@ -2366,8 +2362,8 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
                     agrees++;
                 }
             }
-            scored[c] = (type->param_count == expr->call.arg_count ? 64 : 0) +
-                        agrees;
+            scored[c] =
+                (type->param_count == expr->call.arg_count ? 64 : 0) + agrees;
             order[c] = c;
         }
         for (uint32_t a = 0; a + 1 < listed; a++) {
@@ -2449,15 +2445,15 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
     KestProgram *program = checker->program;
     if (expected == NULL || expected->tag != KEST_T_FN ||
         expected->type_param_count > 0 ||
-        expected->param_count != callee->param_count ||
-        callee->decl == NULL) {
+        expected->param_count != callee->param_count || callee->decl == NULL) {
         return NULL;
     }
 
     uint32_t generics = callee->type_param_count;
     const char **names =
         KEST_ARENA_ARRAY(program->arena, const char *, generics);
-    KestType **bindings = KEST_ARENA_ARRAY(program->arena, KestType *, generics);
+    KestType **bindings =
+        KEST_ARENA_ARRAY(program->arena, KestType *, generics);
     if (names == NULL || bindings == NULL) {
         return NULL;
     }
@@ -2469,10 +2465,12 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
     bool agreed = true;
     for (uint32_t i = 0; i < callee->param_count; i++) {
         agreed = kest_unify(callee->params[i], expected->params[i], names,
-                            bindings, generics) && agreed;
+                            bindings, generics) &&
+                 agreed;
     }
     agreed = kest_unify(callee->result, expected->result, names, bindings,
-                        generics) && agreed;
+                        generics) &&
+             agreed;
     for (uint32_t g = 0; g < generics && agreed; g++) {
         agreed = bindings[g] != NULL;
     }
@@ -2493,9 +2491,8 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
     if (shape != NULL) {
         return shape;
     }
-    KestInstance *instance = kest_instance_of(program, callee->decl,
-                                              callee->unit, names, bindings,
-                                              generics);
+    KestInstance *instance = kest_instance_of(
+        program, callee->decl, callee->unit, names, bindings, generics);
     if (instance == NULL) {
         checker->out_of_memory = true;
         return NULL;
@@ -2503,8 +2500,8 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
     if (instance->site.length == 0) {
         bool inside = checker->asking.length > 0;
         instance->site = inside ? checker->asking : where;
-        instance->site_source = inside ? checker->asking_source
-                                       : program->source;
+        instance->site_source =
+            inside ? checker->asking_source : program->source;
     }
     if (instance->type == NULL) {
         instance->type = kest_substitute(program, (KestType *)callee, names,
@@ -2517,8 +2514,8 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
             checker->out_of_memory = true;
             return error_type(checker);
         }
-        instance->type->symbol = instance_symbol(program, callee->symbol,
-                                                 bindings, generics);
+        instance->type->symbol =
+            instance_symbol(program, callee->symbol, bindings, generics);
         instance->type->type_param_count = 0;
         instance->symbol = instance->type->symbol;
     }
@@ -2535,8 +2532,8 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
 // sentence.
 static void cannot_be_told(Checker *checker, KestSpan where, const char *name,
                            const char *from) {
-    report(checker, where, "K0343",
-           "what `%s` is here cannot be told from %s", name, from);
+    report(checker, where, "K0343", "what `%s` is here cannot be told from %s",
+           name, from);
     // And the rule, which is one rule and was said two ways: a builder was
     // told to say it where the value is going and a call that it had to
     // appear in an argument or where what the call gives is written down.
@@ -2557,9 +2554,9 @@ static void cannot_be_told(Checker *checker, KestSpan where, const char *name,
 // what the sentence is about, so it is in the sentence; the two places are what
 // the notes are for.
 //
-// `what` is `argument` or `field`, because the two walks are two and a builder's
-// places are its fields. `at` is the position that would not agree, and `was`
-// is what the bindings were before it was asked.
+// `what` is `argument` or `field`, because the two walks are two and a
+// builder's places are its fields. `at` is the position that would not agree,
+// and `was` is what the bindings were before it was asked.
 static void told_two_ways(Checker *checker, KestExpr *expr, const char *what,
                           const KestType *wanted, KestType *given,
                           const char **names, KestType **was, uint32_t *from,
@@ -2587,8 +2584,8 @@ static void told_two_ways(Checker *checker, KestExpr *expr, const char *what,
     // does not fit at all is what `K0310` answers with the type it wanted
     // written out -- so this is the sentence with the name and without the
     // places, rather than a second sentence nobody can be made to read.
-    report(checker, expr->span, "K0363",
-           "two %ss disagree about what `%s` is", what, names[0]);
+    report(checker, expr->span, "K0363", "two %ss disagree about what `%s` is",
+           what, names[0]);
 }
 
 // The position that bound each name, so a disagreement can say which two. Set
@@ -2625,8 +2622,7 @@ static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
     kest_diags_mute(diags, false);
 
     uint32_t generics = shape->type_param_count;
-    const char **names = KEST_ARENA_ARRAY(checker->program->arena,
-                                          const char *,
+    const char **names = KEST_ARENA_ARRAY(checker->program->arena, const char *,
                                           generics == 0 ? 1 : generics);
     KestType **bindings = KEST_ARENA_ARRAY(checker->program->arena, KestType *,
                                            generics == 0 ? 1 : generics);
@@ -2649,9 +2645,8 @@ static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
                         generics)) {
             agreed = false;
             if (said == 0) {
-                told_two_ways(checker, expr, "field",
-                              shape->members[i].type, given[i], names, was,
-                              from, generics, i);
+                told_two_ways(checker, expr, "field", shape->members[i].type,
+                              given[i], names, was, from, generics, i);
                 said = 1;
             }
         }
@@ -2674,9 +2669,8 @@ static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
 // as much as it can -- `Answer.Held(5)` is an `Answer<i32>` -- and where a case
 // carries nothing of the shape's own names, the copy comes from where the value
 // is going, which is the same rule `array()` and `store()` already keep.
-static KestType *copy_of_case(Checker *checker, KestExpr *expr,
-                              KestType *shape, KestSpan case_name,
-                              const KestType *expected) {
+static KestType *copy_of_case(Checker *checker, KestExpr *expr, KestType *shape,
+                              KestSpan case_name, const KestType *expected) {
     KestProgram *program = checker->program;
     if (expected != NULL && expected->tag == KEST_T_ENUM &&
         expected->decl == shape->decl && expected->type_param_count == 0) {
@@ -2684,8 +2678,8 @@ static KestType *copy_of_case(Checker *checker, KestExpr *expr,
     }
     const KestVariantType *one = NULL;
     for (uint32_t c = 0; c < shape->case_count; c++) {
-        if (kest_word_same(shape->cases[c].name,
-                           span_text(checker, case_name), case_name.length)) {
+        if (kest_word_same(shape->cases[c].name, span_text(checker, case_name),
+                           case_name.length)) {
             one = &shape->cases[c];
             break;
         }
@@ -2699,8 +2693,9 @@ static KestType *copy_of_case(Checker *checker, KestExpr *expr,
     KestDiags *diags = program->diags;
     kest_diags_mute(diags, true);
     KestType *given[16];
-    uint32_t count = expr == NULL ? 0
-                     : expr->call.arg_count < 16 ? expr->call.arg_count : 16;
+    uint32_t count = expr == NULL                ? 0
+                     : expr->call.arg_count < 16 ? expr->call.arg_count
+                                                 : 16;
     for (uint32_t i = 0; i < count; i++) {
         given[i] = check_expr(checker, expr->call.args[i], NULL);
     }
@@ -2724,8 +2719,7 @@ static KestType *copy_of_case(Checker *checker, KestExpr *expr,
     }
     // And what the case carries nothing of, from where the value is going.
     if (expected != NULL && expected->tag == KEST_T_ENUM &&
-        expected->decl == shape->decl &&
-        expected->type_arg_count == generics) {
+        expected->decl == shape->decl && expected->type_arg_count == generics) {
         for (uint32_t g = 0; g < generics; g++) {
             if (bindings[g] == NULL) {
                 bindings[g] = expected->type_args[g];
@@ -2773,8 +2767,7 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
     kest_diags_mute(diags, false);
 
     uint32_t generics = callee->type_param_count;
-    const char **names = KEST_ARENA_ARRAY(checker->program->arena,
-                                          const char *,
+    const char **names = KEST_ARENA_ARRAY(checker->program->arena, const char *,
                                           generics == 0 ? 1 : generics);
     KestType **bindings = KEST_ARENA_ARRAY(checker->program->arena, KestType *,
                                            generics == 0 ? 1 : generics);
@@ -2797,29 +2790,26 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
     // wanted comes back as an error until it is asked again with the shape in
     // hand, and asking by what came back never asked it again.
     for (uint32_t i = 0; i < count && i < callee->param_count; i++) {
-        if (callee->params[i] != NULL &&
-            callee->params[i]->tag == KEST_T_FN) {
+        if (callee->params[i] != NULL && callee->params[i]->tag == KEST_T_FN) {
             continue;
         }
         KestType *was[16] = {0};
         for (uint32_t g = 0; g < generics && g < 16; g++) {
             was[g] = bindings[g];
         }
-        if (!kest_unify(callee->params[i], given[i], names,
-                        bindings, generics)) {
+        if (!kest_unify(callee->params[i], given[i], names, bindings,
+                        generics)) {
             agreed = false;
             if (said == 0) {
-                told_two_ways(checker, expr, "argument",
-                              callee->params[i], given[i], names,
-                              was, from, generics, i);
+                told_two_ways(checker, expr, "argument", callee->params[i],
+                              given[i], names, was, from, generics, i);
                 said = 1;
             }
         }
         bound_at(from, was, bindings, generics, i);
     }
     for (uint32_t i = 0; i < count && i < callee->param_count; i++) {
-        if (callee->params[i] == NULL ||
-            callee->params[i]->tag != KEST_T_FN) {
+        if (callee->params[i] == NULL || callee->params[i]->tag != KEST_T_FN) {
             continue;
         }
         KestType *wanted = kest_substitute(program, callee->params[i], names,
@@ -2831,13 +2821,12 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
         for (uint32_t g = 0; g < generics && g < 16; g++) {
             was[g] = bindings[g];
         }
-        if (!kest_unify(callee->params[i], given[i], names,
-                        bindings, generics)) {
+        if (!kest_unify(callee->params[i], given[i], names, bindings,
+                        generics)) {
             agreed = false;
             if (said == 0) {
-                told_two_ways(checker, expr, "argument",
-                              callee->params[i], given[i], names,
-                              was, from, generics, i);
+                told_two_ways(checker, expr, "argument", callee->params[i],
+                              given[i], names, was, from, generics, i);
                 said = 1;
             }
         }
@@ -2850,13 +2839,13 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
         wanting = wanting || bindings[g] == NULL;
     }
     if (wanting && expected != NULL) {
-        agreed = kest_unify(callee->result, expected, names, bindings,
-                            generics) && agreed;
+        agreed =
+            kest_unify(callee->result, expected, names, bindings, generics) &&
+            agreed;
     }
     for (uint32_t g = 0; g < generics; g++) {
         if (bindings[g] == NULL) {
-            cannot_be_told(checker, expr->span, names[g],
-                           "what was passed");
+            cannot_be_told(checker, expr->span, names[g], "what was passed");
             return error_type(checker);
         }
     }
@@ -2877,9 +2866,8 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
         expr->call.callee->type = shape;
         return check_arguments(checker, expr, shape);
     }
-    KestInstance *instance = kest_instance_of(program, callee->decl,
-                                              callee->unit, names, bindings,
-                                              generics);
+    KestInstance *instance = kest_instance_of(
+        program, callee->decl, callee->unit, names, bindings, generics);
     if (instance == NULL) {
         checker->out_of_memory = true;
         return error_type(checker);
@@ -2890,8 +2878,8 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
     if (instance->site.length == 0) {
         bool inside = checker->asking.length > 0;
         instance->site = inside ? checker->asking : expr->span;
-        instance->site_source = inside ? checker->asking_source
-                                       : program->source;
+        instance->site_source =
+            inside ? checker->asking_source : program->source;
     }
     if (instance->type == NULL) {
         instance->type = kest_substitute(program, (KestType *)callee, names,
@@ -2903,8 +2891,8 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
             checker->out_of_memory = true;
             return error_type(checker);
         }
-        instance->type->symbol = instance_symbol(program, callee->symbol,
-                                                 bindings, generics);
+        instance->type->symbol =
+            instance_symbol(program, callee->symbol, bindings, generics);
         instance->type->type_param_count = 0;
         instance->symbol = instance->type->symbol;
     }
@@ -3001,8 +2989,8 @@ static size_t module_of(const KestType *type, const char **module) {
         return 0;
     }
     const char *end = strchr(named->name, '<');
-    size_t length = end == NULL ? strlen(named->name)
-                                : (size_t)(end - named->name);
+    size_t length =
+        end == NULL ? strlen(named->name) : (size_t)(end - named->name);
     while (length > 0 && named->name[length - 1] != '.') {
         length--;
     }
@@ -3022,8 +3010,7 @@ static KestType *check_method(Checker *checker, KestExpr *expr,
                               const KestType *expected) {
     if (!expr->call.method) {
         KestExpr *callee = expr->call.callee;
-        KestExpr **moved = KEST_ARENA_ARRAY(checker->program->arena,
-                                            KestExpr *,
+        KestExpr **moved = KEST_ARENA_ARRAY(checker->program->arena, KestExpr *,
                                             expr->call.arg_count + 1);
         KestExpr *named = KEST_ARENA_NEW(checker->program->arena, KestExpr);
         if (moved == NULL || named == NULL) {
@@ -3065,12 +3052,12 @@ static KestType *check_method(Checker *checker, KestExpr *expr,
             continue;
         }
         char joined[256];
-        int written = lengths[at] == 0
-                          ? snprintf(joined, sizeof joined, "%.*s",
-                                     (int)name.length, text)
-                          : snprintf(joined, sizeof joined, "%.*s.%.*s",
-                                     (int)lengths[at], places[at],
-                                     (int)name.length, text);
+        int written =
+            lengths[at] == 0
+                ? snprintf(joined, sizeof joined, "%.*s", (int)name.length,
+                           text)
+                : snprintf(joined, sizeof joined, "%.*s.%.*s", (int)lengths[at],
+                           places[at], (int)name.length, text);
         if (written <= 0 || (size_t)written >= sizeof joined) {
             continue;
         }
@@ -3121,24 +3108,24 @@ static KestType *check_method(Checker *checker, KestExpr *expr,
     if (handled) {
         return answered;
     }
-    report(checker, name, "K0307",
-           "nothing called `%.*s` takes a `%s` first", (int)name.length, text,
-           type_name(checker, object));
+    report(checker, name, "K0307", "nothing called `%.*s` takes a `%s` first",
+           (int)name.length, text, type_name(checker, object));
     // Where it would have been looked for, and whether that is a module this
     // file reads at all: one it did not import is one nothing was looked for
     // in.
     if (lengths[1] == 0) {
         suggest(checker, "`x.f(a)` is `f(x, a)` for a function this file "
                          "declares");
-    } else if (!kest_import_by_path(checker->program, places[1],
-                                    lengths[1])) {
-        suggest(checker, "`x.f(a)` is `f(x, a)` for a function this file or "
-                         "`%.*s` declares, and this file does not import "
-                         "`%.*s`",
+    } else if (!kest_import_by_path(checker->program, places[1], lengths[1])) {
+        suggest(checker,
+                "`x.f(a)` is `f(x, a)` for a function this file or "
+                "`%.*s` declares, and this file does not import "
+                "`%.*s`",
                 (int)lengths[1], places[1], (int)lengths[1], places[1]);
     } else {
-        suggest(checker, "`x.f(a)` is `f(x, a)` for a function this file or "
-                         "`%.*s` declares",
+        suggest(checker,
+                "`x.f(a)` is `f(x, a)` for a function this file or "
+                "`%.*s` declares",
                 (int)lengths[1], places[1]);
     }
     for (uint32_t i = 1; i < expr->call.arg_count; i++) {
@@ -3154,18 +3141,17 @@ static KestType *check_method(Checker *checker, KestExpr *expr,
 static void note_the_other(Checker *checker, KestSpan where) {
     const char *name = span_text(checker, where);
     char joined[256];
-    int written = checker->program->module[0] == '\0'
-                      ? 0
-                      : snprintf(joined, sizeof(joined), "%s.%.*s",
-                                 checker->program->module, (int)where.length,
-                                 name);
+    int written =
+        checker->program->module[0] == '\0'
+            ? 0
+            : snprintf(joined, sizeof(joined), "%s.%.*s",
+                       checker->program->module, (int)where.length, name);
     const KestSymbol *other =
         kest_lookup_global(checker->program, name, where.length);
     if (other == NULL && written > 0 && (size_t)written < sizeof(joined)) {
         other = kest_lookup_global(checker->program, joined, (size_t)written);
     }
-    if (other == NULL || other->type == NULL ||
-        other->type->tag != KEST_T_FN) {
+    if (other == NULL || other->type == NULL || other->type->tag != KEST_T_FN) {
         return;
     }
     kest_diags_note(checker->program->diags, other->source, other->span,
@@ -3210,9 +3196,8 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
     if (expr->call.callee->kind == KEST_EXPR_FIELD &&
         names_a_type(expr->call.callee->field.object)) {
         KestSpan owner = expr->call.callee->field.object->span;
-        KestType *choice = kest_lookup_type(checker->program,
-                                            span_text(checker, owner),
-                                            owner.length);
+        KestType *choice = kest_lookup_type(
+            checker->program, span_text(checker, owner), owner.length);
         if (choice != NULL && choice->tag == KEST_T_ENUM) {
             report_unimported(checker, owner);
             if (choice->type_param_count > 0) {
@@ -3233,8 +3218,8 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
         (expr->call.callee->kind == KEST_EXPR_FIELD &&
          expr->call.callee->field.object->kind == KEST_EXPR_NAME)) {
         KestSpan name = expr->call.callee->span;
-        KestType *type = kest_lookup_type(checker->program,
-                                          span_text(checker, name), name.length);
+        KestType *type = kest_lookup_type(
+            checker->program, span_text(checker, name), name.length);
         if (type != NULL && type->tag == KEST_T_STRUCT) {
             report_unimported(checker, name);
             // A shape is not a type. Which copy is meant comes from what it
@@ -3283,15 +3268,14 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
                 // where the two are the same kind of number, so `i32(3.7)` is
                 // the question it always was.
                 const KestExpr *literal = literal_of(expr->call.args[i]);
-                bool same_kind =
-                    literal != NULL &&
-                    ((literal->kind == KEST_EXPR_INT &&
-                      type->tag == KEST_T_INT &&
-                      // One that does not fit is a narrowing, which is what
-                      // `i8(300)` is written for.
-                      literal_fits(checker, literal, type)) ||
-                     (literal->kind == KEST_EXPR_FLOAT &&
-                      type->tag == KEST_T_FLOAT));
+                bool same_kind = literal != NULL &&
+                                 ((literal->kind == KEST_EXPR_INT &&
+                                   type->tag == KEST_T_INT &&
+                                   // One that does not fit is a narrowing,
+                                   // which is what `i8(300)` is written for.
+                                   literal_fits(checker, literal, type)) ||
+                                  (literal->kind == KEST_EXPR_FLOAT &&
+                                   type->tag == KEST_T_FLOAT));
                 KestType *from = check_expr(checker, expr->call.args[i],
                                             same_kind ? type : NULL);
                 // A flag set is bits over an integer, so a number of that
@@ -3386,8 +3370,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             expr->call.callee->type = host->type;
             callee = host->type;
         } else if (kest_out_of_reach(checker->program,
-                                     span_text(checker, whole),
-                                     whole.length)) {
+                                     span_text(checker, whole), whole.length)) {
             // A name this program holds under a module this file did not ask
             // for. Said before the halves are looked at on their own, because
             // `text.chars` with no import is a missing line and not the
@@ -3618,9 +3601,9 @@ static KestType *arguments_checked(Checker *checker, KestExpr *expr,
     // of them is called.
     const KestSymbol *declared = declared_at(checker, callee);
     const KestDecl *written = declared == NULL ? NULL : declared->decl;
-    if (written != NULL && (written->kind != KEST_DECL_FN ||
-                            written->function.param_count !=
-                                callee->param_count)) {
+    if (written != NULL &&
+        (written->kind != KEST_DECL_FN ||
+         written->function.param_count != callee->param_count)) {
         written = NULL;
     }
 
@@ -3691,8 +3674,7 @@ static const char *names_a_function(Checker *checker, KestSpan name) {
     }
     KestSymbol *found =
         kest_lookup_global(checker->program, written, name.length);
-    if (found != NULL && found->type != NULL &&
-        found->type->tag == KEST_T_FN) {
+    if (found != NULL && found->type != NULL && found->type->tag == KEST_T_FN) {
         return found->name;
     }
     // And under whatever this file imported: `upper` is `text.upper`, and
@@ -3723,8 +3705,9 @@ static const char *nearest_under(Checker *checker, const char *module,
     const char *best = NULL;
     uint32_t nearest_so_far = limit + 1;
 
-    for (uint32_t i = 0; i < checker->program->global_count +
-                                 checker->program->type_count; i++) {
+    for (uint32_t i = 0;
+         i < checker->program->global_count + checker->program->type_count;
+         i++) {
         // The two lists in one walk, because what somebody meant may be
         // either: `shape.Point` is a type and `shape.zero` is not.
         const char *whole =
@@ -3734,8 +3717,8 @@ static const char *nearest_under(Checker *checker, const char *module,
                       ->name;
         // Under the module the word means rather than under the word: a name
         // lives under the whole of its module.
-        const char *under = kest_module_for(checker->program, module,
-                                            module_length);
+        const char *under =
+            kest_module_for(checker->program, module, module_length);
         size_t under_length = under == NULL ? module_length : strlen(under);
         if (under == NULL) {
             under = module;
@@ -3744,8 +3727,8 @@ static const char *nearest_under(Checker *checker, const char *module,
             continue;
         }
         const char *member = whole + under_length + 1;
-        uint32_t distance = kest_word_distance(name, length, member,
-                                               strlen(member), limit);
+        uint32_t distance =
+            kest_word_distance(name, length, member, strlen(member), limit);
         if (distance < nearest_so_far) {
             nearest_so_far = distance;
             // Written the way the reader writes it, which is the word they
@@ -3770,8 +3753,9 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
     // it is called, and there is no value to hand around: which function the
     // host bound is settled when the program starts, not when it compiles.
     if (expr->field.object->kind == KEST_EXPR_NAME) {
-        KestSymbol *host = kest_lookup_global(
-            checker->program, span_text(checker, expr->span), expr->span.length);
+        KestSymbol *host =
+            kest_lookup_global(checker->program, span_text(checker, expr->span),
+                               expr->span.length);
         if (host != NULL && host->type->tag == KEST_T_FN &&
             host->type->is_foreign) {
             report(checker, expr->span, "K0342",
@@ -3799,17 +3783,17 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
         if (host != NULL && host->type->tag == KEST_T_FN) {
             report_unimported(checker, expr->span);
             host->named = true;
-            KestType *chosen = named_function(
-                checker, span_text(checker, expr->span), expr->span.length,
-                expected);
+            KestType *chosen =
+                named_function(checker, span_text(checker, expr->span),
+                               expr->span.length, expected);
             if (chosen != NULL) {
                 return chosen;
             }
             // One that takes types is the copy that fits where it is going,
             // the same as one named without a module in front of it.
             if (host->type->type_param_count > 0) {
-                KestType *copy = copy_for_shape(checker, host->type, expected,
-                                                expr->span);
+                KestType *copy =
+                    copy_for_shape(checker, host->type, expected, expr->span);
                 if (copy != NULL) {
                     return copy;
                 }
@@ -3830,9 +3814,8 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
     // like a field of the enum and is the enum.
     if (names_a_type(expr->field.object)) {
         KestSpan owner = expr->field.object->span;
-        KestType *choice = kest_lookup_type(checker->program,
-                                            span_text(checker, owner),
-                                            owner.length);
+        KestType *choice = kest_lookup_type(
+            checker->program, span_text(checker, owner), owner.length);
         // One named bit, which is a value of the set it was named in.
         if (choice != NULL && choice->tag == KEST_T_FLAGS) {
             report_unimported(checker, owner);
@@ -3878,7 +3861,8 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
         KestSpan owner = expr->field.object->span;
         const char *module = span_text(checker, owner);
         if (find_local(checker, module, owner.length) == NULL &&
-            kest_lookup_global(checker->program, module, owner.length) == NULL &&
+            kest_lookup_global(checker->program, module, owner.length) ==
+                NULL &&
             kest_module_named(checker->program, module, owner.length)) {
             const char *member = span_text(checker, expr->field.name);
             report(checker, expr->field.name, "K0353",
@@ -3888,10 +3872,10 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
                 kest_retired(checker->program, module, owner.length, member,
                              expr->field.name.length);
             const char *nearest =
-                instead != NULL ? NULL
-                                : nearest_under(checker, module, owner.length,
-                                                member,
-                                                expr->field.name.length);
+                instead != NULL
+                    ? NULL
+                    : nearest_under(checker, module, owner.length, member,
+                                    expr->field.name.length);
             if (instead != NULL) {
                 suggest(checker, "%s", instead);
             } else if (nearest != NULL) {
@@ -3905,10 +3889,11 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
             // so a file whose only use of it is the one that was spelt wrong
             // is not a file with an import nothing writes.
             kest_import_reached_by(checker->program, module, owner.length);
-            const KestSymbol *read = kest_first_under(checker->program, module, owner.length);
+            const KestSymbol *read =
+                kest_first_under(checker->program, module, owner.length);
             if (read != NULL && read->source != NULL) {
-                kest_diags_note(checker->program->diags, read->source, read->span,
-                                "this is the `%.*s` that was read",
+                kest_diags_note(checker->program->diags, read->source,
+                                read->span, "this is the `%.*s` that was read",
                                 (int)owner.length, module);
             }
             return error_type(checker);
@@ -3955,8 +3940,9 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
             // that call it: `x.f()` is `f(x)`, and `x.f` is nothing.
             const char *elsewhere = names_a_function(checker, expr->field.name);
             if (elsewhere != NULL) {
-                suggest(checker, "`%s` is a function, and one is called: "
-                                 "`%s(...)`",
+                suggest(checker,
+                        "`%s` is a function, and one is called: "
+                        "`%s(...)`",
                         elsewhere, elsewhere);
             }
         }
@@ -3970,8 +3956,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
     // and not on the reference. Saying only that a reference has no fields is
     // true and leaves the reader where they were.
     if ((object->tag == KEST_T_REF || object->tag == KEST_T_OPTIONAL) &&
-        object->element != NULL &&
-        object->element->tag == KEST_T_STRUCT) {
+        object->element != NULL && object->element->tag == KEST_T_STRUCT) {
         const KestType *named = object->element;
         for (uint32_t i = 0; i < named->member_count; i++) {
             if (kest_word_same(named->members[i].name, name, length)) {
@@ -3980,7 +3965,8 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
                 } else {
                     suggest(checker,
                             "read what it names with `get` and take `%.*s` "
-                            "off that", (int)length, name);
+                            "off that",
+                            (int)length, name);
                 }
                 return error_type(checker);
             }
@@ -4008,8 +3994,7 @@ static KestType *check_array(Checker *checker, KestExpr *expr,
             ? expected->element
             : NULL;
     if (fixed && expected->count != expr->array.count) {
-        report(checker, expr->span, "K0320",
-               "this holds %u and %u %s written",
+        report(checker, expr->span, "K0320", "this holds %u and %u %s written",
                expected->count, expr->array.count,
                expr->array.count == 1 ? "is" : "are");
         fixed = false;
@@ -4048,7 +4033,6 @@ static KestType *check_array(Checker *checker, KestExpr *expr,
     }
     return kest_array_of(checker->program, element);
 }
-
 
 // True when the number is known here, whatever it is, so that a caller with
 // something else to ask of it -- how many there are, for a `[T; N]` -- has it
@@ -4090,9 +4074,8 @@ static KestType *check_index(Checker *checker, KestExpr *expr) {
     }
     // Where it is is read where it is written, whatever is being indexed.
     int64_t at = 0;
-    bool known =
-        written_place(checker, expr->index.index,
-                      object->tag == KEST_T_TEXT, &at);
+    bool known = written_place(checker, expr->index.index,
+                               object->tag == KEST_T_TEXT, &at);
 
     // A piece of text is its bytes. There is no character type, so what comes
     // out is a `u8` and decoding is the program's business.
@@ -4102,10 +4085,9 @@ static KestType *check_index(Checker *checker, KestExpr *expr) {
     if (object->tag != KEST_T_ARRAY && object->tag != KEST_T_FIXED) {
         report(checker, expr->index.object->span, "K0315",
                "`%s` cannot be indexed", type_name(checker, object));
-        if (object->element != NULL &&
-            (object->element->tag == KEST_T_ARRAY ||
-             object->element->tag == KEST_T_FIXED ||
-             object->element->tag == KEST_T_TEXT)) {
+        if (object->element != NULL && (object->element->tag == KEST_T_ARRAY ||
+                                        object->element->tag == KEST_T_FIXED ||
+                                        object->element->tag == KEST_T_TEXT)) {
             say_if_let(checker, object, NULL);
         }
         return error_type(checker);
@@ -4146,8 +4128,7 @@ static bool applies(const KestProgram *program, const KestType *type,
         return is_comparison(op) &&
                kest_wants((KestProgram *)program, type, KEST_WANTS_ORDERS);
     }
-    return is_numeric(type) ||
-           (is_comparison(op) && type->tag == KEST_T_TEXT);
+    return is_numeric(type) || (is_comparison(op) && type->tag == KEST_T_TEXT);
 }
 
 static KestType *check_binary(Checker *checker, KestExpr *expr,
@@ -4174,9 +4155,10 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     // far, the same way an index says how deep, and neither has to be the
     // type of the thing it is applied to.
     if (op == KEST_TOK_LTLT || op == KEST_TOK_GTGT) {
-        KestType *value = check_expr(checker, expr->binary.left, inside(expected));
-        KestType *by = check_expr(checker, expr->binary.right,
-                                  builtin(checker, "i32"));
+        KestType *value =
+            check_expr(checker, expr->binary.left, inside(expected));
+        KestType *by =
+            check_expr(checker, expr->binary.right, builtin(checker, "i32"));
         if (!is_error(value) && value->tag != KEST_T_INT) {
             report(checker, expr->span, "K0314", "`%s` does not apply to `%s`",
                    kest_token_bare(op, spelling, sizeof(spelling)),
@@ -4192,8 +4174,8 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         return value;
     }
 
-    bool logical = is_comparison(op) || op == KEST_TOK_EQEQ ||
-                   op == KEST_TOK_BANGEQ;
+    bool logical =
+        is_comparison(op) || op == KEST_TOK_EQEQ || op == KEST_TOK_BANGEQ;
     const KestType *hint = logical ? NULL : inside(expected);
 
     // `none` on the left takes its type from the other side, the way a number
@@ -4255,8 +4237,8 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     if (!kest_type_equal(left, right)) {
         report(checker, expr->span, "K0314",
                "`%s` needs both sides to have one type, found `%s` and `%s`",
-               kest_token_bare(op, spelling, sizeof(spelling)), type_name(checker, left),
-               type_name(checker, right));
+               kest_token_bare(op, spelling, sizeof(spelling)),
+               type_name(checker, left), type_name(checker, right));
         return logical ? builtin(checker, "bool") : error_type(checker);
     }
 
@@ -4285,9 +4267,9 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         // arrays are equal when they hold the same things and comparing the
         // handles answers a different question.
         const KestType *without = NULL;
-        if (!is_error(left) && !has_equality(checker->program, left, &without)) {
-            report(checker, expr->span, "K0314",
-                   "`%s` does not apply to `%s`",
+        if (!is_error(left) &&
+            !has_equality(checker->program, left, &without)) {
+            report(checker, expr->span, "K0314", "`%s` does not apply to `%s`",
                    kest_token_bare(op, spelling, sizeof(spelling)),
                    type_name(checker, left));
             if (without != NULL && without != left) {
@@ -4360,7 +4342,8 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         // of them comes first is a choice, and there are as many orders as
         // fields. So this does not offer a default -- it says the choice is
         // there and what shape the answer takes.
-        bool told = left != NULL && applies(checker->program, left->element, op) &&
+        bool told = left != NULL &&
+                    applies(checker->program, left->element, op) &&
                     say_if_let(checker, left, NULL);
         if (told) {
             // An optional said the one thing there is to say about one.
@@ -4400,10 +4383,10 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
     // keep. A float keeps it too: `kest_left_over` answers for every pair C
     // has an answer for, and for the pair it has none for the answer is what
     // is not a number rather than a program that stops.
-    if (op == KEST_TOK_PERCENT && !is_error(left) &&
-        left->tag != KEST_T_INT && left->tag != KEST_T_FLOAT) {
-        report(checker, expr->span, "K0314",
-               "`%%` does not apply to `%s`", type_name(checker, left));
+    if (op == KEST_TOK_PERCENT && !is_error(left) && left->tag != KEST_T_INT &&
+        left->tag != KEST_T_FLOAT) {
+        report(checker, expr->span, "K0314", "`%%` does not apply to `%s`",
+               type_name(checker, left));
         if (left->element != NULL && left->element->tag == KEST_T_INT) {
             say_if_let(checker, left, NULL);
         }
@@ -4428,8 +4411,7 @@ static bool literal_fits(Checker *checker, const KestExpr *expr,
         if (checker->negating) {
             return false;
         }
-        return type->width == 64 ||
-               value <= ((uint64_t)1 << type->width) - 1;
+        return type->width == 64 || value <= ((uint64_t)1 << type->width) - 1;
     }
     uint64_t limit = (uint64_t)1 << (type->width - 1);
     return value <= (checker->negating ? limit : limit - 1);
@@ -4535,9 +4517,8 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
         if (is_error(subjects[i])) {
             any_error = true;
         } else {
-            combinations *= subjects[i]->case_count == 0
-                                ? 1
-                                : subjects[i]->case_count;
+            combinations *=
+                subjects[i]->case_count == 0 ? 1 : subjects[i]->case_count;
         }
     }
     for (uint32_t i = count; i < choose->subject_count; i++) {
@@ -4618,9 +4599,8 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
         for (uint32_t p = 0; p < arm->part_count && p < count; p++) {
             const KestArmPart *part = &arm->parts[p];
             const KestType *of = subjects[p];
-            uint32_t cases = is_error(of) || of->case_count == 0
-                                 ? 1
-                                 : of->case_count;
+            uint32_t cases =
+                is_error(of) || of->case_count == 0 ? 1 : of->case_count;
             stride /= cases;
 
             const KestVariantType *variant = NULL;
@@ -4637,8 +4617,7 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
                     }
                     for (uint32_t k = 0; k < was; k++) {
                         if (covered_count < MAX_COMBINATIONS) {
-                            covered[covered_count++] =
-                                covered[k] + c * stride;
+                            covered[covered_count++] = covered[k] + c * stride;
                         }
                     }
                 }
@@ -4696,10 +4675,9 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
             // is; a literal takes it, the way a literal always does.
             // What checking an arm gives back is nothing once compiling has
             // run out of work, and the arms after it are still walked.
-            if (given == NULL ||
-                (value != NULL && !is_literal(arm->value) &&
-                 is_literal(choose->arms[0].value) &&
-                 given->tag == value->tag)) {
+            if (given == NULL || (value != NULL && !is_literal(arm->value) &&
+                                  is_literal(choose->arms[0].value) &&
+                                  given->tag == value->tag)) {
                 given = value;
             }
         } else {
@@ -4756,8 +4734,7 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
                 }
                 // A list long enough to stop reading is a list that has
                 // stopped helping, so what is left over is counted instead.
-                if (named < NAMED_AT_MOST &&
-                    used + at + 8 < sizeof(missing)) {
+                if (named < NAMED_AT_MOST && used + at + 8 < sizeof(missing)) {
                     used = kest_put(missing, sizeof(missing), used, "%s`%s`",
                                     used > 0 ? ", " : "", one);
                     named++;
@@ -4888,10 +4865,10 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
 
     case KEST_EXPR_NONE:
         if (expected == NULL || expected->tag != KEST_T_OPTIONAL) {
-            report(checker, expr->span, "K0322",
-                   "`none` has no type here");
-            kest_diags_suggest(checker->program->diags,
-                               "write what it is missing: `let x: i32? = none`");
+            report(checker, expr->span, "K0322", "`none` has no type here");
+            kest_diags_suggest(
+                checker->program->diags,
+                "write what it is missing: `let x: i32? = none`");
             return error_type(checker);
         }
         return (KestType *)expected;
@@ -4902,7 +4879,8 @@ static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
     case KEST_EXPR_UNARY: {
         if (expr->unary.op == KEST_TOK_BANG) {
             KestType *boolean = builtin(checker, "bool");
-            KestType *operand = check_expr(checker, expr->unary.operand, boolean);
+            KestType *operand =
+                check_expr(checker, expr->unary.operand, boolean);
             if (!kest_type_equal(operand, boolean)) {
                 expected_but(checker, expr->unary.operand->span, boolean,
                              operand, "`!`");
@@ -5014,8 +4992,7 @@ static KestType *check_expr(Checker *checker, KestExpr *expr,
     // written here and could not be made to fail -- a condition that cannot be
     // false is a reader's second guess about what the rule is.
     if (expected != NULL && expected->tag == KEST_T_OPTIONAL && type != NULL &&
-        type->tag != KEST_T_ERROR &&
-        kest_type_equal(type, expected->element)) {
+        type->tag != KEST_T_ERROR && kest_type_equal(type, expected->element)) {
         expr->wrapped = true;
         type = (KestType *)expected;
     }
@@ -5180,13 +5157,13 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
     }
     // A literal in one arm takes the shape the other arm settled on, which is
     // what makes `if c -> 1 else -> x` work when `x` is an `f32`.
-    if (is_literal(branch->then_value) && other != NULL &&
-        !is_error(other) && other->tag == given->tag) {
+    if (is_literal(branch->then_value) && other != NULL && !is_error(other) &&
+        other->tag == given->tag) {
         given = other;
         branch->then_value->type = given;
     }
-    KestExpr *second = branch->otherwise != NULL ? branch->otherwise
-                                                 : branch->else_value;
+    KestExpr *second =
+        branch->otherwise != NULL ? branch->otherwise : branch->else_value;
     if (second != NULL) {
         if (is_literal(second) && second->type != NULL &&
             second->type->tag == given->tag) {
@@ -5279,7 +5256,8 @@ static bool is_fields_walk(Checker *checker, const KestStmt *stmt) {
         sequence->kind != KEST_EXPR_CALL || sequence->call.arg_count != 1 ||
         sequence->call.method || sequence->call.callee == NULL ||
         sequence->call.callee->kind != KEST_EXPR_NAME ||
-        !kest_word_same("fields", span_text(checker, sequence->call.callee->span),
+        !kest_word_same("fields",
+                        span_text(checker, sequence->call.callee->span),
                         sequence->call.callee->span.length)) {
         return false;
     }
@@ -5332,8 +5310,8 @@ static void check_fields_walk(Checker *checker, KestStmt *stmt) {
     while (root->kind == KEST_EXPR_FIELD) {
         root = root->field.object;
     }
-    Local *rooted = find_local(checker, span_text(checker, root->span),
-                               root->span.length);
+    Local *rooted =
+        find_local(checker, span_text(checker, root->span), root->span.length);
     if (rooted != NULL) {
         rooted->written_into = true;
         rooted->read = true;
@@ -5347,22 +5325,20 @@ static void check_fields_walk(Checker *checker, KestStmt *stmt) {
         from++;
     }
     KestSpan written = {stmt->span.offset + from, stmt->span.length - from};
-    KestStmt **copies =
-        held->member_count == 0
-            ? NULL
-            : KEST_ARENA_ARRAY(checker->program->arena, KestStmt *,
-                               held->member_count);
+    KestStmt **copies = held->member_count == 0
+                            ? NULL
+                            : KEST_ARENA_ARRAY(checker->program->arena,
+                                               KestStmt *, held->member_count);
     if (held->member_count > 0 && copies == NULL) {
         checker->out_of_memory = true;
         return;
     }
     for (uint32_t m = 0; m < held->member_count; m++) {
         KestStmt *copy = KEST_ARENA_NEW(checker->program->arena, KestStmt);
-        if (copy == NULL ||
-            !kest_parse_block_again(checker->program->arena,
-                                    checker->program->source,
-                                    checker->program->diags, written,
-                                    &copy->block)) {
+        if (copy == NULL || !kest_parse_block_again(checker->program->arena,
+                                                    checker->program->source,
+                                                    checker->program->diags,
+                                                    written, &copy->block)) {
             checker->out_of_memory = true;
             return;
         }
@@ -5544,12 +5520,13 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         }
         // `+=` and its like on a vector, which are what the operators are:
         // `*=` and `/=` scale it by an `f32`.
-        bool vector_step = stmt->assign.op != KEST_TOK_EQ && kest_is_vector(target);
+        bool vector_step =
+            stmt->assign.op != KEST_TOK_EQ && kest_is_vector(target);
         if (vector_step) {
             as_component(checker, stmt->assign.value, &value);
         }
-        if (vector_step && vector_answer(stmt->assign.op, target, value) ==
-                               target) {
+        if (vector_step &&
+            vector_answer(stmt->assign.op, target, value) == target) {
             // One of the four, with what it may take.
         } else if (!kest_type_equal(target, value)) {
             expected_but(checker, stmt->assign.value->span, target, value,
@@ -5558,7 +5535,8 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         if (stmt->assign.op != KEST_TOK_EQ && !is_error(target) &&
             !is_numeric(target) && !kest_is_vector(target)) {
             report(checker, stmt->span, "K0314", "`%s` does not apply to `%s`",
-                   kest_token_bare(stmt->assign.op, spelling, sizeof(spelling)), type_name(checker, target));
+                   kest_token_bare(stmt->assign.op, spelling, sizeof(spelling)),
+                   type_name(checker, target));
         }
         break;
     }
@@ -5611,7 +5589,8 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         } else {
             // The same shape `if let` has: what it holds is named for as long
             // as there was something to name.
-            KestType *optional = check_expr(checker, stmt->loop.condition, NULL);
+            KestType *optional =
+                check_expr(checker, stmt->loop.condition, NULL);
             KestType *held = error_type(checker);
             if (!is_error(optional)) {
                 if (optional->tag == KEST_T_OPTIONAL) {
@@ -5650,8 +5629,9 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
             // `0..count` counts in whatever `count` is. It is the rule an
             // operator already follows, and the node is corrected so the
             // compiler reads the same type the checker settled on.
-            if (!kest_type_equal(from, to) && is_literal(stmt->each->sequence) &&
-                !is_error(to) && from != NULL && from->tag == to->tag) {
+            if (!kest_type_equal(from, to) &&
+                is_literal(stmt->each->sequence) && !is_error(to) &&
+                from != NULL && from->tag == to->tag) {
                 from = to;
                 stmt->each->sequence->type = to;
             }
@@ -6001,8 +5981,7 @@ static bool stmt_returns(const KestStmt *stmt) {
         // when what it asks for is `none`.
         return stmt->loop.binding.length == 0 && stmt->loop.condition != NULL &&
                stmt->loop.condition->kind == KEST_EXPR_BOOL &&
-               stmt->loop.condition->boolean &&
-               !block_leaves(&stmt->loop.body);
+               stmt->loop.condition->boolean && !block_leaves(&stmt->loop.body);
     // A `for` walks something that can be empty, so it is a loop a program
     // comes back from however it is written. The rest leave the body the way
     // the statement after them does.
@@ -6049,8 +6028,7 @@ static const KestType *resumes_from(Checker *checker, const KestDecl *decl,
         }
     }
     if (held == NULL) {
-        report(checker, param, "K0368",
-               "`%.*s` is not something `%.*s` takes",
+        report(checker, param, "K0368", "`%.*s` is not something `%.*s` takes",
                (int)param.length, param_name, (int)decl->name.length,
                span_text(checker, decl->name));
         return NULL;
@@ -6122,9 +6100,9 @@ static bool check_function(KestProgram *program, Checker *checker,
         checker->resume_cases = resumes_from(checker, decl, signature);
         checker->resume_mark = body;
         if (checker->resume_cases != NULL) {
-            checker->waited = KEST_ARENA_ARRAY(
-                program->arena, uint32_t,
-                checker->resume_cases->case_count + 1);
+            checker->waited =
+                KEST_ARENA_ARRAY(program->arena, uint32_t,
+                                 checker->resume_cases->case_count + 1);
             if (checker->waited == NULL) {
                 checker->out_of_memory = true;
                 return false;
@@ -6148,9 +6126,8 @@ static bool check_function(KestProgram *program, Checker *checker,
         checker->result->tag != KEST_T_ERROR &&
         !always_returns(&decl->function.body)) {
         report(checker, decl->name, "K0316",
-               "`%.*s` can end without returning `%s`",
-               (int)decl->name.length, name,
-               kest_type_name(program->arena, checker->result));
+               "`%.*s` can end without returning `%s`", (int)decl->name.length,
+               name, kest_type_name(program->arena, checker->result));
         // The shape somebody writes when they expect the last thing in a body
         // to be what it gives back. A `match` or an `if` whose arms give
         // values is a value, and a value on its own is not a return.
@@ -6184,7 +6161,8 @@ static bool check_unit(KestProgram *program, KestUnit *unit) {
         if (decl->kind != KEST_DECL_CONST) {
             continue;
         }
-        KestType *declared = kest_resolve_type_ref(program, decl->constant.type);
+        KestType *declared =
+            kest_resolve_type_ref(program, decl->constant.type);
         KestType *value = check_expr(&checker, decl->constant.value, declared);
         if (!kest_type_equal(value, declared)) {
             expected_but(&checker, decl->constant.value->span, declared, value,
@@ -6241,8 +6219,7 @@ static bool check_unit(KestProgram *program, KestUnit *unit) {
                     kest_diags_add(program->diags, KEST_SEVERITY_WARNING,
                                    "K0513", decl->type_params[g].name,
                                    "nothing in this body %s a `%s`",
-                                   kest_capability(at)->word,
-                                   stands->name);
+                                   kest_capability(at)->word, stands->name);
                     kest_diags_suggest(program->diags,
                                        "take it out: what a generic says it "
                                        "needs is what it may be handed");
@@ -6351,8 +6328,7 @@ bool kest_retype_instance(KestProgram *program, KestInstance *instance) {
     kest_diags_mute(program->diags, true);
     kest_bind_types(program, instance->names, instance->bindings,
                     instance->count);
-    bool ok = check_function(program, &checker, instance->decl,
-                             instance->type);
+    bool ok = check_function(program, &checker, instance->decl, instance->type);
     kest_unbind_types(program);
     kest_diags_mute(program->diags, false);
     return ok;
@@ -6429,8 +6405,7 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
             // `kest_type_name`, on a sentence nobody will read. Most copies
             // in a program that compiles are quiet ones.
             size_t room = 1;
-            if (instance->site.length == 0 ||
-                program->diags->count == before) {
+            if (instance->site.length == 0 || program->diags->count == before) {
                 if (!ok) {
                     return false;
                 }
@@ -6459,10 +6434,9 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
                 // `where`, because the names are the ones written in the body
                 // above and not in the line this note is on: a reader looking
                 // at `K` is looking at the frame the message opened with.
-                kest_diags_note_at(program->diags, d,
-                                   instance->site_source, instance->site,
-                                   "this copy was asked for here, where %s",
-                                   which);
+                kest_diags_note_at(
+                    program->diags, d, instance->site_source, instance->site,
+                    "this copy was asked for here, where %s", which);
             }
             if (!ok) {
                 return false;
@@ -6603,4 +6577,3 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
     }
     return true;
 }
-

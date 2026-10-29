@@ -102,25 +102,79 @@ typedef struct {
 // Which of the names this host looks up is which. Every part of the run
 // below asks for one of these, so they are named here rather than inside
 // the one function that used to be all of it.
-enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
-       BLAMED, BLAMED_BY, FOOTED, GREETS, WHO_IS, MARKED, MARKING, MARK,
-       UNMARK, HEAVIEST,
-       LENGTH_OF,
-       BETWEEN, SPREAD, HOARD, PILE, CHURN, READY, FILLING, GLUED,
-       JOINED, REPEATED, JOINED_PIECES, READABLE, GREW, POPPED, TOOK,
-       EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
-       BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO, WORN,
-       MOVED, PUT_RECORD, OWN_ARRAY, HOW_MANY_ON, REACH,
-       HEAVIEST_CELL, AS_WRITTEN, RANKED, APPLY, DOUBLED, GROWS, WEIGHED,
-       // Added at the end on purpose: every name before this one keeps the
-       // place it had, and a hole that breaks a machine's hold on the list it
-       // was started from lands on the same entry it always did.
-       HALF_WRITTEN, HEAL, HURT_AT,
-       // What the list of names below has to be as long as. This host looked
-       // each of them up into an array sized by the last name in this list,
-       // so a name added after that one was a write past the end of it -- this
-       // host getting wrong the one thing it is here to show being got right.
-       ENTRIES };
+enum {
+    CREATE,
+    SPAWN,
+    STEP,
+    ON_EVENTS,
+    SILENCE,
+    DAMAGE_OF,
+    HURT_BY,
+    WORST,
+    BLAMED,
+    BLAMED_BY,
+    FOOTED,
+    GREETS,
+    WHO_IS,
+    MARKED,
+    MARKING,
+    MARK,
+    UNMARK,
+    HEAVIEST,
+    LENGTH_OF,
+    BETWEEN,
+    SPREAD,
+    HOARD,
+    PILE,
+    CHURN,
+    READY,
+    FILLING,
+    GLUED,
+    JOINED,
+    REPEATED,
+    JOINED_PIECES,
+    READABLE,
+    GREW,
+    POPPED,
+    TOOK,
+    EMPTIED,
+    UNDER,
+    NAMED,
+    AT_ONCE,
+    COPIED,
+    BLANK,
+    FIRST,
+    BORN,
+    HEALTH_OF,
+    DROPPED,
+    TOTAL_OF,
+    ANSWER_INTO,
+    SAY_INTO,
+    WORN,
+    MOVED,
+    PUT_RECORD,
+    OWN_ARRAY,
+    HOW_MANY_ON,
+    REACH,
+    HEAVIEST_CELL,
+    AS_WRITTEN,
+    RANKED,
+    APPLY,
+    DOUBLED,
+    GROWS,
+    WEIGHED,
+    // Added at the end on purpose: every name before this one keeps the
+    // place it had, and a hole that breaks a machine's hold on the list it
+    // was started from lands on the same entry it always did.
+    HALF_WRITTEN,
+    HEAL,
+    HURT_AT,
+    // What the list of names below has to be as long as. This host looked
+    // each of them up into an array sized by the last name in this list,
+    // so a name added after that one was a write past the end of it -- this
+    // host getting wrong the one thing it is here to show being got right.
+    ENTRIES
+};
 
 // What this host is between calls. A host that runs a program every frame
 // holds exactly this: the machine, the names it looked up once because a
@@ -307,7 +361,8 @@ static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
 // machine here asks for that on purpose, because it is the one mistake at this
 // crossing nothing can be asked about beforehand -- the tag is decided inside
 // the call -- and the rest bind nothing and are answered honestly.
-static void engine_blame(KestValue *frame, KestRuntime *runtime, void *context) {
+static void engine_blame(KestValue *frame, KestRuntime *runtime,
+                         void *context) {
     (void)runtime;
     const bool *wrongly = context;
     int32_t cost = (int32_t)frame[0].integer;
@@ -346,9 +401,8 @@ static void engine_who(KestValue *frame, KestRuntime *runtime, void *context) {
     } else {
         kest_text(runtime, said, (uint32_t)strlen(said), frame);
     }
-    frame[2].integer = decider != NULL && decider->answers_too_wide
-                           ? (int64_t)1 << 40
-                           : 3;
+    frame[2].integer =
+        decider != NULL && decider->answers_too_wide ? (int64_t)1 << 40 : 3;
 }
 
 // What this host weighs something at, which is a number kept narrower than the
@@ -358,9 +412,8 @@ static void engine_weigh(KestValue *frame, KestRuntime *runtime,
                          void *context) {
     const Decider *decider = decided(context);
     (void)runtime;
-    frame[0].real = decider != NULL && decider->answers_too_wide
-                        ? 0.1
-                        : (double)(float)0.5;
+    frame[0].real =
+        decider != NULL && decider->answers_too_wide ? 0.1 : (double)(float)0.5;
 }
 
 // A call this host makes from inside a call of its own, which is a run of the
@@ -494,9 +547,8 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
         // returns and ask again, which is the only thing that makes the
         // refusal stop. It does that at the end of this file.
         if (freed) {
-            fprintf(stderr,
-                    "a machine said it was freed while the program was "
-                    "running\n");
+            fprintf(stderr, "a machine said it was freed while the program was "
+                            "running\n");
             _Exit(1);
         }
         decider->meddles = false;
@@ -596,8 +648,10 @@ static size_t what_was_said(KestRuntime *runtime, KestBuild *build,
         // Said here rather than left to the reading above, which would go
         // looking for words that are in the report and not in these bytes,
         // and say the machine had not said them.
-        fprintf(stderr, "what was said is %zu bytes and this host read %zu of "
-                        "them\n", said, got);
+        fprintf(stderr,
+                "what was said is %zu bytes and this host read %zu of "
+                "them\n",
+                said, got);
     }
     return said;
 }
@@ -625,7 +679,8 @@ static bool build_said_that(KestBuild *build, const char *code,
     what_was_said(NULL, build, KEST_FORM_TEXT, said, sizeof(said));
     char line[512];
     bool named = false;
-    for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
+    for (const char *at = said;
+         (at = line_of(at, line, sizeof(line))) != NULL;) {
         if (strstr(line, code) != NULL && strstr(line, words) != NULL) {
             named = true;
         }
@@ -644,7 +699,8 @@ static bool build_said_that(KestBuild *build, const char *code,
 // quiet from one that never spoke.
 static bool build_said_nothing(KestBuild *build, const char *after) {
     char said[8192];
-    bool quiet = what_was_said(NULL, build, KEST_FORM_TEXT, said, sizeof(said)) == 0;
+    bool quiet =
+        what_was_said(NULL, build, KEST_FORM_TEXT, said, sizeof(said)) == 0;
     if (!quiet) {
         char line[512];
         line_of(said, line, sizeof(line));
@@ -659,7 +715,8 @@ static bool said_that(KestRuntime *runtime, const char *code,
     what_was_said(runtime, NULL, KEST_FORM_TEXT, said, sizeof(said));
     char line[512];
     bool named = false;
-    for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
+    for (const char *at = said;
+         (at = line_of(at, line, sizeof(line))) != NULL;) {
         if (strstr(line, code) != NULL && strstr(line, words) != NULL) {
             named = true;
         }
@@ -683,7 +740,8 @@ static bool said_under(KestRuntime *runtime, const char *code,
     char line[512];
     bool named = false;
     bool suggested = false;
-    for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
+    for (const char *at = said;
+         (at = line_of(at, line, sizeof(line))) != NULL;) {
         if (strstr(line, code) != NULL) {
             named = true;
         }
@@ -692,8 +750,10 @@ static bool said_under(KestRuntime *runtime, const char *code,
         }
     }
     if (!suggested) {
-        fprintf(stderr, "the machine refused without saying `%s` and, under "
-                        "it, `%s`\n", code, words);
+        fprintf(stderr,
+                "the machine refused without saying `%s` and, under "
+                "it, `%s`\n",
+                code, words);
     }
     return suggested;
 }
@@ -706,7 +766,8 @@ static bool said_under(KestRuntime *runtime, const char *code,
 // it lands on is not the frame it came from.
 static bool said_nothing(KestRuntime *runtime, const char *after) {
     char said[8192];
-    bool quiet = what_was_said(runtime, NULL, KEST_FORM_TEXT, said, sizeof(said)) == 0;
+    bool quiet =
+        what_was_said(runtime, NULL, KEST_FORM_TEXT, said, sizeof(said)) == 0;
     if (!quiet) {
         char line[512];
         line_of(said, line, sizeof(line));
@@ -725,7 +786,8 @@ static uint32_t places_said(KestRuntime *runtime, const char *words) {
     char line[512];
     uint32_t places = 0;
     bool named = false;
-    for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
+    for (const char *at = said;
+         (at = line_of(at, line, sizeof(line))) != NULL;) {
         if (strstr(line, "-->") != NULL) {
             places++;
         }
@@ -752,8 +814,10 @@ static bool room_for_calling(KestBuild *build, const char *const *names,
     KestLimits from_there = {0, 0, 0, 0};
     if (into != NULL && (!kest_needs_from(build, NULL, &back_in, NULL) ||
                          !kest_needs_of(build, into, &from_there, NULL))) {
-        fprintf(stderr, "the program says nothing about calling `%s` from "
-                        "inside a host function\n", into);
+        fprintf(stderr,
+                "the program says nothing about calling `%s` from "
+                "inside a host function\n",
+                into);
         return false;
     }
     limits->stack_slots = back_in.stack_slots + from_there.stack_slots;
@@ -782,7 +846,8 @@ static bool needed_for(KestRuntime *runtime, KestLimits *asking) {
     what_was_said(runtime, NULL, KEST_FORM_TEXT, said, sizeof(said));
     char line[512];
     bool told = false;
-    for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
+    for (const char *at = said;
+         (at = line_of(at, line, sizeof(line))) != NULL;) {
         const char *at = strstr(line, "calling this needs ");
         unsigned slots = 0;
         unsigned frames = 0;
@@ -807,7 +872,8 @@ static bool said_in_both(KestRuntime *runtime, const char *one,
     char line[512];
     bool first = false;
     bool second = false;
-    for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
+    for (const char *at = said;
+         (at = line_of(at, line, sizeof(line))) != NULL;) {
         first = first || strstr(line, one) != NULL;
         second = second || strstr(line, other) != NULL;
     }
@@ -845,21 +911,20 @@ static void point_pieces(KestPiece point[3]) {
 
 // What this host believes about the cases of the one tagged shape it reads: the
 // name of each tag, how many slots the case carries, and what is in them. This
-// host reads slot one as a `double` for `Moved` and as a whole number for `Hit`,
-// on the strength of four numbers written in this file -- and a case added to
-// that enum moves the numbers and changes what is in the slots, with nothing in
-// a frame to say either. The kinds are the type's own widths, the same as
-// everywhere else this host says what it believes; which member of a slot each
-// of them is read through follows from the kind, and `kest_slot_of` is where
-// that is asked. Every case here carries one kind, so one is written a case.
+// host reads slot one as a `double` for `Moved` and as a whole number for
+// `Hit`, on the strength of four numbers written in this file -- and a case
+// added to that enum moves the numbers and changes what is in the slots, with
+// nothing in a frame to say either. The kinds are the type's own widths, the
+// same as everywhere else this host says what it believes; which member of a
+// slot each of them is read through follows from the kind, and `kest_slot_of`
+// is where that is asked. Every case here carries one kind, so one is written a
+// case.
 static bool reads_the_cases(const KestLayout *layout, uint16_t piece) {
     static const struct {
         uint16_t carries;
         uint8_t kind;
-    } ours[] = {{0, KEST_L_I32},
-                {2, KEST_L_F32},
-                {1, KEST_L_I32},
-                {1, KEST_L_I32}};
+    } ours[] = {
+        {0, KEST_L_I32}, {2, KEST_L_F32}, {1, KEST_L_I32}, {1, KEST_L_I32}};
     _Static_assert(sizeof(ours) / sizeof(ours[0]) ==
                        sizeof(event_names) / sizeof(event_names[0]),
                    "every case this host names is one it reads");
@@ -979,17 +1044,20 @@ static bool frame_adds_up(KestRuntime *runtime, int32_t entry,
     for (uint32_t which = 0; which < takes; which++) {
         const KestLayout *layout = kest_frame_layout(runtime, entry, which);
         if (layout == NULL) {
-            fprintf(stderr, "`%s` takes %u and says nothing about the one "
-                            "at %u\n", name, takes, which);
+            fprintf(stderr,
+                    "`%s` takes %u and says nothing about the one "
+                    "at %u\n",
+                    name, takes, which);
             return false;
         }
         // Where an argument starts is what the ones before it come to. One of
         // those is a number the program hands over and the other is a walk
         // this host makes, which is the point of asking rather than counting.
         if (kest_frame_at(runtime, entry, which) != at) {
-            fprintf(stderr, "`%s` puts argument %u at %u and the ones before "
-                            "it come to %u\n", name, which,
-                    kest_frame_at(runtime, entry, which), at);
+            fprintf(stderr,
+                    "`%s` puts argument %u at %u and the ones before "
+                    "it come to %u\n",
+                    name, which, kest_frame_at(runtime, entry, which), at);
             return false;
         }
         // A piece is where something is inside one of these, so it cannot be
@@ -997,9 +1065,10 @@ static bool frame_adds_up(KestRuntime *runtime, int32_t entry,
         // bytes reads whatever is after them if it is.
         for (uint16_t p = 0; p < layout->count; p++) {
             if (layout->pieces[p].offset >= layout->size) {
-                fprintf(stderr, "`%s` has a piece of argument %u at byte %u "
-                                "of %u\n", name, which,
-                        layout->pieces[p].offset, layout->size);
+                fprintf(stderr,
+                        "`%s` has a piece of argument %u at byte %u "
+                        "of %u\n",
+                        name, which, layout->pieces[p].offset, layout->size);
                 return false;
             }
         }
@@ -1015,18 +1084,20 @@ static bool frame_adds_up(KestRuntime *runtime, int32_t entry,
         return false;
     }
     if (kest_frame_at(runtime, entry, takes) != at) {
-        fprintf(stderr, "`%s` says a result starts at %u and its arguments "
-                        "come to %u\n", name,
-                kest_frame_at(runtime, entry, takes), at);
+        fprintf(stderr,
+                "`%s` says a result starts at %u and its arguments "
+                "come to %u\n",
+                name, kest_frame_at(runtime, entry, takes), at);
         return false;
     }
     const KestLayout *gives = kest_frame_gives(runtime, entry);
     uint32_t back = gives == NULL ? 0 : gives->slots;
     uint32_t wider = at > back ? at : back;
     if (kest_frame_slots(runtime, entry) != wider) {
-        fprintf(stderr, "`%s` needs a frame %u wide and what it takes (%u) "
-                        "and what it gives back (%u) come to %u\n", name,
-                kest_frame_slots(runtime, entry), at, back, wider);
+        fprintf(stderr,
+                "`%s` needs a frame %u wide and what it takes (%u) "
+                "and what it gives back (%u) come to %u\n",
+                name, kest_frame_slots(runtime, entry), at, back, wider);
         return false;
     }
     return true;
@@ -1107,9 +1178,9 @@ static bool lays_them_out_the_same(KestBuild *build) {
     // `Cell`s laid out where they stand and a tag, so a name here is a path
     // and not a word.
     {
-        const char *called[] = {"cells[0].at", "cells[0].weight",
-                                "cells[1].at", "cells[1].weight",
-                                "cells[2].at", "cells[2].weight", "tag"};
+        const char *called[] = {
+            "cells[0].at", "cells[0].weight", "cells[1].at", "cells[1].weight",
+            "cells[2].at", "cells[2].weight", "tag"};
         const KestLayout *of_a_row = NULL;
         if (kest_build_layout(build, "Row", &of_a_row) != 1 ||
             of_a_row->count != 7) {
@@ -1119,8 +1190,9 @@ static bool lays_them_out_the_same(KestBuild *build) {
         for (uint16_t p = 0; p < of_a_row->count; p++) {
             const char *says = of_a_row->pieces[p].name;
             if (says == NULL || strcmp(says, called[p]) != 0) {
-                fprintf(stderr, "`Row` piece %u is called `%s` and this host "
-                                "reads `%s`\n",
+                fprintf(stderr,
+                        "`Row` piece %u is called `%s` and this host "
+                        "reads `%s`\n",
                         p, says == NULL ? "nothing" : says, called[p]);
                 return 1;
             }
@@ -1134,13 +1206,13 @@ static bool lays_them_out_the_same(KestBuild *build) {
         uint16_t count;
         bool tagged;
         uint16_t align;
-    } lending[] = {{"Point", sizeof(Point), point, 3, false, _Alignof(Point)},
-                   {"Row", sizeof(Row), row, 7, false, _Alignof(Row)},
-                   {"Tile", sizeof(Tile), tile, 4, false, _Alignof(Tile)},
-                   {"Flagged", sizeof(Flagged), flagged, 2, false,
-                    _Alignof(Flagged)},
-                   {"Mark", sizeof(Mark), mark, 3, false, _Alignof(Mark)},
-                   {"Event", sizeof(Event), event, 3, true, _Alignof(Event)}};
+    } lending[] = {
+        {"Point", sizeof(Point), point, 3, false, _Alignof(Point)},
+        {"Row", sizeof(Row), row, 7, false, _Alignof(Row)},
+        {"Tile", sizeof(Tile), tile, 4, false, _Alignof(Tile)},
+        {"Flagged", sizeof(Flagged), flagged, 2, false, _Alignof(Flagged)},
+        {"Mark", sizeof(Mark), mark, 3, false, _Alignof(Mark)},
+        {"Event", sizeof(Event), event, 3, true, _Alignof(Event)}};
     for (size_t i = 0; i < sizeof(lending) / sizeof(lending[0]); i++) {
         const KestLayout *layout = NULL;
         if (kest_build_layout(build, lending[i].name, &layout) != 1) {
@@ -1175,8 +1247,8 @@ static bool lays_them_out_the_same(KestBuild *build) {
                     lending[i].name);
             return false;
         }
-        printf("`%s` is %u bytes in %u slots, aligned to %u\n",
-               lending[i].name, layout->size, layout->count, layout->align);
+        printf("`%s` is %u bytes in %u slots, aligned to %u\n", lending[i].name,
+               layout->size, layout->count, layout->align);
     }
     return true;
 }
@@ -1309,8 +1381,8 @@ static bool frames_of_lending(Engine *engine, Row *batch, int frames,
     for (int frame = 0; frame < frames; frame++) {
         KestValue lent[8];
         for (int i = 0; i < 8; i++) {
-            lent[i] = kest_borrow(engine->runtime, &batch[i], 1, "Row",
-                                  sizeof(Row));
+            lent[i] =
+                kest_borrow(engine->runtime, &batch[i], 1, "Row", sizeof(Row));
             if (lent[i].object == NULL) {
                 kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
                 return false;
@@ -1328,8 +1400,9 @@ static bool frames_of_lending(Engine *engine, Row *batch, int frames,
         if (frame == 0) {
             widest = kest_heap_taken(engine->runtime);
         } else if (kest_heap_taken(engine->runtime) != widest) {
-            fprintf(stderr, "eight lends a frame grew the heap by %zu after "
-                            "frame %d\n",
+            fprintf(stderr,
+                    "eight lends a frame grew the heap by %zu after "
+                    "frame %d\n",
                     kest_heap_taken(engine->runtime) - widest, frame);
             return false;
         }
@@ -1398,8 +1471,8 @@ static bool heals(Engine *engine) {
         int32_t tag;
         int32_t cut;
     } hurts[2] = {{1, 7}, {0, 99}};
-    KestValue hurt = kest_borrow(engine->runtime, hurts, 2, "Hurt",
-                                 sizeof(hurts[0]));
+    KestValue hurt =
+        kest_borrow(engine->runtime, hurts, 2, "Hurt", sizeof(hurts[0]));
     engine->frame[0] = hurt;
     engine->frame[1].integer = 0;
     if (!asks(engine, HEAL)) {
@@ -1407,8 +1480,8 @@ static bool heals(Engine *engine) {
         return false;
     }
     if (hurts[0].tag != 0 || hurts[0].cut != 0) {
-        fprintf(stderr, "healed, a `Hurt` left tag %d over %d\n",
-                hurts[0].tag, hurts[0].cut);
+        fprintf(stderr, "healed, a `Hurt` left tag %d over %d\n", hurts[0].tag,
+                hurts[0].cut);
         return false;
     }
     engine->frame[0] = hurt;
@@ -1477,15 +1550,16 @@ static bool lends_bytes(Engine *engine) {
         size_t again_cost = kest_heap_taken(engine->runtime) - was_again;
         if (again.object == NULL || again_cost != 0 ||
             !kest_lend_ends(engine->runtime, again)) {
-            fprintf(stderr,
-                    "a lend after one that ended cost %zu bytes\n", again_cost);
+            fprintf(stderr, "a lend after one that ended cost %zu bytes\n",
+                    again_cost);
             return false;
         }
         printf("a lend costs a header: %zu bytes for four and %zu for %zu, "
                "and nothing for the one after\n",
                small_cost, big_cost, sizeof(plenty));
     }
-    engine->frame[0] = kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
+    engine->frame[0] =
+        kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
     if (engine->frame[0].object == NULL) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
@@ -1511,7 +1585,8 @@ static bool lends_bytes(Engine *engine) {
     printf("and refused four bytes at no address, and lent nought of them\n");
 
     size_t before_text = kest_heap_taken(engine->runtime);
-    if (!kest_call(engine->runtime, engine->entry[READABLE], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+    if (!kest_call(engine->runtime, engine->entry[READABLE], engine->frame,
+                   sizeof(engine->frame) / sizeof(engine->frame[0]))) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
     }
@@ -1565,8 +1640,8 @@ static bool lends_bytes(Engine *engine) {
     letters[1] = 'e';
     letters[2] = 's';
     letters[3] = 't';
-    KestValue writable = kest_borrow(engine->runtime, letters, 4, "u8",
-                                     sizeof(letters[0]));
+    KestValue writable =
+        kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
     if (writable.object == NULL) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
@@ -1617,12 +1692,14 @@ static bool lends_bytes(Engine *engine) {
     // any other and so text a program may make: four bytes in and four bytes
     // of text out, with the nought still in the middle of it.
     letters[2] = 0;
-    engine->frame[0] = kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
+    engine->frame[0] =
+        kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
     if (engine->frame[0].object == NULL) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
     }
-    if (!kest_call(engine->runtime, engine->entry[READABLE], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+    if (!kest_call(engine->runtime, engine->entry[READABLE], engine->frame,
+                   sizeof(engine->frame) / sizeof(engine->frame[0]))) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
     }
@@ -1638,12 +1715,14 @@ static bool lends_bytes(Engine *engine) {
     // is asked about; nothing refuses the lend, because nothing about it is
     // wrong. What refuses is the asking.
     letters[2] = 0xff;
-    engine->frame[0] = kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
+    engine->frame[0] =
+        kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
     if (engine->frame[0].object == NULL) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
     }
-    if (kest_call(engine->runtime, engine->entry[READABLE], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+    if (kest_call(engine->runtime, engine->entry[READABLE], engine->frame,
+                  sizeof(engine->frame) / sizeof(engine->frame[0]))) {
         fprintf(stderr, "text was made of a byte that begins no character\n");
         return false;
     }
@@ -1660,12 +1739,15 @@ static bool lends_bytes(Engine *engine) {
     const int32_t changes[4] = {GREW, POPPED, TOOK, EMPTIED};
     const char *changed_it[4] = {"push", "pop", "remove", "clear"};
     for (int which = 0; which < 4; which++) {
-        engine->frame[0] = kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
+        engine->frame[0] =
+            kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
         if (engine->frame[0].object == NULL) {
             kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
             return false;
         }
-        if (kest_call(engine->runtime, engine->entry[changes[which]], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+        if (kest_call(engine->runtime, engine->entry[changes[which]],
+                      engine->frame,
+                      sizeof(engine->frame) / sizeof(engine->frame[0]))) {
             fprintf(stderr, "`%s` changed how many the host lent\n",
                     changed_it[which]);
             return false;
@@ -1690,7 +1772,8 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
     // this one asks for more, so that the message a host gets is one this
     // host has seen rather than one it is promised. Last, because a heap
     // thrown away takes the world with it.
-    if (kest_call(engine->runtime, engine->entry[HOARD], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+    if (kest_call(engine->runtime, engine->entry[HOARD], engine->frame,
+                  sizeof(engine->frame) / sizeof(engine->frame[0]))) {
         fprintf(stderr, "a program that asks for everything was let finish\n");
         return false;
     }
@@ -1875,8 +1958,7 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
             return false;
         }
         engine->frame[0] = was_lent;
-        if (!kest_call(engine->runtime, engine->entry[HEAVIEST],
-                       engine->frame,
+        if (!kest_call(engine->runtime, engine->entry[HEAVIEST], engine->frame,
                        sizeof(engine->frame) / sizeof(engine->frame[0]))) {
             kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
             return false;
@@ -1934,7 +2016,8 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
     // And the same ceiling the other way, because an array grows by taking one
     // block and a store by taking four: the same message from different code,
     // and a host that has seen one has not seen the other.
-    if (kest_call(engine->runtime, engine->entry[PILE], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+    if (kest_call(engine->runtime, engine->entry[PILE], engine->frame,
+                  sizeof(engine->frame) / sizeof(engine->frame[0]))) {
         fprintf(stderr, "an array with no end to it was let finish\n");
         return false;
     }
@@ -1962,31 +2045,34 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
     // host's own compiler, because the two are not the same question and the
     // compilers do not spell it the same.
     if (!kest_checked()) {
-    Row rows[2];
-    memset(rows, 0, sizeof(rows));
-    KestValue lent =
-        kest_borrow(engine->runtime, rows, 2, "Row", sizeof(Row));
-    if (lent.object == NULL || !kest_heap_reset(engine->runtime)) {
-        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
-        return false;
-    }
-    engine->frame[0] = lent;
-    // Two ways this goes wrong and one sentence for both. A machine that
-    // stopped asking whose a handle is reads whatever is at that address, and
-    // what is there decides whether the call comes back at all: sometimes it
-    // succeeds and takes the handle, sometimes it refuses for a reason that is
-    // not the right one. Both are the same fault to a reader and to whatever
-    // is holding this host to catching it, so both say so.
-    bool took = kest_call(engine->runtime, engine->entry[HEAVIEST],
-                          engine->frame,
-                          sizeof(engine->frame) / sizeof(engine->frame[0]));
-    if (took || !said_that(engine->runtime, "K0636",
-                           "did not come from this machine")) {
-        fprintf(stderr,
+        Row rows[2];
+        memset(rows, 0, sizeof(rows));
+        KestValue lent =
+            kest_borrow(engine->runtime, rows, 2, "Row", sizeof(Row));
+        if (lent.object == NULL || !kest_heap_reset(engine->runtime)) {
+            kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+            return false;
+        }
+        engine->frame[0] = lent;
+        // Two ways this goes wrong and one sentence for both. A machine that
+        // stopped asking whose a handle is reads whatever is at that address,
+        // and what is there decides whether the call comes back at all:
+        // sometimes it succeeds and takes the handle, sometimes it refuses for
+        // a reason that is not the right one. Both are the same fault to a
+        // reader and to whatever is holding this host to catching it, so both
+        // say so.
+        bool took =
+            kest_call(engine->runtime, engine->entry[HEAVIEST], engine->frame,
+                      sizeof(engine->frame) / sizeof(engine->frame[0]));
+        if (took || !said_that(engine->runtime, "K0636",
+                               "did not come from this machine")) {
+            fprintf(
+                stderr,
                 "a handle from before the heap was thrown away was taken\n");
-        return false;
-    }
-    printf("and refused an array it lent before the heap was thrown away\n");
+            return false;
+        }
+        printf(
+            "and refused an array it lent before the heap was thrown away\n");
     }
 
     // And the other side of a budget, which is a program that stays inside one
@@ -1995,12 +2081,14 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
     // that kept the room would want more than a megabyte here and be told so.
     // The two above prove the message, and this proves there is nothing to say.
     engine->frame[0].integer = 100000;
-    if (!kest_call(engine->runtime, engine->entry[CHURN], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+    if (!kest_call(engine->runtime, engine->entry[CHURN], engine->frame,
+                   sizeof(engine->frame) / sizeof(engine->frame[0]))) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
     }
     printf("emptied and filled 100000 times, holding %lld, in %zu bytes\n",
-           (long long)engine->frame[0].integer, kest_heap_used(engine->runtime));
+           (long long)engine->frame[0].integer,
+           kest_heap_used(engine->runtime));
     return true;
 }
 
@@ -2019,7 +2107,9 @@ static bool weighs_what_it_costs(Engine *engine) {
     for (int which = 0; which < 2; which++) {
         engine->frame[0].integer = 1000;
         size_t spent = kest_heap_taken(engine->runtime);
-        if (!kest_call(engine->runtime, engine->entry[asked[which]], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+        if (!kest_call(engine->runtime, engine->entry[asked[which]],
+                       engine->frame,
+                       sizeof(engine->frame) / sizeof(engine->frame[0]))) {
             kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
             return false;
         }
@@ -2043,7 +2133,9 @@ static bool weighs_what_it_costs(Engine *engine) {
     for (int which = 0; which < 2; which++) {
         engine->frame[0].integer = 600;
         size_t spent = kest_heap_taken(engine->runtime);
-        if (!kest_call(engine->runtime, engine->entry[ways[which]], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+        if (!kest_call(engine->runtime, engine->entry[ways[which]],
+                       engine->frame,
+                       sizeof(engine->frame) / sizeof(engine->frame[0]))) {
             kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
             return false;
         }
@@ -2070,7 +2162,9 @@ static bool weighs_what_it_costs(Engine *engine) {
         for (int size = 0; size < 2; size++) {
             engine->frame[0].integer = size == 0 ? 200 : 400;
             size_t spent = kest_heap_taken(engine->runtime);
-            if (!kest_call(engine->runtime, engine->entry[linear[which]], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+            if (!kest_call(engine->runtime, engine->entry[linear[which]],
+                           engine->frame,
+                           sizeof(engine->frame) / sizeof(engine->frame[0]))) {
                 kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
                 return false;
             }
@@ -2079,8 +2173,9 @@ static bool weighs_what_it_costs(Engine *engine) {
         printf("`%s` over 200 and 400: %zu bytes and %zu\n", called[which],
                cost[0], cost[1]);
         if (cost[0] == 0 || cost[1] > cost[0] * 3) {
-            fprintf(stderr, "`%s` costs %zu for twice the work, which is not "
-                            "the gathering way\n",
+            fprintf(stderr,
+                    "`%s` costs %zu for twice the work, which is not "
+                    "the gathering way\n",
                     called[which], cost[1]);
             return false;
         }
@@ -2100,26 +2195,24 @@ static bool weighs_what_it_costs(Engine *engine) {
 // there is -- a file left out is refused even where it is on the disk beside
 // the program, and a file handed in place of one is what is read.
 static bool built_from_files_handed_over(void) {
-    static const char program[] =
-        "module handed\n"
-        "\n"
-        "import handed.more\n"
-        "\n"
-        "fn main() -> i32 {\n"
-        "    return more.seven() * 6\n"
-        "}\n";
-    static const char more[] =
-        "module handed.more\n"
-        "\n"
-        "fn seven() -> i32 {\n"
-        "    return 7\n"
-        "}\n";
+    static const char program[] = "module handed\n"
+                                  "\n"
+                                  "import handed.more\n"
+                                  "\n"
+                                  "fn main() -> i32 {\n"
+                                  "    return more.seven() * 6\n"
+                                  "}\n";
+    static const char more[] = "module handed.more\n"
+                               "\n"
+                               "fn seven() -> i32 {\n"
+                               "    return 7\n"
+                               "}\n";
     const KestFile files[] = {
         {"handed.kest", program, sizeof(program) - 1},
         {"handed/more.kest", more, sizeof(more) - 1},
     };
-    KestBuild *build = kest_build_from(files, 2, "lib/", stderr,
-                                       KEST_FORM_TEXT, 0);
+    KestBuild *build =
+        kest_build_from(files, 2, "lib/", stderr, KEST_FORM_TEXT, 0);
     KestRuntime *rt = build == NULL ? NULL : kest_start(build, NULL, NULL);
     KestValue frame[2] = {{0}};
     if (rt == NULL || !kest_call(rt, kest_entry(rt, "main"), frame, 2) ||
@@ -2160,10 +2253,9 @@ static bool built_from_files_handed_over(void) {
 
 static bool held_across_a_reload(void) {
     KestHost *host = kest_host_new();
-    KestHeld *held = host == NULL
-                         ? NULL
-                         : kest_held_new("examples/held.kest", NULL, host,
-                                         stderr);
+    KestHeld *held =
+        host == NULL ? NULL
+                     : kest_held_new("examples/held.kest", NULL, host, stderr);
     KestValue many = {.integer = 5};
     KestValue turn = {0};
     if (held == NULL || !kest_held_begin(held, "begin", &many, 1) ||
@@ -2203,13 +2295,15 @@ static bool held_across_a_reload(void) {
     if (kest_held_reload(held, "examples/frame.kest", said, sizeof(said)) ||
         strstr(said, "restore") == NULL ||
         !kest_held_call(held, "step", NULL, 0, &turn) || turn.integer != 4) {
-        fprintf(stderr, "a refused reload did not leave the world where it "
-                        "was: %s, turn %lld\n",
+        fprintf(stderr,
+                "a refused reload did not leave the world where it "
+                "was: %s, turn %lld\n",
                 said, (long long)turn.integer);
         return false;
     }
     printf("a held world stepped, was read where it lies, reloaded under "
-           "itself, and was refused a program with no restore: %s\n", said);
+           "itself, and was refused a program with no restore: %s\n",
+           said);
 
     // A file written under a build is noticed. Written somewhere of the
     // gate's own rather than into the tree, and taken away again.
@@ -2220,8 +2314,7 @@ static bool held_across_a_reload(void) {
     FILE *file = fopen(path, "wb");
     bool noticed = false;
     if (file != NULL) {
-        fputs("module changed\n\nfn main() -> i32 {\n    return 0\n}\n",
-              file);
+        fputs("module changed\n\nfn main() -> i32 {\n    return 0\n}\n", file);
         fclose(file);
         KestHeld *other = kest_held_new(path, NULL, host, stderr);
         bool before = other != NULL && kest_held_changed(other);
@@ -2308,8 +2401,9 @@ int main(int argc, char **argv) {
         return 1;
     }
     if (first_build == 0 || kest_build_cost(read_again) != first_build) {
-        fprintf(stderr, "building it cost %zu and building it a second time "
-                        "cost %zu\n",
+        fprintf(stderr,
+                "building it cost %zu and building it a second time "
+                "cost %zu\n",
                 first_build, kest_build_cost(read_again));
         return 1;
     }
@@ -2321,26 +2415,29 @@ int main(int argc, char **argv) {
     {
         uint64_t took = kest_build_work(build);
         if (took == 0 || kest_build_work(read_again) != took) {
-            fprintf(stderr, "building it took %llu units of work and building "
-                            "it a second time took %llu\n",
+            fprintf(stderr,
+                    "building it took %llu units of work and building "
+                    "it a second time took %llu\n",
                     (unsigned long long)took,
                     (unsigned long long)kest_build_work(read_again));
             return 1;
         }
-        KestBuild *just = kest_build_within(path, NULL, stderr,
-                                            KEST_FORM_TEXT, 0, took);
+        KestBuild *just =
+            kest_build_within(path, NULL, stderr, KEST_FORM_TEXT, 0, took);
         if (just == NULL || kest_build_work(just) != took) {
-            fprintf(stderr, "a build given the %llu units it takes was not "
-                            "let through\n",
+            fprintf(stderr,
+                    "a build given the %llu units it takes was not "
+                    "let through\n",
                     (unsigned long long)took);
             return 1;
         }
         kest_build_free(just);
-        KestBuild *short_of = kest_build_within(path, NULL, NULL,
-                                                KEST_FORM_TEXT, 0, took - 1);
+        KestBuild *short_of =
+            kest_build_within(path, NULL, NULL, KEST_FORM_TEXT, 0, took - 1);
         if (short_of != NULL) {
-            fprintf(stderr, "a build given %llu units, one short of what it "
-                            "takes, was let through\n",
+            fprintf(stderr,
+                    "a build given %llu units, one short of what it "
+                    "takes, was let through\n",
                     (unsigned long long)(took - 1));
             return 1;
         }
@@ -2377,8 +2474,10 @@ int main(int argc, char **argv) {
         size_t says = kest_build_read_bytes(build, at);
         FILE *open_it = fopen(from, "rb");
         if (open_it == NULL || fseek(open_it, 0, SEEK_END) != 0) {
-            fprintf(stderr, "the build says it read `%s` and this host cannot "
-                            "open it\n", from);
+            fprintf(stderr,
+                    "the build says it read `%s` and this host cannot "
+                    "open it\n",
+                    from);
             return 1;
         }
         long there = ftell(open_it);
@@ -2400,8 +2499,9 @@ int main(int argc, char **argv) {
     if (kest_build_mark(build) == 0 ||
         kest_build_mark(build) != kest_build_mark(read_again) ||
         kest_build_read_mark(build, files) != 0) {
-        fprintf(stderr, "the program marks %016llx and the same program built "
-                        "again marks %016llx\n",
+        fprintf(stderr,
+                "the program marks %016llx and the same program built "
+                "again marks %016llx\n",
                 (unsigned long long)kest_build_mark(build),
                 (unsigned long long)kest_build_mark(read_again));
         return 1;
@@ -2413,8 +2513,9 @@ int main(int argc, char **argv) {
     // of one program answer alike here for the same reason they do above.
     if (kest_build_code_mark(build) == 0 ||
         kest_build_code_mark(build) != kest_build_code_mark(read_again)) {
-        fprintf(stderr, "what this program runs marks %016llx and the same "
-                        "program built again marks %016llx\n",
+        fprintf(stderr,
+                "what this program runs marks %016llx and the same "
+                "program built again marks %016llx\n",
                 (unsigned long long)kest_build_code_mark(build),
                 (unsigned long long)kest_build_code_mark(read_again));
         return 1;
@@ -2428,13 +2529,15 @@ int main(int argc, char **argv) {
     }
     if (files == 0 || added_up != kest_build_source(build) ||
         kest_build_read_bytes(build, files) != 0) {
-        fprintf(stderr, "the build read %u file(s) adding up to %zu and says "
-                        "%zu\n",
+        fprintf(stderr,
+                "the build read %u file(s) adding up to %zu and says "
+                "%zu\n",
                 files, added_up, kest_build_source(build));
         return 1;
     }
     printf("it read %u file(s), %zu bytes of source, and compiling them cost "
-           "%zu\n", files, added_up, first_build);
+           "%zu\n",
+           files, added_up, first_build);
 
     // And what asking that build what the program needs costs it. The walk is
     // six arrays a function wide, the answer does not change after the program
@@ -2454,10 +2557,12 @@ int main(int argc, char **argv) {
         fprintf(stderr, "a build says what it needs once and not twice\n");
         return 1;
     }
-    size_t asking_again = kest_build_cost(read_again) - before_asking - one_walk;
+    size_t asking_again =
+        kest_build_cost(read_again) - before_asking - one_walk;
     if (one_walk == 0 || asking_again != 0) {
-        fprintf(stderr, "asking what a program needs cost %zu bytes and "
-                        "asking again cost %zu\n",
+        fprintf(stderr,
+                "asking what a program needs cost %zu bytes and "
+                "asking again cost %zu\n",
                 one_walk, asking_again);
         return 1;
     }
@@ -2466,7 +2571,8 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("the compiler spent %zu bytes on this program, and the same on "
-           "reading it a second time\n", first_build);
+           "reading it a second time\n",
+           first_build);
 
     // Before there is a host at all, which is what a host writer hands over
     // the first time: nothing. Every extern the program declares is unbound
@@ -2573,22 +2679,57 @@ int main(int argc, char **argv) {
         uint16_t back;
     } bound[] = {
         {"Io.write", 1, false, 0, NULL, 0, false, {0}, 0},
-        {"Engine.decide", 1, true, sizeof(int32_t), NULL, 0, false,
-         {KEST_L_I32}, 1},
+        {"Engine.decide",
+         1,
+         true,
+         sizeof(int32_t),
+         NULL,
+         0,
+         false,
+         {KEST_L_I32},
+         1},
         {"Engine.name", 0, true, 0, NULL, 0, false, {KEST_L_TEXT}, 1},
-        {"Engine.rank", 1, true, sizeof(Point), crossing, 3, false,
-         {KEST_L_I32}, 1},
-        {"Engine.hurt", 1, true, sizeof(Event), tagging, 3, true,
-         {KEST_L_I32}, 1},
+        {"Engine.rank",
+         1,
+         true,
+         sizeof(Point),
+         crossing,
+         3,
+         false,
+         {KEST_L_I32},
+         1},
+        {"Engine.hurt",
+         1,
+         true,
+         sizeof(Event),
+         tagging,
+         3,
+         true,
+         {KEST_L_I32},
+         1},
         // The one that answers a value with a tag in it, which is three slots
         // rather than one: the tag, and what the case it names carries.
-        {"Engine.blame", 1, true, sizeof(int32_t), NULL, 0, false,
-         {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3},
+        {"Engine.blame",
+         1,
+         true,
+         sizeof(int32_t),
+         NULL,
+         0,
+         false,
+         {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD},
+         3},
         // And one that answers with a shape: a name and a number, where the
         // name is a word the machine has to own. Nought bytes for what it
         // takes, because it takes nothing.
-        {"Engine.who", 0, true, 0, NULL, 0, false,
-         {KEST_L_TEXT, KEST_L_I32}, 2},
+        {"Engine.who",
+         0,
+         true,
+         0,
+         NULL,
+         0,
+         false,
+         {KEST_L_TEXT, KEST_L_I32},
+         2},
     };
 
     // What the program may do, which is a question a host answers before it
@@ -2637,7 +2778,8 @@ int main(int argc, char **argv) {
                         "`%s` takes %u and gives %s, and this host wrote one "
                         "that takes %u and gives %s\n",
                         wanted, takes, gives ? "something" : "nothing",
-                        bound[b].takes, bound[b].gives ? "something" : "nothing");
+                        bound[b].takes,
+                        bound[b].gives ? "something" : "nothing");
                 missing = true;
             }
             const KestLayout *first = kest_extern_layout(build, i, 0);
@@ -2662,7 +2804,8 @@ int main(int argc, char **argv) {
                 if (!agrees) {
                     fprintf(stderr,
                             "`%s` gives back something other than what this "
-                            "host writes\n", wanted);
+                            "host writes\n",
+                            wanted);
                     missing = true;
                 }
                 // And what each case of it carries, for one that answers a
@@ -2686,15 +2829,18 @@ int main(int argc, char **argv) {
             if (bound[b].pieces != NULL && first != NULL &&
                 !same_pieces(first, bound[b].pieces, bound[b].count,
                              bound[b].tagged)) {
-                fprintf(stderr, "`%s` is handed a shape laid out differently "
-                                "here\n", wanted);
+                fprintf(stderr,
+                        "`%s` is handed a shape laid out differently "
+                        "here\n",
+                        wanted);
                 missing = true;
             }
             // And what each case of it carries, for a crossing handed a value
             // with a tag in it. The pieces above are the widest case's and say
             // `KEST_L_PAYLOAD` where the tag decides, so a host that stopped
             // there has held the shape and not what it will read out of one.
-            if (bound[b].tagged && first != NULL && !reads_the_cases(first, 0)) {
+            if (bound[b].tagged && first != NULL &&
+                !reads_the_cases(first, 0)) {
                 missing = true;
             }
         }
@@ -2767,8 +2913,9 @@ int main(int argc, char **argv) {
     KestReason why = {KEST_REACH_UNASKED, NULL};
     if (kest_needs(build, &limits, &why)) {
         if (limits.heap_bytes != 0) {
-            fprintf(stderr, "asking what a program needs left %zu bytes of "
-                            "heap written where nothing was answered\n",
+            fprintf(stderr,
+                    "asking what a program needs left %zu bytes of "
+                    "heap written where nothing was answered\n",
                     limits.heap_bytes);
             return 1;
         }
@@ -2776,8 +2923,8 @@ int main(int argc, char **argv) {
         // from inside one, so it asks for room for another on top: what the
         // program says covers the call it makes, and the one made from inside
         // it is this host's to account for.
-        printf("the program needs %u slots and %u frames\n",
-               limits.stack_slots, limits.call_depth);
+        printf("the program needs %u slots and %u frames\n", limits.stack_slots,
+               limits.call_depth);
         // And what the one this host actually drives needs on its own. A host
         // that knows which functions it calls is not made to pay for the
         // deepest of the ones it never will; this one asks, prints the
@@ -2789,8 +2936,9 @@ int main(int argc, char **argv) {
         KestLimits stepping = {0, 0, 64, 0};
         if (kest_needs_of(build, "step", &stepping, NULL) &&
             stepping.heap_bytes != 0) {
-            fprintf(stderr, "asking what `step` needs left %zu bytes of heap "
-                            "written where nothing was answered\n",
+            fprintf(stderr,
+                    "asking what `step` needs left %zu bytes of heap "
+                    "written where nothing was answered\n",
                     stepping.heap_bytes);
             return 1;
         }
@@ -2847,8 +2995,7 @@ int main(int argc, char **argv) {
         limits.heap_bytes = 1024 * 1024;
     } else {
         printf("the program has no deepest call: `%s` %s; giving it room\n",
-               why.where,
-               no_deepest(why.reach));
+               why.where, no_deepest(why.reach));
         limits.stack_slots = 4096;
         limits.call_depth = 64;
     }
@@ -2902,8 +3049,9 @@ int main(int argc, char **argv) {
         // being true.
         if (named.stack_slots >= everything.stack_slots ||
             from_inside.stack_slots <= named.stack_slots) {
-            fprintf(stderr, "the program wants %u, these three want %u, and a "
-                            "call back in starts at %u\n",
+            fprintf(stderr,
+                    "the program wants %u, these three want %u, and a "
+                    "call back in starts at %u\n",
                     everything.stack_slots, named.stack_slots,
                     from_inside.stack_slots);
             return 1;
@@ -2926,8 +3074,9 @@ int main(int argc, char **argv) {
             !kest_needs_from(build, where.where, &there, NULL) ||
             there.stack_slots == 0 ||
             there.stack_slots >= from_inside.stack_slots) {
-            fprintf(stderr, "a call back in starts at %u, said to be in `%s`, "
-                            "which gets there at %u\n",
+            fprintf(stderr,
+                    "a call back in starts at %u, said to be in `%s`, "
+                    "which gets there at %u\n",
                     from_inside.stack_slots,
                     where.where == NULL ? "nothing" : where.where,
                     there.stack_slots);
@@ -3009,8 +3158,9 @@ int main(int argc, char **argv) {
         }
         long said_again = ftell(told);
         if (kest_runtime_cost(filling) != after_reading || answered != 100) {
-            fprintf(stderr, "a hundred refused calls read back cost the "
-                            "machine %zu bytes and %u of them said why\n",
+            fprintf(stderr,
+                    "a hundred refused calls read back cost the "
+                    "machine %zu bytes and %u of them said why\n",
                     kest_runtime_cost(filling) - after_reading, answered);
             return 1;
         }
@@ -3045,8 +3195,9 @@ int main(int argc, char **argv) {
                  200 - KEST_MOST_UNREAD);
         if (kest_runtime_cost(filling) != full ||
             !said_in_both(filling, left_out, "did not keep")) {
-            fprintf(stderr, "two hundred refused calls nobody read cost the "
-                            "machine %zu bytes and then %zu\n",
+            fprintf(stderr,
+                    "two hundred refused calls nobody read cost the "
+                    "machine %zu bytes and then %zu\n",
                     unread, kest_runtime_cost(filling) - full);
             return 1;
         }
@@ -3068,15 +3219,18 @@ int main(int argc, char **argv) {
             }
         }
         char little[64];
-        size_t whole = what_was_said(filling, NULL, KEST_FORM_TEXT, little, sizeof(little));
+        size_t whole = what_was_said(filling, NULL, KEST_FORM_TEXT, little,
+                                     sizeof(little));
         if (whole <= sizeof(little) || strlen(little) != sizeof(little) - 1) {
-            fprintf(stderr, "a report of %zu bytes read into %zu of this "
-                            "host's own left %zu\n",
+            fprintf(stderr,
+                    "a report of %zu bytes read into %zu of this "
+                    "host's own left %zu\n",
                     whole, sizeof(little), strlen(little));
             return 1;
         }
         printf("a report of %zu bytes read into %zu says so and says how many "
-               "there were\n", whole, sizeof(little));
+               "there were\n",
+               whole, sizeof(little));
 
         // And what the two forms of the same refusal cost. A refusal that
         // points is a message, an arrow, the line it happened on and a caret
@@ -3092,22 +3246,24 @@ int main(int argc, char **argv) {
             fprintf(stderr, "a heap that was full filled an array\n");
             return 1;
         }
-        size_t in_words = what_was_said(filling, NULL, KEST_FORM_TEXT, shown,
-                                        sizeof(shown));
+        size_t in_words =
+            what_was_said(filling, NULL, KEST_FORM_TEXT, shown, sizeof(shown));
         asking[0].integer = 40;
         if (kest_call(filling, fills, asking, 4)) {
             fprintf(stderr, "a heap that was full filled an array\n");
             return 1;
         }
-        size_t in_json = what_was_said(filling, NULL, KEST_FORM_JSON, sent,
-                                       sizeof(sent));
+        size_t in_json =
+            what_was_said(filling, NULL, KEST_FORM_JSON, sent, sizeof(sent));
         const char *message = strstr(shown, "the program has used");
         size_t words_alone = message == NULL ? 0 : strcspn(message, "\n");
         if (words_alone == 0 || words_alone >= in_words ||
             in_json <= in_words || strstr(sent, "\"line\":") == NULL ||
             strstr(shown, "embed.kest:") == NULL) {
-            fprintf(stderr, "a refusal is %zu bytes of words, %zu shown and "
-                            "%zu sent\n", words_alone, in_words, in_json);
+            fprintf(stderr,
+                    "a refusal is %zu bytes of words, %zu shown and "
+                    "%zu sent\n",
+                    words_alone, in_words, in_json);
             return 1;
         }
         printf("a refusal is %zu bytes of words and %zu shown with the line it "
@@ -3119,7 +3275,8 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("a hundred refused calls said %ld bytes of why and cost the "
-               "machine nothing to say them\n", said_again - said_once);
+               "machine nothing to say them\n",
+               said_again - said_once);
     }
 
     // And the two answers that used to be one. A name the program has not got
@@ -3168,8 +3325,9 @@ int main(int argc, char **argv) {
     size_t machine_on_build = kest_build_cost(build) - build_before_machine;
     if (one_walk == 0 || machine_on_build != 0 ||
         kest_runtime_cost(engine.runtime) >= one_walk) {
-        fprintf(stderr, "a machine is %zu bytes and cost the build %zu, and a "
-                        "walk of the program is %zu\n",
+        fprintf(stderr,
+                "a machine is %zu bytes and cost the build %zu, and a "
+                "walk of the program is %zu\n",
                 kest_runtime_cost(engine.runtime), machine_on_build, one_walk);
         return 1;
     }
@@ -3255,7 +3413,8 @@ int main(int argc, char **argv) {
         !kest_host_bind(elsewhere, "Engine.blame", engine_blame, NULL) ||
         !kest_host_bind(elsewhere, "Engine.weigh", engine_weigh, NULL) ||
         !kest_host_bind(elsewhere, "Engine.who", engine_who, NULL)) {
-        fprintf(stderr, "a second host could not be given what the first has\n");
+        fprintf(stderr,
+                "a second host could not be given what the first has\n");
         kest_host_free(elsewhere);
         kest_host_free(host);
         kest_build_free(build);
@@ -3272,8 +3431,6 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-
-
     // Starting reads what the host bound and keeps its own copy, so the list
     // of names is done with here. Freeing it now rather than at the end is
     // this host saying so out loud: what has to outlive the machine is the
@@ -3285,7 +3442,6 @@ int main(int argc, char **argv) {
     // this host guessing and being told at the first call that is too narrow.
     KestPiece point[3];
     point_pieces(point);
-
 
     // What this host looks up, and what it means to put in the frame before it
     // calls each of them and read back out of it afterwards: one kind a slot,
@@ -3313,21 +3469,30 @@ int main(int argc, char **argv) {
         // `KEST_L_PAYLOAD` for the slots after a tag because which type
         // is in one is the tag's to say, and this host says the same
         // back rather than picking one of the cases to be right about.
-        {"damageOf", {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3,
-         {KEST_L_I32}, 1},
+        {"damageOf",
+         {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD},
+         3,
+         {KEST_L_I32},
+         1},
         {"hurtBy", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         // The one name here that answers a value with a tag in it: three
         // slots back rather than one, and the two after the tag are the
         // tag's to explain, the same as they are going the other way.
-        {"worst", {KEST_L_WORD}, 1,
-         {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD}, 3},
+        {"worst",
+         {KEST_L_WORD},
+         1,
+         {KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD},
+         3},
         {"blamed", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
         // The one that takes a tag which is not in the first slot of what
         // it takes -- it is, here, because the `Event` is the first field of
         // the shape, and what makes it different is that the cases belong to
         // the field rather than to the argument.
-        {"blamedBy", {KEST_L_I32, KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD},
-         4, {KEST_L_I32}, 1},
+        {"blamedBy",
+         {KEST_L_I32, KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD},
+         4,
+         {KEST_L_I32},
+         1},
         // A tag and a number, which is the pair that read alike until a tag
         // said what it was: an enum whose cases carry nothing is one slot of
         // four bytes, and so is an `i32`.
@@ -3379,20 +3544,31 @@ int main(int argc, char **argv) {
         {"healthOf", {KEST_L_WORD, KEST_L_REF}, 2, {KEST_L_I32}, 1},
         {"dropped", {KEST_L_WORD, KEST_L_REF}, 2, {KEST_L_I32}, 1},
         {"totalOf", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
-        {"answerInto", {KEST_L_WORD, KEST_L_I32, KEST_L_I32}, 3,
-         {KEST_L_I32}, 1},
-        {"sayInto", {KEST_L_WORD, KEST_L_I32, KEST_L_TEXT}, 3,
-         {KEST_L_I32}, 1},
+        {"answerInto",
+         {KEST_L_WORD, KEST_L_I32, KEST_L_I32},
+         3,
+         {KEST_L_I32},
+         1},
+        {"sayInto", {KEST_L_WORD, KEST_L_I32, KEST_L_TEXT}, 3, {KEST_L_I32}, 1},
         {"worn", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
-        {"moved", {KEST_L_F32, KEST_L_F32, KEST_L_F32, KEST_L_F32}, 4,
-         {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3},
+        {"moved",
+         {KEST_L_F32, KEST_L_F32, KEST_L_F32, KEST_L_F32},
+         4,
+         {KEST_L_F32, KEST_L_F32, KEST_L_F32},
+         3},
         {"putRecord", {KEST_L_WORD, KEST_L_I32, KEST_L_I32}, 3, {0}, 0},
         {"ownArray", {0}, 0, {KEST_L_WORD}, 1},
         {"howManyOn", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
-        {"reach", {KEST_L_F32, KEST_L_F32, KEST_L_F32, KEST_L_BOOL}, 4,
-         {KEST_L_F32}, 1},
-        {"heaviestCell", {KEST_L_WORD, KEST_L_I32}, 2,
-         {KEST_L_I32, KEST_L_F32}, 2},
+        {"reach",
+         {KEST_L_F32, KEST_L_F32, KEST_L_F32, KEST_L_BOOL},
+         4,
+         {KEST_L_F32},
+         1},
+        {"heaviestCell",
+         {KEST_L_WORD, KEST_L_I32},
+         2,
+         {KEST_L_I32, KEST_L_F32},
+         2},
         {"asWritten", {0}, 0, {KEST_L_TEXT}, 1},
         {"ranked", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_I32}, 1},
         // A function value is one slot holding which function it is, which is
@@ -3404,8 +3580,11 @@ int main(int argc, char **argv) {
         {"weighed", {0}, 0, {KEST_L_I32}, 1},
         {"halfWritten", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         {"heal", {KEST_L_WORD, KEST_L_I32}, 2, {0}, 0},
-        {"hurtAt", {KEST_L_WORD, KEST_L_I32}, 2,
-         {KEST_L_TAG, KEST_L_PAYLOAD}, 2}};
+        {"hurtAt",
+         {KEST_L_WORD, KEST_L_I32},
+         2,
+         {KEST_L_TAG, KEST_L_PAYLOAD},
+         2}};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     // And what walking the names costs a host in news, which is nothing. The
@@ -3429,7 +3608,8 @@ int main(int argc, char **argv) {
         if (kest_entry_of(engine.runtime, wanted[i].name, 1) >= 0) {
             engine.entry[i] = -1;
             for (uint32_t at = 0; engine.entry[i] < 0; at++) {
-                int32_t candidate = kest_entry_of(engine.runtime, wanted[i].name, at);
+                int32_t candidate =
+                    kest_entry_of(engine.runtime, wanted[i].name, at);
                 if (candidate < 0) {
                     break;
                 }
@@ -3460,8 +3640,9 @@ int main(int argc, char **argv) {
         // first of them. Asked here because this is where a host meets it.
         if (kest_entry_of(engine.runtime, wanted[i].name, 1) >= 0) {
             if (kest_entry(engine.runtime, wanted[i].name) >= 0) {
-                fprintf(stderr, "`%s` is several functions and one index came "
-                                "back for it\n",
+                fprintf(stderr,
+                        "`%s` is several functions and one index came "
+                        "back for it\n",
                         wanted[i].name);
                 return 1;
             }
@@ -3473,7 +3654,8 @@ int main(int argc, char **argv) {
             kest_frame_slots(engine.runtime, engine.entry[i]) >
                 sizeof(engine.frame) / sizeof(engine.frame[0])) {
             fprintf(stderr, "`%s` is not there or needs more than %zu slots\n",
-                    wanted[i].name, sizeof(engine.frame) / sizeof(engine.frame[0]));
+                    wanted[i].name,
+                    sizeof(engine.frame) / sizeof(engine.frame[0]));
             return 1;
         }
         // And what the frame is, asked here for the same reason the name is:
@@ -3489,10 +3671,10 @@ int main(int argc, char **argv) {
         // read and is told at no point. Both directions here, because reading
         // a result back out of the same slots is the same mistake the other
         // way round.
-        if (!kest_frame_fills(engine.runtime, engine.entry[i],
-                              wanted[i].fills, wanted[i].takes) ||
-            !kest_frame_reads(engine.runtime, engine.entry[i],
-                              wanted[i].reads, wanted[i].gives)) {
+        if (!kest_frame_fills(engine.runtime, engine.entry[i], wanted[i].fills,
+                              wanted[i].takes) ||
+            !kest_frame_reads(engine.runtime, engine.entry[i], wanted[i].reads,
+                              wanted[i].gives)) {
             fprintf(stderr, "this host is wrong about what `%s` crosses with\n",
                     wanted[i].name);
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
@@ -3530,7 +3712,8 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("frame %d: spawned, %lld alive, %zu bytes this frame\n", i,
-               (long long)engine.frame[0].integer, kest_heap_taken(engine.runtime) - spent);
+               (long long)engine.frame[0].integer,
+               kest_heap_taken(engine.runtime) - spent);
     }
 
     // And the same subtraction over a frame that promised nothing, which is
@@ -3562,12 +3745,11 @@ int main(int argc, char **argv) {
     // back is the room they need.
     char said[32];
     char mine[32];
-    int64_t room = kest_gave_text(engine.runtime, engine.entry[STEP], engine.frame, said,
-                                  sizeof(said));
+    int64_t room = kest_gave_text(engine.runtime, engine.entry[STEP],
+                                  engine.frame, said, sizeof(said));
     snprintf(mine, sizeof(mine), "%lld", (long long)engine.frame[0].integer);
     if (room < 0 || (size_t)room >= sizeof(said) || strcmp(said, mine) != 0) {
-        fprintf(stderr, "what came back reads as `%s` and is %s\n", said,
-                mine);
+        fprintf(stderr, "what came back reads as `%s` and is %s\n", said, mine);
         return 1;
     }
     printf("what `step` gave, in the program's own words: %s\n", said);
@@ -3584,7 +3766,6 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("the program asked what it is running under: %s\n", about);
-
 
     // And the same question of the machine the second host started, whose
     // decider was never swapped. What comes back is the other answer: a
@@ -3640,7 +3821,6 @@ int main(int argc, char **argv) {
     printf("and a host's own bytes handed back as the machine's were refused: "
            "%s\n",
            about);
-
 
     // And the same mistake one field in, which is where the answer was read no
     // further than the top of: a crossing that answers with a shape writes a
@@ -3711,8 +3891,8 @@ int main(int argc, char **argv) {
     // writes itself, so the message is read here rather than only the
     // answer: minus one on its own is what a host cannot tell apart from an
     // index that is no function.
-    if (kest_gave_text(engine.runtime, engine.entry[CREATE], engine.frame, said, sizeof(said))
-        >= 0) {
+    if (kest_gave_text(engine.runtime, engine.entry[CREATE], engine.frame, said,
+                       sizeof(said)) >= 0) {
         fprintf(stderr, "a store has no text and something wrote one\n");
         return 1;
     }
@@ -3730,7 +3910,8 @@ int main(int argc, char **argv) {
     // frame of the right width with the wrong things in it is caught, because
     // a slot holds whatever was put there and nothing carries what it is.
     const uint8_t writing[3] = {KEST_L_F32, KEST_L_F32, KEST_L_F32};
-    if (!kest_frame_fills(engine.runtime, engine.entry[LENGTH_OF], writing, 3)) {
+    if (!kest_frame_fills(engine.runtime, engine.entry[LENGTH_OF], writing,
+                          3)) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
@@ -3833,8 +4014,9 @@ int main(int argc, char **argv) {
     if (kest_entry(engine.runtime, "Io.write") >= 0 ||
         kest_build_cost(build) != after_saying ||
         !said_nothing(engine.runtime, "the same name asked for twice")) {
-        fprintf(stderr, "asking again for a name the program asks the host "
-                        "for cost %zu bytes\n",
+        fprintf(stderr,
+                "asking again for a name the program asks the host "
+                "for cost %zu bytes\n",
                 kest_build_cost(build) - after_saying);
         return 1;
     }
@@ -3863,12 +4045,14 @@ int main(int argc, char **argv) {
     // `engine.frame[0].real` because of it -- a slot read as the wrong thing is
     // a number nobody wrote, and nothing but this says so.
     const uint8_t reading[1] = {KEST_L_F32};
-    if (!kest_frame_reads(engine.runtime, engine.entry[LENGTH_OF], reading, 1)) {
+    if (!kest_frame_reads(engine.runtime, engine.entry[LENGTH_OF], reading,
+                          1)) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
     const uint8_t read_wrong[1] = {KEST_L_I64};
-    if (kest_frame_reads(engine.runtime, engine.entry[LENGTH_OF], read_wrong, 1)) {
+    if (kest_frame_reads(engine.runtime, engine.entry[LENGTH_OF], read_wrong,
+                         1)) {
         fprintf(stderr, "the program agreed to a result it does not give\n");
         return 1;
     }
@@ -3980,7 +4164,8 @@ int main(int argc, char **argv) {
     const uint32_t wide = sizeof(engine.frame) / sizeof(engine.frame[0]);
     const char *given[2] = {"3.0", "4.0"};
     if (by_words < 0 ||
-        !kest_takes_text(engine.runtime, by_words, engine.frame, wide, given, 2) ||
+        !kest_takes_text(engine.runtime, by_words, engine.frame, wide, given,
+                         2) ||
         !kest_call(engine.runtime, by_words, engine.frame, wide)) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
@@ -3992,7 +4177,8 @@ int main(int argc, char **argv) {
     // what a host would otherwise find out by handing over a slot holding
     // whatever `strtod` left in it.
     const char *nonsense[2] = {"3.0", "wide"};
-    if (kest_takes_text(engine.runtime, by_words, engine.frame, wide, nonsense, 2)) {
+    if (kest_takes_text(engine.runtime, by_words, engine.frame, wide, nonsense,
+                        2)) {
         fprintf(stderr, "a word that is not a number was read as one\n");
         return 1;
     }
@@ -4002,7 +4188,8 @@ int main(int argc, char **argv) {
         return 1;
     }
     const char *too_few[1] = {"3.0"};
-    if (kest_takes_text(engine.runtime, by_words, engine.frame, wide, too_few, 1)) {
+    if (kest_takes_text(engine.runtime, by_words, engine.frame, wide, too_few,
+                        1)) {
         fprintf(stderr, "a frame short of an argument was filled\n");
         return 1;
     }
@@ -4093,8 +4280,9 @@ int main(int argc, char **argv) {
         if (kest_build_cost(build) != told_once ||
             !said_nothing(engine.runtime, "an index that is no function asked "
                                           "about a hundred times")) {
-            fprintf(stderr, "asking again about an index that is no function "
-                            "cost %zu bytes\n",
+            fprintf(stderr,
+                    "asking again about an index that is no function "
+                    "cost %zu bytes\n",
                     kest_build_cost(build) - told_once);
             return 1;
         }
@@ -4104,8 +4292,9 @@ int main(int argc, char **argv) {
         // this was answered with a sentence about the index.
         if (kest_frame_fills(engine.runtime, engine.entry[LENGTH_OF], NULL,
                              3) ||
-            !said_that(engine.runtime, "K0634", "handed nothing to read them "
-                                                "from")) {
+            !said_that(engine.runtime, "K0634",
+                       "handed nothing to read them "
+                       "from")) {
             fprintf(stderr, "a host that described three slots and handed "
                             "none was not told what was wrong\n");
             return 1;
@@ -4128,12 +4317,15 @@ int main(int argc, char **argv) {
         }
         uint32_t places = places_said(engine.runtime, "more under it");
         if (places != KEST_MOST_PLACES + 1) {
-            fprintf(stderr, "a refusal ten calls in showed %u places and a "
-                            "message holds %u\n", places, KEST_MOST_PLACES);
+            fprintf(stderr,
+                    "a refusal ten calls in showed %u places and a "
+                    "message holds %u\n",
+                    places, KEST_MOST_PLACES);
             return 1;
         }
         printf("a refusal ten calls in showed %u places, which is what a "
-               "message holds, and counted the rest\n", places);
+               "message holds, and counted the rest\n",
+               places);
     }
 
     // A function written once and compiled twice, which is the one kind of
@@ -4161,8 +4353,9 @@ int main(int argc, char **argv) {
         if (kest_entry(engine.runtime, "pick") >= 0 ||
             kest_build_cost(build) != named_once ||
             !said_nothing(engine.runtime, "a generic name asked for twice")) {
-            fprintf(stderr, "asking again for a name that is several "
-                            "functions cost %zu bytes\n",
+            fprintf(stderr,
+                    "asking again for a name that is several "
+                    "functions cost %zu bytes\n",
                     kest_build_cost(build) - named_once);
             return 1;
         }
@@ -4174,8 +4367,7 @@ int main(int argc, char **argv) {
                 break;
             }
             copies++;
-            const KestLayout *takes =
-                kest_frame_layout(engine.runtime, one, 0);
+            const KestLayout *takes = kest_frame_layout(engine.runtime, one, 0);
             if (takes == NULL || takes->count != 1) {
                 fprintf(stderr, "a copy of `pick` takes something else\n");
                 return 1;
@@ -4226,8 +4418,10 @@ int main(int argc, char **argv) {
             kest_entry_name(engine.runtime, -1) != NULL ||
             !said_nothing(engine.runtime, "a walk of what a program defines "
                                           "ended")) {
-            fprintf(stderr, "a program of %u functions has %u copies of "
-                            "`pick` in it\n", defined, picks);
+            fprintf(stderr,
+                    "a program of %u functions has %u copies of "
+                    "`pick` in it\n",
+                    defined, picks);
             return 1;
         }
         // And what a host can act on before it calls anything: which of them
@@ -4255,8 +4449,7 @@ int main(int argc, char **argv) {
             } else {
                 said_nothing_about_it++;
             }
-            if (kest_entry_promises(engine.runtime, at,
-                                    KEST_PROMISE_NO_HOST)) {
+            if (kest_entry_promises(engine.runtime, at, KEST_PROMISE_NO_HOST)) {
                 quiet++;
             }
         }
@@ -4264,8 +4457,10 @@ int main(int argc, char **argv) {
             kest_entry_promises(engine.runtime, -1, KEST_PROMISE_NO_ALLOC) ||
             kest_entry_promises(engine.runtime, (int32_t)defined,
                                 KEST_PROMISE_NO_ALLOC)) {
-            fprintf(stderr, "%u function(s) promised `no.alloc` and %u did "
-                            "not\n", promised, said_nothing_about_it);
+            fprintf(stderr,
+                    "%u function(s) promised `no.alloc` and %u did "
+                    "not\n",
+                    promised, said_nothing_about_it);
             return 1;
         }
         // The second promise is asked of the same functions and answers for
@@ -4274,12 +4469,15 @@ int main(int argc, char **argv) {
         // one question twice.
         if (quiet == 0 || quiet >= promised ||
             kest_entry_promises(engine.runtime, -1, KEST_PROMISE_NO_HOST)) {
-            fprintf(stderr, "%u function(s) promised `no.host` against %u that "
-                            "promised `no.alloc`\n", quiet, promised);
+            fprintf(stderr,
+                    "%u function(s) promised `no.host` against %u that "
+                    "promised `no.alloc`\n",
+                    quiet, promised);
             return 1;
         }
         printf("%u of %u function(s) promised to reach no heap, and %u to "
-               "call nothing of this host's\n", promised, defined, quiet);
+               "call nothing of this host's\n",
+               promised, defined, quiet);
 
         // And the same walk read the way every message about a function
         // spells it. What a host reads in a refusal and what it reads in the
@@ -4309,12 +4507,12 @@ int main(int argc, char **argv) {
         if (written != picks || kest_entry_wrote(engine.runtime, -1) != NULL ||
             kest_build_cost(build) != before_walking ||
             kest_runtime_cost(engine.runtime) != machine_before_walking) {
-            fprintf(stderr, "%u of %u copies of `pick` are written the same, "
-                            "and walking the names cost %zu bytes of build "
-                            "and %zu of machine\n",
+            fprintf(stderr,
+                    "%u of %u copies of `pick` are written the same, "
+                    "and walking the names cost %zu bytes of build "
+                    "and %zu of machine\n",
                     written, picks, kest_build_cost(build) - before_walking,
-                    kest_runtime_cost(engine.runtime) -
-                        machine_before_walking);
+                    kest_runtime_cost(engine.runtime) - machine_before_walking);
             return 1;
         }
         // And the end of the same walk on a machine that has been told
@@ -4377,7 +4575,8 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("and a %u function program says so for the index after the "
-               "last\n", defined);
+               "last\n",
+               defined);
         // And the same one by the name it was compiled under, which is what
         // the refusal above spelled out. A host that keeps the name does not
         // have to walk again.
@@ -4398,7 +4597,8 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("host walked %u copies of one body and the `i32` one "
-               "answered %s\n", copies, said);
+               "answered %s\n",
+               copies, said);
     }
 
     // A result of more than one slot, which is the half of a frame nothing in
@@ -4411,8 +4611,8 @@ int main(int argc, char **argv) {
         const KestLayout *back =
             kest_frame_gives(engine.runtime, engine.entry[MOVED]);
         if (back == NULL || back->size != sizeof(Point) ||
-            back->align != _Alignof(Point) || !same_pieces(back, point, 3,
-                                                           false)) {
+            back->align != _Alignof(Point) ||
+            !same_pieces(back, point, 3, false)) {
             fprintf(stderr, "`moved` does not give back a `Point` this host "
                             "knows\n");
             return 1;
@@ -4465,8 +4665,9 @@ int main(int argc, char **argv) {
                 return 1;
             }
             if ((float)answered != before.at[k] + by) {
-                fprintf(stderr, "`moved` answered %g at %u and this host "
-                                "worked out %g\n",
+                fprintf(stderr,
+                        "`moved` answered %g at %u and this host "
+                        "worked out %g\n",
                         answered, k, (double)(before.at[k] + by));
                 return 1;
             }
@@ -4474,8 +4675,8 @@ int main(int argc, char **argv) {
         // And the same result asked for as words. A shape is written the way
         // a program writes one (the name, and the fields in the order they
         // were declared), and a host that wants its own layout still walks it
-        // with `kest_frame_gives`, which is the paragraph below. What has no text
-        // is what holds a handle, and a store above is asked exactly that.
+        // with `kest_frame_gives`, which is the paragraph below. What has no
+        // text is what holds a handle, and a store above is asked exactly that.
         char said[64];
         int64_t as_words = kest_gave_text(engine.runtime, engine.entry[MOVED],
                                           engine.frame, said, sizeof(said));
@@ -4500,7 +4701,8 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("host read a %u slot result back over its arguments, and was "
-               "told why it has no words\n", back->count);
+               "told why it has no words\n",
+               back->count);
     }
 
     // Two of them, where the host would otherwise have to count the first
@@ -4509,7 +4711,8 @@ int main(int argc, char **argv) {
     // And what the argument is, checked the way anything lent is: the same
     // layout, the same pieces, the same `offsetof` on this side. A frame of
     // the right width with the wrong things in it is the mistake this catches.
-    const KestLayout *takes = kest_frame_layout(engine.runtime, engine.entry[BETWEEN], 1);
+    const KestLayout *takes =
+        kest_frame_layout(engine.runtime, engine.entry[BETWEEN], 1);
     if (takes == NULL || takes->size != sizeof(Point) ||
         takes->align != _Alignof(Point) ||
         !same_pieces(takes, point, 3, false)) {
@@ -4519,7 +4722,8 @@ int main(int argc, char **argv) {
     // And what comes back, which is read as a `double` in a slot and is an
     // `f32` in memory: what the layout says is which of the two the program
     // means, and this host reads `engine.frame[0].real` because of it.
-    const KestLayout *gives = kest_frame_gives(engine.runtime, engine.entry[BETWEEN]);
+    const KestLayout *gives =
+        kest_frame_gives(engine.runtime, engine.entry[BETWEEN]);
     if (gives == NULL || gives->count != 1 ||
         gives->pieces[0].kind != KEST_L_F32) {
         fprintf(stderr, "`between` does not give back one `f32`\n");
@@ -4535,7 +4739,8 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("%u arguments, the second at slot %u: %g between them\n",
-           kest_frame_takes(engine.runtime, engine.entry[BETWEEN]), second, engine.frame[0].real);
+           kest_frame_takes(engine.runtime, engine.entry[BETWEEN]), second,
+           engine.frame[0].real);
 
     // And the same shape going the other way: the program hands this host a
     // `Point` and reads back what the host made of it. What says the three
@@ -4564,7 +4769,8 @@ int main(int argc, char **argv) {
             corners[i].at[k] = (float)(i * 3 + k);
         }
     }
-    engine.frame[0] = kest_borrow(engine.runtime, corners, 4, "Point", sizeof(Point));
+    engine.frame[0] =
+        kest_borrow(engine.runtime, corners, 4, "Point", sizeof(Point));
     if (engine.frame[0].object == NULL) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
@@ -4619,9 +4825,9 @@ int main(int argc, char **argv) {
         kest_frame_layout(engine.runtime, engine.entry[REACH], 1);
     const KestLayout *gives_edge =
         kest_frame_gives(engine.runtime, engine.entry[REACH]);
-    if (takes_point == NULL || takes_point->count != 3 ||
-        takes_which == NULL || takes_which->count != 1 ||
-        gives_edge == NULL || gives_edge->count != 1) {
+    if (takes_point == NULL || takes_point->count != 3 || takes_which == NULL ||
+        takes_which->count != 1 || gives_edge == NULL ||
+        gives_edge->count != 1) {
         fprintf(stderr, "`reach` does not take a point and a word about it\n");
         return 1;
     }
@@ -4638,8 +4844,7 @@ int main(int argc, char **argv) {
         // ask the second one about.
         for (int ask = 0; ask < 2; ask++) {
             for (int k = 0; k < 3; k++) {
-                if (!put_number(&engine.frame[k],
-                                takes_point->pieces[k].kind,
+                if (!put_number(&engine.frame[k], takes_point->pieces[k].kind,
                                 (double)corners[i].at[k])) {
                     fprintf(stderr, "a point slot is not a number\n");
                     return 1;
@@ -4648,8 +4853,8 @@ int main(int argc, char **argv) {
             // The whole slot, because a slot is eight bytes and a `bool` is
             // one: a host that writes the byte hands the machine whatever the
             // other seven were, and `false` arrives as true.
-            if (!put_number(&engine.frame[whether],
-                            takes_which->pieces[0].kind, ask)) {
+            if (!put_number(&engine.frame[whether], takes_which->pieces[0].kind,
+                            ask)) {
                 fprintf(stderr, "the word about a point is not a number\n");
                 return 1;
             }
@@ -4673,13 +4878,15 @@ int main(int argc, char **argv) {
         }
     }
     if (highest - lowest != across) {
-        fprintf(stderr, "8 crossings of one point say %g across and one "
-                        "crossing of a batch says %g\n",
+        fprintf(stderr,
+                "8 crossings of one point say %g across and one "
+                "crossing of a batch says %g\n",
                 (double)(highest - lowest), (double)across);
         return 1;
     }
     printf("host asked the same of the same 4 points one at a time: %g "
-           "across, in 8 crossings against 1\n", (double)(highest - lowest));
+           "across, in 8 crossings against 1\n",
+           (double)(highest - lowest));
 
     // A run of the host's structs inside a struct of the host's, walked in
     // place. Every offset in it is one both sides worked out on their own.
@@ -4747,8 +4954,8 @@ int main(int argc, char **argv) {
     // A result of one slot lets a host be right by remembering. This one does
     // not.
     {
-        KestValue again = kest_borrow(engine.runtime, rows, 2, "Row",
-                                      sizeof(Row));
+        KestValue again =
+            kest_borrow(engine.runtime, rows, 2, "Row", sizeof(Row));
         if (again.object == NULL) {
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
             return 1;
@@ -4778,8 +4985,8 @@ int main(int argc, char **argv) {
         if (!said_that(engine.runtime, "K0634", "gives back")) {
             return 1;
         }
-        uint32_t row_at = kest_frame_at(engine.runtime,
-                                        engine.entry[HEAVIEST_CELL], 1);
+        uint32_t row_at =
+            kest_frame_at(engine.runtime, engine.entry[HEAVIEST_CELL], 1);
         engine.frame[0] = again;
         engine.frame[row_at].integer = 1;
         if (!asks(&engine, HEAVIEST_CELL)) {
@@ -4804,10 +5011,10 @@ int main(int argc, char **argv) {
         }
         if ((int32_t)answered[0] != here->at ||
             (float)answered[1] != here->weight) {
-            fprintf(stderr, "`heaviestCell` answered %g weighing %g and this "
-                            "host walked to %d weighing %g\n",
-                    answered[0], answered[1], here->at,
-                    (double)here->weight);
+            fprintf(stderr,
+                    "`heaviestCell` answered %g weighing %g and this "
+                    "host walked to %d weighing %g\n",
+                    answered[0], answered[1], here->at, (double)here->weight);
             return 1;
         }
         // And the same body handed a row that is not there. `heaviestCell`
@@ -4822,8 +5029,7 @@ int main(int argc, char **argv) {
         const size_t asked_before = kest_heap_taken(engine.runtime);
         engine.frame[0] = again;
         engine.frame[row_at].integer = 99;
-        if (kest_call(engine.runtime, engine.entry[HEAVIEST_CELL],
-                      engine.frame,
+        if (kest_call(engine.runtime, engine.entry[HEAVIEST_CELL], engine.frame,
                       sizeof(engine.frame) / sizeof(engine.frame[0]))) {
             fprintf(stderr, "`heaviestCell` answered about a row that is not "
                             "there\n");
@@ -4835,9 +5041,10 @@ int main(int argc, char **argv) {
         const size_t held_after = kest_heap_used(engine.runtime);
         const size_t asked_after = kest_heap_taken(engine.runtime);
         if (held_after != held_before || asked_after != asked_before) {
-            fprintf(stderr, "a refusal inside a `no.alloc` body moved the "
-                            "program heap: holding %zu then %zu, ever asked "
-                            "%zu then %zu\n",
+            fprintf(stderr,
+                    "a refusal inside a `no.alloc` body moved the "
+                    "program heap: holding %zu then %zu, ever asked "
+                    "%zu then %zu\n",
                     held_before, held_after, asked_before, asked_after);
             return 1;
         }
@@ -4846,8 +5053,8 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("host read a %u slot result of two kinds through what the "
-               "program says they are: %d weighing %g\n", cell->count,
-               (int)answered[0], answered[1]);
+               "program says they are: %d weighing %g\n",
+               cell->count, (int)answered[0], answered[1]);
         printf("and a refusal inside a body promising `no.alloc` left the "
                "program heap at %zu bytes, %zu ever asked for\n",
                held_after, asked_after);
@@ -4860,11 +5067,9 @@ int main(int argc, char **argv) {
     // `i16` of minus three hundred read as a `u16` is sixty-five thousand,
     // and a `i8` of minus nine read as a `u8` is two hundred and forty-seven.
     // The answer says all three at once.
-    Tile tiles[3] = {{7, 50, 0, -2},
-                     {40000, -300, 1, -9},
-                     {9, 1, 1, 3}};
-    KestValue laid = kest_borrow(engine.runtime, tiles, 3, "Tile",
-                                 sizeof(Tile));
+    Tile tiles[3] = {{7, 50, 0, -2}, {40000, -300, 1, -9}, {9, 1, 1, 3}};
+    KestValue laid =
+        kest_borrow(engine.runtime, tiles, 3, "Tile", sizeof(Tile));
     engine.frame[0] = laid;
     if (engine.frame[0].object == NULL) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
@@ -4883,8 +5088,8 @@ int main(int argc, char **argv) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
-    printf("host lent %zu byte tiles: four widths read as %lld\n",
-           sizeof(Tile), (long long)engine.frame[0].integer);
+    printf("host lent %zu byte tiles: four widths read as %lld\n", sizeof(Tile),
+           (long long)engine.frame[0].integer);
 
     // And what a frame of lending costs, which is the question a host lending
     // a batch every frame is really asking. The block is the host's, so what a
@@ -4942,8 +5147,8 @@ int main(int argc, char **argv) {
     // their ends rather than two names for one. What a host takes back is
     // memory, so what goes with it is every handle over any of that memory.
     KestValue whole = kest_borrow(engine.runtime, rows, 2, "Row", sizeof(Row));
-    KestValue tail = kest_borrow(engine.runtime, &rows[1], 1, "Row",
-                                 sizeof(Row));
+    KestValue tail =
+        kest_borrow(engine.runtime, &rows[1], 1, "Row", sizeof(Row));
     if (whole.object == NULL || tail.object == NULL) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
@@ -4979,7 +5184,6 @@ int main(int argc, char **argv) {
                sizeof(rows) / sizeof(rows[0]));
     }
 
-
     // Text is the other thing a host hands over, and the machine copies it:
     // what a program holds it must own. So a host that hands the same name
     // every frame keeps what it was given rather than saying it again -- this
@@ -5003,7 +5207,8 @@ int main(int argc, char **argv) {
             kest_slot_of(of_text->pieces[0].kind) != KEST_S_TEXT ||
             kest_slot_of(of_handle->pieces[0].kind) != KEST_S_WORD ||
             kest_slot_of(KEST_L_REF) != kest_slot_of(KEST_L_I64)) {
-            fprintf(stderr, "a layout says the same of bytes and of a handle\n");
+            fprintf(stderr,
+                    "a layout says the same of bytes and of a handle\n");
             return 1;
         }
     }
@@ -5135,7 +5340,8 @@ int main(int argc, char **argv) {
     // The stride is the program's own, so what this host has to get right is
     // only that its `Event` is the program's `Event`. Saying `sizeof` is what
     // makes a disagreement a message rather than a wrong read.
-    engine.frame[0] = kest_borrow(engine.runtime, events, 4, "Event", sizeof(Event));
+    engine.frame[0] =
+        kest_borrow(engine.runtime, events, 4, "Event", sizeof(Event));
     KestValue four_events = engine.frame[0];
     if (engine.frame[0].object == NULL) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
@@ -5159,8 +5365,9 @@ int main(int argc, char **argv) {
     // them was written from the other.
     engine.frame[0] = four_events;
     if (!asks(&engine, HURT_BY) || engine.frame[0].integer != inside) {
-        fprintf(stderr, "the program answered %lld for these events and this "
-                        "host answered %lld\n",
+        fprintf(stderr,
+                "the program answered %lld for these events and this "
+                "host answered %lld\n",
                 (long long)inside, (long long)engine.frame[0].integer);
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
@@ -5203,8 +5410,8 @@ int main(int argc, char **argv) {
     // it names carries, and reads the rest the way the case says. Nothing in
     // this tree gave a value with a tag in it back until now, so nothing had
     // ever read one out of a frame.
-    const KestLayout *answered = kest_frame_gives(engine.runtime,
-                                                  engine.entry[WORST]);
+    const KestLayout *answered =
+        kest_frame_gives(engine.runtime, engine.entry[WORST]);
     if (answered == NULL || !answered->tagged) {
         fprintf(stderr, "the program gives back an enum and says otherwise\n");
         return 1;
@@ -5232,8 +5439,8 @@ int main(int argc, char **argv) {
     // boundary the C standard has no answer for.
     Event aligned[2];
     void *crooked = (unsigned char *)(void *)aligned + _Alignof(Event) / 2;
-    if (kest_borrow(engine.runtime, crooked, 1, "Event", sizeof(Event)).object !=
-        NULL) {
+    if (kest_borrow(engine.runtime, crooked, 1, "Event", sizeof(Event))
+            .object != NULL) {
         fprintf(stderr, "a lend at a crooked address was allowed\n");
         return 1;
     }
@@ -5274,8 +5481,8 @@ int main(int argc, char **argv) {
     if (!said_that(engine.runtime, "K0610", "no array of `Tyle` to lend to")) {
         return 1;
     }
-    if (kest_borrow(engine.runtime, tiles, 3, "Tile",
-                    sizeof(Tile) + 4).object != NULL) {
+    if (kest_borrow(engine.runtime, tiles, 3, "Tile", sizeof(Tile) + 4)
+            .object != NULL) {
         fprintf(stderr, "a lend of the wrong size was made\n");
         return 1;
     }
@@ -5290,8 +5497,8 @@ int main(int argc, char **argv) {
     // matters; what is said once is what there is to say about it.
     size_t laid_out_once = kest_build_cost(build);
     for (uint32_t again = 0; again < 100; again++) {
-        if (kest_borrow(engine.runtime, tiles, 3, "Tile",
-                        sizeof(Tile) + 4).object != NULL) {
+        if (kest_borrow(engine.runtime, tiles, 3, "Tile", sizeof(Tile) + 4)
+                .object != NULL) {
             fprintf(stderr, "a lend of the wrong size was made\n");
             return 1;
         }
@@ -5362,8 +5569,8 @@ int main(int argc, char **argv) {
     // told.
     {
         Flagged some[3] = {{7, 1}, {9, 0}, {11, 1}};
-        KestValue run = kest_borrow(engine.runtime, some, 3, "Flagged",
-                                    sizeof(Flagged));
+        KestValue run =
+            kest_borrow(engine.runtime, some, 3, "Flagged", sizeof(Flagged));
         if (run.object == NULL) {
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
             return 1;
@@ -5383,7 +5590,8 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("host lent %zu byte rows of a `u16` and a `bool`: 7 and 11 are "
-               "on\n", sizeof(Flagged));
+               "on\n",
+               sizeof(Flagged));
     }
 
     // And the same block written through the layout and nothing else: no
@@ -5413,16 +5621,17 @@ int main(int argc, char **argv) {
                 }
             }
         }
-        KestValue run = kest_borrow(engine.runtime, block, 3, "Flagged",
-                                    laid->size);
+        KestValue run =
+            kest_borrow(engine.runtime, block, 3, "Flagged", laid->size);
         if (run.object == NULL) {
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
             return 1;
         }
         engine.frame[0] = run;
         if (!asks(&engine, HOW_MANY_ON) || engine.frame[0].integer != 6) {
-            fprintf(stderr, "what was written through the layout read back as "
-                            "%lld rather than 6\n",
+            fprintf(stderr,
+                    "what was written through the layout read back as "
+                    "%lld rather than 6\n",
                     (long long)engine.frame[0].integer);
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
             return 1;
@@ -5442,16 +5651,16 @@ int main(int argc, char **argv) {
     // is what the machine says to write.
     {
         int32_t twins[2] = {3, 4};
-        if (kest_borrow(engine.runtime, twins, 2, "Twin",
-                        sizeof(twins[0])).object != NULL) {
+        if (kest_borrow(engine.runtime, twins, 2, "Twin", sizeof(twins[0]))
+                .object != NULL) {
             fprintf(stderr, "a lend of a name two modules wrote was made\n");
             return 1;
         }
         if (!said_that(engine.runtime, "K0610", "more than one `Twin`")) {
             return 1;
         }
-        KestValue whole = kest_borrow(engine.runtime, twins, 2, "examples.embed.Twin",
-                                      sizeof(twins[0]));
+        KestValue whole = kest_borrow(engine.runtime, twins, 2,
+                                      "examples.embed.Twin", sizeof(twins[0]));
         if (whole.object == NULL) {
             fprintf(stderr, "a lend under the whole name was refused\n");
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
@@ -5483,8 +5692,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "the program's own array was taken back\n");
         return 1;
     }
-    if (!said_that(engine.runtime, "K0637", "the program's own and not a "
-                                            "lend")) {
+    if (!said_that(engine.runtime, "K0637",
+                   "the program's own and not a "
+                   "lend")) {
         return 1;
     }
     printf("an array the program made was not this host's to take back\n");
@@ -5543,7 +5753,8 @@ int main(int argc, char **argv) {
     // How many there are is this host's word, and the one thing the library
     // knows about the number is what the program can count to. Nothing is
     // read here either: the refusal comes before the length is believed.
-    if (kest_borrow(engine.runtime, aligned, 2147483648u, "Event", sizeof(Event))
+    if (kest_borrow(engine.runtime, aligned, 2147483648u, "Event",
+                    sizeof(Event))
             .object != NULL) {
         fprintf(stderr, "a lend longer than a count was allowed\n");
         return 1;
@@ -5585,8 +5796,8 @@ int main(int argc, char **argv) {
         askew++;
     }
     memcpy(askew, arriving, sizeof(arriving));
-    if (kest_borrow(engine.runtime, askew, 2, "Event", sizeof(Event))
-            .object != NULL) {
+    if (kest_borrow(engine.runtime, askew, 2, "Event", sizeof(Event)).object !=
+        NULL) {
         // What the machine was told, said out loud: a refusal that did not
         // happen is a refusal about *something*, and which of the three
         // numbers it is about is the whole of what to do next.
@@ -5634,8 +5845,7 @@ int main(int argc, char **argv) {
                 (unsigned char)((value >> (byte * 8)) & 0xff);
         }
     }
-    engine.frame[0] =
-        kest_borrow(engine.runtime, wire, sizeof(wire), "u8", 1);
+    engine.frame[0] = kest_borrow(engine.runtime, wire, sizeof(wire), "u8", 1);
     if (engine.frame[0].object == NULL) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
@@ -5652,8 +5862,7 @@ int main(int argc, char **argv) {
     // memory, so a program answering in a wire form writes the bytes where the
     // host will read them. Nothing is copied in either direction -- the same
     // eight bytes carried the question and carry the answer.
-    engine.frame[0] =
-        kest_borrow(engine.runtime, wire, sizeof(wire), "u8", 1);
+    engine.frame[0] = kest_borrow(engine.runtime, wire, sizeof(wire), "u8", 1);
     engine.frame[1].integer = 7;
     engine.frame[2].integer = 258;
     if (engine.frame[0].object == NULL || !asks(&engine, ANSWER_INTO) ||
@@ -5665,8 +5874,10 @@ int main(int argc, char **argv) {
     }
     // Read back the way this host would read anything off a wire: the bytes
     // are its own, and what is in them now is what the program put there.
-    int32_t wrote_first = wire[0] | wire[1] << 8 | wire[2] << 16 | wire[3] << 24;
-    int32_t wrote_second = wire[4] | wire[5] << 8 | wire[6] << 16 | wire[7] << 24;
+    int32_t wrote_first =
+        wire[0] | wire[1] << 8 | wire[2] << 16 | wire[3] << 24;
+    int32_t wrote_second =
+        wire[4] | wire[5] << 8 | wire[6] << 16 | wire[7] << 24;
     if (wrote_first != 7 || wrote_second != 258) {
         fprintf(stderr,
                 "the program answered %d and %d into this host's bytes\n",
@@ -5692,18 +5903,17 @@ int main(int argc, char **argv) {
     {
         Row halves[2];
         memset(halves, 0, sizeof(halves));
-        KestValue lent = kest_borrow(engine.runtime, halves, 2, "Row",
-                                     sizeof(halves[0]));
+        KestValue lent =
+            kest_borrow(engine.runtime, halves, 2, "Row", sizeof(halves[0]));
         if (lent.object == NULL) {
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
             return 1;
         }
-        uint32_t upto_at = kest_frame_at(engine.runtime,
-                                         engine.entry[HALF_WRITTEN], 1);
+        uint32_t upto_at =
+            kest_frame_at(engine.runtime, engine.entry[HALF_WRITTEN], 1);
         engine.frame[0] = lent;
         engine.frame[upto_at].integer = 99;
-        if (kest_call(engine.runtime, engine.entry[HALF_WRITTEN],
-                      engine.frame,
+        if (kest_call(engine.runtime, engine.entry[HALF_WRITTEN], engine.frame,
                       sizeof(engine.frame) / sizeof(engine.frame[0]))) {
             fprintf(stderr, "`halfWritten` answered about a row that is not "
                             "there\n");
@@ -5714,13 +5924,16 @@ int main(int argc, char **argv) {
         }
         for (size_t r = 0; r < sizeof(halves) / sizeof(halves[0]); r++) {
             if (halves[r].tag != 7) {
-                fprintf(stderr, "the pass that finished before a refusal left "
-                                "row %zu tagged %d\n", r, halves[r].tag);
+                fprintf(stderr,
+                        "the pass that finished before a refusal left "
+                        "row %zu tagged %d\n",
+                        r, halves[r].tag);
                 return 1;
             }
             if (halves[r].cells[0].weight != 99.0f) {
-                fprintf(stderr, "what a refused call wrote before it stopped "
-                                "is not in row %zu, which weighs %g\n",
+                fprintf(stderr,
+                        "what a refused call wrote before it stopped "
+                        "is not in row %zu, which weighs %g\n",
                         r, (double)halves[r].cells[0].weight);
                 return 1;
             }
@@ -5741,10 +5954,10 @@ int main(int argc, char **argv) {
                "machine able to answer again\n");
     }
 
-
     // And back the other way: what the program writes is what the host reads,
     // because there is one copy of it.
-    KestValue lent = kest_borrow(engine.runtime, events, 4, "Event", sizeof(Event));
+    KestValue lent =
+        kest_borrow(engine.runtime, events, 4, "Event", sizeof(Event));
     engine.frame[0] = lent;
     engine.frame[1].integer = 0;
     if (!asks(&engine, SILENCE)) {
@@ -5769,7 +5982,8 @@ int main(int argc, char **argv) {
     if (!asks(&engine, ON_EVENTS)) {
         return 1;
     }
-    printf("host reads it back: %lld damage\n", (long long)engine.frame[0].integer);
+    printf("host reads it back: %lld damage\n",
+           (long long)engine.frame[0].integer);
 
     // And the worst of them now that the first is silent, which is the case
     // this host has not yet been handed back: two floats rather than a whole
@@ -5786,8 +6000,9 @@ int main(int argc, char **argv) {
     }
     if (loudest.tag != EVENT_MOVED || loudest.as.moved.x != 1.5f ||
         loudest.as.moved.y != 2.5f) {
-        fprintf(stderr, "the worst of the rest came back as `%s` of %g and "
-                        "%g\n",
+        fprintf(stderr,
+                "the worst of the rest came back as `%s` of %g and "
+                "%g\n",
                 event_names[loudest.tag], (double)loudest.as.moved.x,
                 (double)loudest.as.moved.y);
         return 1;
@@ -6041,9 +6256,9 @@ int main(int argc, char **argv) {
     // And a layout that holds no tag at all, which has no cases rather than
     // none left: the walk above ends at the end of the list and this ends
     // before it starts, and both of them answer nothing.
-    if (kest_case_of(kest_frame_layout(engine.runtime, engine.entry[LENGTH_OF],
-                                       0),
-                     0, 0, NULL, NULL) != NULL) {
+    if (kest_case_of(
+            kest_frame_layout(engine.runtime, engine.entry[LENGTH_OF], 0), 0, 0,
+            NULL, NULL) != NULL) {
         fprintf(stderr, "a case came back for something that has none\n");
         return 1;
     }
@@ -6064,8 +6279,7 @@ int main(int argc, char **argv) {
     for (size_t i = 0; i < sizeof(handing) / sizeof(handing[0]); i++) {
         const KestPiece *pieces = NULL;
         uint16_t count = 0;
-        if (kest_case_of(carries, 0, handing[i].tag, &pieces, &count) ==
-            NULL) {
+        if (kest_case_of(carries, 0, handing[i].tag, &pieces, &count) == NULL) {
             fprintf(stderr, "no case %d to hand over\n", handing[i].tag);
             return 1;
         }
@@ -6086,7 +6300,8 @@ int main(int argc, char **argv) {
         if (!asks(&engine, DAMAGE_OF) ||
             engine.frame[0].integer != handing[i].answer) {
             fprintf(stderr, "`%s` handed over as a value answered %lld\n",
-                    event_names[handing[i].tag], (long long)engine.frame[0].integer);
+                    event_names[handing[i].tag],
+                    (long long)engine.frame[0].integer);
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
             return 1;
         }
@@ -6111,8 +6326,9 @@ int main(int argc, char **argv) {
     }
     size_t after = kest_heap_taken(engine.runtime);
     if (after != before) {
-        fprintf(stderr, "a thousand frames that promise nothing left %zu "
-                        "bytes behind\n",
+        fprintf(stderr,
+                "a thousand frames that promise nothing left %zu "
+                "bytes behind\n",
                 after - before);
         return 1;
     }
@@ -6123,7 +6339,6 @@ int main(int argc, char **argv) {
     if (!weighs_what_it_costs(&engine)) {
         return 1;
     }
-
 
     if (!lends_bytes(&engine)) {
         return 1;
@@ -6164,8 +6379,9 @@ int main(int argc, char **argv) {
         return 1;
     }
     if (marks[0].at != 5 || !marks[0].held) {
-        fprintf(stderr, "a value written into a lend reads back as %d, held "
-                        "%d\n",
+        fprintf(stderr,
+                "a value written into a lend reads back as %d, held "
+                "%d\n",
                 marks[0].at, (int)marks[0].held);
         return 1;
     }
@@ -6243,15 +6459,16 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("eight lends a frame for a hundred frames cost the heap what the "
-           "first frame did: %zu bytes\n", widest_frame);
+           "first frame did: %zu bytes\n",
+           widest_frame);
 
     // What the machine is running with, asked of the machine rather than kept
     // beside it: a number allocated is a number without a scale on its own.
     KestLimits allowed = {0, 0, 0, 0};
     kest_allowed(engine.runtime, &allowed);
     printf("used %zu of %zu bytes, in %u slots and %u frames\n",
-           kest_heap_used(engine.runtime), allowed.heap_bytes, allowed.stack_slots,
-           allowed.call_depth);
+           kest_heap_used(engine.runtime), allowed.heap_bytes,
+           allowed.stack_slots, allowed.call_depth);
 
     // And what a host may not do while the program is running, asked for from
     // inside the one function of this host's the program calls. The machine
@@ -6506,7 +6723,8 @@ int main(int argc, char **argv) {
     // memory: the bytes are here afterwards whatever the machine does next.
     unsigned char words[16];
     memset(words, 0, sizeof(words));
-    engine.frame[0] = kest_borrow(engine.runtime, words, sizeof(words), "u8", 1);
+    engine.frame[0] =
+        kest_borrow(engine.runtime, words, sizeof(words), "u8", 1);
     // How many there are and how much room there is, which a host can ask.
     // A lend is as long as it is lent and has no room over;
     // a number a host wrote into a slot is not an array and answers nought,
@@ -6525,8 +6743,8 @@ int main(int argc, char **argv) {
                     kest_array_length(engine.runtime, engine.frame[0], NULL));
             return 1;
         }
-        uint32_t many = kest_array_length(engine.runtime, engine.frame[0],
-                                          &room);
+        uint32_t many =
+            kest_array_length(engine.runtime, engine.frame[0], &room);
         printf("a lend of %zu bytes says it is %u long with room for %u\n",
                sizeof(words), many, room);
     }
@@ -6546,8 +6764,9 @@ int main(int argc, char **argv) {
     // Read after the heap the text was on has gone, because that is the whole
     // of why a host asks for words this way rather than keeping the value.
     if (memcmp(words, "kest", 4) != 0 || words[4] != 0) {
-        fprintf(stderr, "the words a program wrote into this host's bytes "
-                        "read `%.*s`\n",
+        fprintf(stderr,
+                "the words a program wrote into this host's bytes "
+                "read `%.*s`\n",
                 (int)sizeof(words), (const char *)words);
         return 1;
     }
@@ -6612,8 +6831,8 @@ int main(int argc, char **argv) {
     // across one is refused twice over.
     Row outlived[8];
     memset(outlived, 0, sizeof(outlived));
-    KestValue kept = kest_borrow(engine.runtime, outlived, 8, "Row",
-                                 sizeof(Row));
+    KestValue kept =
+        kest_borrow(engine.runtime, outlived, 8, "Row", sizeof(Row));
     if (kept.object == NULL || !kest_heap_reset(engine.runtime)) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
@@ -6666,8 +6885,9 @@ int main(int argc, char **argv) {
     }
     if (kest_kept_where(engine.runtime, written) != KEST_KEPT_PROGRAM ||
         kest_kept_where(engine.runtime, made[0]) != KEST_KEPT_HEAP) {
-        fprintf(stderr, "text out of the file is %s and text made while "
-                        "running is %s\n",
+        fprintf(stderr,
+                "text out of the file is %s and text made while "
+                "running is %s\n",
                 keeping(kest_kept_where(engine.runtime, written)),
                 keeping(kest_kept_where(engine.runtime, made[0])));
         return 1;
@@ -6695,7 +6915,8 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and text the file was written with is the one a host may keep: "
-           "`%s`, still there after the heap went\n", written.text);
+           "`%s`, still there after the heap went\n",
+           written.text);
 
     // And the same text handed back as a run of bytes, which is a host lending
     // the machine its own memory. What a program holds of text is a pointer
@@ -6724,8 +6945,8 @@ int main(int argc, char **argv) {
     // and what it is told is which of them it is holding.
     Row the_block[2];
     memset(the_block, 0, sizeof(the_block));
-    KestValue borrowed = kest_borrow(engine.runtime, the_block, 2, "Row",
-                                     sizeof(Row));
+    KestValue borrowed =
+        kest_borrow(engine.runtime, the_block, 2, "Row", sizeof(Row));
     if (borrowed.object == NULL) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
@@ -6798,16 +7019,16 @@ int main(int argc, char **argv) {
     // And the same program for a machine nobody trusts, which takes only the
     // doors the host opened to it and has to be told how long it may run and
     // how much heap it may have. Each refusal is read back from the build's
-    // report by its code and what it names. Here rather than beside the first start,
-    // because a machine started and freed there is one more counted before
-    // the build is asked how many are standing on it.
+    // report by its code and what it names. Here rather than beside the first
+    // start, because a machine started and freed there is one more counted
+    // before the build is asked how many are standing on it.
     {
         // A host of its own, because the one above has the doors it bound
         // for code it wrote, and this is a host saying which of them are for
         // code nobody trusts.
         KestHost *strict = kest_host_new();
-        static Decider strict_decider = {-1, 1, true, true, false, false,
-                                         DECIDER_MARK};
+        static Decider strict_decider = {-1,    1,     true,        true,
+                                         false, false, DECIDER_MARK};
         static bool strict_blaming = false;
         if (strict == NULL ||
             !kest_host_bind(strict, "Io.write", io_write, stdout) ||
@@ -6841,7 +7062,8 @@ int main(int argc, char **argv) {
             {&no_heap, "K0665", "on its heap"},
         };
         for (size_t r = 0; r < sizeof(refusals) / sizeof(refusals[0]); r++) {
-            if (kest_start_untrusted(build, strict, refusals[r].limits) != NULL) {
+            if (kest_start_untrusted(build, strict, refusals[r].limits) !=
+                NULL) {
                 fprintf(stderr, "a machine nobody trusts started without %s\n",
                         refusals[r].code);
                 return 1;
@@ -6864,8 +7086,9 @@ int main(int argc, char **argv) {
             }
             fclose(told);
             if (!said) {
-                fprintf(stderr, "a machine nobody trusts was refused without "
-                                "saying %s about %s\n",
+                fprintf(stderr,
+                        "a machine nobody trusts was refused without "
+                        "saying %s about %s\n",
                         refusals[r].code, refusals[r].names);
                 return 1;
             }
@@ -6904,16 +7127,18 @@ int main(int argc, char **argv) {
     // the build is not holding the words, it is holding the file they point at.
     {
         KestHost *quietly = kest_host_new();
-        static Decider unasked = {-1, 1, false, true, false, false, DECIDER_MARK};
+        static Decider unasked = {-1,    1,     false,       true,
+                                  false, false, DECIDER_MARK};
         if (quietly == NULL ||
             !kest_host_bind(quietly, "Io.write", io_write, stdout) ||
-            !kest_host_bind(quietly, "Engine.decide", engine_decide, &unasked) ||
+            !kest_host_bind(quietly, "Engine.decide", engine_decide,
+                            &unasked) ||
             !kest_host_bind(quietly, "Engine.name", engine_name, &unasked) ||
             !kest_host_bind(quietly, "Engine.rank", engine_rank, &unasked) ||
             !kest_host_bind(quietly, "Engine.hurt", engine_hurt, NULL) ||
             !kest_host_bind(quietly, "Engine.blame", engine_blame, NULL) ||
             !kest_host_bind(quietly, "Engine.weigh", engine_weigh, NULL) ||
-        !kest_host_bind(quietly, "Engine.who", engine_who, NULL)) {
+            !kest_host_bind(quietly, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host to say nothing with would not be made\n");
             return 1;
         }
@@ -6949,7 +7174,8 @@ int main(int argc, char **argv) {
     // and pay nothing for it.
     {
         KestHost *timed = kest_host_new();
-        static Decider untimed = {-1, 1, false, true, false, false, DECIDER_MARK};
+        static Decider untimed = {-1,    1,     false,       true,
+                                  false, false, DECIDER_MARK};
         if (timed == NULL ||
             !kest_host_bind(timed, "Io.write", io_write, stdout) ||
             !kest_host_bind(timed, "Engine.decide", engine_decide, &untimed) ||
@@ -6979,8 +7205,9 @@ int main(int argc, char **argv) {
         KestLimits allowed_steps = {0, 0, 0, 0};
         kest_allowed(budgeted, &allowed_steps);
         if (allowed_steps.fuel != 10) {
-            fprintf(stderr, "a machine given 10 steps says it was allowed "
-                            "%llu\n",
+            fprintf(stderr,
+                    "a machine given 10 steps says it was allowed "
+                    "%llu\n",
                     (unsigned long long)allowed_steps.fuel);
             return 1;
         }
@@ -7001,7 +7228,8 @@ int main(int argc, char **argv) {
         // more carries on rather than starting again.
         kest_fuel_set(budgeted, KEST_FUEL_UNLIMITED);
         asking[0].integer = 1000;
-        if (!kest_call(budgeted, fills, asking, 4) || asking[0].integer != 1000) {
+        if (!kest_call(budgeted, fills, asking, 4) ||
+            asking[0].integer != 1000) {
             fprintf(stderr, "a machine given fuel again would not run\n");
             return 1;
         }
@@ -7016,8 +7244,9 @@ int main(int argc, char **argv) {
         }
         uint64_t left = kest_fuel_left(budgeted);
         if (left == 0 || left >= 100000) {
-            fprintf(stderr, "a thousand turns inside a hundred thousand steps "
-                            "left %llu\n",
+            fprintf(stderr,
+                    "a thousand turns inside a hundred thousand steps "
+                    "left %llu\n",
                     (unsigned long long)left);
             return 1;
         }
@@ -7126,7 +7355,8 @@ int main(int argc, char **argv) {
     // where it was made, with the host's own words under it.
     {
         KestHost *sorry = kest_host_new();
-        static Decider unasked = {-1, 1, false, true, false, false, DECIDER_MARK};
+        static Decider unasked = {-1,    1,     false,       true,
+                                  false, false, DECIDER_MARK};
         if (sorry == NULL ||
             !kest_host_bind(sorry, "Io.write", io_write, stdout) ||
             !kest_host_bind(sorry, "Engine.decide", engine_decide, &unasked) ||
@@ -7149,8 +7379,8 @@ int main(int argc, char **argv) {
         // `Engine.hurt` is bound to a body that says it could not: whatever it
         // wrote is not read, and the call refuses.
         static Event one_event[1];
-        KestValue lent = kest_borrow(refusing, one_event, 1, "Event",
-                                     sizeof(Event));
+        KestValue lent =
+            kest_borrow(refusing, one_event, 1, "Event", sizeof(Event));
         if (lent.object == NULL) {
             kest_report(refusing, stderr, KEST_FORM_TEXT);
             return 1;
@@ -7198,7 +7428,7 @@ int main(int argc, char **argv) {
             !kest_host_bind(sizing, "Engine.hurt", engine_hurt, NULL) ||
             !kest_host_bind(sizing, "Engine.blame", engine_blame, NULL) ||
             !kest_host_bind(sizing, "Engine.weigh", engine_weigh, NULL) ||
-        !kest_host_bind(sizing, "Engine.who", engine_who, NULL)) {
+            !kest_host_bind(sizing, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host to size two machines with would not be "
                             "made\n");
             return 1;
@@ -7214,8 +7444,9 @@ int main(int argc, char **argv) {
         size_t narrow_cost = kest_runtime_cost(narrow);
         size_t wide_cost = kest_runtime_cost(wide);
         if (wide_cost - narrow_cost != 4096 * sizeof(KestValue)) {
-            fprintf(stderr, "a machine with 4096 more slots is %zu bytes "
-                            "wider, and a slot is %zu\n",
+            fprintf(stderr,
+                    "a machine with 4096 more slots is %zu bytes "
+                    "wider, and a slot is %zu\n",
                     wide_cost - narrow_cost, sizeof(KestValue));
             return 1;
         }
@@ -7225,14 +7456,15 @@ int main(int argc, char **argv) {
         }
         size_t left_on_the_build = kest_build_cost(build) - build_before;
         if (narrow_cost == 0 || left_on_the_build >= narrow_cost) {
-            fprintf(stderr, "starting two machines left %zu bytes on the "
-                            "build, and one machine is %zu\n",
+            fprintf(stderr,
+                    "starting two machines left %zu bytes on the "
+                    "build, and one machine is %zu\n",
                     left_on_the_build, narrow_cost);
             return 1;
         }
         printf("a machine of 4096 slots is %zu bytes and one of 8192 is %zu, "
-               "and starting two left %zu on the build\n", narrow_cost,
-               wide_cost, left_on_the_build);
+               "and starting two left %zu on the build\n",
+               narrow_cost, wide_cost, left_on_the_build);
 
         // And the two numbers a host actually has to pick between: what the
         // whole program needs, and what the functions this host calls need
@@ -7261,7 +7493,7 @@ int main(int argc, char **argv) {
             !kest_host_bind(picking, "Engine.hurt", engine_hurt, NULL) ||
             !kest_host_bind(picking, "Engine.blame", engine_blame, NULL) ||
             !kest_host_bind(picking, "Engine.weigh", engine_weigh, NULL) ||
-        !kest_host_bind(picking, "Engine.who", engine_who, NULL)) {
+            !kest_host_bind(picking, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host to size two more machines would not be "
                             "made\n");
             return 1;
@@ -7287,9 +7519,10 @@ int main(int argc, char **argv) {
         // down.
         if (driven.stack_slots <= whole.stack_slots ||
             driven.call_depth >= whole.call_depth || named_cost >= quiet_cost) {
-            fprintf(stderr, "saying nothing wants %u slots and %u frames, "
-                            "naming wants %u and %u, at %zu bytes against "
-                            "%zu\n",
+            fprintf(stderr,
+                    "saying nothing wants %u slots and %u frames, "
+                    "naming wants %u and %u, at %zu bytes against "
+                    "%zu\n",
                     whole.stack_slots, whole.call_depth, driven.stack_slots,
                     driven.call_depth, quiet_cost, named_cost);
             return 1;
@@ -7321,7 +7554,7 @@ int main(int argc, char **argv) {
             !kest_host_bind(shallow, "Engine.hurt", engine_hurt, NULL) ||
             !kest_host_bind(shallow, "Engine.blame", engine_blame, NULL) ||
             !kest_host_bind(shallow, "Engine.weigh", engine_weigh, NULL) ||
-        !kest_host_bind(shallow, "Engine.who", engine_who, NULL)) {
+            !kest_host_bind(shallow, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host to be refused with would not be made\n");
             return 1;
         }
@@ -7377,7 +7610,7 @@ int main(int argc, char **argv) {
             !kest_host_bind(unasked, "Engine.hurt", engine_hurt, NULL) ||
             !kest_host_bind(unasked, "Engine.blame", engine_blame, NULL) ||
             !kest_host_bind(unasked, "Engine.weigh", engine_weigh, NULL) ||
-        !kest_host_bind(unasked, "Engine.who", engine_who, NULL)) {
+            !kest_host_bind(unasked, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host that picks no numbers would not be made\n");
             return 1;
         }
@@ -7408,8 +7641,9 @@ int main(int argc, char **argv) {
         }
         if (was_given.stack_slots >= KEST_STACK_SLOTS ||
             was_given.call_depth >= KEST_CALL_DEPTH) {
-            fprintf(stderr, "a host that said nothing was given %u slots and "
-                            "%u frames\n",
+            fprintf(stderr,
+                    "a host that said nothing was given %u slots and "
+                    "%u frames\n",
                     was_given.stack_slots, was_given.call_depth);
             return 1;
         }
@@ -7422,11 +7656,12 @@ int main(int argc, char **argv) {
         if (!kest_needs(build, &worst, NULL) ||
             was_given.stack_slots <= worst.stack_slots ||
             was_given.call_depth <= worst.call_depth) {
-            fprintf(stderr, "the program's worst is %u slots and %u frames, "
-                            "and a host that said nothing was given %u and "
-                            "%u\n",
-                    worst.stack_slots, worst.call_depth,
-                    was_given.stack_slots, was_given.call_depth);
+            fprintf(stderr,
+                    "the program's worst is %u slots and %u frames, "
+                    "and a host that said nothing was given %u and "
+                    "%u\n",
+                    worst.stack_slots, worst.call_depth, was_given.stack_slots,
+                    was_given.call_depth);
             return 1;
         }
         // And more by exactly the way back in, which is the other half of the
@@ -7440,18 +7675,18 @@ int main(int argc, char **argv) {
         if (!kest_needs_from(build, NULL, &way_back, NULL) ||
             was_given.stack_slots != worst.stack_slots + way_back.stack_slots ||
             was_given.call_depth != worst.call_depth + way_back.call_depth) {
-            fprintf(stderr, "a host that said nothing was given %u slots and "
-                            "%u frames, against %u and %u for the program and "
-                            "%u and %u for the way back in\n",
+            fprintf(stderr,
+                    "a host that said nothing was given %u slots and "
+                    "%u frames, against %u and %u for the program and "
+                    "%u and %u for the way back in\n",
                     was_given.stack_slots, was_given.call_depth,
-                    worst.stack_slots, worst.call_depth,
-                    way_back.stack_slots, way_back.call_depth);
+                    worst.stack_slots, worst.call_depth, way_back.stack_slots,
+                    way_back.call_depth);
             return 1;
         }
         printf("a host that said nothing was given %u slots, which is %u for "
                "the program and %u for the way back in\n",
-               was_given.stack_slots, worst.stack_slots,
-               way_back.stack_slots);
+               was_given.stack_slots, worst.stack_slots, way_back.stack_slots);
         KestValue turn[6] = {{0}};
         int32_t made_world = kest_entry(given, "create");
         int32_t put_one = kest_entry(given, "spawn");
@@ -7477,8 +7712,10 @@ int main(int argc, char **argv) {
         }
         size_t asked_for_cost = kest_runtime_cost(given);
         if (asked_for_cost >= narrow_cost) {
-            fprintf(stderr, "what the program asked for is %zu bytes and 4096 "
-                            "slots is %zu\n", asked_for_cost, narrow_cost);
+            fprintf(stderr,
+                    "what the program asked for is %zu bytes and 4096 "
+                    "slots is %zu\n",
+                    asked_for_cost, narrow_cost);
             return 1;
         }
         if (!kest_runtime_free(given)) {
@@ -7503,7 +7740,8 @@ int main(int argc, char **argv) {
         // would do as well and wants `std.math` bound as well, which is four
         // more bindings and nothing more shown.
         const char *deep_path = "examples/least.kest";
-        KestBuild *deeply = kest_build(deep_path, NULL, stderr, KEST_FORM_TEXT, 0);
+        KestBuild *deeply =
+            kest_build(deep_path, NULL, stderr, KEST_FORM_TEXT, 0);
         if (deeply == NULL) {
             fprintf(stderr, "`%s` did not compile\n", deep_path);
             return 1;
@@ -7519,8 +7757,8 @@ int main(int argc, char **argv) {
             return 1;
         }
         KestHost *quiet = kest_host_new();
-        if (quiet == NULL || !kest_host_bind(quiet, "Host.write", io_write,
-                                             stdout)) {
+        if (quiet == NULL ||
+            !kest_host_bind(quiet, "Host.write", io_write, stdout)) {
             fprintf(stderr, "a host for `%s` would not be made\n", deep_path);
             return 1;
         }
@@ -7579,10 +7817,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(watching, "Engine.name", engine_name, &decider) ||
             !kest_host_bind(watching, "Engine.rank", engine_rank, &decider) ||
             !kest_host_bind(watching, "Engine.hurt", engine_hurt, NULL) ||
-            !kest_host_bind(watching, "Engine.blame", engine_blame,
-                            &blaming) ||
-            !kest_host_bind(watching, "Engine.weigh", engine_weigh,
-                            &decider) ||
+            !kest_host_bind(watching, "Engine.blame", engine_blame, &blaming) ||
+            !kest_host_bind(watching, "Engine.weigh", engine_weigh, &decider) ||
             !kest_host_bind(watching, "Engine.who", engine_who, &decider)) {
             fprintf(stderr, "a second host could not be bound\n");
             return 1;
@@ -7658,7 +7894,8 @@ int main(int argc, char **argv) {
         // to be written, and a number is never handed over as text.
         uint32_t text_length = 0;
         if (kest_frame_written(watched, 0, 0)) {
-            fprintf(stderr, "a body with a breakpoint in it was answered for\n");
+            fprintf(stderr,
+                    "a body with a breakpoint in it was answered for\n");
             return 1;
         }
         code[0] = was;
@@ -7711,8 +7948,7 @@ int main(int argc, char **argv) {
         }
         if (kest_collect(watched) || kest_heap_reset(watched) ||
             kest_scratch_mark(watched) != 0 ||
-            kest_scratch_rewind(watched, 1) ||
-            kest_heap_allow(watched, 4096)) {
+            kest_scratch_rewind(watched, 1) || kest_heap_allow(watched, 4096)) {
             fprintf(stderr,
                     "a stopped machine let the heap its frames are standing "
                     "on be taken away\n");
@@ -7805,8 +8041,9 @@ int main(int argc, char **argv) {
             KestValue worth[2] = {{0}};
             bool answered = kest_call(asking_in, weighed, worth, 2);
             if (weighing_how != 0 && weighing_went) {
-                fprintf(stderr, "a call made from inside a call ran on "
-                                "through %s\n",
+                fprintf(stderr,
+                        "a call made from inside a call ran on "
+                        "through %s\n",
                         weighing_how == 1 ? "arithmetic that cannot be done"
                                           : "a breakpoint");
                 return 1;
@@ -7864,8 +8101,8 @@ int main(int argc, char **argv) {
     // allocation, a walk or a lend, so they are counted whether or not
     // anybody asks.
     KestTelemetry did = {0};
-    if (!kest_telemetry(engine.runtime, &did) ||
-        kest_telemetry(NULL, &did) || kest_telemetry(engine.runtime, NULL)) {
+    if (!kest_telemetry(engine.runtime, &did) || kest_telemetry(NULL, &did) ||
+        kest_telemetry(engine.runtime, NULL)) {
         fprintf(stderr, "what the heap did was not answered for\n");
         return 1;
     }
@@ -7975,106 +8212,113 @@ int main(int argc, char **argv) {
             !kest_host_bind(apart, "Engine.hurt", engine_hurt, NULL) ||
             !kest_host_bind(apart, "Engine.blame", engine_blame, NULL) ||
             !kest_host_bind(apart, "Engine.weigh", engine_weigh, NULL) ||
-        !kest_host_bind(apart, "Engine.who", engine_who, NULL)) {
+            !kest_host_bind(apart, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host of its own would not be made\n");
             return 1;
         }
-    // And text handed over to a machine with no heap left to copy it into.
-    // The bytes are copied, so a host handing over more than is left is told
-    // rather than given a piece of text that is not there. A machine of its
-    // own, because this one has a frame budget the rest of this run is about.
-    {
-        // A build of its own, because how many machines are standing on this
-        // one is a thing this host says out loud further down: a machine
-        // started to be refused something is not a machine this host drives.
-        KestBuild *aside = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
-        KestLimits nothing_left = {0, 0, 0, 0};
-        nothing_left.heap_bytes = 64;
-        KestRuntime *starved =
-            aside == NULL ? NULL : kest_start(aside, apart, &nothing_left);
-        if (starved == NULL) {
-            fprintf(stderr, "a machine of its own would not start\n");
-            return 1;
+        // And text handed over to a machine with no heap left to copy it into.
+        // The bytes are copied, so a host handing over more than is left is
+        // told rather than given a piece of text that is not there. A machine
+        // of its own, because this one has a frame budget the rest of this run
+        // is about.
+        {
+            // A build of its own, because how many machines are standing on
+            // this one is a thing this host says out loud further down: a
+            // machine started to be refused something is not a machine this
+            // host drives.
+            KestBuild *aside =
+                kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
+            KestLimits nothing_left = {0, 0, 0, 0};
+            nothing_left.heap_bytes = 64;
+            KestRuntime *starved =
+                aside == NULL ? NULL : kest_start(aside, apart, &nothing_left);
+            if (starved == NULL) {
+                fprintf(stderr, "a machine of its own would not start\n");
+                return 1;
+            }
+            char many[512];
+            memset(many, 'x', sizeof(many) - 1);
+            many[sizeof(many) - 1] = '\0';
+            KestValue too_much[2] = {{0}, {0}};
+            if (kest_text(starved, many, sizeof(many) - 1, too_much) ||
+                too_much[0].text == NULL || too_much[0].text[0] != '\0') {
+                fprintf(stderr,
+                        "text was made where there was no room for it\n");
+                return 1;
+            }
+            if (!said_that(starved, "K0605", "out of memory")) {
+                return 1;
+            }
+            kest_runtime_free(starved);
+            kest_build_free(aside);
+            printf("text handed to a machine with %zu bytes was refused\n",
+                   (size_t)nothing_left.heap_bytes);
         }
-        char many[512];
-        memset(many, 'x', sizeof(many) - 1);
-        many[sizeof(many) - 1] = '\0';
-        KestValue too_much[2] = {{0}, {0}};
-        if (kest_text(starved, many, sizeof(many) - 1, too_much) ||
-            too_much[0].text == NULL || too_much[0].text[0] != '\0') {
-            fprintf(stderr, "text was made where there was no room for it\n");
-            return 1;
+        // And a host that did not account for the call it makes from inside
+        // one. The numbers above are what the program wants plus what a call
+        // back in wants; a machine started with what one function wants runs
+        // that function and has nowhere to take the call this host makes from
+        // inside it. That is the one thing a host is told here rather than left
+        // to find out, and nothing had ever been told it.
+        {
+            // What `step` alone wants, which is what a host that knows which
+            // function it drives would take and is exactly the number that
+            // leaves nothing over for the call this host makes from inside it.
+            KestLimits bare = {0, 0, 0, 0};
+            if (!kest_needs_of(build, "step", &bare, NULL)) {
+                fprintf(stderr, "the program says nothing about what `step` "
+                                "needs\n");
+                return 1;
+            }
+            KestBuild *narrowly =
+                kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
+            KestRuntime *tight =
+                narrowly == NULL ? NULL : kest_start(narrowly, apart, &bare);
+            if (tight == NULL) {
+                fprintf(stderr, "a machine of its own would not start\n");
+                return 1;
+            }
+            quiet.rule = kest_entry(tight, "rule");
+            quiet.asks_the_program = true;
+            KestValue narrow[6] = {{0}};
+            int32_t made = kest_entry(tight, "create");
+            int32_t one = kest_entry(tight, "spawn");
+            int32_t stepped = kest_entry(tight, "step");
+            if (made < 0 || one < 0 || stepped < 0 ||
+                !kest_call(tight, made, narrow, 6)) {
+                kest_report(tight, stderr, KEST_FORM_TEXT);
+                return 1;
+            }
+            KestValue held = narrow[0];
+            narrow[0] = held;
+            narrow[1].integer = 3;
+            if (!kest_call(tight, one, narrow, 6)) {
+                kest_report(tight, stderr, KEST_FORM_TEXT);
+                return 1;
+            }
+            narrow[0] = held;
+            // What the working out costs the program, read on either side of
+            // the refusal: the answer is worked out on the heap the program is
+            // running on, and a refusal that leaves something there is a frame
+            // budget that shrinks every time something goes wrong.
+            size_t heap_before = kest_heap_used(tight);
+            kest_call(tight, stepped, narrow, 6);
+            if (!said_under(tight, "K0602", "this program needs")) {
+                return 1;
+            }
+            if (kest_heap_used(tight) != heap_before) {
+                fprintf(stderr,
+                        "working out what a program needed cost it %zu "
+                        "bytes of its own heap\n",
+                        kest_heap_used(tight) - heap_before);
+                return 1;
+            }
+            kest_runtime_free(tight);
+            kest_build_free(narrowly);
+            printf(
+                "a call in from a machine sized for `step` alone was refused, "
+                "and told what to ask for at no cost to the program's heap\n");
         }
-        if (!said_that(starved, "K0605", "out of memory")) {
-            return 1;
-        }
-        kest_runtime_free(starved);
-        kest_build_free(aside);
-        printf("text handed to a machine with %zu bytes was refused\n",
-               (size_t)nothing_left.heap_bytes);
-    }
-    // And a host that did not account for the call it makes from inside one.
-    // The numbers above are what the program wants plus what a call back in
-    // wants; a machine started with what one function wants runs that function
-    // and has nowhere to take the call this host makes from inside it. That is the one
-    // thing a host is told here rather than left to find out, and nothing had
-    // ever been told it.
-    {
-        // What `step` alone wants, which is what a host that knows which
-        // function it drives would take and is exactly the number that leaves
-        // nothing over for the call this host makes from inside it.
-        KestLimits bare = {0, 0, 0, 0};
-        if (!kest_needs_of(build, "step", &bare, NULL)) {
-            fprintf(stderr, "the program says nothing about what `step` "
-                            "needs\n");
-            return 1;
-        }
-        KestBuild *narrowly = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
-        KestRuntime *tight =
-            narrowly == NULL ? NULL : kest_start(narrowly, apart, &bare);
-        if (tight == NULL) {
-            fprintf(stderr, "a machine of its own would not start\n");
-            return 1;
-        }
-        quiet.rule = kest_entry(tight, "rule");
-        quiet.asks_the_program = true;
-        KestValue narrow[6] = {{0}};
-        int32_t made = kest_entry(tight, "create");
-        int32_t one = kest_entry(tight, "spawn");
-        int32_t stepped = kest_entry(tight, "step");
-        if (made < 0 || one < 0 || stepped < 0 ||
-            !kest_call(tight, made, narrow, 6)) {
-            kest_report(tight, stderr, KEST_FORM_TEXT);
-            return 1;
-        }
-        KestValue held = narrow[0];
-        narrow[0] = held;
-        narrow[1].integer = 3;
-        if (!kest_call(tight, one, narrow, 6)) {
-            kest_report(tight, stderr, KEST_FORM_TEXT);
-            return 1;
-        }
-        narrow[0] = held;
-        // What the working out costs the program, read on either side of the
-        // refusal: the answer is worked out on the heap the program is running
-        // on, and a refusal that leaves something there is a frame budget that
-        // shrinks every time something goes wrong.
-        size_t heap_before = kest_heap_used(tight);
-        kest_call(tight, stepped, narrow, 6);
-        if (!said_under(tight, "K0602", "this program needs")) {
-            return 1;
-        }
-        if (kest_heap_used(tight) != heap_before) {
-            fprintf(stderr, "working out what a program needed cost it %zu "
-                            "bytes of its own heap\n",
-                    kest_heap_used(tight) - heap_before);
-            return 1;
-        }
-        kest_runtime_free(tight);
-        kest_build_free(narrowly);
-        printf("a call in from a machine sized for `step` alone was refused, "
-               "and told what to ask for at no cost to the program's heap\n");
-    }
         kest_host_free(apart);
     }
 
@@ -8102,7 +8346,8 @@ int main(int argc, char **argv) {
                               : 0;
         for (int cycle = 0; cycle < 3; cycle++) {
             KestHost *over = kest_host_new();
-            static Decider quietly = {-1, 1, false, true, false, false, DECIDER_MARK};
+            static Decider quietly = {-1,    1,     false,       true,
+                                      false, false, DECIDER_MARK};
             KestBuild *reloaded =
                 kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
             if (over == NULL || reloaded == NULL ||
@@ -8114,7 +8359,7 @@ int main(int argc, char **argv) {
                 !kest_host_bind(over, "Engine.hurt", engine_hurt, NULL) ||
                 !kest_host_bind(over, "Engine.blame", engine_blame, NULL) ||
                 !kest_host_bind(over, "Engine.weigh", engine_weigh, NULL) ||
-        !kest_host_bind(over, "Engine.who", engine_who, NULL)) {
+                !kest_host_bind(over, "Engine.who", engine_who, NULL)) {
                 fprintf(stderr, "a reload would not build\n");
                 return 1;
             }
@@ -8138,8 +8383,9 @@ int main(int argc, char **argv) {
                 built = costs;
                 started = machine;
             } else if (costs != built || machine != started) {
-                fprintf(stderr, "reload %d cost %zu and %zu where the first "
-                                "cost %zu and %zu\n",
+                fprintf(stderr,
+                        "reload %d cost %zu and %zu where the first "
+                        "cost %zu and %zu\n",
                         cycle, costs, machine, built, started);
                 return 1;
             }
@@ -8149,7 +8395,8 @@ int main(int argc, char **argv) {
             }
         }
         printf("a reload of this program is %zu bytes of build and %zu of "
-               "machine, three times over\n", built, started);
+               "machine, three times over\n",
+               built, started);
     }
 
     // And the same file built inside a ceiling, which is the one thing this
@@ -8160,11 +8407,12 @@ int main(int argc, char **argv) {
     // make sense of, and one of those asked this machine for sixty-five
     // gigabytes -- so what a build may have is a number, and the number this
     // host has in front of it is what building this one cost a moment ago.
-    KestBuild *walled = kest_build(path, NULL, stderr, KEST_FORM_TEXT,
-                                   first_build);
+    KestBuild *walled =
+        kest_build(path, NULL, stderr, KEST_FORM_TEXT, first_build);
     if (walled == NULL) {
-        fprintf(stderr, "a build given the %zu bytes it costs would not "
-                        "build\n",
+        fprintf(stderr,
+                "a build given the %zu bytes it costs would not "
+                "build\n",
                 first_build);
         return 1;
     }
@@ -8190,11 +8438,12 @@ int main(int argc, char **argv) {
                             "from\n");
             return 1;
         }
-        KestBuild *cannot = kest_build(path, NULL, refused, KEST_FORM_TEXT,
-                                       too_little[which]);
+        KestBuild *cannot =
+            kest_build(path, NULL, refused, KEST_FORM_TEXT, too_little[which]);
         if (cannot != NULL) {
-            fprintf(stderr, "a build given %zu of the %zu bytes it costs "
-                            "built anyway\n",
+            fprintf(stderr,
+                    "a build given %zu of the %zu bytes it costs "
+                    "built anyway\n",
                     too_little[which], first_build);
             return 1;
         }
@@ -8229,32 +8478,28 @@ int main(int argc, char **argv) {
         KestValue frame[4] = {{0}};
         KestLimits allowed;
         KestValue nowhere[2] = {{0}, {0}};
-        bool quiet = !kest_text(NULL, "hi", 2, nowhere) &&
-                     nowhere[0].text != NULL &&
-                     kest_borrow(NULL, numbers, 2, "i32", 4).object == NULL &&
-                     !kest_lend_ends(NULL, nothing) &&
-                     !kest_still_holds(NULL, nothing) &&
-                     kest_kept_where(NULL, nothing) == KEST_KEPT_NOWHERE &&
-                     !kest_call(NULL, 0, frame, 1) &&
-                     kest_entry(NULL, "main") < 0 &&
-                     kest_entry_of(NULL, "main", 0) < 0 &&
-                     kest_entry_name(NULL, 0) == NULL &&
-                     kest_entry_wrote(NULL, 0) == NULL &&
-                     !kest_entry_promises(NULL, 0, KEST_PROMISE_NO_ALLOC) &&
-                     kest_frame_takes(NULL, 0) == 0 &&
-                     kest_frame_at(NULL, 0, 0) == 0 &&
-                     kest_frame_layout(NULL, 0, 0) == NULL &&
-                     kest_frame_gives(NULL, 0) == NULL &&
-                     !kest_frame_fills(NULL, 0, kinds, 2) &&
-                     !kest_frame_reads(NULL, 0, kinds, 2) &&
-                     !kest_takes_text(NULL, 0, frame, 1, words, 1) &&
-                     kest_gave_text(NULL, 0, frame, out, sizeof out) < 0 &&
-                     kest_frame_slots(NULL, 0) == 0 &&
-                     kest_heap_used(NULL) == 0 &&
-                     kest_heap_wanted(NULL) == 0 &&
-                     !kest_heap_reset(NULL) && !kest_heap_allow(NULL, 16) &&
-                     kest_runtime_cost(NULL) == 0 &&
-                     kest_runtime_free(NULL);
+        bool quiet =
+            !kest_text(NULL, "hi", 2, nowhere) && nowhere[0].text != NULL &&
+            kest_borrow(NULL, numbers, 2, "i32", 4).object == NULL &&
+            !kest_lend_ends(NULL, nothing) &&
+            !kest_still_holds(NULL, nothing) &&
+            kest_kept_where(NULL, nothing) == KEST_KEPT_NOWHERE &&
+            !kest_call(NULL, 0, frame, 1) && kest_entry(NULL, "main") < 0 &&
+            kest_entry_of(NULL, "main", 0) < 0 &&
+            kest_entry_name(NULL, 0) == NULL &&
+            kest_entry_wrote(NULL, 0) == NULL &&
+            !kest_entry_promises(NULL, 0, KEST_PROMISE_NO_ALLOC) &&
+            kest_frame_takes(NULL, 0) == 0 && kest_frame_at(NULL, 0, 0) == 0 &&
+            kest_frame_layout(NULL, 0, 0) == NULL &&
+            kest_frame_gives(NULL, 0) == NULL &&
+            !kest_frame_fills(NULL, 0, kinds, 2) &&
+            !kest_frame_reads(NULL, 0, kinds, 2) &&
+            !kest_takes_text(NULL, 0, frame, 1, words, 1) &&
+            kest_gave_text(NULL, 0, frame, out, sizeof out) < 0 &&
+            kest_frame_slots(NULL, 0) == 0 && kest_heap_used(NULL) == 0 &&
+            kest_heap_wanted(NULL) == 0 && !kest_heap_reset(NULL) &&
+            !kest_heap_allow(NULL, 16) && kest_runtime_cost(NULL) == 0 &&
+            kest_runtime_free(NULL);
         kest_report(NULL, stderr, KEST_FORM_TEXT);
         kest_allowed(NULL, &allowed);
         (void)kest_heap_refused_by(NULL);
@@ -8266,37 +8511,34 @@ int main(int argc, char **argv) {
     }
 
     // And the same question asked of the other two things a host holds. A
-    // build that did not compile is the first thing a host meets -- `kest_build`
-    // answers NULL for it -- so this is the more likely of the two, and the
-    // next line a host writes is `kest_start`. Twenty-five doors, and two of
-    // them took the process down.
+    // build that did not compile is the first thing a host meets --
+    // `kest_build` answers NULL for it -- so this is the more likely of the
+    // two, and the next line a host writes is `kest_start`. Twenty-five doors,
+    // and two of them took the process down.
     {
         KestLimits least;
         KestReason why = {0, NULL};
         const KestLayout *laid = NULL;
-        bool quiet = !kest_needs(NULL, &least, &why) &&
-                     !kest_needs_of(NULL, "main", &least, &why) &&
-                     !kest_bound(NULL, 4, &least, &why) &&
-                     !kest_bound_of(NULL, "main", 4, &least, &why) &&
-                     !kest_needs_from(NULL, NULL, &least, &why) &&
-                     !kest_bound_from(NULL, NULL, 4, &least, &why) &&
-                     !kest_host_bind(NULL, "a", NULL, NULL) &&
-                     kest_host_find(NULL, "a", NULL) == NULL &&
-                     kest_build_free(NULL) &&
-                     kest_build_cost(NULL) == 0 &&
-                     kest_build_held(NULL) == 0 &&
-                     kest_build_read(NULL, 0) == NULL &&
-                     kest_build_read_bytes(NULL, 0) == 0 &&
-                     kest_build_read_mark(NULL, 0) == 0 &&
-                     kest_build_mark(NULL) == 0 &&
-                     kest_build_code_mark(NULL) == 0 &&
-                     kest_build_source(NULL) == 0 &&
-                     kest_build_extern(NULL, 0) == NULL &&
-                     kest_extern_takes(NULL, 0) == 0 &&
-                     kest_extern_layout(NULL, 0, 0) == NULL &&
-                     kest_extern_gives(NULL, 0) == NULL &&
-                     kest_build_layout(NULL, "Npc", &laid) == 0 &&
-                     kest_start(NULL, NULL, NULL) == NULL;
+        bool quiet =
+            !kest_needs(NULL, &least, &why) &&
+            !kest_needs_of(NULL, "main", &least, &why) &&
+            !kest_bound(NULL, 4, &least, &why) &&
+            !kest_bound_of(NULL, "main", 4, &least, &why) &&
+            !kest_needs_from(NULL, NULL, &least, &why) &&
+            !kest_bound_from(NULL, NULL, 4, &least, &why) &&
+            !kest_host_bind(NULL, "a", NULL, NULL) &&
+            kest_host_find(NULL, "a", NULL) == NULL && kest_build_free(NULL) &&
+            kest_build_cost(NULL) == 0 && kest_build_held(NULL) == 0 &&
+            kest_build_read(NULL, 0) == NULL &&
+            kest_build_read_bytes(NULL, 0) == 0 &&
+            kest_build_read_mark(NULL, 0) == 0 && kest_build_mark(NULL) == 0 &&
+            kest_build_code_mark(NULL) == 0 && kest_build_source(NULL) == 0 &&
+            kest_build_extern(NULL, 0) == NULL &&
+            kest_extern_takes(NULL, 0) == 0 &&
+            kest_extern_layout(NULL, 0, 0) == NULL &&
+            kest_extern_gives(NULL, 0) == NULL &&
+            kest_build_layout(NULL, "Npc", &laid) == 0 &&
+            kest_start(NULL, NULL, NULL) == NULL;
         kest_build_report(NULL, stderr, KEST_FORM_TEXT);
         kest_host_free(NULL);
         if (!quiet) {

@@ -95,7 +95,6 @@ typedef struct {
     uint32_t by_name_slots;
 } Graph;
 
-
 // One place a body is written down as reaching the heap, so the first and the
 // rest are kept by the same rule and nothing has to remember which it is.
 static void reaches(Graph *graph, Function *function, KestSpan span,
@@ -154,8 +153,8 @@ static const KestTypeRef *written_shape(Graph *graph, Function *function,
             param->name.length != callee->span.length) {
             continue;
         }
-        if (memcmp(span_text(graph, param->name), text,
-                   callee->span.length) == 0) {
+        if (memcmp(span_text(graph, param->name), text, callee->span.length) ==
+            0) {
             return param->type;
         }
     }
@@ -293,8 +292,9 @@ static void call_through(Graph *graph, Function *function, KestSpan span,
         return;
     }
     if (function->through_count == function->through_capacity) {
-        uint32_t grown =
-            function->through_capacity == 0 ? 4 : function->through_capacity * 2;
+        uint32_t grown = function->through_capacity == 0
+                             ? 4
+                             : function->through_capacity * 2;
         Through *throughs =
             KEST_ARENA_ARRAY(graph->program->arena, Through, grown);
         if (throughs == NULL) {
@@ -404,7 +404,8 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
                 {"slice", NULL},
                 {"store", "`store()` makes something that can grow"},
             };
-            for (uint32_t i = 0; i < sizeof(REACHES) / sizeof(REACHES[0]); i++) {
+            for (uint32_t i = 0; i < sizeof(REACHES) / sizeof(REACHES[0]);
+                 i++) {
                 if (!kest_word_same(REACHES[i].name, text,
                                     callee->span.length)) {
                     continue;
@@ -440,8 +441,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         }
         if (graph->a_template &&
             (callee->type == NULL || callee->type->tag != KEST_T_FN)) {
-            const KestTypeRef *written =
-                written_shape(graph, function, callee);
+            const KestTypeRef *written = written_shape(graph, function, callee);
             if (written != NULL) {
                 call_through(graph, function, expr->span,
                              shape_written(graph, written->span),
@@ -660,45 +660,46 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
 
     uint32_t next = 0;
     for (uint32_t u = 0; u < units->count; u++) {
-      kest_program_in(program, &units->items[u]);
-      const KestUnit *unit = &units->items[u].unit;
-      for (uint32_t i = 0; i < unit->count; i++) {
-        const KestDecl *decl = unit->items[i];
-        if (decl->kind != KEST_DECL_FN) {
-            continue;
+        kest_program_in(program, &units->items[u]);
+        const KestUnit *unit = &units->items[u].unit;
+        for (uint32_t i = 0; i < unit->count; i++) {
+            const KestDecl *decl = unit->items[i];
+            if (decl->kind != KEST_DECL_FN) {
+                continue;
+            }
+            Function *function = &graph.functions[next++];
+            function->unit = u;
+            function->decl = decl;
+            // Named by the symbol the checker gave it, which includes what it
+            // takes, because two functions may share a name. An extern is
+            // declared under its receiver too, so that is where it is found.
+            KestSpan where = decl->name;
+            if (decl->function.receiver.length > 0) {
+                where.offset = decl->function.receiver.offset;
+                where.length = decl->name.offset + decl->name.length -
+                               decl->function.receiver.offset;
+            }
+            KestSymbol *symbol =
+                kest_symbol_at(program, program->source, where);
+            if (symbol == NULL || symbol->type->symbol == NULL) {
+                next--;
+                graph.count--;
+                continue;
+            }
+            function->name = symbol->type->symbol;
+            function->display = symbol->name;
+            function->promises = about == 2   ? decl->function.deterministic
+                                 : about == 1 ? decl->function.no_host
+                                              : decl->function.no_alloc;
+            function->is_extern = decl->function.is_extern;
+            // A foreign body is not here to be read, so its promise is the only
+            // thing there is to go on -- and about the host there is nothing to
+            // go on either way: a function the host provides is the host,
+            // whatever it says about the heap.
+            function->allocates =
+                function->is_extern && (about == 1 || !function->promises);
+            function->site = NO_SITE;
         }
-        Function *function = &graph.functions[next++];
-        function->unit = u;
-        function->decl = decl;
-        // Named by the symbol the checker gave it, which includes what it
-        // takes, because two functions may share a name. An extern is
-        // declared under its receiver too, so that is where it is found.
-        KestSpan where = decl->name;
-        if (decl->function.receiver.length > 0) {
-            where.offset = decl->function.receiver.offset;
-            where.length = decl->name.offset + decl->name.length -
-                           decl->function.receiver.offset;
-        }
-        KestSymbol *symbol = kest_symbol_at(program, program->source, where);
-        if (symbol == NULL || symbol->type->symbol == NULL) {
-            next--;
-            graph.count--;
-            continue;
-        }
-        function->name = symbol->type->symbol;
-        function->display = symbol->name;
-        function->promises = about == 2   ? decl->function.deterministic
-                             : about == 1 ? decl->function.no_host
-                                          : decl->function.no_alloc;
-        function->is_extern = decl->function.is_extern;
-        // A foreign body is not here to be read, so its promise is the only
-        // thing there is to go on -- and about the host there is nothing to go
-        // on either way: a function the host provides is the host, whatever it
-        // says about the heap.
-        function->allocates =
-            function->is_extern && (about == 1 || !function->promises);
-        function->site = NO_SITE;
-      }
     }
 
     // The copies. Each is the same declaration under another set of types, and
@@ -715,10 +716,9 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
         function->decl = instance->decl;
         function->name = instance->symbol;
         function->display = instance->symbol;
-        function->promises =
-            about == 2   ? instance->decl->function.deterministic
-            : about == 1 ? instance->decl->function.no_host
-                         : instance->decl->function.no_alloc;
+        function->promises = about == 2 ? instance->decl->function.deterministic
+                             : about == 1 ? instance->decl->function.no_host
+                                          : instance->decl->function.no_alloc;
         function->is_extern = instance->decl->function.is_extern;
         function->allocates =
             function->is_extern && (about == 1 || !function->promises);
@@ -759,8 +759,8 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
         // for what it calls: the first is true whatever the types are, and the
         // second is settled per copy. Without it a promise on a generic that
         // nothing instantiates was proved against nothing at all.
-        graph.a_template = i < first_copy &&
-                           function->decl->type_param_count > 0;
+        graph.a_template =
+            i < first_copy && function->decl->type_param_count > 0;
         kest_program_in(program, &units->items[function->unit]);
         // The tree is typed for this copy before it is read, which is the
         // whole of what makes the answer that copy's own.
@@ -889,11 +889,10 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
             for (uint32_t n = 0; n < function->site_count; n++) {
                 uint32_t left = function->site_count - n - 1 + function->more;
                 if (n + 1 == MORE_SITES && left > 0) {
-                    kest_diags_note(program->diags,
-                                    &units->items[function->unit].source,
-                                    function->sites[n],
-                                    "and here, and %u more place%s", left,
-                                    left == 1 ? "" : "s");
+                    kest_diags_note(
+                        program->diags, &units->items[function->unit].source,
+                        function->sites[n], "and here, and %u more place%s",
+                        left, left == 1 ? "" : "s");
                     break;
                 }
                 // Saying the same reason under every one of them is noise;
@@ -903,10 +902,9 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
                                     &units->items[function->unit].source,
                                     function->sites[n], "and here");
                 } else {
-                    kest_diags_note(program->diags,
-                                    &units->items[function->unit].source,
-                                    function->sites[n], "and here: %s",
-                                    function->whys[n]);
+                    kest_diags_note(
+                        program->diags, &units->items[function->unit].source,
+                        function->sites[n], "and here: %s", function->whys[n]);
                 }
             }
         }
@@ -926,16 +924,14 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
         for (uint32_t n = 0; n < hops && n < room; n++) {
             uint32_t left = hops - n - 1;
             if (n + 1 == room && left > 0) {
-                kest_diags_note(program->diags,
-                                &units->items[path.units[n]].source,
-                                path.calls[n],
-                                "which calls `%s`, and %u call%s under that",
-                                path.names[n], left, left == 1 ? "" : "s");
+                kest_diags_note(
+                    program->diags, &units->items[path.units[n]].source,
+                    path.calls[n], "which calls `%s`, and %u call%s under that",
+                    path.names[n], left, left == 1 ? "" : "s");
                 break;
             }
             kest_diags_note(program->diags, &units->items[path.units[n]].source,
-                            path.calls[n], "which calls `%s`",
-                            path.names[n]);
+                            path.calls[n], "which calls `%s`", path.names[n]);
         }
     }
     *into = graph;
@@ -955,6 +951,5 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
     bool held = prove_promise(program, units, 0, &walked, NULL);
     const Graph *first = held ? &walked : NULL;
     bool crossing = prove_promise(program, units, 1, &other, first);
-    return prove_promise(program, units, 2, &other, first) && crossing &&
-           held;
+    return prove_promise(program, units, 2, &other, first) && crossing && held;
 }

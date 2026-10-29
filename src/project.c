@@ -125,8 +125,8 @@ KestProject *kest_project_from(KestArena *arena, const char *where,
         // A file that is not there is not a mistake: a program is a file and
         // needs no project around it. A file that is there and will not be
         // read is.
-        *why = there ? "there is a project here and it could not be read"
-                     : NULL;
+        *why =
+            there ? "there is a project here and it could not be read" : NULL;
         return NULL;
     }
 
@@ -218,7 +218,8 @@ const char *kest_project_written(KestArena *arena, const char *name) {
         "\n"
         "# What it was written against, which deterministic profile it is\n"
         "# written under, and which edition of the language: a change that\n"
-        "# would break a program is made under a new edition, and this line is\n"
+        "# would break a program is made under a new edition, and this line "
+        "is\n"
         "# the one it asks.\n"
         "kest %s\n"
         "profile %s %u\n"

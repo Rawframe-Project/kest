@@ -2,7 +2,6 @@
 
 #include <string.h>
 
-
 #define LINE_LIMIT 80
 
 typedef struct {
@@ -229,8 +228,7 @@ static bool holds_a_body(const KestExpr *expr) {
     // A block in braces is lines of its own; one that gives a value is as
     // long as that value.
     case KEST_EXPR_BLOCK:
-        return expr->lambda->value == NULL ||
-               holds_a_body(expr->lambda->value);
+        return expr->lambda->value == NULL || holds_a_body(expr->lambda->value);
     case KEST_EXPR_IF:
         return expr->branch->then_body.count > 0 ||
                expr->branch->else_body.count > 0 ||
@@ -429,11 +427,9 @@ static bool takes_what_follows(const KestExpr *expr) {
 }
 
 static void print_operand(Printer *printer, const KestExpr *expr, int limit) {
-    bool needs =
-        expr != NULL &&
-        ((expr->kind == KEST_EXPR_BINARY &&
-          precedence_of(expr->binary.op) < limit) ||
-         takes_what_follows(expr));
+    bool needs = expr != NULL && ((expr->kind == KEST_EXPR_BINARY &&
+                                   precedence_of(expr->binary.op) < limit) ||
+                                  takes_what_follows(expr));
     if (needs) {
         put_char(printer, '(');
     }
@@ -452,7 +448,7 @@ static uint32_t else_width(Printer *printer, const KestBranch *branch) {
     }
     if (branch->else_value != NULL) {
         return width + (uint32_t)strlen(" -> ") +
-           measure(printer, branch->else_value);
+               measure(printer, branch->else_value);
     }
     return width;
 }
@@ -646,10 +642,10 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         // An `if` that gives a value has one place it can break: before the
         // `else`, which is why the parser looks past a line break for one.
         // Everything else about it is one line by what it is.
-        bool split = branch->then_value != NULL && !printer->counting &&
-                     !printer->flat &&
-                     printer->column + else_width(printer, branch) >
-                         room(printer);
+        bool split =
+            branch->then_value != NULL && !printer->counting &&
+            !printer->flat &&
+            printer->column + else_width(printer, branch) > room(printer);
         if (split) {
             printer->depth++;
             put_char(printer, '\n');
@@ -685,8 +681,8 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         printer->previous_line = 0;
         for (uint32_t i = 0; i < expr->choose->arm_count; i++) {
             const KestArm *arm = &expr->choose->arms[i];
-            uint32_t begins = arm->span.length > 0 ? arm->span.offset
-                                                   : expr->span.offset;
+            uint32_t begins =
+                arm->span.length > 0 ? arm->span.offset : expr->span.offset;
             // An arm that gives a value is one line when it is printed, so
             // everything written inside it -- over however many lines the
             // author took -- belongs above it.
@@ -697,9 +693,9 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
                 // arm underneath -- a comment about something the author did
                 // not write it about, which is the mistake `rest_of_line`
                 // exists to prevent and which arms were not going through.
-                lead_through(printer, begins,
-                             rest_of_line(printer,
-                                          arm->value->span.offset +
+                lead_through(
+                    printer, begins,
+                    rest_of_line(printer, arm->value->span.offset +
                                               arm->value->span.length));
             } else {
                 lead(printer, begins);
@@ -727,10 +723,10 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
                 // the one place it can: a line ending in `->` carries on, and
                 // what follows is the whole of what the arm gives.
                 put(printer, " ->");
-                bool wrapped = !printer->counting && !printer->flat &&
-                               printer->column + 1 +
-                                       measure(printer, arm->value) >
-                                   room(printer);
+                bool wrapped =
+                    !printer->counting && !printer->flat &&
+                    printer->column + 1 + measure(printer, arm->value) >
+                        room(printer);
                 if (wrapped) {
                     printer->depth++;
                     put_char(printer, '\n');
@@ -764,9 +760,8 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
         // about this, and nothing was flushing it at all. Before the indent
         // comes back out, so a comment about the end of the arms is written
         // where the arms are.
-        flush_comments(printer,
-                       rest_of_line(printer,
-                                    expr->span.offset + expr->span.length));
+        flush_comments(printer, rest_of_line(printer, expr->span.offset +
+                                                          expr->span.length));
         printer->depth--;
         indent(printer);
         put_char(printer, '}');
@@ -827,9 +822,9 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
         // is what `rest_of_line` is for and what a statement longer than a
         // line was slipping past.
         if (prints_flat(stmt) && stmt->span.length > 0) {
-            lead_through(printer, stmt->span.offset,
-                         rest_of_line(printer, stmt->span.offset +
-                                                   stmt->span.length));
+            lead_through(
+                printer, stmt->span.offset,
+                rest_of_line(printer, stmt->span.offset + stmt->span.length));
         } else {
             lead(printer, stmt->span.offset);
         }
@@ -1127,9 +1122,8 @@ static void print_decl(Printer *printer, const KestDecl *decl,
             print_type(printer, field->type);
             put_char(printer, '\n');
         }
-        flush_comments(printer,
-                       rest_of_line(printer,
-                                    decl->span.offset + decl->span.length));
+        flush_comments(printer, rest_of_line(printer, decl->span.offset +
+                                                          decl->span.length));
         printer->depth--;
         put(printer, "}\n");
         break;
@@ -1147,9 +1141,8 @@ static void print_decl(Printer *printer, const KestDecl *decl,
             print_span(printer, decl->choice.cases[i]->name);
             put_char(printer, '\n');
         }
-        flush_comments(printer,
-                       rest_of_line(printer,
-                                    decl->span.offset + decl->span.length));
+        flush_comments(printer, rest_of_line(printer, decl->span.offset +
+                                                          decl->span.length));
         printer->depth--;
         put(printer, "}\n");
         break;
@@ -1169,10 +1162,10 @@ static void print_decl(Printer *printer, const KestDecl *decl,
             // is the mistake a statement had, and an arm, and a declaration.
             if (i > 0) {
                 const KestVariant *before = decl->choice.cases[i - 1];
-                KestSpan ended = before->payload_count > 0
-                                     ? before->payload[before->payload_count -
-                                                       1]->span
-                                     : before->name;
+                KestSpan ended =
+                    before->payload_count > 0
+                        ? before->payload[before->payload_count - 1]->span
+                        : before->name;
                 printer->previous_line =
                     line_of(printer, ended.offset + ended.length);
             }
@@ -1189,9 +1182,8 @@ static void print_decl(Printer *printer, const KestDecl *decl,
             }
             put_char(printer, '\n');
         }
-        flush_comments(printer,
-                       rest_of_line(printer,
-                                    decl->span.offset + decl->span.length));
+        flush_comments(printer, rest_of_line(printer, decl->span.offset +
+                                                          decl->span.length));
         printer->depth--;
         put(printer, "}\n");
         break;
@@ -1206,8 +1198,8 @@ static void print_decl(Printer *printer, const KestDecl *decl,
         put_char(printer, '\n');
         break;
     }
-    printer->previous_line = line_of(printer, decl->span.offset +
-                                                  decl->span.length);
+    printer->previous_line =
+        line_of(printer, decl->span.offset + decl->span.length);
 }
 
 const char *kest_format(const KestUnit *unit, const KestSource *source,
@@ -1229,7 +1221,8 @@ const char *kest_format(const KestUnit *unit, const KestSource *source,
     }
 
     for (uint32_t i = 0; i < unit->count; i++) {
-        print_decl(&printer, unit->items[i], i == 0 ? NULL : unit->items[i - 1]);
+        print_decl(&printer, unit->items[i],
+                   i == 0 ? NULL : unit->items[i - 1]);
     }
     // Anything written after the last declaration is still the author's.
     flush_comments(&printer, (uint32_t)source->length);
@@ -1315,8 +1308,7 @@ static size_t comment_length(const KestSource *source, KestSpan span) {
     return length;
 }
 
-KestWords kest_format_same_words(KestArena *arena,
-                                 const KestSource *before,
+KestWords kest_format_same_words(KestArena *arena, const KestSource *before,
                                  const KestSource *after) {
     KestDiags quiet;
     kest_diags_init(&quiet, arena);

@@ -209,16 +209,16 @@ static Spread spread_of_pauses(const Pauses *all, size_t away) {
 
 static void say_spread(const char *what, Spread it) {
     printf("%-14s %9.3f %9.3f %9.3f %9.3f %9.3f  %lld sample(s)\n", what,
-           (double)it.middle / 1e6, (double)it.p95 / 1e6,
-           (double)it.p99 / 1e6, (double)it.worst / 1e6,
-           (double)it.spread / 1e6, it.count);
+           (double)it.middle / 1e6, (double)it.p95 / 1e6, (double)it.p99 / 1e6,
+           (double)it.worst / 1e6, (double)it.spread / 1e6, it.count);
 }
 
 static void say_spread_json(const char *what, Spread it, bool comma) {
-    printf("    \"%s\": {\"p50\": %lld, \"p95\": %lld, \"p99\": %lld, "
-           "\"max\": %lld, \"min\": %lld, \"mad\": %lld, \"samples\": %lld}%s\n",
-           what, it.middle, it.p95, it.p99, it.worst, it.least, it.spread,
-           it.count, comma ? "," : "");
+    printf(
+        "    \"%s\": {\"p50\": %lld, \"p95\": %lld, \"p99\": %lld, "
+        "\"max\": %lld, \"min\": %lld, \"mad\": %lld, \"samples\": %lld}%s\n",
+        what, it.middle, it.p95, it.p99, it.worst, it.least, it.spread,
+        it.count, comma ? "," : "");
 }
 
 /* What the program wrote, which a measurement does not want to see: a
@@ -521,13 +521,13 @@ int main(int argc, char **argv) {
            "starting", (double)start_took / 1e6);
     printf("%-14s %9.3f  once, the first call of all\n", "cold",
            (double)cold_took / 1e6);
-    printf("a call ran %llu step(s), %llu call(s) and %llu crossing(s), "
-           "which is %llu step(s) over the %lld timed\n",
-           (unsigned long long)(counted.steps / (unsigned long long)samples),
-           (unsigned long long)(counted.calls / (unsigned long long)samples),
-           (unsigned long long)(counted.crossings /
-                                (unsigned long long)samples),
-           (unsigned long long)counted.steps, samples);
+    printf(
+        "a call ran %llu step(s), %llu call(s) and %llu crossing(s), "
+        "which is %llu step(s) over the %lld timed\n",
+        (unsigned long long)(counted.steps / (unsigned long long)samples),
+        (unsigned long long)(counted.calls / (unsigned long long)samples),
+        (unsigned long long)(counted.crossings / (unsigned long long)samples),
+        (unsigned long long)counted.steps, samples);
     printf("the heap holds %llu byte(s), was handed %llu, and held %llu at "
            "most\n",
            (unsigned long long)held, (unsigned long long)taken,
@@ -540,8 +540,7 @@ int main(int argc, char **argv) {
     printf("%llu walk(s) gave back %llu byte(s) over %llu root slot(s); "
            "%llu plot(s) made and %llu handed back; %llu block(s)\n",
            (unsigned long long)heap.sweeps, (unsigned long long)heap.reclaimed,
-           (unsigned long long)heap.roots,
-           (unsigned long long)heap.plots_made,
+           (unsigned long long)heap.roots, (unsigned long long)heap.plots_made,
            (unsigned long long)heap.plots_freed,
            (unsigned long long)heap.blocks);
     if (heap.walked > 0) {
@@ -586,13 +585,13 @@ int main(int argc, char **argv) {
                roots, reclaimed);
         printf("after the last one the heap held %llu byte(s) in %llu plot(s) "
                "of %llu, with %llu byte(s) free in them\n",
-               (unsigned long long)last->live,
-               (unsigned long long)last->plots,
+               (unsigned long long)last->live, (unsigned long long)last->plots,
                (unsigned long long)last->plot_bytes,
                (unsigned long long)last->free_bytes);
         if (pauses.lost > 0) {
             printf("%lld pause(s) went unkept, which is a run that ran out of "
-                   "room to remember them\n", pauses.lost);
+                   "room to remember them\n",
+                   pauses.lost);
         }
     }
 
@@ -616,17 +615,17 @@ int main(int argc, char **argv) {
         printf("    \"starting\": %lld,\n", start_took);
         printf("    \"cold\": %lld\n", cold_took);
         printf("  },\n");
-        printf("  \"perCall\": {\"steps\": %llu, \"calls\": %llu, "
-               "\"crossings\": %llu},\n",
-               (unsigned long long)(counted.steps /
-                                    (unsigned long long)samples),
-               (unsigned long long)(counted.calls /
-                                    (unsigned long long)samples),
-               (unsigned long long)(counted.crossings /
-                                    (unsigned long long)samples));
-        printf("  \"heap\": {\"held\": %llu, \"taken\": %llu, \"most\": %llu}\n",
-               (unsigned long long)held, (unsigned long long)taken,
-               (unsigned long long)most);
+        printf(
+            "  \"perCall\": {\"steps\": %llu, \"calls\": %llu, "
+            "\"crossings\": %llu},\n",
+            (unsigned long long)(counted.steps / (unsigned long long)samples),
+            (unsigned long long)(counted.calls / (unsigned long long)samples),
+            (unsigned long long)(counted.crossings /
+                                 (unsigned long long)samples));
+        printf(
+            "  \"heap\": {\"held\": %llu, \"taken\": %llu, \"most\": %llu}\n",
+            (unsigned long long)held, (unsigned long long)taken,
+            (unsigned long long)most);
         printf("}\n");
     }
 

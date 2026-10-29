@@ -318,8 +318,8 @@ static bool room_to_keep(KestDiags *diags) {
 }
 
 static void add_formatted(KestDiags *diags, KestSeverity severity,
-                          const char *code, KestSpan span,
-                          const char *message, bool after_the_room) {
+                          const char *code, KestSpan span, const char *message,
+                          bool after_the_room) {
     diags->held_back = false;
     KestDiag *diag = &diags->items[diags->count++];
     diag->severity = severity;
@@ -340,9 +340,8 @@ static void add_formatted(KestDiags *diags, KestSeverity severity,
 // The message is formatted into the arena and is as long as it is. A caller
 // that wrote it into a buffer of its own first would cut a message off in the
 // middle of a name, which is what every one of them used to do.
-void kest_diags_addv(KestDiags *diags, KestSeverity severity,
-                     const char *code, KestSpan span, const char *format,
-                     va_list args) {
+void kest_diags_addv(KestDiags *diags, KestSeverity severity, const char *code,
+                     KestSpan span, const char *format, va_list args) {
     if (diags->muted) {
         return;
     }
@@ -427,7 +426,8 @@ void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
 // diagnostic and a note about one further back are the same thing said to a
 // different item.
 static void note_on(KestDiags *diags, KestDiag *diag, const KestSource *source,
-                    KestSpan span, const char *format, va_list args, bool kept) {
+                    KestSpan span, const char *format, va_list args,
+                    bool kept) {
     bool full = diag->note_count == KEST_MOST_PLACES;
     if (full && !kept) {
         // Counted rather than dropped. What a caller does about it is the
@@ -462,8 +462,8 @@ void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
     }
     va_list args;
     va_start(args, format);
-    note_on(diags, &diags->items[diags->count - 1], source, span, format,
-            args, false);
+    note_on(diags, &diags->items[diags->count - 1], source, span, format, args,
+            false);
     va_end(args);
 }
 
@@ -564,12 +564,13 @@ typedef struct {
     bool cut_after;
 } Shown;
 
-static Shown shown_part(const KestSource *source, uint32_t line, KestSpan span) {
+static Shown shown_part(const KestSource *source, uint32_t line,
+                        KestSpan span) {
     uint32_t start = source->line_offsets[line - 1];
     uint32_t end = line < source->line_count ? source->line_offsets[line]
                                              : (uint32_t)source->length;
-    while (end > start && (source->text[end - 1] == '\n' ||
-                           source->text[end - 1] == '\r')) {
+    while (end > start &&
+           (source->text[end - 1] == '\n' || source->text[end - 1] == '\r')) {
         end--;
     }
 

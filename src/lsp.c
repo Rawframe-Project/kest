@@ -130,11 +130,12 @@ static void locate(const char *text, size_t length, size_t offset,
         }
     }
     uint32_t units = 0;
-    for (size_t i = line_start; i < offset && i < length; ) {
+    for (size_t i = line_start; i < offset && i < length;) {
         unsigned char c = (unsigned char)text[i];
-        size_t wide = c < 0x80 ? 1 : (c & 0xe0) == 0xc0 ? 2
-                                 : (c & 0xf0) == 0xe0   ? 3
-                                                        : 4;
+        size_t wide = c < 0x80             ? 1
+                      : (c & 0xe0) == 0xc0 ? 2
+                      : (c & 0xf0) == 0xe0 ? 3
+                                           : 4;
         units += wide == 4 ? 2 : 1;
         i += wide;
     }
@@ -154,9 +155,10 @@ static size_t offset_of(const char *text, size_t length, uint32_t line,
     uint32_t units = 0;
     while (at < length && text[at] != '\n' && units < column) {
         unsigned char c = (unsigned char)text[at];
-        size_t wide = c < 0x80 ? 1 : (c & 0xe0) == 0xc0 ? 2
-                                 : (c & 0xf0) == 0xe0   ? 3
-                                                        : 4;
+        size_t wide = c < 0x80             ? 1
+                      : (c & 0xe0) == 0xc0 ? 2
+                      : (c & 0xf0) == 0xe0 ? 3
+                                           : 4;
         units += wide == 4 ? 2 : 1;
         at += wide;
     }
@@ -168,9 +170,11 @@ static void put_range(KestSaid *out, const char *text, size_t length,
     uint32_t line = 0;
     uint32_t column = 0;
     locate(text, length, from, &line, &column);
-    kest_wire_sayf(out, "{\"start\":{\"line\":%u,\"character\":%u},", line, column);
+    kest_wire_sayf(out, "{\"start\":{\"line\":%u,\"character\":%u},", line,
+                   column);
     locate(text, length, from + count, &line, &column);
-    kest_wire_sayf(out, "\"end\":{\"line\":%u,\"character\":%u}}", line, column);
+    kest_wire_sayf(out, "\"end\":{\"line\":%u,\"character\":%u}}", line,
+                   column);
 }
 
 // A path out of `file:///...`, with the percent escapes read back. Anything
@@ -212,8 +216,8 @@ static char *path_of_uri(const char *uri, size_t length) {
     size_t used = 0;
     for (size_t i = 0; i < left; i++) {
         if (from[i] == '%' && i + 2 < left) {
-            out[used++] = (char)((nibble(from[i + 1]) << 4) |
-                                 nibble(from[i + 2]));
+            out[used++] =
+                (char)((nibble(from[i + 1]) << 4) | nibble(from[i + 2]));
             i += 2;
             continue;
         }
@@ -284,8 +288,8 @@ static void build_again(Server *server) {
 // request names. A request about the file last built costs nothing here.
 static void ready(Server *server) {
     Open *file = here(server);
-    if (server->build != NULL && server->built != NULL &&
-        file->path != NULL && strcmp(server->built, file->path) == 0) {
+    if (server->build != NULL && server->built != NULL && file->path != NULL &&
+        strcmp(server->built, file->path) == 0) {
         return;
     }
     build_again(server);
@@ -294,16 +298,16 @@ static void ready(Server *server) {
 // One diagnostic of the list a client is sent, with its suggestion under its
 // message as a client shows one.
 static void put_said(Server *server, KestSaid *out, bool *first,
-                     const char *text, size_t length, KestSpan span,
-                     bool error, const char *code, const char *message,
+                     const char *text, size_t length, KestSpan span, bool error,
+                     const char *code, const char *message,
                      const char *suggestion) {
     kest_wire_say(out, *first ? "" : ",");
     *first = false;
     kest_wire_say(out, "{\"range\":");
     put_range(out, text, length, span.offset,
               span.length == 0 ? 1 : span.length);
-    kest_wire_sayf(out, ",\"severity\":%d,\"source\":\"kest\",\"code\":",
-                   error ? 1 : 2);
+    kest_wire_sayf(
+        out, ",\"severity\":%d,\"source\":\"kest\",\"code\":", error ? 1 : 2);
     kest_wire_text(out, code);
     kest_wire_say(out, ",\"message\":");
     if (suggestion != NULL && suggestion[0] != '\0') {
@@ -441,8 +445,8 @@ static void imports_failing(Server *server, KestSaid *out, bool *first,
                 where = decl->name;
             }
         }
-        const char *named = other->module[0] != '\0' ? other->module
-                                                      : other->source.path;
+        const char *named =
+            other->module[0] != '\0' ? other->module : other->source.path;
         size_t room = strlen(named) + strlen(wrong->message) + 32;
         char *said = kest_arena_alloc(server->arena, room, 1);
         if (said == NULL) {
@@ -458,8 +462,9 @@ static void imports_failing(Server *server, KestSaid *out, bool *first,
 static void publish_to(Server *server, const char *path,
                        const KestSource *source) {
     KestSaid out = {0};
-    kest_wire_say(&out, "{\"jsonrpc\":\"2.0\",\"method\":"
-              "\"textDocument/publishDiagnostics\",\"params\":{\"uri\":");
+    kest_wire_say(&out,
+                  "{\"jsonrpc\":\"2.0\",\"method\":"
+                  "\"textDocument/publishDiagnostics\",\"params\":{\"uri\":");
     put_uri(&out, path);
     kest_wire_say(&out, ",\"diagnostics\":[");
     bool first = true;
@@ -471,8 +476,8 @@ static void publish_to(Server *server, const char *path,
                 continue;
             }
             put_said(server, &out, &first, source->text, source->length,
-                     one->span, one->severity == KEST_SEVERITY_ERROR,
-                     one->code, one->message, one->suggestion);
+                     one->span, one->severity == KEST_SEVERITY_ERROR, one->code,
+                     one->message, one->suggestion);
         }
     }
     kest_wire_say(&out, "]}}");
@@ -503,9 +508,8 @@ static bool is_open(const Server *server, const char *path) {
 // names in another scheme reads its imports from where the server runs, and
 // those are left untold rather than named as a URI that names nothing.
 static bool from_the_root(const char *path) {
-    return path[0] == '/' ||
-           (path[0] != '\0' && path[1] == ':' &&
-            (path[2] == '/' || path[2] == '\\'));
+    return path[0] == '/' || (path[0] != '\0' && path[1] == ':' &&
+                              (path[2] == '/' || path[2] == '\\'));
 }
 
 // Every other file the build read, told what is wrong with it, and every one
@@ -553,8 +557,9 @@ static void publish_others(Server *server, const Open *file) {
 static void publish(Server *server) {
     Open *file = here(server);
     KestSaid out = {0};
-    kest_wire_say(&out, "{\"jsonrpc\":\"2.0\",\"method\":"
-              "\"textDocument/publishDiagnostics\",\"params\":{\"uri\":");
+    kest_wire_say(&out,
+                  "{\"jsonrpc\":\"2.0\",\"method\":"
+                  "\"textDocument/publishDiagnostics\",\"params\":{\"uri\":");
     kest_wire_text(&out, file->uri);
     kest_wire_say(&out, ",\"diagnostics\":[");
     bool first = true;
@@ -596,9 +601,8 @@ static void publish(Server *server) {
             kest_diags_starved_words(diags, &code, room, sizeof room);
         if (words != NULL) {
             if (diags->last_code[0] != '\0') {
-                put_said(server, &out, &first, file->text, file->length,
-                         start, true, diags->last_code, diags->last_words,
-                         NULL);
+                put_said(server, &out, &first, file->text, file->length, start,
+                         true, diags->last_code, diags->last_words, NULL);
             }
             put_said(server, &out, &first, file->text, file->length, start,
                      true, code, words, NULL);
@@ -613,8 +617,7 @@ static void publish(Server *server) {
         // wrong with it.
         KestSpan start = {0, 0};
         put_said(server, &out, &first, file->text, file->length, start, true,
-                 "K0705", "there is not enough memory to read a program",
-                 NULL);
+                 "K0705", "there is not enough memory to read a program", NULL);
     }
     kest_wire_say(&out, "]}}");
     if (!out.broke && out.bytes != NULL) {
@@ -779,7 +782,8 @@ static void hover(Server *server, const KestJson *id, const KestJson *params) {
         } else {
             snprintf(said, room, "%.*s: %s", (int)one->span.length,
                      kest_span_text(one->source, one->span), written);
-            kest_wire_say(&out, "{\"contents\":{\"kind\":\"plaintext\",\"value\":");
+            kest_wire_say(&out,
+                          "{\"contents\":{\"kind\":\"plaintext\",\"value\":");
             kest_wire_text(&out, said);
             kest_wire_say(&out, "},\"range\":");
             put_range(&out, here(server)->text, here(server)->length,
@@ -790,7 +794,8 @@ static void hover(Server *server, const KestJson *id, const KestJson *params) {
     finish_answer(server, &out);
 }
 
-static void definition(Server *server, const KestJson *id, const KestJson *params) {
+static void definition(Server *server, const KestJson *id,
+                       const KestJson *params) {
     size_t offset = position_in(server, params);
     const KestUse *one = offset == (size_t)-1 ? NULL : use_at(server, offset);
     KestSaid out = {0};
@@ -810,10 +815,11 @@ static void definition(Server *server, const KestJson *id, const KestJson *param
     finish_answer(server, &out);
 }
 
-static void references(Server *server, const KestJson *id, const KestJson *params) {
+static void references(Server *server, const KestJson *id,
+                       const KestJson *params) {
     size_t offset = position_in(server, params);
-    const KestUse *wanted = offset == (size_t)-1 ? NULL
-                                                 : use_at(server, offset);
+    const KestUse *wanted =
+        offset == (size_t)-1 ? NULL : use_at(server, offset);
     KestSaid out = {0};
     start_answer(&out, id);
     kest_wire_char(&out, '[');
@@ -821,8 +827,7 @@ static void references(Server *server, const KestJson *id, const KestJson *param
     if (wanted != NULL && server->build != NULL &&
         server->build->program != NULL) {
         uint32_t count = 0;
-        const KestUse *uses = kest_program_uses(server->build->program,
-                                                &count);
+        const KestUse *uses = kest_program_uses(server->build->program, &count);
         for (uint32_t i = 0; i < count; i++) {
             if (!same_declaration(&uses[i], wanted)) {
                 continue;
@@ -846,8 +851,8 @@ static void references(Server *server, const KestJson *id, const KestJson *param
 static void rename_everywhere(Server *server, const KestJson *id,
                               const KestJson *params) {
     size_t offset = position_in(server, params);
-    const KestUse *wanted = offset == (size_t)-1 ? NULL
-                                                 : use_at(server, offset);
+    const KestUse *wanted =
+        offset == (size_t)-1 ? NULL : use_at(server, offset);
     const KestJson *fresh = kest_wire_member(params, "newName");
     KestSaid out = {0};
     start_answer(&out, id);
@@ -868,8 +873,8 @@ static void rename_everywhere(Server *server, const KestJson *id,
     uint32_t count = 0;
     const KestUse *uses = kest_program_uses(server->build->program, &count);
     for (uint32_t i = 0; i < count; i++) {
-        if (!same_declaration(&uses[i], wanted) ||
-            uses[i].source == NULL || file->path == NULL ||
+        if (!same_declaration(&uses[i], wanted) || uses[i].source == NULL ||
+            file->path == NULL ||
             strcmp(uses[i].source->path, file->path) != 0) {
             continue;
         }
@@ -912,13 +917,12 @@ static void symbols(Server *server, const KestJson *id, bool one_file,
             if (symbol->source == NULL) {
                 continue;
             }
-            if (one_file && (here(server)->path == NULL ||
-                             strcmp(symbol->source->path,
-                                    here(server)->path) != 0)) {
+            if (one_file &&
+                (here(server)->path == NULL ||
+                 strcmp(symbol->source->path, here(server)->path) != 0)) {
                 continue;
             }
-            if (query_length > 0 &&
-                strstr(symbol->name, query) == NULL) {
+            if (query_length > 0 && strstr(symbol->name, query) == NULL) {
                 continue;
             }
             size_t length = 0;
@@ -931,8 +935,9 @@ static void symbols(Server *server, const KestJson *id, bool one_file,
             // the two kinds here are.
             // Twelve is a function and fourteen is a constant, which is
             // what the two kinds here are.
-            kest_wire_sayf(&out, ",\"kind\":%d,\"location\":{\"uri\":",
-                 symbol->type != NULL && symbol->type->tag == KEST_T_FN ? 12
+            kest_wire_sayf(
+                &out, ",\"kind\":%d,\"location\":{\"uri\":",
+                symbol->type != NULL && symbol->type->tag == KEST_T_FN ? 12
                                                                        : 14);
             put_uri(&out, symbol->source->path);
             kest_wire_say(&out, ",\"range\":");
@@ -951,11 +956,10 @@ static void completion(Server *server, const KestJson *id) {
     kest_wire_say(&out, "{\"isIncomplete\":false,\"items\":[");
     bool first = true;
     static const char *const WORDS[] = {
-        "break", "const",  "continue", "defer",  "else",  "enum",
-        "extern", "false", "fn",       "for",    "if",    "import",
-        "in",    "let",    "match",    "module", "none",  "return",
-        "struct", "true",  "while",    "scratch", "flags",
-        "own",
+        "break",  "const", "continue", "defer",   "else",  "enum",
+        "extern", "false", "fn",       "for",     "if",    "import",
+        "in",     "let",   "match",    "module",  "none",  "return",
+        "struct", "true",  "while",    "scratch", "flags", "own",
     };
     for (size_t i = 0; i < sizeof(WORDS) / sizeof(WORDS[0]); i++) {
         kest_wire_say(&out, first ? "" : ",");
@@ -972,11 +976,12 @@ static void completion(Server *server, const KestJson *id) {
             first = false;
             kest_wire_say(&out, "{\"label\":");
             kest_wire_text(&out, symbol->name);
-            kest_wire_sayf(&out, ",\"kind\":%d,\"detail\":",
-                 symbol->type != NULL && symbol->type->tag == KEST_T_FN ? 3
+            kest_wire_sayf(
+                &out, ",\"kind\":%d,\"detail\":",
+                symbol->type != NULL && symbol->type->tag == KEST_T_FN ? 3
                                                                        : 21);
             kest_wire_text(&out,
-                     kest_type_name(server->build->arena, symbol->type));
+                           kest_type_name(server->build->arena, symbol->type));
             kest_wire_char(&out, '}');
         }
     }
@@ -1008,8 +1013,8 @@ static void formatting(Server *server, const KestJson *id) {
         if (formatted != NULL &&
             (!kest_source_init(&written, server->build->arena, source->path,
                                formatted, formatted_size) ||
-             kest_format_same_words(server->build->arena, source,
-                                    &written) != KEST_WORDS_SAME)) {
+             kest_format_same_words(server->build->arena, source, &written) !=
+                 KEST_WORDS_SAME)) {
             formatted = NULL;
         }
     }
@@ -1060,13 +1065,15 @@ static void opened(Server *server, const KestJson *params) {
 
 static void changed(Server *server, const KestJson *params) {
     const KestJson *changes = kest_wire_member(params, "contentChanges");
-    if (changes == NULL || changes->kind != KEST_JSON_LIST || changes->count == 0) {
+    if (changes == NULL || changes->kind != KEST_JSON_LIST ||
+        changes->count == 0) {
         return;
     }
     // Whole documents, which is what this server asks for: a range change is
     // an edit this would have to apply itself, and applying an edit twice is
     // the one way a language server can be wrong about what the file says.
-    const KestJson *text = kest_wire_member(changes->items[changes->count - 1], "text");
+    const KestJson *text =
+        kest_wire_member(changes->items[changes->count - 1], "text");
     if (text == NULL || text->kind != KEST_JSON_TEXT) {
         return;
     }
@@ -1211,9 +1218,10 @@ static void handle(Server *server, const KestJson *message) {
     }
     if (method_is(method, "workspace/symbol")) {
         const KestJson *query = kest_wire_member(params, "query");
-        symbols(server, id, false,
-                query != NULL && query->kind == KEST_JSON_TEXT ? query->text : "",
-                query != NULL && query->kind == KEST_JSON_TEXT ? query->length : 0);
+        symbols(
+            server, id, false,
+            query != NULL && query->kind == KEST_JSON_TEXT ? query->text : "",
+            query != NULL && query->kind == KEST_JSON_TEXT ? query->length : 0);
         return;
     }
     if (method_is(method, "textDocument/rename")) {

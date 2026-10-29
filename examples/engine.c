@@ -143,16 +143,14 @@ static void engine_refuse(KestValue *frame, KestRuntime *runtime,
 // has already thrown the old machine away by the time it finds out, and then
 // has nothing true to say about which world it is holding.
 #define DOORS 7
-static const char *const door_names[DOORS] = {"begin", "step",    "place",
-                                              "save",  "restore", "round",
-                                              "watched"};
+static const char *const door_names[DOORS] = {
+    "begin", "step", "place", "save", "restore", "round", "watched"};
 static bool doors_of(KestRuntime *runtime, const uint32_t was[DOORS],
                      int32_t found[DOORS], uint32_t wide[DOORS]) {
     for (size_t i = 0; i < DOORS; i++) {
         found[i] = kest_entry(runtime, door_names[i]);
         if (found[i] < 0) {
-            fprintf(stderr, "the program has no `%s` to call\n",
-                    door_names[i]);
+            fprintf(stderr, "the program has no `%s` to call\n", door_names[i]);
             return false;
         }
         wide[i] = kest_frame_takes(runtime, found[i]);
@@ -169,9 +167,9 @@ static bool doors_of(KestRuntime *runtime, const uint32_t was[DOORS],
 
 static void doors_into(Engine *engine, const int32_t found[DOORS],
                        const uint32_t wide[DOORS]) {
-    int32_t *into[DOORS] = {&engine->begin,   &engine->step,  &engine->place,
-                            &engine->save,    &engine->restore,
-                            &engine->round,   &engine->watched};
+    int32_t *into[DOORS] = {&engine->begin,  &engine->step,    &engine->place,
+                            &engine->save,   &engine->restore, &engine->round,
+                            &engine->watched};
     for (size_t i = 0; i < DOORS; i++) {
         *into[i] = found[i];
         engine->wide[i] = wide[i];
@@ -222,8 +220,10 @@ static bool worth_installing(KestRuntime *runtime, int32_t step) {
                   {KEST_PROMISE_DETERMINISTIC, "deterministic"}};
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
         if (!kest_entry_promises(runtime, step, wanted[i].which)) {
-            fprintf(stderr, "`step` does not promise `%s`, so this engine will "
-                            "not put it in a frame\n", wanted[i].called);
+            fprintf(stderr,
+                    "`step` does not promise `%s`, so this engine will "
+                    "not put it in a frame\n",
+                    wanted[i].called);
             return false;
         }
     }
@@ -252,10 +252,10 @@ static bool one_frame(Engine *engine, int frame, float xs[BODIES],
         return true;
     }
 
-    KestValue here = kest_borrow(engine->runtime, xs, BODIES, "f32",
-                                 sizeof(float));
-    KestValue there = kest_borrow(engine->runtime, ys, BODIES, "f32",
-                                  sizeof(float));
+    KestValue here =
+        kest_borrow(engine->runtime, xs, BODIES, "f32", sizeof(float));
+    KestValue there =
+        kest_borrow(engine->runtime, ys, BODIES, "f32", sizeof(float));
     // How many the machine says are there, against how many this host lent.
     // A host driving a world reads a run back and has to know where it stops
     // without asking the program.
@@ -283,8 +283,10 @@ static bool one_frame(Engine *engine, int frame, float xs[BODIES],
     }
     if (!lent) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
-        fprintf(stderr, "frame %d could not read the world into this "
-                        "engine's own memory\n", frame);
+        fprintf(stderr,
+                "frame %d could not read the world into this "
+                "engine's own memory\n",
+                frame);
         return false;
     }
     return true;
@@ -358,17 +360,16 @@ static bool save_the_world(Engine *engine, Saved *saved) {
     saved->shaped = kest_layout_mark(shape);
 
     KestValue lent[8];
-    void *blocks[8] = {saved->ids,  saved->xs,     saved->ys,
-                       saved->vxs,  saved->vys,    saved->chases,
-                       saved->doings, saved->marks};
+    void *blocks[8] = {saved->ids, saved->xs,     saved->ys,     saved->vxs,
+                       saved->vys, saved->chases, saved->doings, saved->marks};
     const char *of[8] = {"i32", "f32", "f32", "f32",
                          "f32", "i32", "i32", "i32"};
-    size_t wide[8] = {sizeof(int32_t), sizeof(float),   sizeof(float),
-                      sizeof(float),   sizeof(float),   sizeof(int32_t),
+    size_t wide[8] = {sizeof(int32_t), sizeof(float),  sizeof(float),
+                      sizeof(float),   sizeof(float),  sizeof(int32_t),
                       sizeof(int32_t), sizeof(int32_t)};
     for (size_t i = 0; i < 8; i++) {
-        lent[i] = kest_borrow(engine->runtime, blocks[i], BODIES, of[i],
-                              wide[i]);
+        lent[i] =
+            kest_borrow(engine->runtime, blocks[i], BODIES, of[i], wide[i]);
     }
     KestValue asking[16] = {{0}};
     asking[0] = engine->world[0];
@@ -383,8 +384,8 @@ static bool save_the_world(Engine *engine, Saved *saved) {
     wrote = wrote && kest_call(engine->runtime, engine->save, asking, 16);
     saved->count = wrote ? (int32_t)asking[0].integer : 0;
     for (size_t i = 0; i < 8; i++) {
-        if (lent[i].object != NULL && !kest_lend_ends(engine->runtime,
-                                                      lent[i])) {
+        if (lent[i].object != NULL &&
+            !kest_lend_ends(engine->runtime, lent[i])) {
             wrote = false;
         }
     }
@@ -404,13 +405,13 @@ static bool save_the_world(Engine *engine, Saved *saved) {
 static bool restore_into(KestRuntime *into, int32_t restore, int32_t round,
                          const Saved *saved, KestValue world[2]) {
     KestValue lent[8];
-    const void *blocks[8] = {saved->ids,  saved->xs,     saved->ys,
-                             saved->vxs,  saved->vys,    saved->chases,
+    const void *blocks[8] = {saved->ids,    saved->xs,   saved->ys,
+                             saved->vxs,    saved->vys,  saved->chases,
                              saved->doings, saved->marks};
     const char *of[8] = {"i32", "f32", "f32", "f32",
                          "f32", "i32", "i32", "i32"};
-    size_t wide[8] = {sizeof(int32_t), sizeof(float),   sizeof(float),
-                      sizeof(float),   sizeof(float),   sizeof(int32_t),
+    size_t wide[8] = {sizeof(int32_t), sizeof(float),  sizeof(float),
+                      sizeof(float),   sizeof(float),  sizeof(int32_t),
                       sizeof(int32_t), sizeof(int32_t)};
     KestValue asking[16] = {{0}};
     bool made = true;
@@ -418,8 +419,8 @@ static bool restore_into(KestRuntime *into, int32_t restore, int32_t round,
         // The block is this host's and the program only reads it, so the cast
         // is this host saying so: a lend is an address and a count, and it is
         // the host that knows which way the memory goes.
-        lent[i] = kest_borrow(into, (void *)(uintptr_t)blocks[i], BODIES,
-                              of[i], wide[i]);
+        lent[i] = kest_borrow(into, (void *)(uintptr_t)blocks[i], BODIES, of[i],
+                              wide[i]);
         if (lent[i].object == NULL) {
             made = false;
         }
@@ -610,8 +611,8 @@ int main(int argc, char **argv) {
     // path is the only way to say "and now it is this" without editing a file
     // somebody else is reading. It is what the edit corpus is driven with.
     const char *after = argc > 2 ? argv[2] : path;
-    Engine engine = {NULL, NULL, {{0}, {0}}, -1, -1, -1, -1, -1, -1, -1,
-                     {0, 0, 0, 0, 0, 0, 0}};
+    Engine engine = {NULL, NULL, {{0}, {0}},           -1, -1, -1, -1, -1,
+                     -1,   -1,   {0, 0, 0, 0, 0, 0, 0}};
     engine.build = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
     if (engine.build == NULL) {
         return 1;
@@ -662,8 +663,10 @@ int main(int argc, char **argv) {
     if (!kest_call(engine.runtime, engine.watched, crossing, 8) ||
         crossing[0].integer != BODIES + BODIES) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
-        fprintf(stderr, "a crossing back in from a host function answered "
-                        "%lld\n", (long long)crossing[0].integer);
+        fprintf(stderr,
+                "a crossing back in from a host function answered "
+                "%lld\n",
+                (long long)crossing[0].integer);
         return 1;
     }
 
@@ -773,7 +776,8 @@ int main(int argc, char **argv) {
         // end where no reload at all ends, and a host that published before
         // it found out would end somewhere else.
         printf("a reload kept nothing, and %d frames later the first body is "
-               "at %.3f %.3f\n", FRAMES, (double)xs[0], (double)ys[0]);
+               "at %.3f %.3f\n",
+               FRAMES, (double)xs[0], (double)ys[0]);
         driving = NULL;
         if (!kest_runtime_free(engine.runtime) ||
             !kest_build_free(engine.build)) {
@@ -788,7 +792,8 @@ int main(int argc, char **argv) {
         }
     }
     printf("a reload kept the ring, and %d frames later the first body is at "
-           "%.3f %.3f\n", FRAMES, (double)xs[0], (double)ys[0]);
+           "%.3f %.3f\n",
+           FRAMES, (double)xs[0], (double)ys[0]);
 
     driving = NULL;
     if (!kest_runtime_free(engine.runtime) || !kest_build_free(engine.build)) {

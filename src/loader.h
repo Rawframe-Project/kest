@@ -130,6 +130,6 @@ bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,
 // `fmt` want that: printing a file back does not depend on what it imports
 // being there.
 bool kest_read_unit(KestArena *arena, KestDiags *diags, const char *path,
-                     KestUnits *units);
+                    KestUnits *units);
 
 #endif

@@ -36,14 +36,13 @@ static const Color tile_colour[TILES] = {
     {150, 120, 90, 255},
 };
 static const Color mark_colour[5] = {
-    {0, 0, 0, 0}, {230, 60, 40, 255}, {240, 200, 60, 255},
+    {0, 0, 0, 0},        {230, 60, 40, 255},   {240, 200, 60, 255},
     {160, 220, 80, 255}, {250, 250, 120, 255},
 };
-static const char *const job_name[9] = {"idle", "chop",  "build",
-                                        "sow",  "reap",  "fetch",
-                                        "carry", "eat",  "sleep"};
+static const char *const job_name[9] = {
+    "idle", "chop", "build", "sow", "reap", "fetch", "carry", "eat", "sleep"};
 static const Color job_colour[9] = {
-    {220, 220, 220, 255}, {230, 60, 40, 255},  {240, 200, 60, 255},
+    {220, 220, 220, 255}, {230, 60, 40, 255},   {240, 200, 60, 255},
     {160, 220, 80, 255},  {250, 250, 120, 255}, {120, 180, 255, 255},
     {80, 140, 255, 255},  {255, 140, 200, 255}, {150, 110, 200, 255},
 };
@@ -172,8 +171,8 @@ static void draw_world(const Game *g, int cell, Camera2D camera) {
     for (int i = 0; i < g->many; i++) {
         int j = g->doing[i] >= 0 && g->doing[i] < 9 ? g->doing[i] : 0;
         DrawCircle((int)(g->xs[i] * (float)cell) + cell / 2,
-                   (int)(g->ys[i] * (float)cell) + cell / 2,
-                   (float)cell * 0.4f, job_colour[j]);
+                   (int)(g->ys[i] * (float)cell) + cell / 2, (float)cell * 0.4f,
+                   job_colour[j]);
     }
 }
 
@@ -277,8 +276,8 @@ int main(int argc, char **argv) {
     SetTargetFPS(frames > 0 ? 0 : 60);
     Camera2D camera = {0};
     camera.zoom = 1.0f;
-    camera.target = (Vector2){(float)(g.wide * cell) / 2.0f,
-                              (float)(g.high * cell) / 2.0f};
+    camera.target =
+        (Vector2){(float)(g.wide * cell) / 2.0f, (float)(g.high * cell) / 2.0f};
     int tool = 1;
     Vector2 dragged = {0};
     bool dragging = false;
@@ -375,10 +374,9 @@ int main(int argc, char **argv) {
         if (dragging) {
             float lx = dragged.x < mouse.x ? dragged.x : mouse.x;
             float ly = dragged.y < mouse.y ? dragged.y : mouse.y;
-            DrawRectangleLinesEx(
-                (Rectangle){lx, ly, fabsf(mouse.x - dragged.x),
-                            fabsf(mouse.y - dragged.y)},
-                2.0f, WHITE);
+            DrawRectangleLinesEx((Rectangle){lx, ly, fabsf(mouse.x - dragged.x),
+                                             fabsf(mouse.y - dragged.y)},
+                                 2.0f, WHITE);
         }
         EndMode2D();
         draw_panel(&g, &cost, tool);

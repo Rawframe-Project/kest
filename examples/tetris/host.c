@@ -26,9 +26,10 @@
 
 static const Color COLORS[] = {
     {0, 0, 155, 255}, {0, 155, 0, 255}, {155, 0, 0, 255}, {155, 155, 0, 255}};
-static const Color LIGHT[] = {
-    {20, 20, 175, 255}, {20, 175, 20, 255}, {175, 20, 20, 255},
-    {175, 175, 20, 255}};
+static const Color LIGHT[] = {{20, 20, 175, 255},
+                              {20, 175, 20, 255},
+                              {175, 20, 20, 255},
+                              {175, 175, 20, 255}};
 
 // `Screen.box(x, y, color)`: a box on the board, the way the Lua drew one --
 // a dark square with a lighter one inside it.
@@ -138,8 +139,8 @@ int main(int argc, char **argv) {
         BeginDrawing();
         ClearBackground(BLACK);
         DrawRectangleLines(LEFT - 2, TOP - 2, BOX * 10 + 4, BOX * 20 + 4, BLUE);
-        KestValue args[3] = {{.real = 1.0 / 60.0}, {.integer = down},
-                             {.integer = up}};
+        KestValue args[3] = {
+            {.real = 1.0 / 60.0}, {.integer = down}, {.integer = up}};
         ok = frames == 0 ? kest_held_call(held, "frame", args, 3, &score)
                          : kest_held_call(held, "played", args, 1, &score);
         EndDrawing();

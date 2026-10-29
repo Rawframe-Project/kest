@@ -90,8 +90,7 @@ bool kest_build_check(KestBuild *build) {
     }
     uint64_t at = kest_ir_ticked(build->now, build->now_context);
     if (!kest_check(build->arena, &build->diags, &build->units,
-                    build->index_names,
-                    &build->program)) {
+                    build->index_names, &build->program)) {
         // Nothing to read and nothing said, which is a stage that could not
         // write down either the program or what was wrong with it. A caller
         // that is told no and given no reason is a command that stops and
@@ -146,9 +145,9 @@ static void say_what_the_optimizer_found(const KestIrBody *body,
             "dead %u/%u made %u/%u\n",
             body->symbol == NULL ? "(no name)" : body->symbol, found->ops,
             found->hot_copies, found->slot_copies, found->copies_taken,
-            found->hot_reloads,
-            found->reloads, found->reloaded_slots, found->hot_dead,
-            found->dead_writes, found->hot_materialized, found->materialized);
+            found->hot_reloads, found->reloads, found->reloaded_slots,
+            found->hot_dead, found->dead_writes, found->hot_materialized,
+            found->materialized);
 }
 
 bool kest_build_emit(KestBuild *build) {
@@ -176,10 +175,9 @@ bool kest_build_emit(KestBuild *build) {
     // and what they held at their widest is what the build cost.
     KestIrProgram ir;
     KestArena *bodies = kest_arena_new_under(build->arena);
-    KestLower *writes = bodies == NULL
-                            ? NULL
-                            : kest_lower_new(build->program, &build->module,
-                                             bodies);
+    KestLower *writes =
+        bodies == NULL ? NULL
+                       : kest_lower_new(build->program, &build->module, bodies);
     if (writes == NULL) {
         kest_arena_free(bodies);
         kest_diags_starve(&build->diags);
@@ -324,9 +322,9 @@ KestBuild *kest_build_from(const KestFile *files, uint32_t count,
     char *paths[1] = {(char *)files[0].path};
     // A library a build was not told of is looked for on no disk: everything
     // it reads is what it was handed.
-    return finished(opened(library == NULL ? "" : library, paths, 1, files,
-                           count, room, 0),
-                    errors, form, room);
+    return finished(
+        opened(library == NULL ? "" : library, paths, 1, files, count, room, 0),
+        errors, form, room);
 }
 
 static KestBuild *finished(KestBuild *build, FILE *errors, KestForm form,
@@ -539,8 +537,8 @@ const char *kest_build_capability(const KestBuild *build, uint32_t at) {
         bool first = true;
         for (uint32_t before = 0; before < i && first; before++) {
             const char *earlier = NULL;
-            size_t was = receiver_of(build->module.externs[before].name,
-                                     &earlier);
+            size_t was =
+                receiver_of(build->module.externs[before].name, &earlier);
             first = was != length || memcmp(earlier, from, length) != 0;
         }
         if (!first) {
@@ -611,8 +609,8 @@ bool kest_build_free(KestBuild *build) {
     // Acquired against the release a machine counts itself off with: a build
     // freed on one thread has to see what a machine on another did before it
     // went.
-    unsigned standing = atomic_load_explicit(&build->module.machines,
-                                             memory_order_acquire);
+    unsigned standing =
+        atomic_load_explicit(&build->module.machines, memory_order_acquire);
     if (standing > 0) {
         // The program is in here and the machines are standing on it: what
         // they run, what their layouts say, and every piece of text a

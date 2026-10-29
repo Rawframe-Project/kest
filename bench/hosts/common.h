@@ -164,8 +164,7 @@ static inline void scaled(const char *engine, const Scaled *how) {
     for (int c = 0; c < count; c++) {
         int many = counts[c];
         Lane *lanes = (Lane *)calloc((size_t)many, sizeof *lanes);
-        pthread_t *threads =
-            (pthread_t *)calloc((size_t)many, sizeof *threads);
+        pthread_t *threads = (pthread_t *)calloc((size_t)many, sizeof *threads);
         pthread_barrier_t gate;
         pthread_barrier_init(&gate, NULL, (unsigned)many + 1);
         for (int i = 0; i < many; i++) {
@@ -229,9 +228,8 @@ static void *asker_runs(void *given) {
 
 static inline void stopped(const char *engine, const Stoppable *how) {
     size_t room = sizeof(long long) * (STOPS + 1);
-    long long *shared =
-        (long long *)mmap(NULL, room, PROT_READ | PROT_WRITE,
-                          MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    long long *shared = (long long *)mmap(NULL, room, PROT_READ | PROT_WRITE,
+                                          MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     shared[STOPS] = 0;
     fflush(stdout);
     pid_t child = fork();

@@ -260,7 +260,8 @@ int main(int argc, char **argv) {
     kest_telemetry(runtime, &after);
     printf("over those %lld frame(s): %llu allocation(s), %llu walk(s), "
            "%llu byte(s) copied, %llu lend(s)\n",
-           frames, (unsigned long long)(after.allocations - before_frames.allocations),
+           frames,
+           (unsigned long long)(after.allocations - before_frames.allocations),
            (unsigned long long)(after.sweeps - before_frames.sweeps),
            (unsigned long long)(after.copied - before_frames.copied),
            (unsigned long long)(after.lends - before_frames.lends));
@@ -338,8 +339,8 @@ int main(int argc, char **argv) {
        lend, where the run is read and written where it stands and what crosses
        is an address and a count, and nine slots a body for the fine path --
        four fields and the wall in, four fields back. */
-    unsigned long long bodies = (unsigned long long)many *
-                                (unsigned long long)frames;
+    unsigned long long bodies =
+        (unsigned long long)many * (unsigned long long)frames;
     unsigned long long crossing = bodies * (unsigned long long)sizeof(Body);
     printf("what crossed: %s\n",
            "crossings, elements, bytes of the host's memory, bytes marshalled");

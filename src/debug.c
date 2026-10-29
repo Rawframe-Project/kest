@@ -90,8 +90,8 @@ static uint8_t really_at(Debugger *held, int32_t entry, uint32_t at,
 static void as_it_was(Debugger *held) {
     for (uint32_t i = 0; i < held->count; i++) {
         uint32_t many = 0;
-        uint8_t *code = kest_code_of(held->runtime, held->written[i].entry,
-                                     &many);
+        uint8_t *code =
+            kest_code_of(held->runtime, held->written[i].entry, &many);
         if (code != NULL && held->written[i].at < many) {
             code[held->written[i].at] = held->written[i].was;
         }
@@ -101,8 +101,8 @@ static void as_it_was(Debugger *held) {
 static void as_it_is(Debugger *held) {
     for (uint32_t i = 0; i < held->count; i++) {
         uint32_t many = 0;
-        uint8_t *code = kest_code_of(held->runtime, held->written[i].entry,
-                                     &many);
+        uint8_t *code =
+            kest_code_of(held->runtime, held->written[i].entry, &many);
         if (code != NULL && held->written[i].at < many) {
             code[held->written[i].at] = (uint8_t)KEST_OP_STOP;
         }
@@ -111,7 +111,8 @@ static void as_it_is(Debugger *held) {
 
 static bool write_one(Debugger *held, int32_t entry, uint32_t at,
                       bool asked_for) {
-    if (held->count == KEST_MOST_BREAKPOINTS || already_written(held, entry, at)) {
+    if (held->count == KEST_MOST_BREAKPOINTS ||
+        already_written(held, entry, at)) {
         return false;
     }
     uint32_t many = 0;
@@ -254,8 +255,9 @@ static void standing(Debugger *held, int32_t *in, uint32_t *line,
     int64_t at = kest_stopped(held->runtime);
     *deep = kest_frames_deep(held->runtime);
     as_it_was(held);
-    int64_t from = *in < 0 ? -1 : kest_came_from(held->runtime, *in,
-                                                 (uint32_t)(at < 0 ? 0 : at));
+    int64_t from = *in < 0 ? -1
+                           : kest_came_from(held->runtime, *in,
+                                            (uint32_t)(at < 0 ? 0 : at));
     as_it_is(held);
     *line = from < 0 ? 0 : line_of(held, *in, (uint32_t)from);
 }
@@ -411,8 +413,7 @@ static void value_of(char *into, size_t room, KestValue value, uint8_t kind) {
 // a text was written ended the debugger on a fault. The proof is of the body
 // as it was compiled, so it is asked with the breakpoints out.
 static void local_said(Debugger *held, uint32_t deep, uint16_t slot,
-                       uint8_t kind, KestValue value, char *into,
-                       size_t room) {
+                       uint8_t kind, KestValue value, char *into, size_t room) {
     as_it_was(held);
     bool written = kest_frame_written(held->runtime, deep, slot);
     uint32_t length = 0;
@@ -486,9 +487,9 @@ static bool break_at(Debugger *held, const char *in, uint32_t wanted) {
     // another: a line number on its own means the file in front of the person,
     // and line 13 of the standard library is not that. `break io.kest:13` is
     // how to mean the other one.
-    const KestSource *root =
-        held->build->units.count > 0 ? &held->build->units.items[0].source
-                                     : NULL;
+    const KestSource *root = held->build->units.count > 0
+                                 ? &held->build->units.items[0].source
+                                 : NULL;
     for (uint32_t entry = 0; entry < held->build->module.count; entry++) {
         const KestSource *came_from = source_of(held, (int32_t)entry);
         if (came_from == NULL) {
@@ -548,15 +549,15 @@ uint32_t kest_debugger_break(KestDebugger *held, const char *file,
 }
 
 void kest_debugger_unbreak(KestDebugger *held, const char *file) {
-    const KestSource *root =
-        held->build->units.count > 0 ? &held->build->units.items[0].source
-                                     : NULL;
+    const KestSource *root = held->build->units.count > 0
+                                 ? &held->build->units.items[0].source
+                                 : NULL;
     for (uint32_t i = held->count; i > 0; i--) {
-        const KestSource *came_from = source_of(held, held->written[i - 1].entry);
-        bool here = file == NULL
-                        ? came_from == root
-                        : came_from != NULL &&
-                              strstr(came_from->path, file) != NULL;
+        const KestSource *came_from =
+            source_of(held, held->written[i - 1].entry);
+        bool here = file == NULL ? came_from == root
+                                 : came_from != NULL &&
+                                       strstr(came_from->path, file) != NULL;
         if (held->written[i - 1].asked_for && here) {
             take_one_out(held, i - 1);
         }
@@ -583,8 +584,7 @@ uint32_t kest_debugger_frames(KestDebugger *held) {
 }
 
 bool kest_debugger_frame(KestDebugger *held, uint32_t deep, const char **body,
-                         const char **path, uint32_t *line,
-                         uint32_t *column) {
+                         const char **path, uint32_t *line, uint32_t *column) {
     if (deep >= kest_frames_deep(held->runtime)) {
         return false;
     }
@@ -666,8 +666,8 @@ int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
             at++;
         }
         char *end = at + strlen(at);
-        while (end > at && (end[-1] == '\n' || end[-1] == '\r' ||
-                            end[-1] == ' ')) {
+        while (end > at &&
+               (end[-1] == '\n' || end[-1] == '\r' || end[-1] == ' ')) {
             *--end = '\0';
         }
         char *rest = strchr(at, ' ');
@@ -720,8 +720,8 @@ int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
                 fprintf(out, "nothing is running: `run` first\n");
                 continue;
             }
-            kest_debugger_step(&held, at[0] == 's' ? KEST_STEP_INTO
-                                                   : KEST_STEP_OVER);
+            kest_debugger_step(&held,
+                               at[0] == 's' ? KEST_STEP_INTO : KEST_STEP_OVER);
         } else if (strcmp(at, "where") == 0 || strcmp(at, "w") == 0) {
             say_frames(&held);
         } else if (strcmp(at, "locals") == 0 || strcmp(at, "l") == 0) {

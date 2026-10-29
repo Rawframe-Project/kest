@@ -47,14 +47,14 @@ __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 // writes.
 #include <fcntl.h>
 #include <io.h>
-#define KEST_BYTES_OUT()                                                     \
-    do {                                                                     \
-        _setmode(_fileno(stdout), _O_BINARY);                                \
-        _setmode(_fileno(stderr), _O_BINARY);                                \
+#define KEST_BYTES_OUT()                                                       \
+    do {                                                                       \
+        _setmode(_fileno(stdout), _O_BINARY);                                  \
+        _setmode(_fileno(stderr), _O_BINARY);                                  \
     } while (0)
 #else
-#define KEST_BYTES_OUT()                                                     \
-    do {                                                                     \
+#define KEST_BYTES_OUT()                                                       \
+    do {                                                                       \
     } while (0)
 #endif
 
@@ -225,137 +225,139 @@ static void listed(KestBuild *build, Listing listing) {
     }
 }
 
-
 // What the command does, written where a person asking for it will look:
 // standard output, and not an error.
 static void help(FILE *out) {
-    fprintf(out,
-            "kest %s\n"
-            "\n"
-            "usage: kest <command> <file>... [options]\n"
-            "\n"
-            "These read a program, which is the files named and everything\n"
-            "they import. The first settles where imports resolve from, and\n"
-            "for `run` and `tick` it is the one whose `main` is called.\n"
-            "\n"
-            "  check <file>...   resolve everything and report what is wrong\n"
-            "  run <file>...     compile and run `main`\n"
-            "  emit <file>...    print the bytecode\n"
-            "  call <file> <fn> [argument]...\n"
-            "                    call one function and print what it gives\n"
-            "  tick <file> [n]   call `" TICK_BULK "` once with n events, "
-            "and\n"
-            "                    `" TICK_SINGLE "` n times, whichever are "
-            "defined.\n"
-            "                    `4,5,6` instead of a count lends those, so a\n"
-            "                    program that reads what it was given can be\n"
-            "                    given something\n"
-            "\n"
-            "These read each file on its own and follow no imports, because\n"
-            "what a file is does not depend on what it imports.\n"
-            "\n"
-            "  fmt <file>...     print the file in the one form it has\n"
-            "  parse <file>...   print the syntax tree\n"
-            "  lex <file>...     print the token stream, whatever is wrong\n"
-            "\n"
-            "  profile <file>    run it and say what it did: how many steps\n"
-            "                    of a budget, how many calls of each body,\n"
-            "                    how many crossings into the host, what the\n"
-            "                    heap holds and what the budget cost. Counts\n"
-            "                    and no durations: a clock is the host's\n"
-            "  new <name>        a directory with a project, a program and a\n"
-            "                    test in it, ready to run\n"
-            "  build [file]      compile it and say nothing if it compiles.\n"
-            "                    Without a file, what the project says to\n"
-            "                    build. Bytecode is not a format anything\n"
-            "                    else reads; with `--release` it writes one\n"
-            "                    binary that carries the program instead\n"
-            "  test <files>      run each one and read what it answered. A\n"
-            "                    test here is a program that checks itself\n"
-            "                    and answers with which check failed\n"
-            "  hostile <file> [seed]\n"
-            "                    the file, with a function after it for\n"
-            "                    every call of every door it declares with\n"
-            "                    what a program nobody trusts could hand it,\n"
-            "                    for the host that binds them to run\n"
-            "  doc <file>        what the file declares, each as it is\n"
-            "                    written with the comment above it, as\n"
-            "                    Markdown for somebody who will call it\n"
-            "  doctor [dir]      what this command line is, where it looks\n"
-            "                    for the library, whether it found it, and\n"
-            "                    what the project here says about itself\n"
-            "  debug <file>      run it with breakpoints: `break <line>`,\n"
-            "                    `run`, `continue`, `step`, `next`, `where`\n"
-            "                    and `locals`. A breakpoint is written into\n"
-            "                    the code and taken out again, so a machine\n"
-            "                    nobody is debugging pays nothing for it\n"
-            "  lsp               answer an editor over the standard streams:\n"
-            "                    what is wrong, what a name is, where it was\n"
-            "                    declared, what else names it, what a file\n"
-            "                    declares and the one form\n"
-            "  dap               the debugger, driven by an editor over the\n"
-            "                    Debug Adapter Protocol on the standard\n"
-            "                    streams: breakpoints, steps, frames, locals\n"
-            "  help              this, and `-h` and `--help` are it too\n"
-            "\n"
-            "options:\n"
-            "  --json            everything this command says, as JSON, one\n"
-            "                    object a file: the diagnostics, and for\n"
-            "                    `check` what the program holds, for `emit`\n"
-            "                    the instructions, for `lex` the tokens and\n"
-            "                    the comments, for `call` what came back,\n"
-            "                    for `tick` the crossings and the heap, for\n"
-            "                    `fmt` whether the file is in the one form,\n"
-            "                    for `doc` the declarations and for\n"
-            "                    `hostile` the file it writes. `debug` talks\n"
-            "                    with a person and has none: `dap` is that\n"
-            "                    for an editor\n"
-            "  -w                fmt writes each file it is given\n"
-            "  --check           fmt names the files it would rewrite, without\n"
-            "                    writing them, and exits non-zero\n"
-            "  --reset           tick throws the heap away between events\n"
-            "  --c               emit writes the bodies as C rather than as\n"
-            "                    instructions: one translation unit, with a\n"
-            "                    `main` when the program has one and a line\n"
-            "                    naming every body this backend has no C for\n"
-            "                    yet, which the machine runs instead\n"
-            "  --release         build makes a binary of the program that\n"
-            "                    carries it and needs no source to run,\n"
-            "                    named as the program is without `.kest`,\n"
-            "                    compiled by the C compiler CC names, or cc\n"
-            "  --cost            check says what it proved about each body:\n"
-            "                    whether it reaches the heap, whether it\n"
-            "                    crosses to the host, whether anything in it\n"
-            "                    is outside the deterministic profile, and\n"
-            "                    which promise it keeps and does not make.\n"
-            "                    The same facts are in --json either way\n"
-    "  --room <amount>   the most this command may ask this machine for,\n"
-    "                    all of it: reading and compiling the program and\n"
-    "                    the heap it runs on. A number of bytes, or one\n"
-    "                    with K, M or G after it. Without this it asks for\n"
-    "                    whatever it needs\n"
-    "  --work <units>    the most work compiling may do, counted the same\n"
-    "                    on every machine: a word read, a piece of the\n"
-    "                    tree, an instruction laid down or proved. A\n"
-    "                    number, or one with K, M or G after it. --json\n"
-    "                    says what a build took. Without this it takes\n"
-    "                    as long as the program makes it\n"
-    "  --               everything after this is the program's own, which\n"
-    "                    `std.os` hands it. Nothing before it is\n"
-    "  --fuel <steps>    the most steps run, tick and call may take, where\n"
-    "                    a step is a jump that goes back or a call. A\n"
-    "                    number, or one with K, M or G after it. Without\n"
-    "                    this a program runs until it is done, which a\n"
-    "                    program with a loop that never ends never is\n"
-            "  --version         print the version\n"
-            "\n"
-            "exit status is 1 when anything was refused, and otherwise what\n"
-            "`main` returned, which has to be a number from 0 to 255. A\n"
-            "warning is not a refusal: it is said and the run goes on.\n"
-            "\n"
-            "KEST_LIB says where the standard library is. Without it the\n"
-            "compiler looks beside itself and then where it was installed.\n",
-            kest_version());
+    fprintf(
+        out,
+        "kest %s\n"
+        "\n"
+        "usage: kest <command> <file>... [options]\n"
+        "\n"
+        "These read a program, which is the files named and everything\n"
+        "they import. The first settles where imports resolve from, and\n"
+        "for `run` and `tick` it is the one whose `main` is called.\n"
+        "\n"
+        "  check <file>...   resolve everything and report what is wrong\n"
+        "  run <file>...     compile and run `main`\n"
+        "  emit <file>...    print the bytecode\n"
+        "  call <file> <fn> [argument]...\n"
+        "                    call one function and print what it gives\n"
+        "  tick <file> [n]   call `" TICK_BULK "` once with n events, "
+        "and\n"
+        "                    `" TICK_SINGLE "` n times, whichever are "
+        "defined.\n"
+        "                    `4,5,6` instead of a count lends those, so a\n"
+        "                    program that reads what it was given can be\n"
+        "                    given something\n"
+        "\n"
+        "These read each file on its own and follow no imports, because\n"
+        "what a file is does not depend on what it imports.\n"
+        "\n"
+        "  fmt <file>...     print the file in the one form it has\n"
+        "  parse <file>...   print the syntax tree\n"
+        "  lex <file>...     print the token stream, whatever is wrong\n"
+        "\n"
+        "  profile <file>    run it and say what it did: how many steps\n"
+        "                    of a budget, how many calls of each body,\n"
+        "                    how many crossings into the host, what the\n"
+        "                    heap holds and what the budget cost. Counts\n"
+        "                    and no durations: a clock is the host's\n"
+        "  new <name>        a directory with a project, a program and a\n"
+        "                    test in it, ready to run\n"
+        "  build [file]      compile it and say nothing if it compiles.\n"
+        "                    Without a file, what the project says to\n"
+        "                    build. Bytecode is not a format anything\n"
+        "                    else reads; with `--release` it writes one\n"
+        "                    binary that carries the program instead\n"
+        "  test <files>      run each one and read what it answered. A\n"
+        "                    test here is a program that checks itself\n"
+        "                    and answers with which check failed\n"
+        "  hostile <file> [seed]\n"
+        "                    the file, with a function after it for\n"
+        "                    every call of every door it declares with\n"
+        "                    what a program nobody trusts could hand it,\n"
+        "                    for the host that binds them to run\n"
+        "  doc <file>        what the file declares, each as it is\n"
+        "                    written with the comment above it, as\n"
+        "                    Markdown for somebody who will call it\n"
+        "  doctor [dir]      what this command line is, where it looks\n"
+        "                    for the library, whether it found it, and\n"
+        "                    what the project here says about itself\n"
+        "  debug <file>      run it with breakpoints: `break <line>`,\n"
+        "                    `run`, `continue`, `step`, `next`, `where`\n"
+        "                    and `locals`. A breakpoint is written into\n"
+        "                    the code and taken out again, so a machine\n"
+        "                    nobody is debugging pays nothing for it\n"
+        "  lsp               answer an editor over the standard streams:\n"
+        "                    what is wrong, what a name is, where it was\n"
+        "                    declared, what else names it, what a file\n"
+        "                    declares and the one form\n"
+        "  dap               the debugger, driven by an editor over the\n"
+        "                    Debug Adapter Protocol on the standard\n"
+        "                    streams: breakpoints, steps, frames, locals\n"
+        "  help              this, and `-h` and `--help` are it too\n"
+        "\n"
+        "options:\n"
+        "  --json            everything this command says, as JSON, one\n"
+        "                    object a file: the diagnostics, and for\n"
+        "                    `check` what the program holds, for `emit`\n"
+        "                    the instructions, for `lex` the tokens and\n"
+        "                    the comments, for `call` what came back,\n"
+        "                    for `tick` the crossings and the heap, for\n"
+        "                    `fmt` whether the file is in the one form,\n"
+        "                    for `doc` the declarations and for\n"
+        "                    `hostile` the file it writes. `debug` talks\n"
+        "                    with a person and has none: `dap` is that\n"
+        "                    for an editor\n"
+        "  -w                fmt writes each file it is given\n"
+        "  --check           fmt names the files it would rewrite, without\n"
+        "                    writing them, and exits non-zero\n"
+        "  --reset           tick throws the heap away between events\n"
+        "  --c               emit writes the bodies as C rather than as\n"
+        "                    instructions: one translation unit, with a\n"
+        "                    `main` when the program has one and a line\n"
+        "                    naming every body this backend has no C for\n"
+        "                    yet, which the machine runs instead\n"
+        "  --release         build makes a binary of the program that\n"
+        "                    carries it and needs no source to run,\n"
+        "                    named as the program is without `.kest`,\n"
+        "                    compiled by the C compiler CC names, or cc\n"
+        "  --cost            check says what it proved about each body:\n"
+        "                    whether it reaches the heap, whether it\n"
+        "                    crosses to the host, whether anything in it\n"
+        "                    is outside the deterministic profile, and\n"
+        "                    which promise it keeps and does not make.\n"
+        "                    The same facts are in --json either way\n"
+        "  --room <amount>   the most this command may ask this machine for,\n"
+        "                    all of it: reading and compiling the program and\n"
+        "                    the heap it runs on. A number of bytes, or one\n"
+        "                    with K, M or G after it. Without this it asks "
+        "for\n"
+        "                    whatever it needs\n"
+        "  --work <units>    the most work compiling may do, counted the same\n"
+        "                    on every machine: a word read, a piece of the\n"
+        "                    tree, an instruction laid down or proved. A\n"
+        "                    number, or one with K, M or G after it. --json\n"
+        "                    says what a build took. Without this it takes\n"
+        "                    as long as the program makes it\n"
+        "  --               everything after this is the program's own, which\n"
+        "                    `std.os` hands it. Nothing before it is\n"
+        "  --fuel <steps>    the most steps run, tick and call may take, "
+        "where\n"
+        "                    a step is a jump that goes back or a call. A\n"
+        "                    number, or one with K, M or G after it. Without\n"
+        "                    this a program runs until it is done, which a\n"
+        "                    program with a loop that never ends never is\n"
+        "  --version         print the version\n"
+        "\n"
+        "exit status is 1 when anything was refused, and otherwise what\n"
+        "`main` returned, which has to be a number from 0 to 255. A\n"
+        "warning is not a refusal: it is said and the run goes on.\n"
+        "\n"
+        "KEST_LIB says where the standard library is. Without it the\n"
+        "compiler looks beside itself and then where it was installed.\n",
+        kest_version());
 }
 
 static int usage(bool json) {
@@ -377,8 +379,8 @@ static int usage(bool json) {
 // beside the words it is for, which is where everything that reads this tree
 // looks for the pair. Always 1, so a refusal is a `return` of what a command
 // answers with.
-static int refused_at_the_words(bool json, const char *code,
-                                const char *format, ...) {
+static int refused_at_the_words(bool json, const char *code, const char *format,
+                                ...) {
     char said[512];
     va_list words;
     va_start(words, format);
@@ -498,7 +500,6 @@ static void dump_tokens(const KestToken *tokens, uint32_t count,
     }
 }
 
-
 // What `std.io` declares. Where it goes is the host's, which is the whole
 // point of it being the host's: when the caller asked for JSON on standard
 // output, the program's own writing goes to standard error so that what is
@@ -615,8 +616,10 @@ static size_t next_room(size_t room) {
 // is said.
 static void read_too_much(KestRuntime *runtime, const char *what) {
     char said[160];
-    snprintf(said, sizeof said, "%s is more than %zu bytes, the most a door "
-                                "reads", what, (size_t)KEST_MOST_READ);
+    snprintf(said, sizeof said,
+             "%s is more than %zu bytes, the most a door "
+             "reads",
+             what, (size_t)KEST_MOST_READ);
     kest_native_failed(runtime, said);
 }
 
@@ -875,7 +878,9 @@ static int64_t host_nanoseconds(void) {
 #endif
 }
 
-static int64_t host_microseconds(void) { return host_nanoseconds() / 1000; }
+static int64_t host_microseconds(void) {
+    return host_nanoseconds() / 1000;
+}
 
 // The same clock again in the shape a build asks for. A build is weighed only
 // when somebody asked, and what asks is the environment rather than an option,
@@ -889,20 +894,19 @@ static uint64_t compiling_now(void *context) {
 // What each stage of compiling took, in nanoseconds, where `copies` is a share
 // of the four before it rather than a stage of its own.
 static void say_what_compiling_took(const KestSpent *spent) {
-    fprintf(stderr,
-            "spent reading %llu naming %llu bodies %llu promises %llu "
-            "writing %llu verifying %llu optimizing %llu lowering %llu "
-            "finishing %llu of-which-copies %llu\n",
-            (unsigned long long)spent->reading,
-            (unsigned long long)spent->naming,
-            (unsigned long long)spent->bodies,
-            (unsigned long long)spent->promises,
-            (unsigned long long)spent->writing,
-            (unsigned long long)spent->verifying,
-            (unsigned long long)spent->optimizing,
-            (unsigned long long)spent->lowering,
-            (unsigned long long)spent->finishing,
-            (unsigned long long)spent->copies);
+    fprintf(
+        stderr,
+        "spent reading %llu naming %llu bodies %llu promises %llu "
+        "writing %llu verifying %llu optimizing %llu lowering %llu "
+        "finishing %llu of-which-copies %llu\n",
+        (unsigned long long)spent->reading, (unsigned long long)spent->naming,
+        (unsigned long long)spent->bodies, (unsigned long long)spent->promises,
+        (unsigned long long)spent->writing,
+        (unsigned long long)spent->verifying,
+        (unsigned long long)spent->optimizing,
+        (unsigned long long)spent->lowering,
+        (unsigned long long)spent->finishing,
+        (unsigned long long)spent->copies);
 }
 
 static void host_clock(KestValue *frame, KestRuntime *runtime, void *context) {
@@ -922,9 +926,8 @@ static void host_sample(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
     (void)context;
     int64_t index = frame[0].integer;
-    frame[0].real = index >= 0 && index < HOST_SAMPLE_COUNT
-                        ? host_samples[index]
-                        : -1.0f;
+    frame[0].real =
+        index >= 0 && index < HOST_SAMPLE_COUNT ? host_samples[index] : -1.0f;
 }
 
 static void host_samples_view(KestValue *frame, KestRuntime *runtime,
@@ -983,9 +986,9 @@ static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
 
 // And one that answers a value with a tag in it. Which tag is a decision about
 // what the answer means, and the command line has no engine to make one with --
-// so it answers the tag every enum that has a case has, and writes nothing after
-// it. A host with an opinion writes the tag its case is and then what that case
-// carries, which `kest_case_of` says and this keeps no layout to ask.
+// so it answers the tag every enum that has a case has, and writes nothing
+// after it. A host with an opinion writes the tag its case is and then what
+// that case carries, which `kest_case_of` says and this keeps no layout to ask.
 static void engine_blame(KestValue *frame, KestRuntime *runtime,
                          void *context) {
     (void)runtime;
@@ -1063,8 +1066,7 @@ static KestHost *make_host(FILE *output, FILE *input) {
 static bool takes_events(KestProgram *program, const char *name,
                          const char *shape, KestArena *arena, bool *gives,
                          bool *there) {
-    KestSymbol *entry =
-        kest_lookup_global(program, name, strlen(name));
+    KestSymbol *entry = kest_lookup_global(program, name, strlen(name));
     *there = entry != NULL && entry->type->tag == KEST_T_FN;
     if (!*there) {
         return false;
@@ -1100,8 +1102,9 @@ static bool takes_events(KestProgram *program, const char *name,
     const char *written = kest_type_name(arena, entry->type->params[0]);
     if (strcmp(written, shape) != 0) {
         kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0619",
-                       entry->span, "`%s` takes `%s`, and tick has `%s` to "
-                                    "give it",
+                       entry->span,
+                       "`%s` takes `%s`, and tick has `%s` to "
+                       "give it",
                        plain, written, shape);
         kest_diags_suggest(program->diags, "take `%s`", shape);
         return false;
@@ -1217,9 +1220,8 @@ static bool drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
     bool single_gives = false;
     bool drive_bulk =
         takes_events(program, bulk, "[i32]", arena, &bulk_gives, &bulk_there);
-    bool drive_single =
-        takes_events(program, single, "i32", arena, &single_gives,
-                     &single_there);
+    bool drive_single = takes_events(program, single, "i32", arena,
+                                     &single_gives, &single_there);
     out->named = bulk_there || single_there;
     if (!out->named) {
         out->near = kest_nearest_global(program, single, strlen(single));
@@ -1336,8 +1338,8 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
     for (int i = 0; i < count; i++) {
         KestArena *arena = kest_arena_new();
         if (arena == NULL) {
-            kest_diags_say_one(json ? stdout : stderr, json,
-                               KEST_STARVED_CODE, KEST_STARVED_SAYS);
+            kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                               KEST_STARVED_SAYS);
             return 1;
         }
         // Each file is its own arena, so each is given the whole of what this
@@ -1402,8 +1404,8 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                                diags.error_count,
                                diags.error_count == 1 ? "" : "s");
                     }
-                    kest_ast_dump(&units.items[0].unit,
-                                  &units.items[0].source, stdout);
+                    kest_ast_dump(&units.items[0].unit, &units.items[0].source,
+                                  stdout);
                 }
             }
             kest_diags_sort(&diags);
@@ -1569,7 +1571,9 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
             // from a file that is not in the form yet. One of the two is
             // fixed by running `-w` and the other is not.
             fprintf(stdout, ",\"formed\":%s",
-                    text == NULL ? "null" : same ? "true" : "false");
+                    text == NULL ? "null"
+                    : same       ? "true"
+                                 : "false");
             // The one form of the file, where that is what was asked for.
             // `-w` put it in the file and `--check` was asked a question
             // rather than for a file, so neither of those says it: what a
@@ -1623,8 +1627,8 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 // Said rather than left to the status. In this form the object
                 // above has already gone out saying the file is not in the one
                 // form, which is true and is not what happened.
-                refused_at_the_words(json, "K0706",
-                                     "`%s` could not be written", paths[i]);
+                refused_at_the_words(json, "K0706", "`%s` could not be written",
+                                     paths[i]);
                 status = 1;
             }
             kest_arena_free(arena);
@@ -1679,8 +1683,8 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
         } else if (replace_file(paths[i], text, length)) {
             printf("%s\n", paths[i]);
         } else {
-            refused_at_the_words(json, "K0706",
-                                 "`%s` could not be written", paths[i]);
+            refused_at_the_words(json, "K0706", "`%s` could not be written",
+                                 paths[i]);
             status = 1;
         }
 
@@ -1829,8 +1833,7 @@ static bool read_fuel(const char *text, uint64_t *fuel, const char *of,
     return true;
 }
 
-static int32_t *read_events(const char *text, int32_t *count,
-                            bool json) {
+static int32_t *read_events(const char *text, int32_t *count, bool json) {
     uint32_t found = 1;
     for (const char *at = text; *at != '\0'; at++) {
         found += *at == ',' ? 1 : 0;
@@ -1855,8 +1858,8 @@ static int32_t *read_events(const char *text, int32_t *count,
         long value = strtol(at, &end, 10);
         if (end == at || (*end != ',' && *end != '\0') || errno == ERANGE ||
             value < INT32_MIN || value > INT32_MAX) {
-            refused_at_the_words(json, "K0649",
-                                 "`%s` is not a list of events", text);
+            refused_at_the_words(json, "K0649", "`%s` is not a list of events",
+                                 text);
             free(events);
             return NULL;
         }
@@ -1928,11 +1931,11 @@ static const char *all_of_them(KestArena *arena, KestSymbol **candidates,
     return out;
 }
 
-static const KestSymbol *choose(KestBuild *build, const char *name,
-                                char **args, int count) {
+static const KestSymbol *choose(KestBuild *build, const char *name, char **args,
+                                int count) {
     KestSymbol *candidates[16];
-    uint32_t found = kest_overloads(build->program, name, strlen(name),
-                                    candidates, 16);
+    uint32_t found =
+        kest_overloads(build->program, name, strlen(name), candidates, 16);
     const KestSymbol *chosen = NULL;
     uint32_t matches = 0;
     int refused = -1;
@@ -1951,7 +1954,7 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
                 KestValue scratch = {0};
                 const char *why = NULL;
                 fits = kest_value_read(build->arena, args[a], want, &scratch,
-                                     &why);
+                                       &why);
                 if (!fits) {
                     // Kept for the one case where it is worth saying: one
                     // function of that name, and an argument it could not
@@ -1963,8 +1966,7 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
                     (want->tag == KEST_T_INT || want->tag == KEST_T_FLOAT)) {
                     bool real = spelled_as_float(args[a]);
                     fits = want->tag == (real ? KEST_T_FLOAT : KEST_T_INT) &&
-                           want->width == 32 &&
-                           (real || want->is_signed);
+                           want->width == 32 && (real || want->is_signed);
                 }
             }
             if (fits) {
@@ -2012,8 +2014,7 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
     } else if (count == 0) {
         // Nothing was typed at all, which the notes below show the shape of
         // and the message does not: "what was typed" was nothing.
-        kest_diags_suggest(&build->diags,
-                           "nothing was written after the name");
+        kest_diags_suggest(&build->diags, "nothing was written after the name");
     } else if (plenty != NULL) {
         kest_diags_suggest(&build->diags, "they take %s", plenty);
     } else if (found == 1 && refused >= 0 && refusal != NULL) {
@@ -2233,13 +2234,12 @@ typedef struct {
 // and a measurement written into the middle of it is a line nobody asked for.
 static void say_profile(const KestCounted *counted, const Entered *bodies,
                         uint32_t body_count) {
-    fprintf(stderr,
-            "%llu step(s), %llu call(s), %llu crossing(s) into the host, "
-            "%zu byte(s) of heap and %zu at most",
-            (unsigned long long)counted->steps,
-            (unsigned long long)counted->calls,
-            (unsigned long long)counted->crossings, counted->heap,
-            counted->most);
+    fprintf(
+        stderr,
+        "%llu step(s), %llu call(s), %llu crossing(s) into the host, "
+        "%zu byte(s) of heap and %zu at most",
+        (unsigned long long)counted->steps, (unsigned long long)counted->calls,
+        (unsigned long long)counted->crossings, counted->heap, counted->most);
     if (counted->fuel_given > 0) {
         fprintf(stderr, ", %llu of %llu step(s) of budget spent",
                 (unsigned long long)(counted->fuel_given - counted->fuel_left),
@@ -2333,9 +2333,10 @@ static int write_hostile(const char *path, uint64_t seed, bool json) {
     if (!json) {
         fwrite(source, 1, used, stdout);
         fputs(calls, stdout);
-        fprintf(stderr, "hostile: %u call(s) of the doors `%s` declares, from "
-                        "seed %llu, and %u door(s) taking what a program "
-                        "cannot make\n",
+        fprintf(stderr,
+                "hostile: %u call(s) of the doors `%s` declares, from "
+                "seed %llu, and %u door(s) taking what a program "
+                "cannot make\n",
                 called, path, (unsigned long long)seed, passed);
         kest_arena_free(arena);
         return 0;
@@ -2374,10 +2375,9 @@ static int write_doc(const char *executable, const char *path, bool json,
     if (path == NULL) {
         return refused_at_the_words(json, "K0649", "`%s` needs a file", "doc");
     }
-    KestBuild *build =
-        kest_build(path, kest_library_path(NULL, executable),
-                   json ? stdout : stderr,
-                   json ? KEST_FORM_JSON : KEST_FORM_TEXT, room);
+    KestBuild *build = kest_build(path, kest_library_path(NULL, executable),
+                                  json ? stdout : stderr,
+                                  json ? KEST_FORM_JSON : KEST_FORM_TEXT, room);
     if (build == NULL) {
         return 1;
     }
@@ -2393,8 +2393,7 @@ static int write_doc(const char *executable, const char *path, bool json,
     if (arena != NULL) {
         kest_arena_cap(arena, room);
         kest_diags_init(&diags, arena);
-        said = kest_read_unit(arena, &diags, path, &units) &&
-               units.count > 0 &&
+        said = kest_read_unit(arena, &diags, path, &units) && units.count > 0 &&
                kest_doc(&units.items[0], arena, &diags, json, stdout);
     }
     kest_arena_free(arena);
@@ -2423,9 +2422,8 @@ static int make_project(const char *name, bool json) {
     // exists is how somebody loses a project.
     if (KEST_MAKE_DIRECTORY(name) != 0) {
         kest_arena_free(arena);
-        refused_at_the_words(json, "K0701",
-                             "`%s` is already there, or could not be made",
-                             name);
+        refused_at_the_words(
+            json, "K0701", "`%s` is already there, or could not be made", name);
         return 1;
     }
     snprintf(path, sizeof(path), "%s/src", name);
@@ -2490,8 +2488,8 @@ static int look_over(const char *executable, const char *where, bool json) {
     }
     const char *library = kest_library_path(arena, executable);
     const char *why = NULL;
-    KestProject *project = kest_project_read(arena, where == NULL ? "" : where,
-                                             &why);
+    KestProject *project =
+        kest_project_read(arena, where == NULL ? "" : where, &why);
     uint32_t profile = 0;
     const char *named = kest_profile(&profile);
 
@@ -2544,11 +2542,12 @@ static int look_over(const char *executable, const char *where, bool json) {
         if (json) {
             printf(",\"project\":null,\"projectSaid\":null");
         } else {
-            printf("project    none here, which is fine: a file is a program\n");
+            printf(
+                "project    none here, which is fine: a file is a program\n");
         }
     } else {
-        FILE *entry = project->entry[0] == '\0' ? NULL
-                                                : fopen(project->entry, "rb");
+        FILE *entry =
+            project->entry[0] == '\0' ? NULL : fopen(project->entry, "rb");
         bool entry_there = entry != NULL;
         if (entry != NULL) {
             fclose(entry);
@@ -2561,8 +2560,8 @@ static int look_over(const char *executable, const char *where, bool json) {
             kest_json_text(project->name, stdout);
             printf(",\"entry\":");
             kest_json_text(project->entry, stdout);
-            printf(",\"entryFound\":%s,\"kest\":", entry_there ? "true"
-                                                              : "false");
+            printf(",\"entryFound\":%s,\"kest\":",
+                   entry_there ? "true" : "false");
             kest_json_text(project->needs_kest, stdout);
             printf(",\"profile\":");
             kest_json_text(project->profile, stdout);
@@ -2708,7 +2707,7 @@ static size_t windows_argument(char *to, const char *text) {
             slashes++;
             c++;
         }
-        size_t times = *c == '\0' ? slashes * 2
+        size_t times = *c == '\0'  ? slashes * 2
                        : *c == '"' ? slashes * 2 + 1
                                    : slashes;
         for (size_t i = 0; i < times; i++) {
@@ -2761,8 +2760,7 @@ static int ran_program(char **words) {
             held[at++] = '\0';
         }
         arguments[count] = NULL;
-        answered = _spawnvp(_P_WAIT, words[0],
-                            (const char *const *)arguments);
+        answered = _spawnvp(_P_WAIT, words[0], (const char *const *)arguments);
     }
     free(arguments);
     free(held);
@@ -2842,8 +2840,8 @@ static char *made_release(const char *executable, const char *program,
     // character of that path and nothing more.
     char include[1030];
     snprintf(include, sizeof(include), "-I%s", header);
-    const char *after[] = {"-std=c11", "-O2", include, "-o",  out,
-                           source,     archive, "-lm"};
+    const char *after[] = {"-std=c11", "-O2",  include, "-o",
+                           out,        source, archive, "-lm"};
     size_t fixed = sizeof(after) / sizeof(after[0]);
     char **words = malloc((extra + fixed + 1) * sizeof(char *));
     char *split = malloc(strlen(compiler) + 1);
@@ -2902,8 +2900,8 @@ static int run(const char *command, const char *executable, char **paths,
     // A profile counts the calls the program makes, and a debugger stops in
     // them and says which frame it is in, so both are compiled with every one
     // of them a call.
-    if (build != NULL && (strcmp(command, "profile") == 0 ||
-                          strcmp(command, "debug") == 0)) {
+    if (build != NULL &&
+        (strcmp(command, "profile") == 0 || strcmp(command, "debug") == 0)) {
         kest_build_calls_as_written(build);
     }
     if (build == NULL) {
@@ -2918,8 +2916,8 @@ static int run(const char *command, const char *executable, char **paths,
         if (room > 0) {
             char said[120];
             snprintf(said, sizeof said, KEST_CRAMPED_START, room);
-            kest_diags_say_one(json ? stdout : stderr, json,
-                               KEST_CRAMPED_CODE, said);
+            kest_diags_say_one(json ? stdout : stderr, json, KEST_CRAMPED_CODE,
+                               said);
             return 1;
         }
         kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
@@ -2948,8 +2946,8 @@ static int run(const char *command, const char *executable, char **paths,
     // than a thing of its own so that what is debugged is the program as it is
     // run, with the same host bound and the same limits.
     bool debugging = strcmp(command, "debug") == 0;
-    bool running = strcmp(command, "run") == 0 || ticking || profiling ||
-                   debugging;
+    bool running =
+        strcmp(command, "run") == 0 || ticking || profiling || debugging;
     KestCounted counted = {0};
     bool was_counted = false;
     Entered *bodies = NULL;
@@ -3023,10 +3021,9 @@ static int run(const char *command, const char *executable, char **paths,
             // The first path is the file; the second is what to call, and the
             // rest are what to call it with.
             const KestSymbol *chosen =
-                path_count < 2
-                    ? NULL
-                    : choose(build, kest_build_name(build, paths[1]),
-                             paths + 2, path_count - 2);
+                path_count < 2 ? NULL
+                               : choose(build, kest_build_name(build, paths[1]),
+                                        paths + 2, path_count - 2);
             if (path_count < 2) {
                 KestSpan nowhere = {0, 0};
                 kest_diags_in(&build->diags, NULL);
@@ -3129,13 +3126,13 @@ static int run(const char *command, const char *executable, char **paths,
                             // because it is the same rule.
                             KestSpan nowhere = {0, 0};
                             kest_diags_in(&build->diags, NULL);
-                            kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
-                                           "K0629", nowhere,
-                                           "there is no text for `%s`, which "
-                                           "is what `%s` gives",
-                                           kest_type_name(build->arena,
-                                                          without),
-                                           paths[1]);
+                            kest_diags_add(
+                                &build->diags, KEST_SEVERITY_ERROR, "K0629",
+                                nowhere,
+                                "there is no text for `%s`, which "
+                                "is what `%s` gives",
+                                kest_type_name(build->arena, without),
+                                paths[1]);
                             kest_diags_suggest(&build->diags,
                                                "call something that gives a "
                                                "value with text, or write the "
@@ -3174,7 +3171,8 @@ static int run(const char *command, const char *executable, char **paths,
             // reader looks; `tick` answers with what a frame cost, and a
             // program writing into the middle of that is the same mixing as
             // above.
-            KestHost *host = make_host(json || ticking ? stderr : stdout, stdin);
+            KestHost *host =
+                make_host(json || ticking ? stderr : stdout, stdin);
             if (host == NULL) {
                 kest_diags_say_one(stderr, json, KEST_STARVED_CODE,
                                    KEST_STARVED_SAYS);
@@ -3286,8 +3284,9 @@ static int run(const char *command, const char *executable, char **paths,
                         printf("cost      %zu bytes to compile\n",
                                kest_build_cost(build));
                         printf("machine   %zu bytes, %u slots and %u "
-                               "frame%s\n", ticked.machine, ticked.slots,
-                               ticked.frames, ticked.frames == 1 ? "" : "s");
+                               "frame%s\n",
+                               ticked.machine, ticked.slots, ticked.frames,
+                               ticked.frames == 1 ? "" : "s");
                         if (ticked.thrown > 0) {
                             printf("heap      %zu bytes, thrown away %d "
                                    "time%s\n",
@@ -3329,7 +3328,8 @@ static int run(const char *command, const char *executable, char **paths,
                                            "this file declares nothing, so "
                                            "there is nothing to run");
                         }
-                        kest_diags_suggest(&build->diags, "add `fn main() { }`");
+                        kest_diags_suggest(&build->diags,
+                                           "add `fn main() { }`");
                     } else if (debugging) {
                         exit_code = kest_debug_serve(build, runtime, entry,
                                                      stdin, stdout);
@@ -3359,10 +3359,9 @@ static int run(const char *command, const char *executable, char **paths,
                     // Read out while the machine is still there, because the
                     // object a run writes is written after it is gone.
                     if (was_counted) {
-                        bodies = KEST_ARENA_ARRAY(build->arena, Entered,
-                                                  build->module.count == 0
-                                                      ? 1
-                                                      : build->module.count);
+                        bodies = KEST_ARENA_ARRAY(
+                            build->arena, Entered,
+                            build->module.count == 0 ? 1 : build->module.count);
                         for (uint32_t which = 0;
                              bodies != NULL && which < build->module.count;
                              which++) {
@@ -3488,8 +3487,7 @@ static int run(const char *command, const char *executable, char **paths,
         // every constant once. Said by every command that builds, so the two
         // can be read against each other.
         if (build->program != NULL) {
-            fprintf(stdout, ",\"folds\":%u,\"asked\":%u",
-                    build->program->folds,
+            fprintf(stdout, ",\"folds\":%u,\"asked\":%u", build->program->folds,
                     build->program->asked_for_nothing);
         }
         // And what one body written for many types costs this program, which
@@ -3502,9 +3500,11 @@ static int run(const char *command, const char *executable, char **paths,
         {
             uint32_t from_bodies = 0;
             uint32_t bytes = 0;
-            uint32_t made = kest_module_copied(&build->module, &from_bodies, &bytes);
-            fprintf(stdout, ",\"copies\":%u,\"copiedBodies\":%u"
-                            ",\"copiedBytes\":%u",
+            uint32_t made =
+                kest_module_copied(&build->module, &from_bodies, &bytes);
+            fprintf(stdout,
+                    ",\"copies\":%u,\"copiedBodies\":%u"
+                    ",\"copiedBytes\":%u",
                     made, from_bodies, bytes);
             // And what the module itself is still holding, which is the part
             // of `held` that has somewhere to be looked up rather than being
@@ -3530,15 +3530,16 @@ static int run(const char *command, const char *executable, char **paths,
                 kest_program_holds(build->program, &of_types, &of_globals,
                                    &of_found_by, &of_composed);
             }
-            fprintf(stdout, ",\"holds\":{\"code\":%u,\"origins\":%u"
-                            ",\"constants\":%u,\"layouts\":%u"
-                            ",\"types\":%u,\"globals\":%u"
-                            ",\"foundBy\":%u,\"composed\":%u,\"chunks\":%u"
-                            ",\"files\":%u,\"lines\":%u,\"paths\":%u"
-                            ",\"names\":%u}",
-                    of_code, of_origins, of_constants, of_layouts,
-                    of_types, of_globals, of_found_by, of_composed,
-                    of_chunks, of_files, of_lines, of_paths, of_names);
+            fprintf(stdout,
+                    ",\"holds\":{\"code\":%u,\"origins\":%u"
+                    ",\"constants\":%u,\"layouts\":%u"
+                    ",\"types\":%u,\"globals\":%u"
+                    ",\"foundBy\":%u,\"composed\":%u,\"chunks\":%u"
+                    ",\"files\":%u,\"lines\":%u,\"paths\":%u"
+                    ",\"names\":%u}",
+                    of_code, of_origins, of_constants, of_layouts, of_types,
+                    of_globals, of_found_by, of_composed, of_chunks, of_files,
+                    of_lines, of_paths, of_names);
         }
         // And what that cost was paid for: every file this build read, and how
         // many bytes each of them is. A cost on its own is a number with
@@ -3573,9 +3574,8 @@ static int run(const char *command, const char *executable, char **paths,
             // compile, so the module this build would make has no name yet,
             // and the name is the file's own -- the whole of what its `module`
             // line says, which is what every name in it lives under.
-            const char *alias = build->units.count > 0
-                                    ? build->units.items[0].module
-                                    : NULL;
+            const char *alias =
+                build->units.count > 0 ? build->units.items[0].module : NULL;
             fputs(",\"module\":", stdout);
             if (alias == NULL || alias[0] == '\0') {
                 fputs("null", stdout);
@@ -3630,8 +3630,7 @@ static int run(const char *command, const char *executable, char **paths,
                     (unsigned long long)counted.steps,
                     (unsigned long long)counted.calls,
                     (unsigned long long)counted.crossings, counted.heap,
-                    counted.most,
-                    (unsigned long long)counted.fuel_given,
+                    counted.most, (unsigned long long)counted.fuel_given,
                     (unsigned long long)counted.fuel_left);
             for (uint32_t which = 0; which < body_count; which++) {
                 fprintf(stdout, "%s{\"name\":", which == 0 ? "" : ",");
@@ -3876,8 +3875,8 @@ static int run_tests(const char *executable, char **paths, int path_count,
         char *one[1] = {paths[i]};
         // Each on its own, because a program that will not compile is one
         // program that will not compile and the rest still run.
-        int status = run("run", executable, one, 1, false, 0, NULL, false,
-                         room, work, fuel, false, false, false);
+        int status = run("run", executable, one, 1, false, 0, NULL, false, room,
+                         work, fuel, false, false, false);
         if (status != 0) {
             failed++;
         }
@@ -3886,8 +3885,7 @@ static int run_tests(const char *executable, char **paths, int path_count,
             kest_json_text(paths[i], stdout);
             printf(",\"answered\":%d}", status);
         } else {
-            printf("%-40s %s\n", paths[i],
-                   status == 0 ? "passed" : "FAILED");
+            printf("%-40s %s\n", paths[i], status == 0 ? "passed" : "FAILED");
             if (status != 0) {
                 printf("    it answered %d, which is the check that failed\n",
                        status);
@@ -3981,10 +3979,10 @@ int main(int argc, char **argv) {
     // what its server wrote to the error stream, so that is where it is said.
     if (strcmp(argv[1], "lsp") == 0) {
         char rooted[2048];
-        int served = kest_lsp_serve(
-            library_from_root(kest_library_path(NULL, argv[0]), rooted,
-                              sizeof(rooted)),
-            stdin, stdout);
+        int served =
+            kest_lsp_serve(library_from_root(kest_library_path(NULL, argv[0]),
+                                             rooted, sizeof(rooted)),
+                           stdin, stdout);
         if (served != 0) {
             kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
                                KEST_STARVED_SAYS);
@@ -3995,8 +3993,8 @@ int main(int argc, char **argv) {
     // editor's console and what it reads is nothing, because both standard
     // streams are the protocol.
     if (strcmp(argv[1], "dap") == 0) {
-        int served = kest_dap_serve(kest_library_path(NULL, argv[0]),
-                                    make_host, stdin, stdout);
+        int served = kest_dap_serve(kest_library_path(NULL, argv[0]), make_host,
+                                    stdin, stdout);
         if (served != 0) {
             kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
                                KEST_STARVED_SAYS);
@@ -4184,8 +4182,7 @@ int main(int argc, char **argv) {
         FileCommand what = strcmp(argv[1], "fmt") == 0   ? FILE_FORMAT
                            : strcmp(argv[1], "lex") == 0 ? FILE_LEX
                                                          : FILE_PARSE;
-        int status =
-            per_file(paths, path_count, what, mode, json, room, work);
+        int status = per_file(paths, path_count, what, mode, json, room, work);
         free(paths);
         free(given);
         return status;
@@ -4281,8 +4278,7 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0 ||
         strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0 ||
         strcmp(argv[1], "profile") == 0 || strcmp(argv[1], "build") == 0 ||
-        strcmp(argv[1], "debug") == 0 ||
-        strcmp(argv[1], "call") == 0) {
+        strcmp(argv[1], "debug") == 0 || strcmp(argv[1], "call") == 0) {
         // Without a file, what the project says to work on. A project is a
         // thing to be inside rather than a thing to name at every command, so
         // `kest build` in a directory with one is `kest build` on its entry.
@@ -4346,9 +4342,8 @@ int main(int argc, char **argv) {
                                         argv[1]);
         }
         int status =
-            run(argv[1], argv[0], paths, path_count, json, count, given,
-                reset, room, work, fuel, costing, writing_c || releasing,
-                releasing);
+            run(argv[1], argv[0], paths, path_count, json, count, given, reset,
+                room, work, fuel, costing, writing_c || releasing, releasing);
         free(from_project);
         free(paths);
         free(given);

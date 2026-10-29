@@ -83,9 +83,9 @@
 // that, because a program that asks for four kilobytes is not a program whose
 // memory is decided by the difference between four and six.
 static const uint32_t WIDTHS[] = {
-    16,    32,    48,    64,    96,     128,    192,    256,   384,
-    512,   768,   1024,  1536,  2048,   3072,   4096,   6144,  8192,
-    12288, 16384, 24576, 32768, 49152,  65536,  98304,  131072};
+    16,    32,    48,    64,    96,    128,   192,   256,   384,
+    512,   768,   1024,  1536,  2048,  3072,  4096,  6144,  8192,
+    12288, 16384, 24576, 32768, 49152, 65536, 98304, 131072};
 #define WIDTH_COUNT (sizeof(WIDTHS) / sizeof(WIDTHS[0]))
 #define WIDEST 131072u
 
@@ -329,7 +329,8 @@ static size_t scatter(uintptr_t unit) {
 static bool index_put(KestGround *ground, uintptr_t unit, Plot *plot);
 
 static bool index_grow(KestGround *ground) {
-    size_t bigger = ground->index_capacity == 0 ? 64 : ground->index_capacity * 2;
+    size_t bigger =
+        ground->index_capacity == 0 ? 64 : ground->index_capacity * 2;
     Plot **was = ground->index;
     size_t was_capacity = ground->index_capacity;
     Plot **now = calloc(bigger, sizeof(Plot *) * 2);
@@ -445,7 +446,8 @@ static Plot *plot_holding(const KestGround *ground, const void *at) {
         return NULL;
     }
     const unsigned char *low = plot->data;
-    const unsigned char *high = plot->data + (size_t)plot->places * plot->stride;
+    const unsigned char *high =
+        plot->data + (size_t)plot->places * plot->stride;
     if ((const unsigned char *)at < low || (const unsigned char *)at >= high) {
         return NULL;
     }
@@ -580,8 +582,7 @@ static void give_back(KestGround *ground, Plot *plot, uint32_t place) {
 static void *room_in_a_plot(KestGround *ground, size_t bytes,
                             KestGroundKind kind, Plot **held);
 
-void *kest_ground_take(KestGround *ground, size_t bytes,
-                       KestGroundKind kind) {
+void *kest_ground_take(KestGround *ground, size_t bytes, KestGroundKind kind) {
     Plot *plot = NULL;
     void *at = room_in_a_plot(ground, bytes, kind, &plot);
     if (at != NULL) {
@@ -589,9 +590,9 @@ void *kest_ground_take(KestGround *ground, size_t bytes,
         ground->counted.asked += bytes;
         ground->counted.given += plot->stride;
         ground->counted.by_kind[(unsigned)kind & 3u]++;
-        ground->counted.by_width[plot->width_index >= WIDTH_COUNT
-                                     ? WIDTH_COUNT
-                                     : plot->width_index]++;
+        ground->counted
+            .by_width[plot->width_index >= WIDTH_COUNT ? WIDTH_COUNT
+                                                       : plot->width_index]++;
     }
     return at;
 }

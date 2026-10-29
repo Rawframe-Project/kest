@@ -202,9 +202,9 @@ static void *lane_make(void *context) {
 
 static double lane_frame(void *state) {
     Lane_state *lane = state;
-    KestValue lent = kest_borrow(lane->runtime, lane->world, BODIES,
-                                 "bench.hosts.bodies.Body",
-                                 sizeof *lane->world);
+    KestValue lent =
+        kest_borrow(lane->runtime, lane->world, BODIES,
+                    "bench.hosts.bodies.Body", sizeof *lane->world);
     KestValue slots[2] = {{0}};
     slots[0] = lent;
     slots[1].real = WALL;

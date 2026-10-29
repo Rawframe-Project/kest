@@ -128,11 +128,21 @@ static KestJson *read_text(Reading *reading) {
         }
         char what = *reading->at++;
         switch (what) {
-        case 'n': out[used++] = '\n'; break;
-        case 't': out[used++] = '\t'; break;
-        case 'r': out[used++] = '\r'; break;
-        case 'b': out[used++] = '\b'; break;
-        case 'f': out[used++] = '\f'; break;
+        case 'n':
+            out[used++] = '\n';
+            break;
+        case 't':
+            out[used++] = '\t';
+            break;
+        case 'r':
+            out[used++] = '\r';
+            break;
+        case 'b':
+            out[used++] = '\b';
+            break;
+        case 'f':
+            out[used++] = '\f';
+            break;
         case 'u': {
             if (reading->end - reading->at < 4) {
                 reading->broke = true;
@@ -155,7 +165,9 @@ static KestJson *read_text(Reading *reading) {
             used += put_utf8(out + used, code);
             break;
         }
-        default: out[used++] = what; break;
+        default:
+            out[used++] = what;
+            break;
         }
     }
     if (reading->at < reading->end) {
@@ -206,7 +218,8 @@ static KestJson *read_any(Reading *reading) {
         bool object = c == '{';
         char closing = object ? '}' : ']';
         reading->at++;
-        KestJson *held = made(reading, object ? KEST_JSON_OBJECT : KEST_JSON_LIST);
+        KestJson *held =
+            made(reading, object ? KEST_JSON_OBJECT : KEST_JSON_LIST);
         if (held == NULL) {
             return NULL;
         }
@@ -300,7 +313,7 @@ const KestJson *kest_wire_member(const KestJson *object, const char *name) {
 }
 
 const KestJson *kest_wire_down(const KestJson *object, const char *first,
-                        const char *second) {
+                               const char *second) {
     return kest_wire_member(kest_wire_member(object, first), second);
 }
 
@@ -372,7 +385,6 @@ void kest_wire_send(FILE *out, const char *body, size_t length) {
     fflush(out);
 }
 
-
 static void said_bytes(KestSaid *said, const char *bytes, size_t length) {
     if (said->broke) {
         return;
@@ -441,11 +453,21 @@ void kest_wire_escaped(KestSaid *out, const char *text, size_t length) {
     for (size_t i = 0; i < length; i++) {
         unsigned char c = (unsigned char)text[i];
         switch (c) {
-        case '"': kest_wire_say(out, "\\\""); break;
-        case '\\': kest_wire_say(out, "\\\\"); break;
-        case '\n': kest_wire_say(out, "\\n"); break;
-        case '\r': kest_wire_say(out, "\\r"); break;
-        case '\t': kest_wire_say(out, "\\t"); break;
+        case '"':
+            kest_wire_say(out, "\\\"");
+            break;
+        case '\\':
+            kest_wire_say(out, "\\\\");
+            break;
+        case '\n':
+            kest_wire_say(out, "\\n");
+            break;
+        case '\r':
+            kest_wire_say(out, "\\r");
+            break;
+        case '\t':
+            kest_wire_say(out, "\\t");
+            break;
         default:
             if (c < 0x20) {
                 kest_wire_sayf(out, "\\u%04x", c);
@@ -458,6 +480,6 @@ void kest_wire_escaped(KestSaid *out, const char *text, size_t length) {
 }
 
 void kest_wire_text(KestSaid *out, const char *text) {
-    kest_wire_escaped(out, text == NULL ? "" : text, text == NULL ? 0 : strlen(text));
+    kest_wire_escaped(out, text == NULL ? "" : text,
+                      text == NULL ? 0 : strlen(text));
 }
-
