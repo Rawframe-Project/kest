@@ -6688,14 +6688,46 @@ fi
 # name was written only for one it found by its bare name, so a function or a
 # constant named through an import, and a call settled among overloads, had no
 # definition and no other uses: an editor answered `null` for `thing.n()` and
-# for `math.min(1, 2)`, the standard library's.
+# for `math.min(1, 2)`, the standard library's. A function of several named as
+# a value is the one the type it is wanted as settles on, and not the first of
+# them a lookup meets.
 mkdir -p "$scratch"/serving/reaching/src/pack
 printf 'project reaching\nsource src\n' \
     >"$scratch"/serving/reaching/kest.project
-printf 'module main\n\nimport pack.thing\nimport std.math\n\nfn main() -> i32 {\n    let f = thing.n\n    return thing.n() + thing.c + f() + math.min(1, 2)\n}\n' \
-    >"$scratch"/serving/reaching/src/main.kest
-printf 'module pack.thing\n\nconst c: i32 = 4\n\nfn n() -> i32 {\n    return 1\n}\n' \
-    >"$scratch"/serving/reaching/src/pack/thing.kest
+cat >"$scratch"/serving/reaching/src/main.kest <<'KEST'
+module main
+
+import pack.thing
+import std.math
+
+fn two() -> i32 {
+    return 2
+}
+
+fn two(a: i32) -> i32 {
+    return a
+}
+
+fn main() -> i32 {
+    let f: fn() -> i32 = thing.n
+    let g: fn(i32) -> i32 = thing.n
+    let h: fn(i32) -> i32 = two
+    return thing.n() + thing.c + f() + g(1) + h(2) + math.min(1, 2)
+}
+KEST
+cat >"$scratch"/serving/reaching/src/pack/thing.kest <<'KEST'
+module pack.thing
+
+const c: i32 = 4
+
+fn n() -> i32 {
+    return 1
+}
+
+fn n(a: i32) -> i32 {
+    return a
+}
+KEST
 reached=$(python3 - "$kest" "$scratch"/serving/reaching/src <<'PY'
 import json, os, subprocess, sys
 
@@ -6715,10 +6747,13 @@ def at(line, written, back):
 # What is asked about, where it is written, and the file and line it is
 # declared on.
 asked = [
-    ("thing.n()", at(7, "thing.n(", 2), "/pack/thing.kest", 4),
-    ("thing.c", at(7, "thing.c", 1), "/pack/thing.kest", 2),
-    ("thing.n as a value", at(6, "thing.n", 1), "/pack/thing.kest", 4),
-    ("math.min(1, 2)", at(7, "math.min(", 2), "/std/math.kest", 19),
+    ("thing.n()", at(17, "thing.n(", 2), "/pack/thing.kest", 4),
+    ("thing.c", at(17, "thing.c", 1), "/pack/thing.kest", 2),
+    ("thing.n as a fn() -> i32", at(14, "thing.n", 1), "/pack/thing.kest", 4),
+    ("thing.n as a fn(i32) -> i32", at(15, "thing.n", 1), "/pack/thing.kest",
+     8),
+    ("two as a fn(i32) -> i32", at(16, "two", 1), "/main.kest", 9),
+    ("math.min(1, 2)", at(17, "math.min(", 2), "/std/math.kest", 19),
 ]
 messages = [
     {"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {}},
@@ -6756,7 +6791,7 @@ for i, (what, _, ends, line) in enumerate(asked):
         wrong.append("the definition of %s was %s" % (what, json.dumps(got)))
 named = sorted(one["range"]["start"]["line"] for one in answers.get(99) or []
                if one["uri"] == uri)
-if named != [6, 7]:
+if named != [14, 17]:
     wrong.append("thing.n was named on lines %s of main.kest" % named)
 print("; ".join(wrong) if wrong else "yes")
 PY

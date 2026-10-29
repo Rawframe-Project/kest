@@ -576,9 +576,10 @@ static void as_component(Checker *checker, KestExpr *side, KestType **type) {
 
 // A name that is several functions is one of them here, and which one is
 // settled by what is wanted. A call settles it by what is passed instead,
-// and this is the other half of that.
-static KestType *named_function(Checker *checker, const char *name,
-                                size_t length, const KestType *expected) {
+// and this is the other half of that. The one it is, rather than its type,
+// because where it is declared is what an editor is sent to.
+static KestSymbol *named_function(Checker *checker, const char *name,
+                                  size_t length, const KestType *expected) {
     KestSymbol *all[32];
     uint32_t count = kest_overloads(checker->program, name, length, all, 32);
     if (count <= 1 || expected == NULL || expected->tag != KEST_T_FN) {
@@ -594,7 +595,7 @@ static KestType *named_function(Checker *checker, const char *name,
         }
         if (kest_type_equal(all[i]->type, expected)) {
             all[i]->named = true;
-            return all[i]->type;
+            return all[i];
         }
     }
     return NULL;
@@ -964,8 +965,8 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         return local->type;
     }
 
-    KestType *chosen = named_function(checker, name, length, expected);
-    if (chosen != NULL && kest_takes_a_block(chosen) &&
+    KestSymbol *chosen = named_function(checker, name, length, expected);
+    if (chosen != NULL && kest_takes_a_block(chosen->type) &&
         !checker->naming_callee) {
         report(checker, expr->span, "K0367",
                "`%.*s` takes a block, so it is written into where it is called "
@@ -974,7 +975,8 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         return error_type(checker);
     }
     if (chosen != NULL) {
-        return chosen;
+        used_global(checker, expr, chosen);
+        return chosen->type;
     }
     KestSymbol *global = kest_lookup_global(checker->program, name, length);
     if (global != NULL) {
@@ -3800,12 +3802,14 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
         if (host != NULL && host->type->tag == KEST_T_FN) {
             report_unimported(checker, expr->span);
             host->named = true;
-            used_global(checker, expr, host);
-            KestType *chosen =
+            // The one what is wanted settles on, where there is one to
+            // settle: the lookup answers whichever of several it met first.
+            KestSymbol *chosen =
                 named_function(checker, span_text(checker, expr->span),
                                expr->span.length, expected);
+            used_global(checker, expr, chosen != NULL ? chosen : host);
             if (chosen != NULL) {
-                return chosen;
+                return chosen->type;
             }
             // One that takes types is the copy that fits where it is going,
             // the same as one named without a module in front of it.
