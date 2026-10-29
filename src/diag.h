@@ -215,6 +215,20 @@ void kest_diags_mute(KestDiags *diags, bool muted);
 size_t kest_put(char *out, size_t room, size_t at, const char *format, ...)
     KEST_SAYS(4, 5);
 
+// A number read the way the language spells one, with `.` before its fraction,
+// whatever locale the host set. `strtod` reads the decimal point of the host's
+// locale, and under one that writes a comma it read `1.5` as `1`. Reads what
+// `strtod` reads from the front of `text`, a number of any length, decimal or
+// hexadecimal, and sets `errno` as it does; puts where the number ended in
+// `end` when that is not NULL, and `text` there when there was none.
+double kest_real_read(const char *text, char **end);
+
+// And written that way: `conversion` is `g` or `a`, as `printf` writes a
+// `double`, with `digits` its precision or below nought for none. Answers how
+// long the text is as written into `into`, as `kest_put` does.
+size_t kest_real_write(char *into, size_t room, char conversion, int digits,
+                       double value);
+
 // Formats and records a diagnostic. The message is copied into the arena and
 // is as long as it is: a caller that wrote it into a buffer of its own first
 // would cut it off in the middle of a name.

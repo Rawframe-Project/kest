@@ -288,7 +288,7 @@ double kest_literal_real(const KestSource *source, KestSpan span) {
     size_t length = span.length < sizeof(buffer) - 1 ? span.length : 0;
     memcpy(buffer, kest_span_text(source, span), length);
     buffer[length] = '\0';
-    return strtod(buffer, NULL);
+    return kest_real_read(buffer, NULL);
 }
 
 // One name a kind, and the compiler counts them. `check-tables.sh` holds the

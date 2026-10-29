@@ -34,13 +34,13 @@ int kest_write_real(char *buffer, size_t size, double value, bool narrow) {
     int chosen = most;
     size_t shortest = 0;
     for (int digits = 1; digits <= most; digits++) {
-        int wrote = snprintf(buffer, size, "%.*g", digits, value);
-        double back = strtod(buffer, NULL);
+        size_t wrote = kest_real_write(buffer, size, 'g', digits, value);
+        double back = kest_real_read(buffer, NULL);
         if (narrow ? (float)back != (float)value : back != value) {
             continue;
         }
-        if (shortest == 0 || (size_t)wrote < shortest) {
-            shortest = (size_t)wrote;
+        if (shortest == 0 || wrote < shortest) {
+            shortest = wrote;
             chosen = digits;
         }
         if (strchr(buffer, 'e') == NULL) {
@@ -49,7 +49,7 @@ int kest_write_real(char *buffer, size_t size, double value, bool narrow) {
     }
     // How long the text is as written into `buffer`, which is never more than
     // fits in it, whatever `snprintf` says it would have needed.
-    size_t written = kest_put(buffer, size, 0, "%.*g", chosen, value);
+    size_t written = kest_real_write(buffer, size, 'g', chosen, value);
     if (strpbrk(buffer, ".eni") == NULL) {
         written = kest_put(buffer, size, written, ".0");
     }
@@ -2774,9 +2774,12 @@ static uint32_t disassemble_one(const KestModule *module,
         if (op == KEST_OP_CONST) {
             KestValue value = chunk->constants[operand];
             switch ((KestConstClass)chunk->constant_classes[operand]) {
-            case KEST_CONST_FLOAT:
-                fprintf(out, "%u  ; %g\n", operand, value.real);
+            case KEST_CONST_FLOAT: {
+                char number[64];
+                kest_real_write(number, sizeof(number), 'g', -1, value.real);
+                fprintf(out, "%u  ; %s\n", operand, number);
                 break;
+            }
             case KEST_CONST_TEXT:
                 fprintf(out, "%u  ; \"%s\"\n", operand, value.text);
                 break;
@@ -2929,7 +2932,7 @@ bool kest_value_read(KestArena *arena, const char *text, const KestType *type,
     }
     case KEST_T_FLOAT: {
         errno = 0;
-        double value = strtod(text, &end);
+        double value = kest_real_read(text, &end);
         if (end == text || *end != '\0') {
             *why = "is not a number";
             return false;

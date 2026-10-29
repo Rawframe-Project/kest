@@ -195,6 +195,11 @@ jobs:
     with:
       preset: ${{ matrix.preset }}
       runner: ${{ matrix.runner || 'ubuntu-24.04' }}
+      # The locale definitions the image leaves out, which `check-numbers.sh`
+      # makes a locale with a decimal comma from.
+      setup: >-
+        ${{ (!matrix.runner || startsWith(matrix.runner, 'ubuntu')) &&
+        'apt-get update -qq && apt-get install -y -qq --no-install-recommends locales' || '' }}
 
   # The seeded fuzzer under the checking build on arm64, on main and at night
   # rather than on a pull request: it takes ten minutes on that runner, and the

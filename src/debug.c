@@ -395,7 +395,7 @@ static void value_of(char *into, size_t room, KestValue value, uint8_t kind) {
     switch (kind) {
     case KEST_L_F32:
     case KEST_L_F64:
-        snprintf(into, room, "%g", value.real);
+        kest_real_write(into, room, 'g', -1, value.real);
         break;
     case KEST_L_BOOL:
         snprintf(into, room, "%s", value.integer != 0 ? "true" : "false");

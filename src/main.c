@@ -62,9 +62,8 @@ __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 // the build embeds (`cmake/kest.manifest`): an argument, a URI from an editor
 // and a project's `source` line are UTF-8, and a path that names a file the
 // system's code page has no character for named another file or none. Only
-// the part of the locale that says what a character is. The rest is the
-// user's, and under a user's whose numbers are written with a decimal comma
-// `strtod` reads `1.5` as `1`.
+// the part of the locale that says what a character is, which is all a path
+// needs.
 #include <locale.h>
 #define KEST_UTF8_PATHS() setlocale(LC_CTYPE, ".UTF8")
 #else

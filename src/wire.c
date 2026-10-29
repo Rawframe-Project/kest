@@ -284,7 +284,7 @@ static KestJson *read_any(Reading *reading) {
         return made(reading, KEST_JSON_NOTHING);
     }
     char *after = NULL;
-    double value = strtod(reading->at, &after);
+    double value = kest_real_read(reading->at, &after);
     if (after == reading->at) {
         reading->broke = true;
         return NULL;

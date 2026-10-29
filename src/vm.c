@@ -3054,9 +3054,11 @@ static void narrower_than_that(KestRuntime *runtime, const char *name,
     KestSpan nowhere = {0, 0};
     kest_diags_in(runtime->diags, NULL);
     if (kind == KEST_L_F32) {
+        char number[64];
+        kest_real_write(number, sizeof(number), 'g', 17, given.real);
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636", nowhere,
-                       "`%s` takes `f32` in slot %u and %.17g is not one", name,
-                       at, given.real);
+                       "`%s` takes `f32` in slot %u and %s is not one", name,
+                       at, number);
     } else {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636", nowhere,
                        "`%s` takes `%s` in slot %u and %lld is not one", name,
@@ -3398,17 +3400,19 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
     if (type->tag == KEST_T_FLOAT && type->width == 32) {
         double given = frame[*at].real;
         if (given == given && (double)(float)given != given) {
+            char number[64];
+            kest_real_write(number, sizeof(number), 'g', 17, given);
             if (saying->at_a_crossing) {
                 crossing_failed(
                     runtime, saying, "K0652",
-                    "`%s` answers with `f32` in slot %u and %.17g is not one",
-                    name, *at, given);
+                    "`%s` answers with `f32` in slot %u and %s is not one",
+                    name, *at, number);
             } else {
                 kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
                                nowhere,
-                               "`%s` takes `f32` in slot %u and %.17g is not "
+                               "`%s` takes `f32` in slot %u and %s is not "
                                "one",
-                               name, *at, given);
+                               name, *at, number);
             }
             kest_diags_suggest(runtime->diags,
                                "every width wraps at its own end and a truth "

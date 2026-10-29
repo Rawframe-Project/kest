@@ -100,7 +100,9 @@ The objects, and what must outlive what:
 
 `kest_build` takes the path, the standard library directory (`NULL` for the usual search), where to write what stopped the build, the form to write it in, and a ceiling on the bytes compiling may take (0 for none). `kest_build_from` compiles files held in memory, which is how a release binary carries its program. Compiling a large program takes tens of milliseconds and starting a machine from a build takes well under one, so a host that wants many machines compiles once.
 
-The library opens a file with the C library's `fopen`, which on Windows reads a path in the process's code page. A host there that hands it paths in UTF-8, as `kest.exe` does, sets that code page to UTF-8 with an application manifest (`activeCodePage`, Windows 10 version 1903 and later; `cmake/kest.manifest` is the command line's) and calls `setlocale(LC_CTYPE, ".UTF8")`. Only the character type: a whole locale is the user's, and under one that writes numbers with a decimal comma `strtod` reads `1.5` as `1`.
+The library opens a file with the C library's `fopen`, which on Windows reads a path in the process's code page. A host there that hands it paths in UTF-8, as `kest.exe` does, sets that code page to UTF-8 with an application manifest (`activeCodePage`, Windows 10 version 1903 and later; `cmake/kest.manifest` is the command line's) and calls `setlocale(LC_CTYPE, ".UTF8")`. The character type is all a path needs.
+
+A host may set any locale. The library reads and writes a number with `.` before its fraction whatever the locale says, so a program means and prints the same under `de_DE` as under `C`.
 
 ## Doors: what a program asks the host for
 

@@ -177,6 +177,7 @@ endfunction()
 kest_tool(inward tools tools/inward.c)
 kest_tool(fuzz tools tools/fuzz.c)
 kest_tool(measure bench bench/measure.c)
+kest_tool(numbers tools tools/numbers.c)
 
 # The frame host, linked with what the C backend writes for the same program.
 add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/build/frame-native.c
