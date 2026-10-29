@@ -9,7 +9,7 @@ From bytes on disk to one tree per file: `lexer`, `ast`, `parser`, `fmt`, `proje
 - **Statement ends.** A newline ends a statement after a token a value can end with, and continues it after anything else (an operator, an opening bracket, a comma). `kest_lexer_ends_statement` lists every token kind explicitly, with no `default`, because a kind added without a decision would read as an unfinished line and swallow the next one; that has happened twice. `>` ends a statement because a type like `ref<Npc>` ends in it, which is why a comparison cannot be split after its operator.
 - **Keywords.** `KEYWORDS` in `lexer.c` is searched in alphabetical order, and `check-tables.sh` holds it sorted. A misspelt keyword is a name to the lexer; `kest_nearest_keyword` lets the parser suggest the keyword it was near.
 - **Line endings.** A line ends at `\n`, and at `\r` with no `\n` after it, so files from any platform give the same line and column numbers. A carriage return inside a string, written as the byte, is refused: it is invisible and cannot be told from one that is not there.
-- **UTF-8.** Source is held to UTF-8. Identifiers may hold any byte above ASCII. Invisible and direction-changing characters inside strings must be written as `\u{...}`, so a file cannot look like one program and be another.
+- **UTF-8.** Source is held to UTF-8. Identifiers may hold any byte above ASCII. Invisible and direction-changing characters inside strings must be written as `\u{...}`, so a file cannot look like one program and be another. A nought byte and the other control characters but tab, line feed and carriage return are refused anywhere in a file (`K0108`): the lexer reads a nought as the end of its input, and what came after it went unread.
 
 ## Syntax tree and parser
 
