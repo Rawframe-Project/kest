@@ -673,7 +673,10 @@ static KestToken scan_string(KestLexer *lexer, uint32_t start) {
             lexer->offset++;
             return make(lexer, KEST_TOK_STRING, start);
         }
-        if (c == '\0' || c == '\n') {
+        // The end of its line, which in a file whose lines end `\r\n` is
+        // the carriage return: read as a byte inside the text, it was said
+        // to be one written as itself besides the string not being closed.
+        if (c == '\0' || c == '\n' || (c == '\r' && at(lexer, 1) == '\n')) {
             kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0101",
                            span_from(start, start + 1),
                            "string is not terminated");
@@ -684,10 +687,10 @@ static KestToken scan_string(KestLexer *lexer, uint32_t start) {
             char escape = at(lexer, 1);
             // A backslash with nothing after it on its line, or in its file,
             // is no escape: the string ends unterminated there, and is said
-            // so. Read as one, the line break was taken into the string and
+            // so. A line may end `\r\n`, which the lexer reads. Read as one, the line break was taken into the string and
             // written into the message, and at the end of the file the token
             // ran a byte past it.
-            if (escape == '\0' || escape == '\n') {
+            if (escape == '\0' || escape == '\n' || escape == '\r') {
                 lexer->offset++;
                 continue;
             }
@@ -799,9 +802,10 @@ static KestToken lexer_next(KestLexer *lexer) {
         if (c == '\'') {
             lexer->offset++;
             while (at(lexer, 0) != '\'' && at(lexer, 0) != '\n' &&
-                   at(lexer, 0) != '\0') {
+                   at(lexer, 0) != '\0' &&
+                   !(at(lexer, 0) == '\r' && at(lexer, 1) == '\n')) {
                 if (at(lexer, 0) == '\\' && at(lexer, 1) != '\0' &&
-                    at(lexer, 1) != '\n') {
+                    at(lexer, 1) != '\n' && at(lexer, 1) != '\r') {
                     // The same escapes text has, said the same way: a byte
                     // written on its own and a byte written in a piece of
                     // text are one spelling, and one spelling is one list.

@@ -4323,19 +4323,26 @@ case "$ended" in
     complain "check: a backslash ending the file was read as an escape"
     ;;
 esac
-for ending in 'let a = " e\\\n    return 0' "let b = '\\\\\n    return 0"; do
-    printf 'fn main() -> i32 {\n    %b\n}\n' "$ending" \
+# And the same where lines end `\r\n`, which the lexer reads: the carriage
+# return is the end of the line, not an escape and not a byte of the text.
+for ending in 'let a = " e\\\n' "let b = '\\\\\n" 'let a = " e\\\r\n' \
+              "let b = '\\\\\r\n" 'let a = " e\r\n' "let b = 'a\r\n"; do
+    case "$ending" in
+    *'\r\n') line='\r\n' ;;
+    *) line='\n' ;;
+    esac
+    printf "%b" "fn main() -> i32 {$line    $ending    return 0$line}$line" \
         >"$scratch"/refused/ends.kest
     ended=$("$kest" check "$scratch"/refused/ends.kest 2>&1 </dev/null)
     case "$ended" in
-    *K0103*)
-        complain "check: a backslash at the end of a line was read as an \
-escape: \`$(printf '%s' "$ended" | grep -m 1 K0103)\`"
+    *K0103* | *K0109*)
+        complain "check: a line ending a string or byte was read as part of \
+it: \`$(printf '%s' "$ended" | grep -m 1 -e K0103 -e K0109)\`"
         ;;
     *K0101* | *K0106*) ;;
     *)
-        complain "check: a backslash at the end of a line did not say the \
-string or byte is not closed"
+        complain "check: a string or byte left open at the end of a line did \
+not say so"
         ;;
     esac
 done
