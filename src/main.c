@@ -19,10 +19,13 @@
 #include <direct.h>
 #include <io.h>
 #define KEST_MAKE_DIRECTORY(path) _mkdir(path)
+#define KEST_WORKING_DIRECTORY(into, room) _getcwd((into), (int)(room))
 #else
 #include <dirent.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #define KEST_MAKE_DIRECTORY(path) mkdir((path), 0755)
+#define KEST_WORKING_DIRECTORY(into, room) getcwd((into), (room))
 #endif
 
 #if defined(_WIN32)
@@ -3836,6 +3839,34 @@ static int run_tests(const char *executable, char **paths, int path_count,
     return failed == 0 ? 0 : 1;
 }
 
+// The library's directory written from the root. An editor is told where a
+// file is by a URI, and `file://lib/std/math.kest` names a machine called
+// `lib`: a library found from a relative `KEST_LIB`, or beside a program
+// started by a relative path, was named that way in every answer about one of
+// its files. The directory as it was is the answer when the working directory
+// cannot be read or the two do not fit, since a name that does not resolve is
+// still better than no library.
+static const char *library_from_root(const char *library, char *into,
+                                     size_t room) {
+    bool rooted = library[0] == '/' || library[0] == '\\' ||
+                  (library[0] != '\0' && library[1] == ':');
+    if (rooted || KEST_WORKING_DIRECTORY(into, room) == NULL) {
+        return library;
+    }
+    size_t used = strlen(into);
+    for (size_t i = 0; i < used; i++) {
+        if (into[i] == '\\') {
+            into[i] = '/';
+        }
+    }
+    const char *between = used > 0 && into[used - 1] == '/' ? "" : "/";
+    int wrote = snprintf(into + used, room - used, "%s%s", between, library);
+    if (wrote < 0 || (size_t)wrote >= room - used) {
+        return library;
+    }
+    return into;
+}
+
 int main(int argc, char **argv) {
     KEST_BYTES_OUT();
 #if defined(__wasi__)
@@ -3884,8 +3915,11 @@ int main(int argc, char **argv) {
     // Each fails only when it has no memory to start in, and an editor shows
     // what its server wrote to the error stream, so that is where it is said.
     if (strcmp(argv[1], "lsp") == 0) {
-        int served =
-            kest_lsp_serve(kest_library_path(NULL, argv[0]), stdin, stdout);
+        char rooted[2048];
+        int served = kest_lsp_serve(
+            library_from_root(kest_library_path(NULL, argv[0]), rooted,
+                              sizeof(rooted)),
+            stdin, stdout);
         if (served != 0) {
             kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
                                KEST_STARVED_SAYS);

@@ -356,6 +356,51 @@ static const KestDiag *first_error(const KestDiags *diags,
 // One note on the open file for each module it reaches that does not build:
 // on the line that imports it where the file does, and at its start where the
 // module is reached through another, with that module's first mistake.
+// The unit a module name is, or the count when no unit is that module.
+static uint32_t unit_named(const KestUnits *units, const char *text,
+                           size_t length) {
+    for (uint32_t k = 0; k < units->count; k++) {
+        if (kest_word_same(units->items[k].module, text, length)) {
+            return k;
+        }
+    }
+    return units->count;
+}
+
+// Whether one unit reaches another through what it imports, and what those
+// import. Walked with a list of its own rather than by calling itself, since
+// how deep a program's imports go is the program's to say. No room for the
+// walk answers no, and the note it was asked for goes at the top of the file.
+static bool leads_to(Server *server, uint32_t from, uint32_t to) {
+    const KestUnits *units = &server->build->units;
+    if (from >= units->count) {
+        return false;
+    }
+    uint32_t *waiting = KEST_ARENA_ARRAY(server->arena, uint32_t, units->count);
+    bool *seen = KEST_ARENA_ARRAY(server->arena, bool, units->count);
+    if (waiting == NULL || seen == NULL) {
+        return false;
+    }
+    uint32_t count = 0;
+    waiting[count++] = from;
+    seen[from] = true;
+    while (count > 0) {
+        const KestUnitInfo *at = &units->items[waiting[--count]];
+        if (at == &units->items[to]) {
+            return true;
+        }
+        for (uint32_t i = 0; i < at->import_count; i++) {
+            const char *module = at->import_paths[i];
+            uint32_t next = unit_named(units, module, strlen(module));
+            if (next < units->count && !seen[next]) {
+                seen[next] = true;
+                waiting[count++] = next;
+            }
+        }
+    }
+    return false;
+}
+
 static void imports_failing(Server *server, KestSaid *out, bool *first,
                             const Open *file) {
     const KestUnits *units = &server->build->units;
@@ -376,13 +421,23 @@ static void imports_failing(Server *server, KestSaid *out, bool *first,
         if (wrong == NULL) {
             continue;
         }
+        // On the import that names it, or else on the first one that leads
+        // to it: a module read for a module the file imports is one the file
+        // never names, and its import line is where the file meets it.
         KestSpan where = {0, 0};
         for (uint32_t d = 0; d < open->unit.count; d++) {
             const KestDecl *decl = open->unit.items[d];
-            if (decl->kind == KEST_DECL_IMPORT &&
-                kest_word_same(other->module,
-                               kest_span_text(&open->source, decl->name),
-                               decl->name.length)) {
+            if (decl->kind != KEST_DECL_IMPORT) {
+                continue;
+            }
+            const char *text = kest_span_text(&open->source, decl->name);
+            if (kest_word_same(other->module, text, decl->name.length)) {
+                where = decl->name;
+                break;
+            }
+            if (where.length == 0 &&
+                leads_to(server, unit_named(units, text, decl->name.length),
+                         k)) {
                 where = decl->name;
             }
         }
@@ -427,6 +482,32 @@ static void publish_to(Server *server, const char *path,
     kest_wire_let_go(&out);
 }
 
+// Whether a path names a file the client has open. An open file is told by
+// its own build, which says more about it than this one can -- the modules it
+// imports that do not build, what is about no file -- and a list sent from
+// here would put only its own lines in place of all of that.
+static bool is_open(const Server *server, const char *path) {
+    for (size_t i = 0; i < server->count; i++) {
+        if (server->open[i].path != NULL &&
+            strcmp(server->open[i].path, path) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Whether a path can be written as a URI a client finds its file by: one from
+// the root, or from a drive. Every file a build reads is one when the open
+// file's path is, since a project's roots are found from that path and the
+// command line hands this server its library from the root. A buffer a client
+// names in another scheme reads its imports from where the server runs, and
+// those are left untold rather than named as a URI that names nothing.
+static bool from_the_root(const char *path) {
+    return path[0] == '/' ||
+           (path[0] != '\0' && path[1] == ':' &&
+            (path[2] == '/' || path[2] == '\\'));
+}
+
 // Every other file the build read, told what is wrong with it, and every one
 // this server told something before and the build now reads clean, told that.
 // A file the build did not read is left as it was told: another build said
@@ -438,7 +519,8 @@ static void publish_others(Server *server, const Open *file) {
     const KestUnits *units = &server->build->units;
     for (uint32_t k = 0; k < units->count; k++) {
         const KestSource *source = &units->items[k].source;
-        if (strcmp(source->path, file->path) == 0) {
+        if (strcmp(source->path, file->path) == 0 ||
+            is_open(server, source->path) || !from_the_root(source->path)) {
             continue;
         }
         bool wrong = false;
