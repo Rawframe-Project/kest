@@ -38,6 +38,7 @@ These are what people and models new to Kest write most often, and what the comp
 | `P { x: 1, y: 2 }` or `P(x: 1)` | `K0201` a struct is built by position | `P(1, 2)` |
 | `io.print(count)` | `K0310` `value` expects `text`, found `i32` | `io.print("{count}")` |
 | `"{f(\"x\")}"` | `K0102` a hole holds code, so a string inside one needs no escape | `"{f("x")}"` |
+| `"{n:4}"` | `K0201` expected the end of the hole, found `:` | `"{text.right("{n}", 4)}"` with `import std.text` |
 | `fn hurt(n: Npc) { n.hp -= 1 }` | warning `K0346`: the parameter is a value, so the write is discarded | `fn hurt(n: Npc) -> Npc` and give the changed one back |
 | `store<Node>()` | `K0211` the type is not given where it is called | `let nodes: store<Node> = store()` |
 | `if (x < 3) { }` | `K0213` a condition is written without brackets round the whole of it | `if x < 3 { }` |

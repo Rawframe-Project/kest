@@ -36,7 +36,7 @@ ann has 3 apples, 6 by tomorrow
 a hole holds code, so 6 need no escape
 ```
 
-A hole may hold any value that compares, written the way a program writes it; see [Data](data.md#what-compares-hashes-and-prints). A string with a hole is built while running, on the heap, so a function that promises `no.alloc` may hold a plain string but not fill a hole. An empty hole `{}` is an error, and so is a comment inside a hole.
+A hole may hold any value that compares, written the way a program writes it; see [Data](data.md#what-compares-hashes-and-prints). A string with a hole is built while running, on the heap, so a function that promises `no.alloc` may hold a plain string but not fill a hole. A hole holds one value and nothing after it, so there is no width or format to write there (`"{n:4}"` is an error); an empty hole `{}` is an error, and so is a comment inside a hole.
 
 ## Escapes and bytes
 

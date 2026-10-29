@@ -4201,6 +4201,9 @@ K0201|fn main() -> i32 {\n    let door: i32? = 1\n    if let 1 = door {\n       
 K0201|fn main() -> i32 {\n    let door: i32? = 1\n    if let Some(x) = door {\n        return 1\n    }\n    return 0\n}|`if let` names what an optional holds: `if let held = ...`
 K0201|fn next() -> text? {\n    return "x"\n}\n\nfn main() -> i32 {\n    while let "x" = next() {\n        return 1\n    }\n    return 0\n}|`while let` names what is held rather than comparing with it
 K0201|fn main() -> i32 {\n    for 1 in [1, 2] {\n        return 1\n    }\n    return 0\n}|a `for` names what it walks over: `for one in ...`
+K0201|fn main() -> i32 {\n    let s = 7\n    let t = "[{s:4}]"\n    return len(t)\n}|expected the end of the hole, found `:`
+K0201|fn main() -> i32 {\n    let s = 7\n    let t = "{s, s}"\n    return len(t)\n}|expected the end of the hole, found `,`
+K0201|fn main() -> i32 {\n    let s = 7\n    let t = "{s s}"\n    return len(t)\n}|a hole holds one value
 K0201|fn main() -> i32 {\n    for x, 1 in [1, 2] {\n        return 1\n    }\n    return 0\n}|a `for` names the position first and what it walks over second
 K0201|struct P {\n    x i32\n}|a field is written `name: type`
 K0201|const N = 1|a `const` is written with its type: `const N: i32 = 1`
