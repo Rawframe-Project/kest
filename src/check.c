@@ -917,6 +917,20 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
 static bool literal_fits(Checker *checker, const KestExpr *expr,
                          const KestType *type);
 
+// Where a name from the top of some file was written, for an editor. A name
+// under a module is resolved by the call or the field it is written in rather
+// than by `check_name`, and an overloaded one by what it was handed, so they
+// are kept from there: kept nowhere, they were names an editor could neither
+// follow nor find. The span is the last word of what was written, which is the
+// word under a cursor and the one a rename changes.
+static void used_global(Checker *checker, const KestExpr *written,
+                        const KestSymbol *symbol) {
+    KestSpan span =
+        written->kind == KEST_EXPR_FIELD ? written->field.name : written->span;
+    kest_program_used(checker->program, checker->program->source, span,
+                      symbol->source, symbol->span, symbol->type, false);
+}
+
 static KestType *check_name(Checker *checker, KestExpr *expr,
                             const KestType *expected) {
     const char *name = span_text(checker, expr->span);
@@ -2407,6 +2421,7 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
         return error_type(checker);
     }
 
+    used_global(checker, expr->call.callee, chosen);
     expr->call.callee->type = chosen->type;
     return check_arguments(checker, expr, chosen->type);
 }
@@ -3367,6 +3382,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             checker->program, span_text(checker, whole), whole.length);
         if (host != NULL && host->type->tag == KEST_T_FN) {
             report_unimported(checker, whole);
+            used_global(checker, expr->call.callee, host);
             expr->call.callee->type = host->type;
             callee = host->type;
         } else if (kest_out_of_reach(checker->program,
@@ -3775,6 +3791,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
             host->type->tag != KEST_T_FN) {
             report_unimported(checker, expr->span);
             host->named = true;
+            used_global(checker, expr, host);
             return host->type;
         }
         // `sort.ascending` outside a call: a function from another module
@@ -3783,6 +3800,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
         if (host != NULL && host->type->tag == KEST_T_FN) {
             report_unimported(checker, expr->span);
             host->named = true;
+            used_global(checker, expr, host);
             KestType *chosen =
                 named_function(checker, span_text(checker, expr->span),
                                expr->span.length, expected);

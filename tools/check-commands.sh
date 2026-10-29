@@ -6684,6 +6684,87 @@ if [ "$imported" != "yes" ]; then
     complain "lsp: a file importing a module that does not build: $imported"
 fi
 
+# And a name written under the module it came from. The checker kept where a
+# name was written only for one it found by its bare name, so a function or a
+# constant named through an import, and a call settled among overloads, had no
+# definition and no other uses: an editor answered `null` for `thing.n()` and
+# for `math.min(1, 2)`, the standard library's.
+mkdir -p "$scratch"/serving/reaching/src/pack
+printf 'project reaching\nsource src\n' \
+    >"$scratch"/serving/reaching/kest.project
+printf 'module main\n\nimport pack.thing\nimport std.math\n\nfn main() -> i32 {\n    let f = thing.n\n    return thing.n() + thing.c + f() + math.min(1, 2)\n}\n' \
+    >"$scratch"/serving/reaching/src/main.kest
+printf 'module pack.thing\n\nconst c: i32 = 4\n\nfn n() -> i32 {\n    return 1\n}\n' \
+    >"$scratch"/serving/reaching/src/pack/thing.kest
+reached=$(python3 - "$kest" "$scratch"/serving/reaching/src <<'PY'
+import json, os, subprocess, sys
+
+kest, root = sys.argv[1], os.path.abspath(sys.argv[2])
+main = os.path.join(root, "main.kest")
+text = open(main).read()
+lines = text.split("\n")
+uri = "file://" + main
+
+
+def at(line, written, back):
+    column = lines[line].index(written) + len(written) - back
+    return {"textDocument": {"uri": uri},
+            "position": {"line": line, "character": column}}
+
+
+# What is asked about, where it is written, and the file and line it is
+# declared on.
+asked = [
+    ("thing.n()", at(7, "thing.n(", 2), "/pack/thing.kest", 4),
+    ("thing.c", at(7, "thing.c", 1), "/pack/thing.kest", 2),
+    ("thing.n as a value", at(6, "thing.n", 1), "/pack/thing.kest", 4),
+    ("math.min(1, 2)", at(7, "math.min(", 2), "/std/math.kest", 19),
+]
+messages = [
+    {"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": uri, "languageId": "kest",
+                                 "version": 1, "text": text}}},
+]
+for i, (_, where, _, _) in enumerate(asked):
+    messages.append({"jsonrpc": "2.0", "id": i + 1,
+                     "method": "textDocument/definition", "params": where})
+messages.append({"jsonrpc": "2.0", "id": 99,
+                 "method": "textDocument/references", "params": asked[0][1]})
+body = b""
+for one in messages:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+out = subprocess.run([kest, "lsp"], input=body, capture_output=True).stdout
+answers = {}
+at_byte = 0
+while True:
+    head = out.find(b"Content-Length: ", at_byte)
+    blank = out.find(b"\r\n\r\n", head) if head >= 0 else -1
+    if blank < 0:
+        break
+    many = int(out[head + 16:blank])
+    said = json.loads(out[blank + 4:blank + 4 + many])
+    at_byte = blank + 4 + many
+    if "id" in said:
+        answers[said["id"]] = said.get("result")
+wrong = []
+for i, (what, _, ends, line) in enumerate(asked):
+    got = answers.get(i + 1)
+    if not got or not got["uri"].endswith(ends) or \
+            got["range"]["start"]["line"] != line:
+        wrong.append("the definition of %s was %s" % (what, json.dumps(got)))
+named = sorted(one["range"]["start"]["line"] for one in answers.get(99) or []
+               if one["uri"] == uri)
+if named != [6, 7]:
+    wrong.append("thing.n was named on lines %s of main.kest" % named)
+print("; ".join(wrong) if wrong else "yes")
+PY
+)
+if [ "$reached" != "yes" ]; then
+    complain "lsp: a name written under its module: $reached"
+fi
+
 # And two open files, one importing the other, over a module that does not
 # build. Each open file's list is its own build's to send: the one in between
 # is told on its own import line that the module does not build, and a build
