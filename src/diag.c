@@ -1,6 +1,9 @@
 #include "diag.h"
 
 #include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static const char *severity_name(KestSeverity severity) {
@@ -1027,4 +1030,148 @@ size_t kest_put(char *out, size_t room, size_t at, const char *format, ...) {
     }
     size_t end = at + (size_t)wrote;
     return end < room ? end : room - 1;
+}
+
+// How many significant digits a number is read with. A `double` is decided by
+// no more than 767 of them, so past these what is left can only say whether
+// the rest is nought, and a digit after the last one kept says that.
+#define KEST_REAL_KEPT 800
+
+static int digit_value(char c, bool hex) {
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    }
+    if (hex && c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    }
+    if (hex && c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    }
+    return -1;
+}
+
+// The digits with the point taken out and the exponent moved to make up for
+// it, so what `strtod` is handed has no decimal point in it to be read in the
+// host's locale: `12.5e3` is read as `125e2`, and `0x1.8p0` as `0x18p-4`.
+// Nought before the first digit that is not and after the last that is are
+// left out, so a number written with a thousand of them still fits.
+double kest_real_read(const char *text, char **end) {
+    const char *at = text;
+    while (*at == ' ' || (*at >= '\t' && *at <= '\r')) {
+        at++;
+    }
+    bool negative = *at == '-';
+    if (*at == '+' || *at == '-') {
+        at++;
+    }
+    bool hex = at[0] == '0' && (at[1] == 'x' || at[1] == 'X') &&
+               (digit_value(at[2], true) >= 0 ||
+                (at[2] == '.' && digit_value(at[3], true) >= 0));
+    if (hex) {
+        at += 2;
+    }
+    if (digit_value(*at, hex) < 0 &&
+        !(*at == '.' && digit_value(at[1], hex) >= 0)) {
+        // `inf`, `nan` or nothing at all, none of which has a point in it.
+        return strtod(text, end);
+    }
+    // A digit of a hexadecimal number is four of the binary exponent's.
+    long long step = hex ? 4 : 1;
+    char kept[KEST_REAL_KEPT + 40];
+    size_t count = 0;
+    size_t used = 0;
+    if (negative) {
+        kept[used++] = '-';
+    }
+    if (hex) {
+        kept[used++] = '0';
+        kept[used++] = 'x';
+    }
+    long long moved = 0;
+    bool more = false;
+    bool fraction = false;
+    for (;; at++) {
+        if (*at == '.' && !fraction) {
+            fraction = true;
+            continue;
+        }
+        if (digit_value(*at, hex) < 0) {
+            break;
+        }
+        if (count == 0 && *at == '0') {
+            moved -= fraction ? step : 0;
+        } else if (count < KEST_REAL_KEPT) {
+            kept[used + count++] = *at;
+            moved -= fraction ? step : 0;
+        } else {
+            more = more || *at != '0';
+            moved += fraction ? 0 : step;
+        }
+    }
+    long long exponent = 0;
+    const char *mark = at;
+    if (hex ? (*at == 'p' || *at == 'P') : (*at == 'e' || *at == 'E')) {
+        const char *after = at + 1;
+        bool below = *after == '-';
+        if (*after == '+' || *after == '-') {
+            after++;
+        }
+        if (*after >= '0' && *after <= '9') {
+            for (; *after >= '0' && *after <= '9'; after++) {
+                // Far past where every number is nought or too wide to hold.
+                if (exponent < 100000000) {
+                    exponent = exponent * 10 + (*after - '0');
+                }
+            }
+            exponent = below ? -exponent : exponent;
+            mark = after;
+        }
+    }
+    if (end != NULL) {
+        *end = (char *)mark;
+    }
+    if (count == 0) {
+        return negative ? -0.0 : 0.0;
+    }
+    if (more) {
+        kept[used + count++] = '1';
+        moved -= step;
+    } else {
+        while (kept[used + count - 1] == '0') {
+            count--;
+            moved += step;
+        }
+    }
+    used += count;
+    snprintf(kept + used, sizeof(kept) - used, "%c%lld", hex ? 'p' : 'e',
+             exponent + moved);
+    return strtod(kept, NULL);
+}
+
+size_t kest_real_write(char *into, size_t room, char conversion, int digits,
+                       double value) {
+    if (room == 0) {
+        return 0;
+    }
+    if (conversion == 'a') {
+        snprintf(into, room, "%a", value);
+    } else if (digits < 0) {
+        snprintf(into, room, "%g", value);
+    } else {
+        snprintf(into, room, "%.*g", digits, value);
+    }
+    // Whatever stands between the digits that is none of what a number is
+    // otherwise written with is the locale's decimal point, a comma or a
+    // character of two bytes, and is written as the language writes one.
+    static const char NUMBER[] = "0123456789abcdefABCDEFxXpP+-iInNtTyY";
+    size_t length = strlen(into);
+    size_t point = strspn(into, NUMBER);
+    if (point < length) {
+        size_t wide = strcspn(into + point, NUMBER);
+        into[point] = '.';
+        memmove(into + point + 1, into + point + wide,
+                length - point - wide + 1);
+        length -= wide - 1;
+    }
+    return length;
 }

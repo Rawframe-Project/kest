@@ -100,6 +100,8 @@ The objects, and what must outlive what:
 
 `kest_build` takes the path, the standard library directory (`NULL` for the usual search), where to write what stopped the build, the form to write it in, and a ceiling on the bytes compiling may take (0 for none). `kest_build_from` compiles files held in memory, which is how a release binary carries its program. Compiling a large program takes tens of milliseconds and starting a machine from a build takes well under one, so a host that wants many machines compiles once.
 
+A host may set any locale. The library reads and writes a number with `.` before its fraction whatever the locale says, so a program means and prints the same under `de_DE` as under `C`.
+
 ## Doors: what a program asks the host for
 
 A program reaches the outside only through `extern` functions, and a host provides each by name. The part before the dot is a capability: `Host.write` is under `Host`, `Clock.now` under `Clock`. Denying a capability is not binding it. A program that declares a door the host did not bind is refused at `kest_start`, by name, before anything runs.

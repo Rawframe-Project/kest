@@ -963,6 +963,33 @@ if spelt != ['src/mem.h']:
           "answers a question nobody asked")
     failed = 1
 
+# A number read or written through the C library's own calls, which use the
+# decimal point of whatever locale the host set: under one that writes a
+# comma the lexer read `1.5` as `1` and the C backend wrote `0x1,8p+0`.
+# `kest_real_read` and `kest_real_write` in `src/diag.c` are where that is
+# answered, and nowhere else in `src` reads or writes one. What is looked for
+# is the call, and a `printf` conversion of a `double` inside a string; a
+# comment may name either.
+real_calls = re.compile(r'\b(?:strto[df]|strtold|atof)\s*\(')
+real_writes = re.compile(r'"(?:[^"\\\n]|\\.)*?(?<!%)%[-+ #0]*(?:\d+|\*)?'
+                         r'(?:\.(?:\d+|\*))?L?[aAeEfFgG](?:[^"\\\n]|\\.)*"')
+real_places = 0
+for where in sorted(glob.glob('src/*.c') + glob.glob('src/*.h')):
+    for number, line in enumerate(open(where), 1):
+        code = re.sub(r'//.*', '', line)
+        if not (real_calls.search(code) or real_writes.search(code)):
+            continue
+        if where == 'src/diag.c':
+            real_places += 1
+            continue
+        print("%s:%u: reads or writes a number in the host's locale, which "
+              "`kest_real_read` and `kest_real_write` do not" % (where, number))
+        failed = 1
+if real_places == 0:
+    print("checks: `src/diag.c` reads and writes no number, so nothing here "
+          "says where one is read")
+    failed = 1
+
 for check in tools:
     where = os.path.join('tools', check)
     text_of = open(where).read()

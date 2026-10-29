@@ -25,6 +25,8 @@ endfunction()
 # What every platform has to print, byte for byte.
 kest_test(conformance fast ${KEST_SH} tools/conformance.sh $<TARGET_FILE:kest>
           ${PROJECT_BINARY_DIR}/conformance.trace test/conformance.trace)
+# And a number read and written the same whatever locale a host set.
+kest_check(numbers fast ${KEST_SH} tools/check-numbers.sh)
 if(WIN32)
   return()
 endif()

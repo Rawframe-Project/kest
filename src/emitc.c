@@ -969,7 +969,9 @@ static void write_const_at(Walk *walk, const KestIrOp *op, uint32_t index) {
                 cannot(walk, "a number with no spelling in C");
                 return;
             }
-            say(c, out, "    { .real = %a },\n", value.real);
+            char number[64];
+            kest_real_write(number, sizeof(number), 'a', -1, value.real);
+            say(c, out, "    { .real = %s },\n", number);
             continue;
         }
         // A function value is which function it is, the number the machine
@@ -1061,8 +1063,10 @@ static void write_const(Walk *walk, const KestIrOp *op) {
                     (unsigned long long)bits, into);
                 continue;
             }
-            say(walk->c, &walk->into->wrote, "    %s.real = %a;\n", into,
-                value.real);
+            char number[64];
+            kest_real_write(number, sizeof(number), 'a', -1, value.real);
+            say(walk->c, &walk->into->wrote, "    %s.real = %s;\n", into,
+                number);
             continue;
         }
         if (class != KEST_CONST_INT && class != KEST_CONST_FN) {
@@ -1937,12 +1941,16 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         double low = 0.0;
         double high = 0.0;
         if (kest_real_bounds((uint16_t)op->imm[0], &low, &high)) {
+            char under[64];
+            char over[64];
+            kest_real_write(under, sizeof(under), 'a', -1, low);
+            kest_real_write(over, sizeof(over), 'a', -1, high);
             say(c, out,
-                "    %s.integer = %s.real > %a && %s.real < %a\n"
+                "    %s.integer = %s.real > %s && %s.real < %s\n"
                 "                     ? (int64_t)%s.real\n"
                 "                     : kest_real_to_int(%u, %s.real);\n",
-                first, second, low, second, high, second, (unsigned)op->imm[0],
-                second);
+                first, second, under, second, over, second,
+                (unsigned)op->imm[0], second);
             break;
         }
         say(c, out, "    %s.integer = kest_real_to_int(%u, %s.real);\n", first,
