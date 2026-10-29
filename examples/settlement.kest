@@ -418,8 +418,13 @@ fn main() -> i32 {
     if os.read("{where}.not-there") != none {
         return 14
     }
-    let took = os.millisBetween(os.now(), os.now())
-    if took > 1 {
+    // What the clock promises is that it only goes forwards. How far apart two
+    // reads in a row are is the machine's business: a busy one put two
+    // milliseconds between them, and a check that asked for less failed for
+    // how loaded the machine was.
+    let before = os.now()
+    let after = os.now()
+    if os.millisBetween(before, after) < 0 {
         return 15
     }
     // Twelve days of a world that starts hungry: somebody starves, and every
