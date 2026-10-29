@@ -682,7 +682,16 @@ static KestToken scan_string(KestLexer *lexer, uint32_t start) {
         }
         if (c == '\\') {
             char escape = at(lexer, 1);
-            const Escape *known = escape == '\0' ? NULL : escape_named(escape);
+            // A backslash with nothing after it on its line, or in its file,
+            // is no escape: the string ends unterminated there, and is said
+            // so. Read as one, the line break was taken into the string and
+            // written into the message, and at the end of the file the token
+            // ran a byte past it.
+            if (escape == '\0' || escape == '\n') {
+                lexer->offset++;
+                continue;
+            }
+            const Escape *known = escape_named(escape);
             if (known == NULL) {
                 kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0103",
                                span_from(lexer->offset, lexer->offset + 2),
@@ -791,7 +800,8 @@ static KestToken lexer_next(KestLexer *lexer) {
             lexer->offset++;
             while (at(lexer, 0) != '\'' && at(lexer, 0) != '\n' &&
                    at(lexer, 0) != '\0') {
-                if (at(lexer, 0) == '\\' && at(lexer, 1) != '\0') {
+                if (at(lexer, 0) == '\\' && at(lexer, 1) != '\0' &&
+                    at(lexer, 1) != '\n') {
                     // The same escapes text has, said the same way: a byte
                     // written on its own and a byte written in a piece of
                     // text are one spelling, and one spelling is one list.
