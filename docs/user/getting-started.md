@@ -4,7 +4,7 @@ Kest is a statically typed language for the gameplay half of a game: rules, AI, 
 
 ## Getting the command line
 
-**From a release.** Each release on the [releases page](https://github.com/Rawframe-Project/kest/releases) carries an archive for Linux on x86-64 and arm64, macOS on arm64 and Windows on x86-64, with every file's checksum in `SHA256SUMS` and a build provenance attestation (`gh attestation verify <file> -R Rawframe-Project/kest`). Unpack it anywhere and put its `bin` directory on the path. The archive holds the command line, the header, the static library, the standard library and the VS Code extension; nothing else needs to be installed.
+**From a release.** Each release on the [releases page](https://github.com/Rawframe-Project/kest/releases) carries an archive for Linux on x86-64 and arm64, macOS on arm64 and Windows on x86-64, with every file's checksum in `SHA256SUMS` and a build provenance attestation (`gh attestation verify <file> -R Rawframe-Project/kest`). Unpack it anywhere and put its `bin` directory on the path. The Windows archive needs Windows 10 version 1903 or later. The archive holds the command line, the header, the static library, the standard library and the VS Code extension; nothing else needs to be installed.
 
 **In the browser.** The [playground](https://rawframe-project.github.io/kest/) runs the command line built as WebAssembly inside the page.
 
@@ -18,7 +18,7 @@ cmake --build --preset dev
 out/dev/kest run examples/math.kest
 ```
 
-On Windows, with Visual Studio, use the `windows-msvc` preset; the command line is then `out\windows-msvc\kest.exe`. Everything a build makes is under `out/<preset>`, next to a link to the standard library, so the command line there finds it.
+On Windows, with Visual Studio, use the `windows-msvc` preset; the command line is then `out\windows-msvc\kest.exe`. It needs Windows 10 version 1903 or later: its manifest sets the process's code page to UTF-8, so a path with any character in it works, and an older Windows ignores the manifest and reads a path in the system's code page. Everything a build makes is under `out/<preset>`, next to a link to the standard library, so the command line there finds it.
 
 To install into a prefix, with the standard library where the command line looks for it:
 

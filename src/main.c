@@ -57,8 +57,21 @@ __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
         _setmode(_fileno(stdout), _O_BINARY);                                  \
         _setmode(_fileno(stderr), _O_BINARY);                                  \
     } while (0)
+
+// And the C library's paths in UTF-8, as the platform's are under the manifest
+// the build embeds (`cmake/kest.manifest`): an argument, a URI from an editor
+// and a project's `source` line are UTF-8, and a path that names a file the
+// system's code page has no character for named another file or none. Only
+// the part of the locale that says what a character is. The rest is the
+// user's, and under a user's whose numbers are written with a decimal comma
+// `strtod` reads `1.5` as `1`.
+#include <locale.h>
+#define KEST_UTF8_PATHS() setlocale(LC_CTYPE, ".UTF8")
 #else
 #define KEST_BYTES_OUT()                                                       \
+    do {                                                                       \
+    } while (0)
+#define KEST_UTF8_PATHS()                                                      \
     do {                                                                       \
     } while (0)
 #endif
@@ -3885,6 +3898,8 @@ __declspec(dllimport) unsigned long __stdcall
 GetFinalPathNameByHandleA(void *file, char *path, unsigned long room,
                           unsigned long flags);
 __declspec(dllimport) int __stdcall CloseHandle(void *object);
+// And the code page those calls are in, which the manifest makes UTF-8.
+__declspec(dllimport) unsigned int __stdcall GetACP(void);
 #endif
 
 // Where a path really is, every link followed, for the language server to
@@ -3892,6 +3907,15 @@ __declspec(dllimport) int __stdcall CloseHandle(void *object);
 // platform, as the loader writes a path.
 static bool resolved_path(const char *path, char *into, size_t room) {
 #if defined(_WIN32)
+    // A Windows older than 10 version 1903 does not read the manifest, and
+    // there the answer is in the system's code page: a character it has
+    // nothing for comes back as one that looks like it, an `a` with a bar
+    // over it as `a`, and not as a failure. A project reached through a link
+    // into a directory named so resolved to the plain `a` one beside it, and
+    // a file there was inside the project.
+    if (GetACP() != 65001u) {
+        return false;
+    }
     // Opened for nothing but its name: no access, shared every way, and with
     // the flag that lets a directory be opened at all.
     void *file = CreateFileA(path, 0, 7, NULL, 3, 0x02000000u, NULL);
@@ -4111,6 +4135,7 @@ static const char *library_from_root(const char *library, char *into,
 
 int main(int argc, char **argv) {
     KEST_BYTES_OUT();
+    KEST_UTF8_PATHS();
 #if defined(__wasi__)
     // WebAssembly's system interface starts a module in `/`, so a path a
     // program writes from where it was run -- `examples/colony.kest` saves a
