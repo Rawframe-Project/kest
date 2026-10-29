@@ -1050,6 +1050,11 @@ struct KestRuntime {
     // authority: what makes a reference this machine's is the handout number
     // in it, which comes from the process rather than from here.
     uint64_t stamps;
+    // How many times this machine has said it had no room. What a refusal
+    // asked for is one number, and a refusal of the same size as the last one
+    // leaves it where it was, so it cannot say whether a call stopped for room;
+    // this moves every time.
+    uint64_t ran_out;
     // The build's count of what is standing on it, which this machine is one
     // of until it is freed.
     atomic_uint *standing;
@@ -1606,6 +1611,7 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
         held = NULL;
     }
     if (held == NULL) {
+        runtime->ran_out++;
         KestSpan nowhere = {0, 0};
         kest_diags_in(runtime->diags, NULL);
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0605", nowhere,
@@ -1627,6 +1633,7 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
 // is not there and a `NULL` for a heap with nothing left were the same answer,
 // and only one of them is about the program.
 static void no_room_to_lend(KestRuntime *runtime) {
+    runtime->ran_out++;
     KestSpan nowhere = {0, 0};
     kest_diags_in(runtime->diags, NULL);
     if (runtime->heap_bytes != 0) {
@@ -2515,6 +2522,7 @@ static size_t was_refused(const KestRuntime *rt) {
 
 static void no_room_at(Vm *vm, const KestSource *source, KestSpan span,
                        const KestRuntime *rt) {
+    vm->ran_out++;
     if (rt->heap_bytes != 0) {
         // What it has and what it wanted, because a program that missed by
         // eight bytes and one that missed by a megabyte are the same message
@@ -7188,6 +7196,10 @@ size_t kest_runtime_cost(const KestRuntime *runtime) {
     return runtime == NULL ? 0 : kest_arena_used(runtime->own);
 }
 
+uint64_t kest_runtime_ran_out(const KestRuntime *runtime) {
+    return runtime == NULL ? 0 : runtime->ran_out;
+}
+
 size_t kest_heap_wanted(const KestRuntime *runtime) {
     return runtime == NULL ? 0 : was_refused(runtime);
 }
@@ -8469,6 +8481,7 @@ bool kest_keeps(KestRuntime *runtime, KestValue kept) {
         KestValue *grown = realloc(runtime->held_by_host,
                                    (size_t)bigger * sizeof(KestValue));
         if (grown == NULL) {
+            runtime->ran_out++;
             KestSpan nowhere = {0, 0};
             kest_diags_in(runtime->diags, NULL);
             kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0605",

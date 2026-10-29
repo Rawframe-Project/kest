@@ -1,6 +1,7 @@
 #include "held.h"
 
 #include "diag.h"
+#include "vm.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -195,15 +196,16 @@ static Called call_with(KestHeld *held, KestRuntime *runtime, int32_t entry,
         memcpy(frame + in_front, args, count * sizeof(KestValue));
     }
     // A machine that ran out of room while it ran is refused for that and
-    // not for what the program answered; what it last had refused moves when
-    // it is refused again.
-    size_t wanted = kest_heap_wanted(runtime);
+    // not for what the program answered. What it last had refused is no way
+    // to tell: a refusal of the same size as the one before leaves it where it
+    // was, and a second reload refused for room blamed `save`.
+    uint64_t ran_out = kest_runtime_ran_out(runtime);
     if (!kest_call(runtime, entry, frame, wide)) {
         if (held->errors != NULL) {
             kest_report(runtime, held->errors, KEST_FORM_TEXT);
         }
-        return kest_heap_wanted(runtime) != wanted ? CALL_NO_ROOM
-                                                   : CALL_REFUSED;
+        return kest_runtime_ran_out(runtime) != ran_out ? CALL_NO_ROOM
+                                                        : CALL_REFUSED;
     }
     *answered = frame;
     return CALLED;
@@ -492,11 +494,11 @@ bool kest_held_reload(KestHeld *held, const char *path, char *said,
     // And made again by the new one out of nothing but those bytes.
     // A lend the new machine had no room to write down is its room and not
     // the program's answer, as a frame there was no room for is; the machine
-    // is a new one, so a refusal it remembers is this one.
+    // is a new one, so any time it has said it had no room is this one.
     KestValue lent = kest_borrow(fresh, copy, length, "u8", 1);
     Called restored = lent.object == NULL
-                          ? (kest_heap_wanted(fresh) != 0 ? CALL_NO_ROOM
-                                                           : CALL_REFUSED)
+                          ? (kest_runtime_ran_out(fresh) != 0 ? CALL_NO_ROOM
+                                                              : CALL_REFUSED)
                           : call_with(held, fresh, restore, false, &lent, 1,
                                       &frame);
     bool made = restored == CALLED;

@@ -31,6 +31,13 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
                               const KestWalk *walked, bool untrusted);
 bool kest_runtime_free(KestRuntime *runtime);
 
+// How many times this machine has said it had no room: a take no walk could
+// make room for, or a lend or a piece of text it had nowhere to write down.
+// What a refusal asked for cannot tell one refusal from the next of the same
+// size, so what has to know whether a call stopped for room rather than for
+// what the program did counts these before the call and after it.
+uint64_t kest_runtime_ran_out(const KestRuntime *runtime);
+
 // The two doors a file this project's other backend wrote calls, and the only
 // two. They are here rather than in the public header because what calls them
 // is this project's own output rather than somebody's host: a generated file
