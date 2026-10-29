@@ -2306,6 +2306,153 @@ case "$answered:$said" in
     ;;
 esac
 
+# And the command line's own memory, which it takes from `malloc` rather than
+# an arena, so neither walk above reaches it. Three places went on without what
+# they asked for: `kest test` ran the part of a project's tests it had room to
+# list and answered for them as all of them, `build --release` made no binary
+# and said nothing, and `tick` said nothing here takes events. A shim refuses
+# one `malloc`, `calloc` or `realloc` of a size only that place asks for, the
+# first, second and so on in turn; each run has to answer what the run with
+# nothing refused answers, or say it had no room and come back 1. Only where a
+# shared library can be put in front of the C library's, which is Linux here.
+if [ "$(uname -s)" = Linux ] && command -v "${CC:-cc}" >/dev/null 2>&1; then
+    mkdir -p "$scratch"/own
+    cat >"$scratch"/own/refuse.c <<'C'
+#define _GNU_SOURCE
+#include <dlfcn.h>
+#include <stdlib.h>
+#include <string.h>
+
+static void *(*real_malloc)(size_t);
+static void *(*real_calloc)(size_t, size_t);
+static void *(*real_realloc)(void *, size_t);
+static long size = -1;
+static long nth = 0;
+static long seen = 0;
+static int ready = 0;
+static char early[4096];
+static size_t early_used = 0;
+
+static void setup(void) {
+    if (ready != 0) {
+        return;
+    }
+    ready = -1;
+    real_malloc = (void *(*)(size_t))dlsym(RTLD_NEXT, "malloc");
+    real_calloc = (void *(*)(size_t, size_t))dlsym(RTLD_NEXT, "calloc");
+    real_realloc = (void *(*)(void *, size_t))dlsym(RTLD_NEXT, "realloc");
+    const char *s = getenv("REFUSE_SIZE");
+    const char *n = getenv("REFUSE_NTH");
+    size = s != NULL ? atol(s) : -1;
+    nth = n != NULL ? atol(n) : 0;
+    ready = 1;
+}
+
+/* Only this process: a C compiler `build --release` starts would otherwise be
+   refused too, and say so as the compiler failing. */
+__attribute__((constructor)) static void alone(void) {
+    setup();
+    unsetenv("LD_PRELOAD");
+}
+
+static int refused(size_t asked) {
+    if (ready != 1 || (long)asked != size) {
+        return 0;
+    }
+    return ++seen == nth;
+}
+
+void *malloc(size_t asked) {
+    setup();
+    return refused(asked) ? NULL : real_malloc(asked);
+}
+
+void *calloc(size_t count, size_t each) {
+    if (ready == -1) {
+        void *at = early + early_used;
+        early_used += (count * each + 15) & ~(size_t)15;
+        memset(at, 0, count * each);
+        return at;
+    }
+    setup();
+    return refused(count * each) ? NULL : real_calloc(count, each);
+}
+
+void *realloc(void *at, size_t asked) {
+    setup();
+    return refused(asked) ? NULL : real_realloc(at, asked);
+}
+
+void free(void *at) {
+    static void (*real_free)(void *);
+    if ((char *)at >= early && (char *)at < early + sizeof early) {
+        return;
+    }
+    if (real_free == NULL) {
+        real_free = (void (*)(void *))dlsym(RTLD_NEXT, "free");
+    }
+    real_free(at);
+}
+C
+    if "${CC:-cc}" -shared -fPIC -o "$scratch"/own/refuse.so \
+           "$scratch"/own/refuse.c -ldl 2>"$scratch"/own/made; then
+        # A project of seven tests, one failing, with a name of a length
+        # nothing else here asks for.
+        long=failing_test_with_a_name_nothing_else_has
+        mkdir -p "$scratch"/own/project/src "$scratch"/own/project/tests
+        printf 'project own\nentry src/main.kest\nsource src\ntests tests\n' \
+            >"$scratch"/own/project/kest.project
+        for one in t1 t2 t3 t4 t5 t6 $long; do
+            answer=0
+            [ $one = $long ] && answer=1
+            printf 'module %s\n\nfn main() -> i32 {\n    return %s\n}\n' \
+                $one $answer >"$scratch"/own/project/tests/$one.kest
+        done
+        cp "$scratch"/own/project/tests/t1.kest \
+           "$scratch"/own/project/src/main.kest
+        sed -i 's/^module t1$/module main/' "$scratch"/own/project/src/main.kest
+        own_walk() {
+            # $1 is the size refused, the rest the command, run in the project.
+            refuse_size=$1
+            shift
+            whole=$(cd "$scratch"/own/project && "$build_dir"/kest "$@" 2>&1 \
+                    </dev/null)
+            whole_was=$?
+            rm -f "$scratch"/own/project/main
+            for refuse_nth in 1 2 3 4 5 6 7 8; do
+                said=$(cd "$scratch"/own/project &&
+                       LD_PRELOAD="$scratch"/own/refuse.so \
+                       REFUSE_SIZE=$refuse_size REFUSE_NTH=$refuse_nth \
+                       "$build_dir"/kest "$@" 2>&1 </dev/null)
+                answered=$?
+                rm -f "$scratch"/own/project/main
+                if [ $answered -eq $whole_was ] && [ "$said" = "$whole" ]; then
+                    continue
+                fi
+                case "$answered:$said" in
+                1:*K0639*) ;;
+                *)
+                    echo "ceilings: \`kest $*\` with the $refuse_nth" \
+                         "allocation of $refuse_size bytes refused came back" \
+                         "$answered and did not say it had no room"
+                    printf '%s\n' "$said" | tail -2 | sed 's/^/    /'
+                    failed=1
+                    ;;
+                esac
+            done
+        }
+        own_walk $((${#long} + 5 + 7)) test
+        own_walk $((${#long} + 5 + 7)) test --json
+        own_walk 5 build --release src/main.kest
+        own_walk $((1237 * 4)) tick "$(pwd)"/examples/events.kest 1237
+    else
+        echo "ceilings: the shim that refuses the command line's own memory" \
+             "did not build"
+        sed 's/^/    /' "$scratch"/own/made | head -3
+        failed=1
+    fi
+fi
+
 # And every arena taken, refused in turn. Taking one is asking the host for its
 # first block, which none of the refusals above is aimed at, so each stage that
 # works in an arena of its own had never been seen told no -- and two of them
