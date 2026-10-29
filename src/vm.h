@@ -31,7 +31,8 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
 bool kest_runtime_free(KestRuntime *runtime);
 
 // How many times this machine has said it had no room: a take no walk could
-// make room for, or a lend or a piece of text it had nowhere to write down.
+// make room for, a lend or a piece of text it had nowhere to write down, or a
+// call deeper or wider than the frames and stack slots it was given.
 // What a refusal asked for cannot tell one refusal from the next of the same
 // size, so what has to know whether a call stopped for room rather than for
 // what the program did counts these before the call and after it.

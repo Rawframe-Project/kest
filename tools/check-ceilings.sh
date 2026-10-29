@@ -2551,8 +2551,12 @@ int main(int argc, char **argv) {
         printf("%zu\n", sizeof(KestValue));
         return 0;
     }
-    KestHeld *held = kest_held_new("examples/held.kest", NULL, host, NULL);
-    KestValue cells = {.integer = 57};
+    /* A world `save` walks a frame a cell, made deeper than the frames a
+       machine has when its walk cannot say how many it needs. */
+    bool deep = strcmp(argv[1], "deep") == 0 && argc > 2;
+    KestHeld *held = kest_held_new(deep ? argv[2] : "examples/held.kest", NULL,
+                                   host, NULL);
+    KestValue cells = {.integer = deep ? 2000 : 57};
     if (held == NULL || !kest_held_begin(held, "begin", &cells, 1)) {
         printf("not held\n");
         return 0;
@@ -2571,8 +2575,8 @@ int main(int argc, char **argv) {
         }
     } else {
         char said[256] = "";
-        bool again = kest_held_reload(held, argc > 2 ? argv[2] : NULL, said,
-                                      sizeof(said));
+        bool again = kest_held_reload(held, argc > 2 && !deep ? argv[2] : NULL,
+                                      said, sizeof(said));
         printf("reloaded %d: %s\n", again ? 1 : 0, said);
     }
     kest_held_free(held);
@@ -2649,6 +2653,53 @@ C
                      "said \`$(printf '%s' "$said" | tr '\n' ' ')\`"
                 failed=1
             fi
+            # And a `save` that nests deeper than the machine's frames, which
+            # are room the way its heap is: a host that gives more lets the
+            # same program through. The reload said `save` did not answer
+            # bytes, because only a heap or a lend was counted as no room.
+            cat >"$scratch"/own/deep.kest <<'KEST'
+module deep
+
+import std.bytes
+
+struct World {
+    cells: [u8]
+}
+
+fn begin(many: i32) -> World {
+    return World(array(many, u8(0)))
+}
+
+fn put(out: [u8], w: World, i: i32) {
+    if i < len(w.cells) {
+        bytes.putU8(out, w.cells[i])
+        put(out, w, i + 1)
+    }
+}
+
+fn save(w: World) -> [u8] {
+    let out: [u8] = array()
+    put(out, w, 0)
+    return out
+}
+
+fn restore(saved: [u8]) -> World {
+    return World(saved)
+}
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+            said=$("$scratch"/own/held deep "$scratch"/own/deep.kest 2>&1)
+            case "$said" in
+            *"reloaded 0: "*"no room to call"*) ;;
+            *)
+                echo "ceilings: a reload whose \`save\` nests deeper than" \
+                     "the machine's frames said \`$said\`"
+                failed=1
+                ;;
+            esac
         else
             echo "ceilings: the host that keeps a world did not build"
             sed 's/^/    /' "$scratch"/own/made | head -3
