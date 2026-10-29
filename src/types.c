@@ -3478,6 +3478,7 @@ void kest_program_used(KestProgram *program, const KestSource *source,
         return;
     }
     if (!use_slot_room(program)) {
+        program->uses_short = true;
         return;
     }
     uint32_t mask = program->use_slot_room - 1;
@@ -3498,6 +3499,8 @@ void kest_program_used(KestProgram *program, const KestSource *source,
             // An index for an editor is not worth refusing a compile over:
             // what it costs is that the editor knows less about this file,
             // and what refusing would cost is the file not compiling at all.
+            // What it knows less is said, for whatever needs all of it.
+            program->uses_short = true;
             return;
         }
         if (program->use_count > 0) {

@@ -462,6 +462,8 @@ static bool is_library(const char *dotted, size_t length) {
 typedef struct {
     const char *sources[KEST_MOST_SOURCES];
     uint32_t count;
+    // And where its tests are, which name what its sources declare.
+    const char *tests;
     const char *where;
     // A manifest that is there and could not be read as a project, and what
     // was wrong with it. Nothing above it is looked at: the project a file is
@@ -479,6 +481,7 @@ typedef struct {
 static void roots_above(KestArena *arena, KestUnits *units, const char *path,
                         Roots *roots) {
     roots->count = 0;
+    roots->tests = NULL;
     roots->where = NULL;
     roots->broken = NULL;
     roots->why = NULL;
@@ -516,6 +519,7 @@ static void roots_above(KestArena *arena, KestUnits *units, const char *path,
             for (uint32_t i = 0; i < project->source_count; i++) {
                 roots->sources[roots->count++] = project->sources[i];
             }
+            roots->tests = project->tests;
             roots->where = at[0] == '\0' ? "./" : at;
             return;
         }
@@ -568,6 +572,34 @@ static const char *beneath(KestArena *arena, const char *where,
         kest_put(joined, room, used, "/");
     }
     return joined;
+}
+
+bool kest_project_above(KestArena *arena, const char *path, const char **where,
+                        const char **roots, uint32_t *count) {
+    *where = NULL;
+    *count = 0;
+    Roots found;
+    roots_above(arena, NULL, path, &found);
+    if (found.where == NULL) {
+        return false;
+    }
+    for (uint32_t i = 0; i <= found.count; i++) {
+        const char *one = i < found.count ? found.sources[i] : found.tests;
+        if (one == NULL || one[0] == '\0') {
+            continue;
+        }
+        // Put under the project, or not at all: a root left as it was written
+        // is a root under wherever this was run, and the files under it are
+        // somebody else's.
+        const char *under = beneath(arena, found.where, one);
+        if (under == one) {
+            *count = 0;
+            return false;
+        }
+        roots[(*count)++] = under;
+    }
+    *where = found.where;
+    return true;
 }
 
 // Whether a file is there to be read, which is what says an import resolved

@@ -3757,15 +3757,95 @@ static int by_name(const void *left, const void *right) {
     return strcmp(*(const char *const *)left, *(const char *const *)right);
 }
 
-// Every `.kest` directly under a directory, in that order. This is the one
-// place this compiler asks what is in a directory, and `kest test` is what
-// asks: a project says where its tests are and not which they are. Puts how
-// many in `many`, with the paths in `into` for the caller to free, and nought
-// for a directory that is not there or has none -- which the caller tells
-// apart, because the second is a project saying something that is not so.
-// Answers false when there was no room for the list, with nothing in it: a
-// list that stopped where the room did was some of the tests run as all of
-// them, and a run that passed.
+// Every `.kest` under a directory and the directories under it, handed to
+// `each` one at a time, for the language server: a rename of a name more than
+// one file writes has to find every file of the project, and the server is
+// the library's, which has only libc and so no way to list a directory. A
+// directory whose name begins with a dot is an editor's or a version
+// control's and is passed over. False when the walk could not say every file
+// -- a directory that would not open, a path too long to write, or one deeper
+// than a project goes, which is a link back up -- and a directory that is not
+// there has none to say.
+static bool files_beneath(const char *directory, KestFileFound each,
+                          void *context, int depth) {
+    if (depth > 32) {
+        return false;
+    }
+    size_t wide = strlen(directory);
+    bool slashed =
+        wide > 0 && (directory[wide - 1] == '/' || directory[wide - 1] == '\\');
+    bool whole = true;
+#if defined(_WIN32)
+    char pattern[4096];
+    snprintf(pattern, sizeof(pattern), "%s%s*", directory, slashed ? "" : "\\");
+    struct _finddata_t entry;
+    intptr_t walking = _findfirst(pattern, &entry);
+    if (walking == -1) {
+        return errno == ENOENT;
+    }
+    do {
+        const char *name = entry.name;
+        bool inner = (entry.attrib & _A_SUBDIR) != 0;
+#else
+    DIR *walking = opendir(directory);
+    if (walking == NULL) {
+        return errno == ENOENT;
+    }
+    for (const struct dirent *entry = readdir(walking); entry != NULL;
+         entry = readdir(walking)) {
+        const char *name = entry->d_name;
+#endif
+        if (name[0] == '.') {
+            continue;
+        }
+        char path[4096];
+        int written = snprintf(path, sizeof(path), "%s%s%s", directory,
+                               slashed ? "" : "/", name);
+        if (written < 0 || (size_t)written >= sizeof(path)) {
+            whole = false;
+            break;
+        }
+#if !defined(_WIN32)
+        struct stat seen;
+        if (stat(path, &seen) != 0) {
+            whole = false;
+            break;
+        }
+        bool inner = S_ISDIR(seen.st_mode);
+#endif
+        size_t length = strlen(name);
+        if (inner) {
+            if (!files_beneath(path, each, context, depth + 1)) {
+                whole = false;
+                break;
+            }
+        } else if (length > 5 && strcmp(name + length - 5, ".kest") == 0) {
+            each(context, path);
+        }
+#if defined(_WIN32)
+    } while (_findnext(walking, &entry) == 0);
+    _findclose(walking);
+#else
+    }
+    closedir(walking);
+#endif
+    return whole;
+}
+
+static bool project_files(const char *directory, KestFileFound each,
+                          void *context) {
+    return files_beneath(directory, each, context, 0);
+}
+
+// Every `.kest` directly under a directory, in that order. Besides the walk
+// above, this is the place this compiler asks what is in a directory, and
+// `kest test` is what asks: a project says where its tests are and not which
+// they are. Puts how many in `many`, with the paths in `into` for the caller to
+// free, and nought for a directory that is not there or has none -- which the
+// caller tells apart, because the second is a project saying something that is
+// not so. Answers false when there was no room for the list, with nothing in
+// it: a list that stopped where the room did was some of the tests run as all
+// of them, and a run that passed.
 static bool tests_under(const char *where, char ***into, uint32_t *many) {
     *into = NULL;
     *many = 0;
@@ -3982,7 +4062,7 @@ int main(int argc, char **argv) {
         int served =
             kest_lsp_serve(library_from_root(kest_library_path(NULL, argv[0]),
                                              rooted, sizeof(rooted)),
-                           stdin, stdout);
+                           stdin, stdout, project_files);
         if (served != 0) {
             kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
                                KEST_STARVED_SAYS);

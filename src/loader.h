@@ -102,6 +102,14 @@ void kest_units_hold(const KestUnits *units, uint32_t *files, uint32_t *lines,
 // False for a library that is nowhere, and for a name that could not be one.
 bool kest_library_has(const char *library, const char *name, size_t length);
 
+// The project a file is in: the nearest `kest.project` at or above it, with
+// the directory it is in in `where` and every directory it says its modules
+// and its tests are under, put under that one, in `roots`, which has room for
+// `KEST_MOST_SOURCES` and one more. False when there is no project, or no room
+// to say where its roots are, and then neither is written.
+bool kest_project_above(KestArena *arena, const char *path, const char **where,
+                        const char **roots, uint32_t *count);
+
 // Where the standard library is: what `KEST_LIB` says, or `lib/` beside the
 // program, which is where it is when nothing has been installed.
 // `arena` may be NULL, in which case the answer is not owned by one and is

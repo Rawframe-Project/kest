@@ -7016,6 +7016,188 @@ if [ "$again" != "yes" ]; then
     complain "lsp: a name read more than once on the way to a program: $again"
 fi
 
+# And a rename of a name another file declares. It edited the open file alone,
+# and the program it left named what nothing declared: every file of the
+# project that names it has to be edited, the declaring one and one the open
+# file never reaches included, and the program has to compile after. A name
+# the person cannot change -- the standard library's, or a dependency's put
+# outside the project -- is refused with a reason. And a rename is never part
+# of one: with the build that checks itself refused from points spread over a
+# session, every answer is a refusal, nothing, or the whole of what it answers
+# with room.
+mkdir -p "$scratch"/renaming/ren/src/pack "$scratch"/renaming/dep/lib
+printf 'project ren\nsource src\nsource ../dep\n' \
+    >"$scratch"/renaming/ren/kest.project
+cat >"$scratch"/renaming/ren/src/main.kest <<'KEST'
+module main
+
+import pack.thing
+import lib.far
+import std.math
+
+fn main() -> i32 {
+    let p: thing.Point = thing.Point(2)
+    return math.min(p.x, far.f())
+}
+KEST
+cat >"$scratch"/renaming/ren/src/other.kest <<'KEST'
+module other
+
+import pack.thing
+
+fn far() -> thing.Point {
+    return thing.Point(5)
+}
+KEST
+cat >"$scratch"/renaming/ren/src/pack/thing.kest <<'KEST'
+module pack.thing
+
+struct Point {
+    x: i32
+}
+KEST
+cat >"$scratch"/renaming/dep/lib/far.kest <<'KEST'
+module lib.far
+
+fn f() -> i32 {
+    return 3
+}
+KEST
+renamed=$(timeout 600 python3 - "$kest" "$build_dir"/kest-debug \
+        "$scratch"/renaming <<'PY'
+import json, os, shutil, subprocess, sys
+
+kest, checking, top = sys.argv[1], sys.argv[2], os.path.abspath(sys.argv[3])
+root = os.path.join(top, "ren", "src")
+main = os.path.join(root, "main.kest")
+text = open(main).read()
+lines = text.split("\n")
+uri = "file://" + main
+
+
+def at(line, written, back):
+    column = lines[line].index(written) + len(written) - back
+    return {"textDocument": {"uri": uri},
+            "position": {"line": line, "character": column}}
+
+
+def renaming(where, fresh):
+    return dict(where, newName=fresh)
+
+
+session = [
+    {"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": uri, "languageId": "kest",
+                                 "version": 1, "text": text}}},
+    {"jsonrpc": "2.0", "id": 1, "method": "textDocument/rename",
+     "params": renaming(at(7, "thing.Point", 1), "Spot")},
+    {"jsonrpc": "2.0", "id": 2, "method": "textDocument/rename",
+     "params": renaming(at(8, "math.min", 1), "least")},
+    {"jsonrpc": "2.0", "id": 3, "method": "textDocument/rename",
+     "params": renaming(at(8, "far.f", 1), "g")},
+    {"jsonrpc": "2.0", "id": 4, "method": "textDocument/references",
+     "params": at(7, "thing.Point", 1)},
+]
+body = b""
+for one in session:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+
+
+def talk(command, refuse=None):
+    env = dict(os.environ)
+    if refuse is not None:
+        env["KEST_REFUSE_AT"] = str(refuse)
+    ran = subprocess.run([command, "lsp"], input=body, capture_output=True,
+                         env=env, timeout=120)
+    said, at_byte = {}, 0
+    while True:
+        head = ran.stdout.find(b"Content-Length: ", at_byte)
+        blank = ran.stdout.find(b"\r\n\r\n", head) if head >= 0 else -1
+        if blank < 0:
+            break
+        many = int(ran.stdout[head + 16:blank])
+        one = json.loads(ran.stdout[blank + 4:blank + 4 + many])
+        at_byte = blank + 4 + many
+        if "id" in one:
+            said[one["id"]] = one
+    return ran, said
+
+
+wrong = []
+ran, said = talk(kest)
+changes = said.get(1, {}).get("result", {}).get("changes", {})
+edited = {os.path.relpath(u[len("file://"):], root):
+          sorted(e["range"]["start"]["line"] for e in edits)
+          for u, edits in changes.items()}
+if edited != {"main.kest": [7, 7], "other.kest": [4, 5],
+              "pack/thing.kest": [2]}:
+    wrong.append("renaming thing.Point edited %s" % edited)
+for asked, words in ((2, "standard library"), (3, "outside the project")):
+    error = said.get(asked, {}).get("error", {})
+    if error.get("code") != -32803 or words not in error.get("message", ""):
+        wrong.append("request %d was answered %s" %
+                     (asked, json.dumps(said.get(asked))))
+
+# The edits made, in a copy, and the program after them.
+copy = os.path.join(top, "after")
+shutil.copytree(os.path.join(top, "ren"), os.path.join(copy, "ren"))
+shutil.copytree(os.path.join(top, "dep"), os.path.join(copy, "dep"))
+for u, edits in changes.items():
+    path = os.path.join(copy, "ren", "src",
+                        os.path.relpath(u[len("file://"):], root))
+    held = open(path).read().split("\n")
+    for e in sorted(edits, key=lambda e: (e["range"]["start"]["line"],
+                                          e["range"]["start"]["character"]),
+                    reverse=True):
+        start, end = e["range"]["start"], e["range"]["end"]
+        line = held[start["line"]]
+        held[start["line"]] = (line[:start["character"]] + e["newText"] +
+                               line[end["character"]:])
+    open(path, "w").write("\n".join(held))
+for name in ("main.kest", "other.kest"):
+    checked = subprocess.run([kest, "check",
+                              os.path.join(copy, "ren", "src", name)],
+                             capture_output=True, text=True)
+    if checked.returncode != 0:
+        wrong.append("%s after the rename: %s" %
+                     (name, (checked.stdout + checked.stderr).strip()
+                      .splitlines()[-1:]))
+
+# Refused from points spread over the session, in the build that checks
+# itself: a rename or a reference list is refused, answers nothing, or answers
+# what it answers with room.
+_, whole = talk(checking)
+low, high = 1, 400000
+while high - low > 1:
+    middle = (low + high) // 2
+    if talk(checking, middle)[1] == whole:
+        high = middle
+    else:
+        low = middle
+for step in range(1, 25):
+    point = max(1, high * step // 25)
+    ran, said = talk(checking, point)
+    if ran.returncode >= 128 or ran.returncode < 0 or \
+            b"Sanitizer" in ran.stderr:
+        wrong.append("with allocation %d of %d refused it died" %
+                     (point, high))
+        break
+    for asked in (1, 4):
+        one = said.get(asked)
+        if one is None or "error" in one or one.get("result") in (None, []):
+            continue
+        if one != whole.get(asked):
+            wrong.append("with allocation %d of %d refused, request %d was "
+                         "answered with part of it" % (point, high, asked))
+print("; ".join(wrong[:3]) if wrong else "yes")
+PY
+)
+if [ "$renamed" != "yes" ]; then
+    complain "lsp: a rename across files: $renamed"
+fi
+
 # And two open files, one importing the other, over a module that does not
 # build. Each open file's list is its own build's to send: the one in between
 # is told on its own import line that the module does not build, and a build
