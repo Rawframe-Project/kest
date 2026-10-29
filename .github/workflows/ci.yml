@@ -83,6 +83,32 @@ jobs:
           cmake --build --preset linux-clang --target kest
           KEST_BUILD=out/linux-clang python3 tools/build_site.py
 
+  # Every tracked C file is in the layout `.clang-format` names, by the CI
+  # image's clang-format: the same binary formats a change locally (docker run
+  # of this image), so the two cannot disagree. A new image with another
+  # clang-format may lay something out differently, and then comes with a
+  # reformat of its own.
+  format:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    container:
+      image: ghcr.io/rawframe-project/ci-cpp:2026.10.7@sha256:08c846597243dc000c83d6c008d078a8c3fabf8633d83963d46c0e6d02c2577e
+      options: --init
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: clang-format
+        run: |
+          clang-format --version
+          mapfile -t files < <(git ls-files '*.c' '*.h')
+          if [ ${#files[@]} -eq 0 ]; then echo "::error::no C file found"; exit 1; fi
+          clang-format --dry-run -Werror "${files[@]}"
+
   # The libFuzzer target over the source boundary, through the family's
   # tools/fuzz_target.sh, which prints neither the seed nor a finding's input.
   # A pull request fuzzes a minute from the committed programs alone; the
@@ -355,7 +381,7 @@ jobs:
   # changes job skipped counting as passed.
   required:
     if: always()
-    needs: [changes, zizmor, docs, site, fuzz, build, build-main, package, games, tetris-windows]
+    needs: [changes, zizmor, docs, site, format, fuzz, build, build-main, package, games, tetris-windows]
     permissions: {}
     runs-on: ubuntu-latest
     timeout-minutes: 2

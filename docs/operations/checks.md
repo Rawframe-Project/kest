@@ -46,6 +46,7 @@ Each check prints one summary line when it passes; anything else is a failure wi
 | `zizmor` | audits every workflow |
 | `docs` | the organization's documentation check, at the pinned `.github`: no em dash and no record numbers in any tracked file, comments included, plus the Markdown rules for the pages |
 | `site` | builds the documentation site with `tools/build_site.py`, in the CI image |
+| `format` | every tracked `.c` and `.h` file against `.clang-format`, with `clang-format --dry-run -Werror` in the CI image, whose clang-format (22.1.5 in `ci-cpp:2026.10.7`) is the reference; format a change the same way with `clang-format -i` in that image |
 | `fuzz` | the libFuzzer target through `tools/fuzz_target.sh`: a minute on a pull request, from the committed programs only; ten minutes on `main` and at night, from the kept corpus, which is then minimized and saved from `main` |
 | `build` | one cell per CMake preset through the organization's `cpp.yml`, warnings as errors, each running its test preset: `linux-gcc` every test but the C backend, the doors, fuzzing and WebAssembly, with ThreadSanitizer; `linux-clang` the fast tests, the C backend, the doors, fuzzing and WebAssembly; `linux-arm64` the fast tests, the regression programs and the C backend, where every processor fuses a multiply and an add; `macos-clang` the fast tests; `windows-msvc` the conformance trace |
 | `build-main` | on `main` and at night only: the seeded fuzzer under the checking build on arm64 (`linux-arm64-fuzz`), which takes ten minutes on that runner |
