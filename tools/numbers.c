@@ -55,6 +55,14 @@ static const char *const READ[] = {
     "-",
     ".",
     "e5",
+    // A decimal point no locale but its own reads: a comma, and `ps_AF`'s,
+    // which the C locale reads as no number at all.
+    ",5",
+    "-,5",
+    "\xd9\xab"
+    "5",
+    "-\xd9\xab"
+    "5",
 };
 
 static const double WRITE[] = {

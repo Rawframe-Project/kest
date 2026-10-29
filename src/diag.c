@@ -1072,8 +1072,17 @@ double kest_real_read(const char *text, char **end) {
     }
     if (digit_value(*at, hex) < 0 &&
         !(*at == '.' && digit_value(at[1], hex) >= 0)) {
-        // `inf`, `nan` or nothing at all, none of which has a point in it.
-        return strtod(text, end);
+        // `inf` and `nan`, which have no point in them, are `strtod`'s to
+        // read. Anything else is no number, and is not handed to it either:
+        // under `de_DE` it read `,5` as a half, and the C locale reads
+        // nothing there.
+        if (*at == 'i' || *at == 'I' || *at == 'n' || *at == 'N') {
+            return strtod(text, end);
+        }
+        if (end != NULL) {
+            *end = (char *)text;
+        }
+        return 0.0;
     }
     // A digit of a hexadecimal number is four of the binary exponent's.
     long long step = hex ? 4 : 1;
