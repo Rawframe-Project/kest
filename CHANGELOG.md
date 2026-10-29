@@ -2,6 +2,29 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.0.4](https://github.com/Rawframe-Project/kest/compare/v0.0.3...v0.0.4) (2026-10-29)
+
+
+### Fixed
+
+* **cli:** refuse a door's text the heap has no room for ([#65](https://github.com/Rawframe-Project/kest/issues/65)) ([99ff0a8](https://github.com/Rawframe-Project/kest/commit/99ff0a8b9055827ec74ee7bce01ff7a61050e01b)), closes [#56](https://github.com/Rawframe-Project/kest/issues/56)
+* **cli:** refuse a read past the most a door reads ([#76](https://github.com/Rawframe-Project/kest/issues/76)) ([d3e9015](https://github.com/Rawframe-Project/kest/commit/d3e901591e84c340986f4af6bf76bdbd267da479)), closes [#66](https://github.com/Rawframe-Project/kest/issues/66)
+* **cli:** say a manifest that cannot be read instead of passing over it ([#59](https://github.com/Rawframe-Project/kest/issues/59)) ([e28d2d3](https://github.com/Rawframe-Project/kest/commit/e28d2d324a3d7104612418e848f00b6e3efd96eb)), closes [#55](https://github.com/Rawframe-Project/kest/issues/55)
+* **cli:** say no room where the command line's own memory runs out ([#71](https://github.com/Rawframe-Project/kest/issues/71)) ([cea4d4f](https://github.com/Rawframe-Project/kest/commit/cea4d4fbc734ba9064af3133af053ccd8513a9ad)), closes [#57](https://github.com/Rawframe-Project/kest/issues/57)
+* **heap:** say what a scratch block's lists asked for when refused ([#81](https://github.com/Rawframe-Project/kest/issues/81)) ([14721c8](https://github.com/Rawframe-Project/kest/commit/14721c87a83ee9239a134598386f37e19c463b76)), closes [#78](https://github.com/Rawframe-Project/kest/issues/78)
+* **lexer:** end a string or byte at a backslash with nothing after it ([#67](https://github.com/Rawframe-Project/kest/issues/67)) ([b355909](https://github.com/Rawframe-Project/kest/commit/b355909e14a58d7714f35b4909da7e47eac62020)), closes [#64](https://github.com/Rawframe-Project/kest/issues/64)
+* **lexer:** give block comments a code of their own ([#80](https://github.com/Rawframe-Project/kest/issues/80)) ([b41528e](https://github.com/Rawframe-Project/kest/commit/b41528e5d53e92154be75ecde5895e3b27d38954)), closes [#68](https://github.com/Rawframe-Project/kest/issues/68)
+* **lexer:** refuse a nought byte rather than end the file there ([#70](https://github.com/Rawframe-Project/kest/issues/70)) ([2afedbc](https://github.com/Rawframe-Project/kest/commit/2afedbc8e7b2253b2967c12feec9711dd6a19064)), closes [#69](https://github.com/Rawframe-Project/kest/issues/69)
+* **lsp:** find the definition of a name written under its module ([#89](https://github.com/Rawframe-Project/kest/issues/89)) ([8087856](https://github.com/Rawframe-Project/kest/commit/80878568b92bc6c3e94c247a62703b6354e4cf0c)), closes [#75](https://github.com/Rawframe-Project/kest/issues/75)
+* **lsp:** find the definition of the name of a type ([#95](https://github.com/Rawframe-Project/kest/issues/95)) ([af2654f](https://github.com/Rawframe-Project/kest/commit/af2654fbb0147f999acdce23739acc3bdf1b9c3d)), closes [#90](https://github.com/Rawframe-Project/kest/issues/90)
+* **lsp:** say where an imported module does not build ([#74](https://github.com/Rawframe-Project/kest/issues/74)) ([869db27](https://github.com/Rawframe-Project/kest/commit/869db27796ce270265d88956e21d8eda50afd975)), closes [#63](https://github.com/Rawframe-Project/kest/issues/63)
+* **parser:** refuse what a string hole holds after its value ([#93](https://github.com/Rawframe-Project/kest/issues/93)) ([b33828a](https://github.com/Rawframe-Project/kest/commit/b33828ad65e10d2a2b1b39d845f68f1d100adab5)), closes [#92](https://github.com/Rawframe-Project/kest/issues/92)
+* **playground:** read the monotonic clock from performance.now() ([#61](https://github.com/Rawframe-Project/kest/issues/61)) ([6f656e0](https://github.com/Rawframe-Project/kest/commit/6f656e0d46e5e4f88a684435236ead65fec8298c)), closes [#60](https://github.com/Rawframe-Project/kest/issues/60)
+* **reload:** count each time the machine had no room ([#82](https://github.com/Rawframe-Project/kest/issues/82)) ([46de6fa](https://github.com/Rawframe-Project/kest/commit/46de6faee3c9d11a247b5fbca8a9ad19fa95e764)), closes [#77](https://github.com/Rawframe-Project/kest/issues/77)
+* **reload:** say no room rather than blame the program ([#72](https://github.com/Rawframe-Project/kest/issues/72)) ([6b7449a](https://github.com/Rawframe-Project/kest/commit/6b7449ab780e5e462f7747b9ea4c652b79c8686c)), closes [#58](https://github.com/Rawframe-Project/kest/issues/58)
+* **vm:** count a refusal for frames or stack slots as no room ([#88](https://github.com/Rawframe-Project/kest/issues/88)) ([c43de3f](https://github.com/Rawframe-Project/kest/commit/c43de3f5d0fd384e5b5e0064bb8e3611a815bea2)), closes [#83](https://github.com/Rawframe-Project/kest/issues/83)
+* **vm:** say no room when a machine cannot have its ground ([#79](https://github.com/Rawframe-Project/kest/issues/79)) ([8860abe](https://github.com/Rawframe-Project/kest/commit/8860abe82bc6379792b55aa2c86c9daa948c5f7e)), closes [#73](https://github.com/Rawframe-Project/kest/issues/73)
+
 ## 0.0.3 (2026-10-28)
 
 ### Fixed
