@@ -37,6 +37,11 @@ struct KestHeld {
     uint32_t door_room;
     Watched *watched;
     uint32_t watched_count;
+    // Whether there was no room to list what to watch. A file that cannot be
+    // read is a change, so a reload finds out what is wrong with it; a file
+    // there was no room to watch is the same, rather than one that never
+    // changes.
+    bool unwatched;
     KestValue *frame;
     uint32_t frame_room;
 };
@@ -64,16 +69,23 @@ static void forget_watched(KestHeld *held) {
 
 static void watch(KestHeld *held) {
     forget_watched(held);
+    held->unwatched = false;
     uint32_t many = 0;
     while (kest_build_read(held->build, many) != NULL) {
         many++;
     }
     held->watched = calloc(many == 0 ? 1 : many, sizeof(Watched));
     if (held->watched == NULL) {
+        held->unwatched = true;
         return;
     }
     for (uint32_t i = 0; i < many; i++) {
-        held->watched[i].path = copied(kest_build_read(held->build, i));
+        char *path = copied(kest_build_read(held->build, i));
+        if (path == NULL) {
+            held->unwatched = true;
+            return;
+        }
+        held->watched[i].path = path;
         held->watched[i].mark = kest_build_read_mark(held->build, i);
         held->watched_count++;
     }
@@ -324,6 +336,9 @@ bool kest_held_changed(KestHeld *held) {
     if (held == NULL) {
         return false;
     }
+    if (held->unwatched) {
+        return true;
+    }
     for (uint32_t i = 0; i < held->watched_count; i++) {
         uint64_t now = 0;
         // A file that cannot be read now is a change as well: it was read
@@ -431,20 +446,25 @@ bool kest_held_reload(KestHeld *held, const char *path, char *said,
     if (call_with(held, held->runtime, save, true, NULL, 0, &frame)) {
         bytes = run_of(frame[0]);
     }
-    uint8_t *copy = NULL;
-    uint32_t length = 0;
-    if (bytes != NULL && bytes->stride == 1) {
-        length = bytes->length;
-        copy = malloc(length == 0 ? 1 : length);
-        if (copy != NULL && length > 0) {
-            memcpy(copy, bytes->bytes, length);
-        }
-    }
-    if (copy == NULL) {
+    if (bytes == NULL || bytes->stride != 1) {
         kest_runtime_free(fresh);
         kest_build_free(candidate);
         return refused(said, room,
                        "refused: `save` did not answer bytes%s", NULL);
+    }
+    uint32_t length = bytes->length;
+    uint8_t *copy = malloc(length == 0 ? 1 : length);
+    if (copy == NULL) {
+        // The host's room, not the program's answer.
+        kest_runtime_free(fresh);
+        kest_build_free(candidate);
+        return refused(said, room,
+                       "refused: there was no room to copy what `save` "
+                       "answered%s",
+                       NULL);
+    }
+    if (length > 0) {
+        memcpy(copy, bytes->bytes, length);
     }
 
     // And made again by the new one out of nothing but those bytes.
@@ -460,6 +480,14 @@ bool kest_held_reload(KestHeld *held, const char *path, char *said,
         kest_lend_ends(fresh, lent);
     }
     free(copy);
+    if (made && world == NULL) {
+        kest_runtime_free(fresh);
+        kest_build_free(candidate);
+        return refused(said, room,
+                       "refused: there was no room to hold the world "
+                       "`restore` made%s",
+                       NULL);
+    }
     if (!made || world == NULL || !keep_world(fresh, shape, world)) {
         free(world);
         kest_runtime_free(fresh);
