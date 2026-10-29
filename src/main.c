@@ -3757,18 +3757,71 @@ static int by_name(const void *left, const void *right) {
     return strcmp(*(const char *const *)left, *(const char *const *)right);
 }
 
+// How deep a walk of a project goes, and how many entries it reads in all.
+// A project is nowhere near either; what they bound is a tree that is not one.
+// A link back up makes a directory its own descendant, and two of them in one
+// directory double the walk at every level, so a walk that only stopped at a
+// depth could read two to the thirty-second entries. On Windows, where the C
+// library cannot tell a junction from a directory, these are what stop it;
+// elsewhere a directory already walked is not walked again either.
+#define DEEPEST_WALK 32
+#define MOST_WALKED 100000
+
+typedef struct {
+    KestFileFound each;
+    void *context;
+    uint32_t entries;
+#if !defined(_WIN32)
+    // Every directory walked, by device and file number, which is the
+    // directory however many links lead to it.
+    struct {
+        dev_t device;
+        ino_t node;
+    } *walked;
+    uint32_t walked_count;
+    uint32_t walked_room;
+#endif
+} Walk;
+
+#if !defined(_WIN32)
+// Whether a directory is new to this walk, writing it down when it is. False
+// with `*whole` cleared when there was no room to write it down, because a
+// walk that cannot tell where it has been cannot say it has been everywhere.
+static bool walked_first(Walk *walk, const struct stat *seen, bool *whole) {
+    for (uint32_t i = 0; i < walk->walked_count; i++) {
+        if (walk->walked[i].device == seen->st_dev &&
+            walk->walked[i].node == seen->st_ino) {
+            return false;
+        }
+    }
+    if (walk->walked_count == walk->walked_room) {
+        uint32_t room = walk->walked_room == 0 ? 16 : walk->walked_room * 2;
+        void *grown = realloc(walk->walked, room * sizeof(*walk->walked));
+        if (grown == NULL) {
+            *whole = false;
+            return false;
+        }
+        walk->walked = grown;
+        walk->walked_room = room;
+    }
+    walk->walked[walk->walked_count].device = seen->st_dev;
+    walk->walked[walk->walked_count].node = seen->st_ino;
+    walk->walked_count++;
+    return true;
+}
+#endif
+
 // Every `.kest` under a directory and the directories under it, handed to
 // `each` one at a time, for the language server: a rename of a name more than
 // one file writes has to find every file of the project, and the server is
 // the library's, which has only libc and so no way to list a directory. A
 // directory whose name begins with a dot is an editor's or a version
 // control's and is passed over. False when the walk could not say every file
-// -- a directory that would not open, a path too long to write, or one deeper
-// than a project goes, which is a link back up -- and a directory that is not
-// there has none to say.
-static bool files_beneath(const char *directory, KestFileFound each,
-                          void *context, int depth) {
-    if (depth > 32) {
+// -- a directory that would not open, a path too long to write, or a walk
+// past either bound above -- and a directory that is not there has none to
+// say.
+static bool files_beneath(Walk *walk, const char *directory, int depth) {
+    if (depth > DEEPEST_WALK) {
         return false;
     }
     size_t wide = strlen(directory);
@@ -3798,6 +3851,10 @@ static bool files_beneath(const char *directory, KestFileFound each,
         if (name[0] == '.') {
             continue;
         }
+        if (++walk->entries > MOST_WALKED) {
+            whole = false;
+            break;
+        }
         char path[4096];
         int written = snprintf(path, sizeof(path), "%s%s%s", directory,
                                slashed ? "" : "/", name);
@@ -3812,15 +3869,21 @@ static bool files_beneath(const char *directory, KestFileFound each,
             break;
         }
         bool inner = S_ISDIR(seen.st_mode);
+        if (inner && !walked_first(walk, &seen, &whole)) {
+            if (!whole) {
+                break;
+            }
+            continue;
+        }
 #endif
         size_t length = strlen(name);
         if (inner) {
-            if (!files_beneath(path, each, context, depth + 1)) {
+            if (!files_beneath(walk, path, depth + 1)) {
                 whole = false;
                 break;
             }
         } else if (length > 5 && strcmp(name + length - 5, ".kest") == 0) {
-            each(context, path);
+            walk->each(walk->context, path);
         }
 #if defined(_WIN32)
     } while (_findnext(walking, &entry) == 0);
@@ -3834,7 +3897,23 @@ static bool files_beneath(const char *directory, KestFileFound each,
 
 static bool project_files(const char *directory, KestFileFound each,
                           void *context) {
-    return files_beneath(directory, each, context, 0);
+    Walk walk = {0};
+    walk.each = each;
+    walk.context = context;
+    bool whole = true;
+#if !defined(_WIN32)
+    // The directory the walk starts in is walked, so a link back up to it is
+    // a directory already walked.
+    struct stat seen;
+    if (stat(directory, &seen) == 0) {
+        walked_first(&walk, &seen, &whole);
+    }
+#endif
+    whole = whole && files_beneath(&walk, directory, 0);
+#if !defined(_WIN32)
+    free(walk.walked);
+#endif
+    return whole;
 }
 
 // Every `.kest` directly under a directory, in that order. Besides the walk

@@ -7024,8 +7024,12 @@ fi
 # outside the project -- is refused with a reason. And a rename is never part
 # of one: with the build that checks itself refused from points spread over a
 # session, every answer is a refusal, nothing, or the whole of what it answers
-# with room.
+# with room. Two links in the project lead back into it, which a walk that
+# followed every directory it met would go down without end; the walk passes
+# over a directory it has been in, and finds the same files.
 mkdir -p "$scratch"/renaming/ren/src/pack "$scratch"/renaming/dep/lib
+ln -s .. "$scratch"/renaming/ren/src/up
+ln -s . "$scratch"/renaming/ren/src/here
 printf 'project ren\nsource src\nsource ../dep\n' \
     >"$scratch"/renaming/ren/kest.project
 cat >"$scratch"/renaming/ren/src/main.kest <<'KEST'
@@ -7142,7 +7146,8 @@ for asked, words in ((2, "standard library"), (3, "outside the project")):
 
 # The edits made, in a copy, and the program after them.
 copy = os.path.join(top, "after")
-shutil.copytree(os.path.join(top, "ren"), os.path.join(copy, "ren"))
+shutil.copytree(os.path.join(top, "ren"), os.path.join(copy, "ren"),
+                symlinks=True)
 shutil.copytree(os.path.join(top, "dep"), os.path.join(copy, "dep"))
 for u, edits in changes.items():
     path = os.path.join(copy, "ren", "src",
