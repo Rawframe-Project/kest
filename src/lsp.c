@@ -51,6 +51,13 @@ typedef struct {
     size_t at;
     KestBuild *build;
     char *built;
+    // The other files a build read that this server has published something
+    // wrong with, so that one published clean later is told it is clean: a
+    // client keeps the last list it was sent for a file until it is sent
+    // another.
+    char **spoken;
+    size_t spoken_count;
+    size_t spoken_room;
     bool shutting_down;
     // The id of the request being answered, for the answer that could not be
     // written: it is answered all the same, with an error.
@@ -314,6 +321,151 @@ static void put_said(Server *server, KestSaid *out, bool *first,
     kest_wire_char(out, '}');
 }
 
+// A file this server has published something wrong with, kept so that it can
+// be told when it is clean. With no room to keep it, it is told now and not
+// told later, which is what a client was told before any of this.
+static void remember_spoken(Server *server, const char *path) {
+    if (server->spoken_count == server->spoken_room) {
+        size_t grown = server->spoken_room == 0 ? 8 : server->spoken_room * 2;
+        char **bigger = realloc(server->spoken, grown * sizeof(char *));
+        if (bigger == NULL) {
+            return;
+        }
+        server->spoken = bigger;
+        server->spoken_room = grown;
+    }
+    char *kept = copy_of(path, strlen(path));
+    if (kept != NULL) {
+        server->spoken[server->spoken_count++] = kept;
+    }
+}
+
+// The first mistake in a file the build read, or NULL for one with none.
+static const KestDiag *first_error(const KestDiags *diags,
+                                   const KestSource *source) {
+    for (uint32_t i = 0; i < diags->count; i++) {
+        const KestDiag *one = &diags->items[i];
+        if (one->source == source && one->severity == KEST_SEVERITY_ERROR &&
+            kest_diags_worth_saying(diags, one)) {
+            return one;
+        }
+    }
+    return NULL;
+}
+
+// One note on the open file for each module it reaches that does not build:
+// on the line that imports it where the file does, and at its start where the
+// module is reached through another, with that module's first mistake.
+static void imports_failing(Server *server, KestSaid *out, bool *first,
+                            const Open *file) {
+    const KestUnits *units = &server->build->units;
+    const KestUnitInfo *open = NULL;
+    for (uint32_t k = 0; k < units->count; k++) {
+        if (strcmp(units->items[k].source.path, file->path) == 0) {
+            open = &units->items[k];
+        }
+    }
+    if (open == NULL) {
+        return;
+    }
+    for (uint32_t k = 0; k < units->count; k++) {
+        const KestUnitInfo *other = &units->items[k];
+        const KestDiag *wrong =
+            other == open ? NULL
+                          : first_error(&server->build->diags, &other->source);
+        if (wrong == NULL) {
+            continue;
+        }
+        KestSpan where = {0, 0};
+        for (uint32_t d = 0; d < open->unit.count; d++) {
+            const KestDecl *decl = open->unit.items[d];
+            if (decl->kind == KEST_DECL_IMPORT &&
+                kest_word_same(other->module,
+                               kest_span_text(&open->source, decl->name),
+                               decl->name.length)) {
+                where = decl->name;
+            }
+        }
+        const char *named = other->module[0] != '\0' ? other->module
+                                                      : other->source.path;
+        size_t room = strlen(named) + strlen(wrong->message) + 32;
+        char *said = kest_arena_alloc(server->arena, room, 1);
+        if (said == NULL) {
+            continue;
+        }
+        snprintf(said, room, "`%s` does not build: %s", named, wrong->message);
+        put_said(server, out, first, file->text, file->length, where, true,
+                 wrong->code, said, NULL);
+    }
+}
+
+// What is wrong with one other file the build read, sent to that file.
+static void publish_to(Server *server, const char *path,
+                       const KestSource *source) {
+    KestSaid out = {0};
+    kest_wire_say(&out, "{\"jsonrpc\":\"2.0\",\"method\":"
+              "\"textDocument/publishDiagnostics\",\"params\":{\"uri\":");
+    put_uri(&out, path);
+    kest_wire_say(&out, ",\"diagnostics\":[");
+    bool first = true;
+    if (source != NULL) {
+        const KestDiags *diags = &server->build->diags;
+        for (uint32_t i = 0; i < diags->count; i++) {
+            const KestDiag *one = &diags->items[i];
+            if (one->source != source || !kest_diags_worth_saying(diags, one)) {
+                continue;
+            }
+            put_said(server, &out, &first, source->text, source->length,
+                     one->span, one->severity == KEST_SEVERITY_ERROR,
+                     one->code, one->message, one->suggestion);
+        }
+    }
+    kest_wire_say(&out, "]}}");
+    if (!out.broke && out.bytes != NULL) {
+        send(server, out.bytes, out.used);
+    }
+    kest_wire_let_go(&out);
+}
+
+// Every other file the build read, told what is wrong with it, and every one
+// this server told something before and the build now reads clean, told that.
+// A file the build did not read is left as it was told: another build said
+// that, and this one knows nothing new about it.
+static void publish_others(Server *server, const Open *file) {
+    if (server->build == NULL || file->path == NULL) {
+        return;
+    }
+    const KestUnits *units = &server->build->units;
+    for (uint32_t k = 0; k < units->count; k++) {
+        const KestSource *source = &units->items[k].source;
+        if (strcmp(source->path, file->path) == 0) {
+            continue;
+        }
+        bool wrong = false;
+        for (uint32_t i = 0; i < server->build->diags.count && !wrong; i++) {
+            const KestDiag *one = &server->build->diags.items[i];
+            wrong = one->source == source &&
+                    kest_diags_worth_saying(&server->build->diags, one);
+        }
+        size_t told = server->spoken_count;
+        for (size_t s = 0; s < server->spoken_count; s++) {
+            if (strcmp(server->spoken[s], source->path) == 0) {
+                told = s;
+            }
+        }
+        if (wrong) {
+            publish_to(server, source->path, source);
+            if (told == server->spoken_count) {
+                remember_spoken(server, source->path);
+            }
+        } else if (told < server->spoken_count) {
+            publish_to(server, source->path, NULL);
+            free(server->spoken[told]);
+            server->spoken[told] = server->spoken[--server->spoken_count];
+        }
+    }
+}
+
 // What is wrong with the file, sent whether or not anything is: a client that
 // is told nothing leaves the last set on the screen.
 static void publish(Server *server) {
@@ -369,6 +521,10 @@ static void publish(Server *server) {
             put_said(server, &out, &first, file->text, file->length, start,
                      true, code, words, NULL);
         }
+        // And every module the file reaches that does not build, said where
+        // the file imports it: a file whose own lines are fine and whose
+        // program is not was shown clean while `kest check` refused it.
+        imports_failing(server, &out, &first, file);
     } else if (file->path != NULL) {
         // No build at all, which is a build that had no room to begin: said
         // as the command line says it, rather than as a file with nothing
@@ -383,6 +539,7 @@ static void publish(Server *server) {
         send(server, out.bytes, out.used);
     }
     kest_wire_let_go(&out);
+    publish_others(server, file);
 }
 
 // Which name is written under this offset, out of the index the checker wrote
@@ -1040,6 +1197,10 @@ int kest_lsp_serve(const char *library, FILE *in, FILE *out) {
         kest_build_free(server.build);
     }
     free(server.built);
+    for (size_t i = 0; i < server.spoken_count; i++) {
+        free(server.spoken[i]);
+    }
+    free(server.spoken);
     for (size_t i = 0; i < server.count; i++) {
         free(server.open[i].uri);
         free(server.open[i].path);

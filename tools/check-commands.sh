@@ -6566,6 +6566,79 @@ if [ "$starved" != "yes" ]; then
 $starved"
 fi
 
+# And a file whose own lines are fine and which imports a module that does not
+# build. The server published only what was wrong with the open file, so it
+# was shown clean while `kest check` of it failed. The open file has to be told
+# on its import line, and the module's own file what is wrong with it; and once
+# the module is mended in a buffer, the module's file has to be told it is
+# clean.
+mkdir -p "$scratch"/serving/importing/src/pack
+printf 'project importing\nsource src\n' \
+    >"$scratch"/serving/importing/kest.project
+printf 'module main\n\nimport pack.thing\n\nfn main() -> i32 {\n    return thing.n()\n}\n' \
+    >"$scratch"/serving/importing/src/main.kest
+printf 'module pack.thing\n\nfn n() -> i32 {\n    return 1 +\n}\n' \
+    >"$scratch"/serving/importing/src/pack/thing.kest
+imported=$(python3 - "$kest" "$scratch"/serving/importing/src <<'PY'
+import json, os, subprocess, sys
+
+kest, root = sys.argv[1], os.path.abspath(sys.argv[2])
+main = os.path.join(root, "main.kest")
+thing = os.path.join(root, "pack", "thing.kest")
+mended = "module pack.thing\n\nfn n() -> i32 {\n    return 1\n}\n"
+
+
+def opened(path, text):
+    return {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+            "params": {"textDocument": {"uri": "file://" + path,
+                                        "languageId": "kest", "version": 1,
+                                        "text": text}}}
+
+
+messages = [
+    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+    opened(main, open(main).read()),
+    opened(thing, mended),
+    {"jsonrpc": "2.0", "method": "textDocument/didChange",
+     "params": {"textDocument": {"uri": "file://" + main, "version": 2},
+                "contentChanges": [{"text": open(main).read()}]}},
+]
+body = b""
+for one in messages:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+out = subprocess.run([kest, "lsp"], input=body, capture_output=True).stdout
+published = []
+at = 0
+while True:
+    head = out.find(b"Content-Length: ", at)
+    blank = out.find(b"\r\n\r\n", head) if head >= 0 else -1
+    if blank < 0:
+        break
+    many = int(out[head + 16:blank])
+    said = json.loads(out[blank + 4:blank + 4 + many])
+    at = blank + 4 + many
+    if said.get("method") == "textDocument/publishDiagnostics":
+        published.append((said["params"]["uri"],
+                          said["params"]["diagnostics"]))
+wrong = []
+first_main = [d for u, d in published if u.endswith("/main.kest")][:1]
+if not first_main or not any(
+        "`pack.thing` does not build" in d["message"] and
+        d["range"]["start"]["line"] == 2 for d in first_main[0]):
+    wrong.append("the open file was not told on its import line")
+thing_said = [d for u, d in published if u.endswith("/thing.kest")]
+if not thing_said or not any(d.get("code") == "K0204" for d in thing_said[0]):
+    wrong.append("the module's file was not told what is wrong with it")
+if not thing_said or thing_said[-1]:
+    wrong.append("the module's file was not told it is clean once mended")
+print("; ".join(wrong) if wrong else "yes")
+PY
+)
+if [ "$imported" != "yes" ]; then
+    complain "lsp: a file importing a module that does not build: $imported"
+fi
+
 # And every request answered, whatever happened to it. A client that sends a
 # request waits for its answer, so a message the server could not read -- one
 # that is not JSON, or one there was no memory to read into its tree -- and an
