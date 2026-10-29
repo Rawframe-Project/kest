@@ -583,6 +583,40 @@ static void os_arg(KestValue *frame, KestRuntime *runtime, void *context) {
     }
 }
 
+// The most a door reads into one piece of text: what a file or the standard
+// input may hold for `Host.fileRead` and `Io.read`. A piece of text says its
+// length in 32 bits, and the buffer it is read into doubles as it fills, which
+// where sizes are 32 bits wide, as in the WebAssembly build, wrapped to nothing
+// past 2 GiB: `realloc` was asked for no bytes and what it gave back was
+// written past its end. So it stops short of both. A build may set it smaller,
+// which is how the refusal is reached without a file that big.
+#ifndef KEST_MOST_READ
+#define KEST_MOST_READ ((size_t)0x7fffffff)
+#endif
+
+// How big the buffer a door reads into is next: twice what it is, held to one
+// byte past the most a door reads, so that a file of exactly that many bytes is
+// told apart from one with more. Nought when it is that big already.
+static size_t next_room(size_t room) {
+    size_t most = (size_t)KEST_MOST_READ + 1;
+    if (room == 0) {
+        return most < 4096 ? most : 4096;
+    }
+    if (room >= most) {
+        return 0;
+    }
+    return room > most / 2 ? most : room * 2;
+}
+
+// The refusal for reading more than that, with the number, as every limit here
+// is said.
+static void read_too_much(KestRuntime *runtime, const char *what) {
+    char said[160];
+    snprintf(said, sizeof said, "%s is more than %zu bytes, the most a door "
+                                "reads", what, (size_t)KEST_MOST_READ);
+    kest_native_failed(runtime, said);
+}
+
 // Nothing, for a file that is not there or could not be read.
 static void nothing_read(KestRuntime *runtime, KestValue *frame) {
     if (handed_back(runtime, "", 0, frame)) {
@@ -609,7 +643,7 @@ static void os_file_read(KestValue *frame, KestRuntime *runtime,
         nothing_read(runtime, frame);
         return;
     }
-    size_t room = 4096;
+    size_t room = next_room(0);
     size_t held = 0;
     char *bytes = malloc(room);
     while (bytes != NULL) {
@@ -618,14 +652,21 @@ static void os_file_read(KestValue *frame, KestRuntime *runtime,
         if (held < room) {
             break;
         }
-        char *grown = realloc(bytes, room * 2);
+        size_t wider = next_room(room);
+        if (wider == 0) {
+            free(bytes);
+            fclose(reading);
+            read_too_much(runtime, "the file");
+            return;
+        }
+        char *grown = realloc(bytes, wider);
         if (grown == NULL) {
             free(bytes);
             bytes = NULL;
             break;
         }
         bytes = grown;
-        room *= 2;
+        room = wider;
     }
     // No room to hold the file is not a file that is not there: said as
     // what it is, rather than as nothing.
@@ -740,7 +781,7 @@ static bool program_could_not_read = false;
 
 static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
     FILE *from = context;
-    size_t room = 4096;
+    size_t room = next_room(0);
     size_t held = 0;
     char *bytes = malloc(room);
     if (bytes == NULL) {
@@ -754,7 +795,13 @@ static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
         if (held < room) {
             break;
         }
-        char *grown = realloc(bytes, room * 2);
+        size_t wider = next_room(room);
+        if (wider == 0) {
+            free(bytes);
+            read_too_much(runtime, "what was read");
+            return;
+        }
+        char *grown = realloc(bytes, wider);
         if (grown == NULL) {
             // What was read so far is a piece of the input, and a piece
             // handed over as the whole of it is the quiet truncation this
@@ -764,7 +811,7 @@ static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
             break;
         }
         bytes = grown;
-        room *= 2;
+        room = wider;
     }
     if (ferror(from)) {
         program_could_not_read = true;
@@ -2255,7 +2302,10 @@ static int write_hostile(const char *path, uint64_t seed, bool json) {
            (got = fread(source + used, 1, room - used, file)) > 0) {
         used += got;
         if (used == room) {
-            char *grown = kest_arena_alloc(arena, room * 2, 1);
+            // Past half of what a size can say, twice it wraps: no room.
+            char *grown = room > SIZE_MAX / 2
+                              ? NULL
+                              : kest_arena_alloc(arena, room * 2, 1);
             if (grown != NULL) {
                 memcpy(grown, source, used);
             }

@@ -2453,6 +2453,89 @@ C
     fi
 fi
 
+# And the most a door reads into one piece of text (`KEST_MOST_READ`). The
+# buffer a file or the standard input is read into doubles as it fills, and
+# where sizes are 32 bits wide that wrapped past 2 GiB: `realloc` was asked for
+# nothing and what it gave back was written past. The limit stops short of it,
+# and a build may set it smaller, which is how it is reached here: the command
+# line and the host `emit --c` writes, each built with a limit of 8192, read a
+# file of exactly that many bytes and refuse one of a byte more with the
+# number, as they do the standard input.
+if command -v "${CC:-cc}" >/dev/null 2>&1 && [ -f "$build_dir"/libkest.a ]; then
+    mkdir -p "$scratch"/most
+    head -c 8192 /dev/zero | tr '\0' 'a' >"$scratch"/most/fits.txt
+    head -c 8193 /dev/zero | tr '\0' 'a' >"$scratch"/most/over.txt
+    cat >"$scratch"/most/reads.kest <<'KEST'
+module reads
+
+import std.os
+
+fn main() -> i32 {
+    if let got = os.read("fits.txt") {
+        if len(got) != 8192 {
+            return 2
+        }
+    } else {
+        return 1
+    }
+    if os.read("over.txt") != none {
+        return 3
+    }
+    return 0
+}
+KEST
+    cat >"$scratch"/most/stdin.kest <<'KEST'
+module stdin
+
+extern fn Io.read() -> text
+
+fn main() -> i32 {
+    let all = Io.read()
+    if len(all) != 8192 {
+        return 1
+    }
+    return 0
+}
+KEST
+    most_lib="$(pwd)"/lib/
+    if "${CC:-cc}" -std=c11 -O1 -Iinclude -DKEST_MOST_READ=8192 \
+           -o "$scratch"/most/kest \
+           src/main.c "$build_dir"/libkest.a -lm 2>"$scratch"/most/made &&
+       "$build_dir"/kest emit --c "$scratch"/most/reads.kest \
+           >"$scratch"/most/reads.c 2>>"$scratch"/most/made &&
+       "${CC:-cc}" -std=c11 -O1 -Iinclude -DKEST_MOST_READ=8192 \
+           -o "$scratch"/most/reads "$scratch"/most/reads.c \
+           "$build_dir"/libkest.a -lm 2>>"$scratch"/most/made; then
+        for how in "kest run reads.kest" "reads" \
+                   "kest run stdin.kest <fits.txt" \
+                   "kest run stdin.kest <over.txt"; do
+            said=$(cd "$scratch"/most && KEST_LIB=$most_lib &&
+                   export KEST_LIB && eval "./$how" 2>&1)
+            answered=$?
+            case "$how:$answered:$said" in
+            *"<fits.txt:0:"*) ;;
+            *"stdin.kest <fits.txt:"*)
+                echo "ceilings: \`$how\` with the limit at 8192 came back" \
+                     "$answered"
+                failed=1
+                ;;
+            *":1:"*K0662*"more than 8192 bytes"*) ;;
+            *)
+                echo "ceilings: \`$how\` with the limit at 8192 did not refuse" \
+                     "8193 bytes with the number: came back $answered"
+                printf '%s\n' "$said" | head -3 | sed 's/^/    /'
+                failed=1
+                ;;
+            esac
+        done
+    else
+        echo "ceilings: a command line and a host with a smaller limit on" \
+             "what a door reads did not build"
+        sed 's/^/    /' "$scratch"/most/made | head -3
+        failed=1
+    fi
+fi
+
 # And every arena taken, refused in turn. Taking one is asking the host for its
 # first block, which none of the refusals above is aimed at, so each stage that
 # works in an arena of its own had never been seen told no -- and two of them

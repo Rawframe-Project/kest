@@ -44,6 +44,13 @@ static char *read_stream(KestArena *arena, FILE *file, size_t *length,
         if (used + 1 < room) {
             continue;
         }
+        // Twice a size past half of what a size can say is no size: where
+        // sizes are 32 bits wide it wrapped to nothing past 2 GiB, and what
+        // was read was copied into that. No room is what it is.
+        if (room > SIZE_MAX / 2) {
+            *starved = true;
+            return NULL;
+        }
         char *grown = kest_arena_alloc(arena, room * 2, 1);
         if (grown == NULL) {
             *starved = true;
