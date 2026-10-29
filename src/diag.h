@@ -348,6 +348,18 @@ void kest_diags_sort(KestDiags *diags);
 // under the span, and the suggestion.
 void kest_diags_render(const KestDiags *diags, FILE *out);
 
+// Whether a diagnostic is said: a run that ran out says what it worked out
+// while it still had room and nothing after, as both renderings do.
+bool kest_diags_worth_saying(const KestDiags *diags, const KestDiag *one);
+
+// What a run that ran out says about it, as both renderings say it: the code
+// in `code` and the sentence, written into `room` where it carries numbers.
+// NULL when it did not run out. For a client that is not a stream -- the
+// language server -- which would otherwise have only the list, and running out
+// is a bit beside the list rather than an item in it.
+const char *kest_diags_starved_words(const KestDiags *diags, const char **code,
+                                     char *room, size_t space);
+
 // Writes a string the way JSON spells one, quotes and escapes and all. Three
 // files compose JSON and the string is the part that has to be right, so there
 // is one of these rather than one each.

@@ -5043,6 +5043,50 @@ case "$nowhere_under" in
     ;;
 esac
 
+# A manifest that is there and cannot be read as a project is said as that,
+# by every command that reads one. It was taken for no manifest: its sources
+# were never looked under, a program in it was read in the first edition
+# whatever edition it named, `kest run` with no file said there was no project
+# here, and `kest test` with no file ran nothing and answered nought.
+mkdir -p "$scratch"/refused/broken/src "$scratch"/refused/broken/tests
+cat > "$scratch"/refused/broken/kest.project <<'KEST'
+project broken
+entry src/main.kest
+source src
+tests tests
+sources lib
+KEST
+cat > "$scratch"/refused/broken/src/main.kest <<'KEST'
+module main
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+cp "$scratch"/refused/broken/src/main.kest "$scratch"/refused/broken/tests/
+for asked in "check src/main.kest" "run" "build" "test" "test --json"; do
+    # shellcheck disable=SC2086
+    broken=$(cd "$scratch"/refused/broken && "$kest" $asked 2>&1 </dev/null)
+    broken_was=$?
+    case "$broken_was:$broken" in
+    1:*"K0709"*"cannot be read as a project"*"does not know"*) ;;
+    *)
+        complain "$asked: a manifest with a line it does not know answered \
+$broken_was and said \`$(printf '%s' "$broken" | head -1)\`"
+        ;;
+    esac
+done
+printf 'project broken\nsource src\nedition 1999\n' \
+    >"$scratch"/refused/broken/kest.project
+broken=$("$kest" check "$scratch"/refused/broken/src/main.kest 2>&1 </dev/null)
+case "$broken" in
+*"K0709"*"an edition this does not know"*) ;;
+*)
+    complain "check: a project naming an edition it does not know said \
+\`$(printf '%s' "$broken" | head -1)\`"
+    ;;
+esac
+
 # A value written where a statement belongs is a `return` with the word left
 # off, and the function is told exactly that. What the arms are measured
 # against is then what the function gives back rather than nothing, so `none`
@@ -6357,6 +6401,126 @@ PY
 )
 if [ "$served" != "yes" ]; then
     complain "lsp: the editor was not answered by this compiler: $served"
+fi
+
+# And a file in a project whose manifest cannot be read. What is wrong is about
+# no file, and the server published only what was about the open one, so the
+# editor showed a file nothing could be read of as one with nothing wrong.
+mkdir -p "$scratch"/serving/broken/src
+printf 'project broken\nsource src\nsources lib\n' \
+    >"$scratch"/serving/broken/kest.project
+cp "$scratch"/serving/serving.kest "$scratch"/serving/broken/src/main.kest
+told=$(python3 - "$kest" "$scratch"/serving/broken/src/main.kest <<'PY'
+import json, os, subprocess, sys
+
+kest, path = sys.argv[1], os.path.abspath(sys.argv[2])
+uri = "file://" + path
+messages = [
+    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": uri, "languageId": "kest",
+                                 "version": 1, "text": open(path).read()}}},
+]
+body = b""
+for one in messages:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+out = subprocess.run([kest, "lsp"], input=body, capture_output=True).stdout
+codes = []
+at = 0
+while True:
+    head = out.find(b"Content-Length: ", at)
+    blank = out.find(b"\r\n\r\n", head) if head >= 0 else -1
+    if blank < 0:
+        break
+    many = int(out[head + 16:blank])
+    said = json.loads(out[blank + 4:blank + 4 + many])
+    at = blank + 4 + many
+    if said.get("method") == "textDocument/publishDiagnostics":
+        codes += [one.get("code") for one in said["params"]["diagnostics"]]
+print(" ".join(codes) if codes else "nothing")
+PY
+)
+case " $told " in
+*" K0709 "*) ;;
+*)
+    complain "lsp: a file in a project whose manifest cannot be read was \
+published with $told"
+    ;;
+esac
+
+# And a build that ran out. Running out is a bit beside the list rather than an
+# item in it, and the server published only the list, so a file whose build ran
+# out was published with nothing wrong, or with only what it found first; and
+# one that could not begin, with no list at all, was published as an empty one.
+# In the build that checks itself, every allocation is refused from each point
+# in turn of a session that opens a file with one mistake in it, which is about
+# a hundred and twenty: every list published has to be the one published with
+# nothing refused, or say it ran out.
+printf 'fn main() -> i32 {\n    return nothing_at_all(0)\n}\n' \
+    >"$scratch"/serving/wrong.kest
+starved=$(timeout 600 python3 - "$build_dir"/kest-debug \
+        "$scratch"/serving/wrong.kest <<'PY'
+import json, os, subprocess, sys
+
+kest, path = sys.argv[1], os.path.abspath(sys.argv[2])
+uri = "file://" + path
+messages = [
+    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": uri, "languageId": "kest",
+                                 "version": 1, "text": open(path).read()}}},
+]
+body = b""
+for one in messages:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+
+
+def published(refused_at):
+    env = dict(os.environ)
+    if refused_at:
+        env["KEST_REFUSE_AT"] = str(refused_at)
+    out = subprocess.run([kest, "lsp"], input=body, capture_output=True,
+                         env=env).stdout
+    lists = []
+    at = 0
+    while True:
+        head = out.find(b"Content-Length: ", at)
+        blank = out.find(b"\r\n\r\n", head) if head >= 0 else -1
+        if blank < 0:
+            break
+        many = int(out[head + 16:blank])
+        said = json.loads(out[blank + 4:blank + 4 + many])
+        at = blank + 4 + many
+        if said.get("method") == "textDocument/publishDiagnostics":
+            lists.append(sorted(d["code"] for d in
+                                said["params"]["diagnostics"]))
+    return lists
+
+
+whole = published(0)
+if len(whole) != 1 or not whole[0]:
+    print("with nothing refused it published %s" % whole)
+    sys.exit(0)
+low, high = 1, 1 << 20
+while high - low > 1:
+    middle = (low + high) // 2
+    if published(middle) == whole:
+        high = middle
+    else:
+        low = middle
+wrong = []
+for refused_at in range(1, high + 1):
+    for got in published(refused_at):
+        if got != whole[0] and not {"K0639", "K0658", "K0705"} & set(got):
+            wrong.append("%d: %s" % (refused_at, got))
+print("; ".join(wrong[:3]) if wrong else "yes")
+PY
+)
+if [ "$starved" != "yes" ]; then
+    complain "lsp: a build that ran out was published without saying so: \
+$starved"
 fi
 
 # And every request answered, whatever happened to it. A client that sends a

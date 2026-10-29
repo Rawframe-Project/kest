@@ -455,6 +455,11 @@ typedef struct {
     const char *sources[KEST_MOST_SOURCES];
     uint32_t count;
     const char *where;
+    // A manifest that is there and could not be read as a project, and what
+    // was wrong with it. Nothing above it is looked at: the project a file is
+    // in is the nearest manifest, and a broken one is not a missing one.
+    const char *broken;
+    const char *why;
 } Roots;
 
 // The project above a file, if there is one: `kest.project` in the directory
@@ -467,6 +472,8 @@ static void roots_above(KestArena *arena, KestUnits *units,
                         const char *path, Roots *roots) {
     roots->count = 0;
     roots->where = NULL;
+    roots->broken = NULL;
+    roots->why = NULL;
     if (path == NULL) {
         return;
     }
@@ -502,6 +509,14 @@ static void roots_above(KestArena *arena, KestUnits *units,
                 roots->sources[roots->count++] = project->sources[i];
             }
             roots->where = at[0] == '\0' ? "./" : at;
+            return;
+        }
+        if (why != NULL) {
+            char manifest[1024];
+            kest_project_path(at, manifest, sizeof(manifest));
+            roots->broken = kest_arena_strndup(arena, manifest,
+                                               strlen(manifest));
+            roots->why = why;
             return;
         }
         // The directory above this one, which is this one with its last piece
@@ -951,6 +966,18 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
         return false;
     }
     KestSpan nowhere = {0, 0};
+    // Said rather than read past. A manifest with a line this does not know
+    // was taken for no manifest, so its sources were never looked under and
+    // an import from one said it could not be read; one naming an edition
+    // this does not know had its program read in the first.
+    if (roots.why != NULL) {
+        kest_diags_in(diags, NULL);
+        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0709", nowhere,
+                       "`%s` cannot be read as a project: %s", roots.broken,
+                       roots.why);
+        kest_diags_suggest(diags, "`kest doctor` says what it read of it");
+        return false;
+    }
     for (int i = 0; i < count; i++) {
         // The first file settles the root; the rest are read against it.
         if (!load_one(arena, diags, root, library, &roots, paths[i], units,
