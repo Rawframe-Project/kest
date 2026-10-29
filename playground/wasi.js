@@ -101,13 +101,32 @@ export async function run(module, args, env, files) {
         return pieces;
     };
 
+    let lastMonotonic = 0n;
     const wasi = {
         args_sizes_get: argList.sizes,
         args_get: argList.get,
         environ_sizes_get: envList.sizes,
         environ_get: envList.get,
+        // Which clock is which, by WASI's numbering. 0 is the time of day,
+        // which may be set backwards and is read in whole milliseconds. 1 is
+        // the monotonic clock, which a program measures elapsed time with and
+        // which only goes forwards: answered from `performance.now()`, finer
+        // than a millisecond, and held to never going below what it last
+        // answered. 2 and 3, the process's and the thread's processor time,
+        // are not something a page can read, and are the monotonic clock.
+        // The monotonic one used to be the time of day too, so two reads in a
+        // row could be two millisecond boundaries apart, or go backwards.
         clock_time_get(id, precision, at) {
-            view().setBigUint64(at, BigInt(Date.now()) * 1000000n, true);
+            if (id === 0) {
+                view().setBigUint64(at, BigInt(Date.now()) * 1000000n, true);
+                return ERRNO.SUCCESS;
+            }
+            if (id < 0 || id > 3) {
+                return ERRNO.INVAL;
+            }
+            const now = BigInt(Math.floor(performance.now() * 1e6));
+            lastMonotonic = now > lastMonotonic ? now : lastMonotonic;
+            view().setBigUint64(at, lastMonotonic, true);
             return ERRNO.SUCCESS;
         },
         fd_write(fd, iovsAt, count, writtenAt) {
