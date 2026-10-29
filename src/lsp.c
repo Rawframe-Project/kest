@@ -300,17 +300,27 @@ static void publish(Server *server) {
             const KestDiag *one = &diags->items[i];
             // Only what is wrong with the file in front of the person. A
             // program is more than one file and a client is told about one.
-            if (one->source == NULL || file->path == NULL ||
-                strcmp(one->source->path, file->path) != 0) {
+            // What is about no file -- a manifest that cannot be read, a
+            // build with no room -- is about this one too, and is put at its
+            // start: left out, a file in a project nothing could be read of
+            // was shown as one with nothing wrong with it.
+            if (file->path == NULL ||
+                (one->source != NULL &&
+                 strcmp(one->source->path, file->path) != 0)) {
                 continue;
             }
-            size_t length = 0;
-            const char *text = text_of(one->source, &length);
+            size_t length = file->length;
+            const char *text = file->text;
+            KestSpan span = {0, 0};
+            if (one->source != NULL) {
+                text = text_of(one->source, &length);
+                span = one->span;
+            }
             kest_wire_say(&out, first ? "" : ",");
             first = false;
             kest_wire_say(&out, "{\"range\":");
-            put_range(&out, text, length, one->span.offset,
-                      one->span.length == 0 ? 1 : one->span.length);
+            put_range(&out, text, length, span.offset,
+                      span.length == 0 ? 1 : span.length);
             kest_wire_sayf(&out, ",\"severity\":%d,\"source\":\"kest\",\"code\":",
                     one->severity == KEST_SEVERITY_ERROR ? 1 : 2);
             kest_wire_text(&out, one->code);

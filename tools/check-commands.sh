@@ -6403,6 +6403,52 @@ if [ "$served" != "yes" ]; then
     complain "lsp: the editor was not answered by this compiler: $served"
 fi
 
+# And a file in a project whose manifest cannot be read. What is wrong is about
+# no file, and the server published only what was about the open one, so the
+# editor showed a file nothing could be read of as one with nothing wrong.
+mkdir -p "$scratch"/serving/broken/src
+printf 'project broken\nsource src\nsources lib\n' \
+    >"$scratch"/serving/broken/kest.project
+cp "$scratch"/serving/serving.kest "$scratch"/serving/broken/src/main.kest
+told=$(python3 - "$kest" "$scratch"/serving/broken/src/main.kest <<'PY'
+import json, os, subprocess, sys
+
+kest, path = sys.argv[1], os.path.abspath(sys.argv[2])
+uri = "file://" + path
+messages = [
+    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": uri, "languageId": "kest",
+                                 "version": 1, "text": open(path).read()}}},
+]
+body = b""
+for one in messages:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+out = subprocess.run([kest, "lsp"], input=body, capture_output=True).stdout
+codes = []
+at = 0
+while True:
+    head = out.find(b"Content-Length: ", at)
+    blank = out.find(b"\r\n\r\n", head) if head >= 0 else -1
+    if blank < 0:
+        break
+    many = int(out[head + 16:blank])
+    said = json.loads(out[blank + 4:blank + 4 + many])
+    at = blank + 4 + many
+    if said.get("method") == "textDocument/publishDiagnostics":
+        codes += [one.get("code") for one in said["params"]["diagnostics"]]
+print(" ".join(codes) if codes else "nothing")
+PY
+)
+case " $told " in
+*" K0709 "*) ;;
+*)
+    complain "lsp: a file in a project whose manifest cannot be read was \
+published with $told"
+    ;;
+esac
+
 # And every request answered, whatever happened to it. A client that sends a
 # request waits for its answer, so a message the server could not read -- one
 # that is not JSON, or one there was no memory to read into its tree -- and an
