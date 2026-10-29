@@ -33,7 +33,7 @@
 
 **What warnings are for.** Warnings are said about the file that was named and not its imports. Lost writes to a parameter's field (`K0346`) are reported only when the function cannot give that type back. An array made with `array()` and filled with `fit` with no `room` or `push` on that name (`K0347`) is reported where it was made, and not when the array was handed elsewhere, since it may come back with room.
 
-**The index.** With `index_names` set (the language server sets it), the checker records what every name resolved to, a name written under its module (`thing.n`) and a call settled among overloads included, at the last word of what was written; hover, definition, references and rename read that index rather than resolving again, so the editor and the compiler cannot disagree.
+**The index.** With `index_names` set (the language server sets it), the checker records what every name resolved to, a name written under its module (`thing.n`), a call settled among overloads and the name of a type wherever it is written (`thing.Point`, `Here(1)`, `thing.Door.Open`) included, each once and at the last word of what was written; hover, definition, references and rename read that index rather than resolving again, so the editor and the compiler cannot disagree.
 
 **Messages.** Most of what a program is told comes from here. A mismatch is always said in one shape (`expected_but`), and where a type mismatch has a known fix the fix is the suggestion: an optional where its value would do says `if let`; a number where text is wanted says to use a hole; a module where a value is wanted names a function under it. A suggestion never offers the word that was written, and never offers a name from a module the file did not import as a spelling.
 

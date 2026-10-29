@@ -2293,6 +2293,7 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
         return error_type(program);
     }
     if (type != NULL) {
+        kest_program_type_used(program, ref->name, type);
         kest_import_reached(program, name, length);
         if (kest_needs_import(program, name, length)) {
             const char *dot = memchr(name, '.', length);
@@ -2762,6 +2763,7 @@ KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref) {
             // written and found again after that.
             KestType *shape = kest_lookup_type(program, name, ref->name.length);
             if (shape != NULL && shape->type_param_count > 0) {
+                kest_program_type_used(program, ref->name, shape);
                 uint32_t count = ref->arg_count;
                 KestType **args = KEST_ARENA_ARRAY(program->arena, KestType *,
                                                    count == 0 ? 1 : count);
@@ -3453,6 +3455,24 @@ void kest_program_used(KestProgram *program, const KestSource *source,
     one->declared = declared;
     one->type = type;
     one->is_local = is_local;
+}
+
+void kest_program_type_used(KestProgram *program, KestSpan written,
+                            const KestType *type) {
+    if (program == NULL || type == NULL || type->declared_in == NULL ||
+        !program->index_names) {
+        return;
+    }
+    const char *text = kest_span_text(program->source, written);
+    for (uint32_t i = written.length; i > 0; i--) {
+        if (text[i - 1] == '.') {
+            written.offset += i;
+            written.length -= i;
+            break;
+        }
+    }
+    kest_program_used(program, program->source, written, type->declared_in,
+                      type->span, type, false);
 }
 
 const KestUse *kest_program_uses(const KestProgram *program, uint32_t *count) {

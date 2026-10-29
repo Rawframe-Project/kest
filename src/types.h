@@ -452,6 +452,13 @@ void kest_program_used(KestProgram *program, const KestSource *source,
                        KestSpan span, const KestSource *declared_in,
                        KestSpan declared, const KestType *type, bool is_local);
 
+// And a type named where it is written, at the last word of what was written
+// (`Point` in `thing.Point`), which is the word under a cursor and the one a
+// rename changes. A type the language has rather than a file is not kept: it
+// has nowhere to send an editor.
+void kest_program_type_used(KestProgram *program, KestSpan written,
+                            const KestType *type);
+
 // Every name written in this program, in the order they were read. What an
 // editor asks of it: which use is under this offset, which declaration it
 // points at, and which other uses point at the same one.
