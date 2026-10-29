@@ -3415,6 +3415,10 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry, const char *from,
         "#include <string.h>\n"
         "#include <math.h>\n"
         "#include <time.h>\n"
+        "#if defined(_WIN32)\n"
+        "#include <fcntl.h>\n"
+        "#include <io.h>\n"
+        "#endif\n"
         "\n"
         "#include \"kest.h\"\n"
         "\n"
@@ -3427,6 +3431,8 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry, const char *from,
         "#pragma STDC FP_CONTRACT OFF\n"
         "#elif defined(__GNUC__)\n"
         "#pragma GCC optimize (\"fp-contract=off\")\n"
+        "#elif defined(_MSC_VER)\n"
+        "#pragma fp_contract (off)\n"
         "#endif\n"
         "\n"
         "// A slot, under the name the machine's own backend gives it.\n"
@@ -4007,7 +4013,15 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry, const char *from,
         "time(s)\\n\",\n"
         "            ran, (unsigned long long)times);\n"
         "}\n"
-        "\nint main(int argc, char **argv) {\n",
+        "\nint main(int argc, char **argv) {\n"
+        "    // Both streams where a byte written is the byte that comes\n"
+        "    // out, as `kest run` has them. Windows starts them where a\n"
+        "    // line end is two bytes, and a release printed other bytes\n"
+        "    // than the program it carries.\n"
+        "#if defined(_WIN32)\n"
+        "    _setmode(_fileno(stdout), _O_BINARY);\n"
+        "    _setmode(_fileno(stderr), _O_BINARY);\n"
+        "#endif\n",
         bound_count);
     if (carried != NULL) {
         write_carried_main(c, &file, carried, carried_count, library);

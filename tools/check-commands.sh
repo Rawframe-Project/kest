@@ -1768,6 +1768,38 @@ what its program answers"
         printf '%s\n' "$release_refused" | sed 's/^/    /' | head -4
         ;;
     esac
+    # A compiler named `cl` or `clang-cl` is MSVC's, or reads its flags, and
+    # is handed those rather than `cc`'s: a Windows release was handed `-o`
+    # and `-lm`, which `cl` does not take. One that writes down what it was
+    # handed, and leaves the object `cl` leaves, which the release takes away.
+    mkdir -p "$scratch"/check-release-msvc
+    cat >"$scratch"/check-release-msvc/cl <<'SH'
+#!/bin/sh
+printf '%s\n' "$@" >"$CL_HANDED"
+: >asking.release.obj
+exit 1
+SH
+    chmod +x "$scratch"/check-release-msvc/cl
+    cp "$scratch"/check-release-msvc/cl "$scratch"/check-release-msvc/clang-cl.EXE
+    for msvc in cl clang-cl.EXE; do
+        CL_HANDED="$scratch"/check-release-msvc/handed
+        export CL_HANDED
+        (cd "$elsewhere" &&
+         PATH="$scratch/check-release-msvc:$PATH" CC="$msvc" \
+             "$put/usr/local/bin/kest" build --release asking.kest \
+             >/dev/null 2>&1 </dev/null)
+        handed=$(tr '\n' ' ' <"$CL_HANDED")
+        case "$handed" in
+        "/nologo /std:c11 /O2 /I"*" /Feasking asking.release.c "*) ;;
+        *)
+            complain "release: \`$msvc\` was handed $handed"
+            ;;
+        esac
+        if [ -e "$elsewhere/asking.release.obj" ] ||
+           [ -e "$elsewhere/asking.release.c" ]; then
+            complain "release: \`$msvc\` left its object or its C behind"
+        fi
+    done
     # A release is named after its program, and only in the characters every
     # shell, `cmd.exe` and file system read the same; a name with a space in
     # it is refused by name, and nothing is left behind.
