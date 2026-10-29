@@ -3,7 +3,6 @@
 
 #include "value.h"
 
-
 // What this machine has said. A host reads it with `kest_report`; the command
 // line wants the set rather than a rendering, because it sorts what running
 // found together with what compiling did.
@@ -27,8 +26,8 @@ KestDiags *kest_runtime_said(KestRuntime *runtime);
 // and never enters a body the other backend wrote.
 KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
                               const KestHost *host, KestDiags *diags,
-                              const KestLimits *limits,
-                              const KestWalk *walked, bool untrusted);
+                              const KestLimits *limits, const KestWalk *walked,
+                              bool untrusted);
 bool kest_runtime_free(KestRuntime *runtime);
 
 // How many times this machine has said it had no room: a take no walk could
@@ -141,8 +140,7 @@ bool kest_value_same(KestRuntime *runtime, uint16_t layout,
 // first byte are cheap and two that are the same are not. A generated file
 // passes nothing for `read`: it has no budget to charge.
 int64_t kest_text_order(const char *left, int64_t left_length,
-                        const char *right, int64_t right_length,
-                        int64_t *read);
+                        const char *right, int64_t right_length, int64_t *read);
 
 // The five reads into a piece of text that do not make one: the byte at a
 // place, a cut, the rest from a place, whether a needle sits at a place, and
@@ -161,8 +159,8 @@ bool kest_text_at(KestRuntime *runtime, const char *bytes, int64_t length,
 bool kest_text_in(KestRuntime *runtime, const char *bytes, int64_t length,
                   int64_t index, uint32_t where, int64_t *into);
 bool kest_text_cut(KestRuntime *runtime, const char *bytes, int64_t length,
-                   int64_t from, int64_t count, uint32_t where,
-                   const char **at, int64_t *many);
+                   int64_t from, int64_t count, uint32_t where, const char **at,
+                   int64_t *many);
 bool kest_text_rest(KestRuntime *runtime, const char *bytes, int64_t length,
                     int64_t from, uint32_t where, const char **at,
                     int64_t *many);
@@ -228,7 +226,8 @@ bool kest_array_clear(KestRuntime *runtime, KestValue handle, uint32_t where);
 bool kest_array_pop(KestRuntime *runtime, KestValue handle, uint32_t where,
                     unsigned char **at);
 bool kest_array_written(KestRuntime *runtime, uint16_t layout, uint16_t count,
-                   const KestValue *values, uint32_t where, KestValue *into);
+                        const KestValue *values, uint32_t where,
+                        KestValue *into);
 
 // A body the machine runs, entered from one the host's compiler compiled.
 // This is what makes the two engines one program rather than two halves that

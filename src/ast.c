@@ -45,7 +45,7 @@ void kest_capability_list(char *out, size_t room) {
     size_t written = 0;
     for (uint32_t at = 0; at < KEST_CAPABILITY_COUNT && written + 1 < room;
          at++) {
-        const char *between = at == 0                        ? ""
+        const char *between = at == 0                           ? ""
                               : at + 1 == KEST_CAPABILITY_COUNT ? " and "
                                                                 : ", ";
         int said = snprintf(out + written, room - written, "%s`%s`", between,
@@ -477,7 +477,8 @@ static void print_decl(const KestDecl *decl, const KestSource *source,
             indent(out, 1);
             fputs("(case ", out);
             print_span(source, decl->choice.cases[i]->name, out);
-            for (uint32_t p = 0; p < decl->choice.cases[i]->payload_count; p++) {
+            for (uint32_t p = 0; p < decl->choice.cases[i]->payload_count;
+                 p++) {
                 fputc(' ', out);
                 print_type(decl->choice.cases[i]->payload[p], source, out);
             }

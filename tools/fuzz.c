@@ -43,17 +43,103 @@ static uint64_t next_number(uint64_t *state) {
 // the middle. A mutation of something that compiles usually still parses,
 // which is how the checker and the compiler are reached at all.
 static const char *const PIECES[] = {
-    "module ", "import std.io\n", "fn ", "main", "() -> ", "i32", "f32",
-    "f64", "u8", "text", "bool", "{\n", "}\n", "return ", "let ", "const ",
-    "struct ", "enum ", "flags ", "match ", "if ", "else ", "for ", "while ",
-    "in ", "0..", "break\n", "continue\n", "defer ", "scratch ", "none",
-    "true", "false", "extern fn ", "no.alloc", "no.host", "deterministic",
-    "array(", "store(", "add(", "get(", "set(", "push(", "len(", "text(",
-    "(", ")", "[", "]", ",", ".", ":", ";", "?", "->", "=", "==", "!=",
-    "<", ">", "+", "-", "*", "/", "%", "&&", "||", "!", "~", "^", "&", "|",
-    "\"", "\"a\"", "\"{", "}\"", "'a'", "\\0", "\n", " ", "\t", "x", "y",
-    "Thing", "T", "1", "0", "-1", "999999999999999999999",
-    "1.5", "0x", "0b", "1e", "\xc4\xb1", "\xff", "\xc0", "\xe2",
+    "module ",
+    "import std.io\n",
+    "fn ",
+    "main",
+    "() -> ",
+    "i32",
+    "f32",
+    "f64",
+    "u8",
+    "text",
+    "bool",
+    "{\n",
+    "}\n",
+    "return ",
+    "let ",
+    "const ",
+    "struct ",
+    "enum ",
+    "flags ",
+    "match ",
+    "if ",
+    "else ",
+    "for ",
+    "while ",
+    "in ",
+    "0..",
+    "break\n",
+    "continue\n",
+    "defer ",
+    "scratch ",
+    "none",
+    "true",
+    "false",
+    "extern fn ",
+    "no.alloc",
+    "no.host",
+    "deterministic",
+    "array(",
+    "store(",
+    "add(",
+    "get(",
+    "set(",
+    "push(",
+    "len(",
+    "text(",
+    "(",
+    ")",
+    "[",
+    "]",
+    ",",
+    ".",
+    ":",
+    ";",
+    "?",
+    "->",
+    "=",
+    "==",
+    "!=",
+    "<",
+    ">",
+    "+",
+    "-",
+    "*",
+    "/",
+    "%",
+    "&&",
+    "||",
+    "!",
+    "~",
+    "^",
+    "&",
+    "|",
+    "\"",
+    "\"a\"",
+    "\"{",
+    "}\"",
+    "'a'",
+    "\\0",
+    "\n",
+    " ",
+    "\t",
+    "x",
+    "y",
+    "Thing",
+    "T",
+    "1",
+    "0",
+    "-1",
+    "999999999999999999999",
+    "1.5",
+    "0x",
+    "0b",
+    "1e",
+    "\xc4\xb1",
+    "\xff",
+    "\xc0",
+    "\xe2",
 };
 
 // A file of this tree, read whole, to be broken. NULL when it is not there,
@@ -82,10 +168,10 @@ static char *seed_program(const char *path, size_t *length) {
 }
 
 static const char *const SEEDS[] = {
-    "examples/math.kest",     "examples/settlement.kest",
-    "examples/boxes.kest",    "examples/inventory.kest",
-    "examples/frame.kest",    "lib/std/text.kest",
-    "lib/std/table.kest",     "examples/registry.kest",
+    "examples/math.kest",  "examples/settlement.kest",
+    "examples/boxes.kest", "examples/inventory.kest",
+    "examples/frame.kest", "lib/std/text.kest",
+    "lib/std/table.kest",  "examples/registry.kest",
 };
 
 // Bytes the compiler was not written for, which is the target this file began
@@ -110,8 +196,7 @@ static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
         size_t seeded_length = 0;
         if (from_a_seed) {
             const char *which =
-                SEEDS[next_number(&state) % (sizeof(SEEDS) /
-                                             sizeof(SEEDS[0]))];
+                SEEDS[next_number(&state) % (sizeof(SEEDS) / sizeof(SEEDS[0]))];
             seeded = seed_program(which, &seeded_length);
         }
         if (seeded != NULL && seeded_length > 0) {
@@ -156,9 +241,9 @@ static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
                         break;
                     }
                     char number[8];
-                    int wrote = snprintf(number, sizeof number, "%u",
-                                         (unsigned)(next_number(&state) %
-                                                    1000));
+                    int wrote =
+                        snprintf(number, sizeof number, "%u",
+                                 (unsigned)(next_number(&state) % 1000));
                     size_t length = (size_t)wrote;
                     if (used - (end - digit) + length >= sizeof(program) - 1) {
                         break;
@@ -171,8 +256,7 @@ static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
                 }
                 case 0:
                     // A byte changed, which is what a typo is.
-                    program[at] =
-                        (char)(next_number(&state) % 256);
+                    program[at] = (char)(next_number(&state) % 256);
                     break;
                 case 1: {
                     // A run cut out, which is what a half-saved file is.
@@ -180,20 +264,18 @@ static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
                     if (at + cut >= used) {
                         cut = used - at - 1;
                     }
-                    memmove(program + at, program + at + cut,
-                            used - at - cut);
+                    memmove(program + at, program + at + cut, used - at - cut);
                     used -= cut;
                     break;
                 }
                 default: {
                     // A piece of the language put in the middle of it.
                     const char *piece =
-                        PIECES[next_number(&state) % (sizeof(PIECES) /
-                                                      sizeof(PIECES[0]))];
+                        PIECES[next_number(&state) %
+                               (sizeof(PIECES) / sizeof(PIECES[0]))];
                     size_t length = strlen(piece);
                     if (used + length < sizeof(program) - 1) {
-                        memmove(program + at + length, program + at,
-                                used - at);
+                        memmove(program + at + length, program + at, used - at);
                         memcpy(program + at, piece, length);
                         used += length;
                     }
@@ -204,11 +286,11 @@ static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
             free(seeded);
         } else {
             uint32_t pieces = (uint32_t)(next_number(&state) % 120) + 1;
-            for (uint32_t i = 0;
-                 i < pieces && used < sizeof(program) - 64; i++) {
+            for (uint32_t i = 0; i < pieces && used < sizeof(program) - 64;
+                 i++) {
                 const char *piece =
-                    PIECES[next_number(&state) % (sizeof(PIECES) /
-                                                  sizeof(PIECES[0]))];
+                    PIECES[next_number(&state) %
+                           (sizeof(PIECES) / sizeof(PIECES[0]))];
                 size_t length = strlen(piece);
                 if (used + length >= sizeof(program) - 1) {
                     break;
@@ -404,10 +486,9 @@ static int fuzz_handles(uint64_t seed, unsigned long many, const char *where) {
         case 2:
             // A near miss: a real handle moved by a little, which is what an
             // arithmetic mistake in a host looks like.
-            handed.object =
-                made ? (char *)mine[0].object +
-                           (int64_t)(next_number(&state) % 64) - 32
-                     : NULL;
+            handed.object = made ? (char *)mine[0].object +
+                                       (int64_t)(next_number(&state) % 64) - 32
+                                 : NULL;
             break;
         case 3:
             handed = made_there ? theirs[0] : handed;
@@ -440,8 +521,7 @@ static int fuzz_handles(uint64_t seed, unsigned long many, const char *where) {
         uint32_t length = 0;
         const char *bytes = kest_text_bytes(&said[0], &length);
         if (bytes != NULL && length != (uint32_t)said[1].integer) {
-            fprintf(stderr,
-                    "fuzz: text of %lld bytes was read back as %u\n",
+            fprintf(stderr, "fuzz: text of %lld bytes was read back as %u\n",
                     (long long)said[1].integer, length);
             return 1;
         }
@@ -521,8 +601,7 @@ static int fuzz_lends(uint64_t seed, unsigned long many, const char *where) {
             uint32_t room = 0;
             uint32_t count = kest_array_length(runtime, held[which], &room);
             if (lending[which] != 0 && count != lending[which]) {
-                fprintf(stderr,
-                        "fuzz: a lend of %u bytes says it is %u long\n",
+                fprintf(stderr, "fuzz: a lend of %u bytes says it is %u long\n",
                         lending[which], count);
                 return 1;
             }
@@ -541,8 +620,7 @@ static int fuzz_lends(uint64_t seed, unsigned long many, const char *where) {
         case 5: {
             // One begun inside another, over the same block: two handles and
             // one block, and ending either ends both.
-            KestValue again =
-                kest_borrow(runtime, blocks[which], 16, "u8", 1);
+            KestValue again = kest_borrow(runtime, blocks[which], 16, "u8", 1);
             (void)kest_array_length(runtime, again, NULL);
             (void)kest_lend_ends(runtime, again);
             (void)kest_array_length(runtime, held[which], NULL);
@@ -628,14 +706,23 @@ static int fuzz_refs(uint64_t seed, unsigned long many, const char *where) {
         }
         int32_t entry = looking;
         switch (next_number(&state) % 5) {
-        case 0: entry = looking; break;
-        case 1: entry = dropping; break;
-        case 2: entry = putting; frame[2].integer = (int64_t)next_number(&state); break;
+        case 0:
+            entry = looking;
+            break;
+        case 1:
+            entry = dropping;
+            break;
+        case 2:
+            entry = putting;
+            frame[2].integer = (int64_t)next_number(&state);
+            break;
         case 3:
             entry = growing;
             frame[1].integer = (int64_t)(next_number(&state) % 1000);
             break;
-        default: entry = counting; break;
+        default:
+            entry = counting;
+            break;
         }
         if (!kest_call(runtime, entry, frame, 8)) {
             // A refusal is an answer. What would not be one is a machine that
@@ -693,12 +780,26 @@ static int fuzz_text(uint64_t seed, unsigned long many, const char *where) {
     // surrogate, a value past the last one there is, and a byte that only ever
     // follows another.
     static const char *const CHARACTERS[] = {
-        "a", "\0", "\n", "\x7f", "\xc4\xb1", "\xe2\x82\xac", "\xf0\x9f\x98\x80",
-        "\xc4", "\xe2\x82", "\xe2", "\xf0\x9f\x98", "\xf0", "\xff", "\xc0\x80",
-        "\xed\xa0\x80", "\xf4\x90\x80\x80", "\x80",
+        "a",
+        "\0",
+        "\n",
+        "\x7f",
+        "\xc4\xb1",
+        "\xe2\x82\xac",
+        "\xf0\x9f\x98\x80",
+        "\xc4",
+        "\xe2\x82",
+        "\xe2",
+        "\xf0\x9f\x98",
+        "\xf0",
+        "\xff",
+        "\xc0\x80",
+        "\xed\xa0\x80",
+        "\xf4\x90\x80\x80",
+        "\x80",
     };
-    static const uint32_t WIDTHS[] = {1, 1, 1, 1, 2, 3, 4,
-                                      1, 2, 1, 3, 1, 1, 2, 3, 4, 1};
+    static const uint32_t WIDTHS[] = {1, 1, 1, 1, 2, 3, 4, 1, 2,
+                                      1, 3, 1, 1, 2, 3, 4, 1};
     unsigned long taken = 0;
     unsigned long refused = 0;
     for (unsigned long round = 0; round < many; round++) {
@@ -730,10 +831,8 @@ static int fuzz_text(uint64_t seed, unsigned long many, const char *where) {
             // character. What is held is that it still answered with an empty
             // piece of text rather than with nothing at all.
             if (into[0].text == NULL || into[1].integer != 0) {
-                fprintf(stderr,
-                        "fuzz: text refused came back as %p of %lld\n",
-                        (const void *)into[0].text,
-                        (long long)into[1].integer);
+                fprintf(stderr, "fuzz: text refused came back as %p of %lld\n",
+                        (const void *)into[0].text, (long long)into[1].integer);
                 return 1;
             }
             refused++;
@@ -852,9 +951,8 @@ static int fuzz_migrate(uint64_t seed, unsigned long many, const char *where) {
             int32_t counted_there = kest_entry(fresh, "counted");
             if (counted_there >= 0 &&
                 kest_call(fresh, counted_there, crossed, 8)) {
-                fprintf(stderr,
-                        "fuzz: a world of one machine was counted by "
-                        "another\n");
+                fprintf(stderr, "fuzz: a world of one machine was counted by "
+                                "another\n");
                 return 1;
             }
             kest_runtime_free(fresh);
@@ -900,9 +998,9 @@ static int fuzz_migrate(uint64_t seed, unsigned long many, const char *where) {
 // has to answer or be refused in words the way anything else does. A report
 // from the sanitisers here is a chunk the verifier should have refused.
 static const char *const PROVEN[] = {
-    "examples/math.kest",   "examples/vectors.kest", "examples/boxes.kest",
-    "examples/words.kest",  "examples/tree.kest",    "examples/state.kest",
-    "examples/queue.kest",  "examples/player.kest",
+    "examples/math.kest",  "examples/vectors.kest", "examples/boxes.kest",
+    "examples/words.kest", "examples/tree.kest",    "examples/state.kest",
+    "examples/queue.kest", "examples/player.kest",
 };
 
 // What the programs above write is not what is asked about, so it goes
@@ -933,8 +1031,10 @@ static int fuzz_chunks(uint64_t seed, unsigned long many, const char *where) {
     for (size_t i = 0; i < PROGRAMS; i++) {
         built[i] = kest_build(PROVEN[i], NULL, NULL, KEST_FORM_TEXT, 0);
         if (built[i] == NULL) {
-            fprintf(stderr, "fuzz: `%s` does not build, so there is nothing "
-                            "to break\n", PROVEN[i]);
+            fprintf(stderr,
+                    "fuzz: `%s` does not build, so there is nothing "
+                    "to break\n",
+                    PROVEN[i]);
             return 1;
         }
     }
@@ -972,7 +1072,8 @@ static int fuzz_chunks(uint64_t seed, unsigned long many, const char *where) {
             uint32_t at = (uint32_t)(next_number(&state) % chunk->code_count);
             switch (next_number(&state) % 4) {
             case 0:
-                chunk->code[at] = (uint8_t)(next_number(&state) % KEST_OP_COUNT);
+                chunk->code[at] =
+                    (uint8_t)(next_number(&state) % KEST_OP_COUNT);
                 break;
             case 1:
                 chunk->code[at] = (uint8_t)next_number(&state);

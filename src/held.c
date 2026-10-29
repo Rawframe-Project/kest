@@ -147,8 +147,8 @@ bool kest_held_free(KestHeld *held) {
     if (held == NULL) {
         return true;
     }
-    bool freed = kest_runtime_free(held->runtime) &&
-                 kest_build_free(held->build);
+    bool freed =
+        kest_runtime_free(held->runtime) && kest_build_free(held->build);
     for (uint32_t i = 0; i < held->door_count; i++) {
         free(held->doors[i].name);
     }
@@ -220,13 +220,12 @@ bool kest_held_begin(KestHeld *held, const char *entry, const KestValue *args,
     const KestLayout *shape =
         found < 0 ? NULL : kest_frame_gives(held->runtime, found);
     KestValue *frame = NULL;
-    if (shape == NULL ||
-        call_with(held, held->runtime, found, false, args, count, &frame) !=
-            CALLED) {
+    if (shape == NULL || call_with(held, held->runtime, found, false, args,
+                                   count, &frame) != CALLED) {
         return false;
     }
-    KestValue *world = malloc((shape->slots == 0 ? 1 : shape->slots) *
-                              sizeof(KestValue));
+    KestValue *world =
+        malloc((shape->slots == 0 ? 1 : shape->slots) * sizeof(KestValue));
     if (world == NULL) {
         return false;
     }
@@ -282,9 +281,8 @@ bool kest_held_call(KestHeld *held, const char *entry, const KestValue *args,
     }
     Door *door = door_named(held, entry);
     KestValue *frame = NULL;
-    if (door == NULL ||
-        call_with(held, held->runtime, door->entry, true, args, count,
-                  &frame) != CALLED) {
+    if (door == NULL || call_with(held, held->runtime, door->entry, true, args,
+                                  count, &frame) != CALLED) {
         return false;
     }
     if (answer != NULL) {
@@ -387,9 +385,9 @@ bool kest_held_reload(KestHeld *held, const char *path, char *said,
     // game draws `said` in a corner, and a refusal that says only that it was
     // refused sends the person back to a terminal to find out what for.
     FILE *heard = kest_scratch_file();
-    KestBuild *candidate = kest_build(
-        from, held->library, heard != NULL ? heard : held->errors,
-        KEST_FORM_TEXT, 0);
+    KestBuild *candidate =
+        kest_build(from, held->library, heard != NULL ? heard : held->errors,
+                   KEST_FORM_TEXT, 0);
     if (heard != NULL) {
         char first[512] = "";
         char where[512] = "";
@@ -473,8 +471,8 @@ bool kest_held_reload(KestHeld *held, const char *path, char *said,
     if (bytes == NULL || bytes->stride != 1) {
         kest_runtime_free(fresh);
         kest_build_free(candidate);
-        return refused(said, room,
-                       "refused: `save` did not answer bytes%s", NULL);
+        return refused(said, room, "refused: `save` did not answer bytes%s",
+                       NULL);
     }
     uint32_t length = bytes->length;
     uint8_t *copy = malloc(length == 0 ? 1 : length);
@@ -496,11 +494,10 @@ bool kest_held_reload(KestHeld *held, const char *path, char *said,
     // the program's answer, as a frame there was no room for is; the machine
     // is a new one, so any time it has said it had no room is this one.
     KestValue lent = kest_borrow(fresh, copy, length, "u8", 1);
-    Called restored = lent.object == NULL
-                          ? (kest_runtime_ran_out(fresh) != 0 ? CALL_NO_ROOM
-                                                              : CALL_REFUSED)
-                          : call_with(held, fresh, restore, false, &lent, 1,
-                                      &frame);
+    Called restored =
+        lent.object == NULL
+            ? (kest_runtime_ran_out(fresh) != 0 ? CALL_NO_ROOM : CALL_REFUSED)
+            : call_with(held, fresh, restore, false, &lent, 1, &frame);
     bool made = restored == CALLED;
     KestValue *world =
         malloc((shape->slots == 0 ? 1 : shape->slots) * sizeof(KestValue));

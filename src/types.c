@@ -33,8 +33,7 @@ double kest_left_over(double left, double right) {
     // There is no `NAN` to reach for -- the library is libc and this file does
     // not include `<math.h>` for one constant.
     volatile double nothing = 0.0;
-    if (left != left || right != right || right == 0.0 ||
-        left - left != 0.0) {
+    if (left != left || right != right || right == 0.0 || left - left != 0.0) {
         return nothing / nothing;
     }
     double divisor = right < 0.0 ? -right : right;
@@ -386,8 +385,7 @@ void kest_import_reached(KestProgram *program, const char *name,
     kest_import_reached_by(program, name, (size_t)(dot - name));
 }
 
-bool kest_file_reaches(KestProgram *program, const char *alias,
-                       size_t length) {
+bool kest_file_reaches(KestProgram *program, const char *alias, size_t length) {
     if (program->unit == NULL) {
         return false;
     }
@@ -435,7 +433,7 @@ const char *kest_module_for(KestProgram *program, const char *alias,
 // The word is expanded first, because a name lives under the whole of its
 // module and what a file writes is the last part of it.
 static bool under_module_of(KestProgram *program, const char *whole,
-                                 const char *name, size_t length) {
+                            const char *name, size_t length) {
     const char *module = kest_module_for(program, name, length);
     if (module == NULL || module[0] == '\0') {
         return kest_under_module(whole, name, length);
@@ -458,8 +456,7 @@ const KestSymbol *kest_first_under(KestProgram *program, const char *name,
     for (uint32_t i = 0; i < program->global_count; i++) {
         const KestSymbol *symbol = &program->globals[i];
         if (!under_module_of(program, symbol->name, name, length) ||
-            kest_needs_import(program, symbol->name,
-                              strlen(symbol->name))) {
+            kest_needs_import(program, symbol->name, strlen(symbol->name))) {
             continue;
         }
         // A name under the module and nothing further: `io.print` rather than
@@ -477,8 +474,7 @@ const KestSymbol *kest_first_under(KestProgram *program, const char *name,
     return any;
 }
 
-bool kest_module_named(KestProgram *program, const char *name,
-                       size_t length) {
+bool kest_module_named(KestProgram *program, const char *name, size_t length) {
     for (uint32_t i = 0; i < program->global_count; i++) {
         const char *whole = program->globals[i].name;
         if (under_module_of(program, whole, name, length) &&
@@ -525,11 +521,10 @@ bool kest_needs_import(KestProgram *program, const char *name, size_t length) {
     // `std.io.print` begins with `std`, which is nobody's module. A name a
     // file wrote itself -- `io.print` -- is matched by its last part, which is
     // what `kest_file_reaches` answers.
-    for (uint32_t i = 0; program->unit != NULL &&
-                         i <= program->unit->import_count;
-         i++) {
-        const char *module = i == 0 ? program->module
-                                    : program->unit->import_paths[i - 1];
+    for (uint32_t i = 0;
+         program->unit != NULL && i <= program->unit->import_count; i++) {
+        const char *module =
+            i == 0 ? program->module : program->unit->import_paths[i - 1];
         if (module == NULL || module[0] == '\0') {
             continue;
         }
@@ -635,8 +630,8 @@ bool kest_out_of_reach(KestProgram *program, const char *name, size_t length) {
 
 KestType *kest_find_type(KestProgram *program, const char *name,
                          size_t length) {
-    // A composed type has no name of its own and is not in here; `kest_type_name`
-    // builds one on demand and nothing looks it up by that.
+    // A composed type has no name of its own and is not in here;
+    // `kest_type_name` builds one on demand and nothing looks it up by that.
     if (program->types_by_name_slots == 0) {
         return NULL;
     }
@@ -665,11 +660,10 @@ static bool add_primitive(KestProgram *program, const char *name,
     // A handle is a machine word. A piece of text is two of them where it is
     // laid out in memory, for the same reason it is two slots: what it is made
     // of, and how many bytes that is. A number is what it says it is.
-    type->byte_size = tag == KEST_T_VOID   ? 0
-                      : tag == KEST_T_TEXT ? 16
-                      : width == 0 || width == 1
-                          ? (tag == KEST_T_BOOL ? 1 : 8)
-                          : (uint16_t)(width / 8);
+    type->byte_size = tag == KEST_T_VOID         ? 0
+                      : tag == KEST_T_TEXT       ? 16
+                      : width == 0 || width == 1 ? (tag == KEST_T_BOOL ? 1 : 8)
+                                                 : (uint16_t)(width / 8);
     type->byte_align = type->byte_size == 0 ? 1
                        : tag == KEST_T_TEXT ? 8
                                             : type->byte_size;
@@ -687,8 +681,7 @@ static bool add_primitive(KestProgram *program, const char *name,
 // a program declares can give one another meaning. Each is a struct like any
 // other once it is made, laid out as a C struct of those floats, so a host
 // lends the bytes it already has and `std.vec`'s shapes are the same bytes.
-static bool add_vector(KestProgram *program, const char *name,
-                       uint16_t count) {
+static bool add_vector(KestProgram *program, const char *name, uint16_t count) {
     static const char *const AXES[4] = {"x", "y", "z", "w"};
     // Out of what was registered rather than looked up by name: the index is
     // what the build that checks itself holds to every name put in it, and
@@ -751,9 +744,8 @@ static bool add_primitives(KestProgram *program) {
 // The constants one of the program's files declares, gathered the first time
 // the file is asked about and kept, or NULL where there is no room to keep
 // them -- which the two callers answer by walking the file as they used to.
-static const KestDecl **constants_of(KestProgram *program,
-                                     const KestUnitInfo *info,
-                                     uint32_t *count) {
+static const KestDecl **
+constants_of(KestProgram *program, const KestUnitInfo *info, uint32_t *count) {
     const KestUnits *files = program->files;
     // An empty list may have no array, and no offset is taken from that.
     if (files == NULL || files->count == 0 || info < files->items ||
@@ -807,10 +799,9 @@ static const KestDecl *constant_in_file(KestProgram *program, const char *name,
     for (uint32_t i = 0; i < count; i++) {
         const KestDecl *decl =
             constants != NULL ? constants[i] : unit->items[i];
-        if (decl->kind == KEST_DECL_CONST &&
-            decl->name.length == length &&
-            memcmp(kest_span_text(program->source, decl->name), name,
-                   length) == 0) {
+        if (decl->kind == KEST_DECL_CONST && decl->name.length == length &&
+            memcmp(kest_span_text(program->source, decl->name), name, length) ==
+                0) {
             return decl;
         }
     }
@@ -840,8 +831,7 @@ static const KestDecl *constant_in_module(KestProgram *program,
         for (uint32_t i = 0; i < count; i++) {
             const KestDecl *decl =
                 constants != NULL ? constants[i] : info->unit.items[i];
-            if (decl->kind == KEST_DECL_CONST &&
-                decl->name.length == length &&
+            if (decl->kind == KEST_DECL_CONST && decl->name.length == length &&
                 memcmp(kest_span_text(&info->source, decl->name), name,
                        length) == 0) {
                 *read_in = &info->source;
@@ -861,9 +851,9 @@ static void remember_count(KestProgram *program, const char *name,
         return;
     }
     if (program->counted_count == program->counted_capacity) {
-        void *moved = grow(program->arena, program->counted,
-                           program->counted_count, &program->counted_capacity,
-                           sizeof(const char *));
+        void *moved =
+            grow(program->arena, program->counted, program->counted_count,
+                 &program->counted_capacity, sizeof(const char *));
         if (moved == NULL) {
             return;
         }
@@ -959,10 +949,8 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
     }
     case KEST_EXPR_BYTE: {
         KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
-        out->integer =
-            (unsigned char)kest_literal_text(program->arena,
-                                             program->source, content,
-                                             NULL)[0];
+        out->integer = (unsigned char)kest_literal_text(
+            program->arena, program->source, content, NULL)[0];
         return true;
     }
     case KEST_EXPR_FLOAT:
@@ -973,8 +961,8 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
         return true;
     case KEST_EXPR_STRING: {
         KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
-        out->text = kest_literal_text(program->arena, program->source, content,
-                                      NULL);
+        out->text =
+            kest_literal_text(program->arena, program->source, content, NULL);
         return true;
     }
     case KEST_EXPR_BOOL:
@@ -1018,9 +1006,8 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
     // worked out -- and `const N: i32 = 130` was taken and wrapped, which is
     // the same narrowing with nobody asking for it.
     case KEST_EXPR_CALL: {
-        const KestType *to = expr->call.callee != NULL
-                                 ? expr->call.callee->type
-                                 : NULL;
+        const KestType *to =
+            expr->call.callee != NULL ? expr->call.callee->type : NULL;
         if (to == NULL && expr->call.callee != NULL &&
             expr->call.callee->kind == KEST_EXPR_NAME) {
             // A builtin whose answer cannot be anything else: how many are in
@@ -1032,9 +1019,8 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
                 kest_span_text(program->source, expr->call.callee->span);
             uint32_t length = expr->call.callee->span.length;
             if (kest_word_same("len", called, length)) {
-                const KestType *of = expr->call.arg_count == 1
-                                         ? expr->call.args[0]->type
-                                         : NULL;
+                const KestType *of =
+                    expr->call.arg_count == 1 ? expr->call.args[0]->type : NULL;
                 if (of == NULL || of->tag != KEST_T_FIXED) {
                     *why = "`len` is worked out where it is written for a run "
                            "of a size the type says, and asked while running "
@@ -1082,13 +1068,12 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
                 const KestType *what = expr->call.args[0]->type;
                 KestValue held = {0};
                 if (what == NULL ||
-                    !fold(program, expr->call.args[0], &held, depth + 1,
-                          why)) {
+                    !fold(program, expr->call.args[0], &held, depth + 1, why)) {
                     return false;
                 }
-                bool narrow = what->slots == 1 &&
-                              (kest_scalar_of(what) == KEST_L_U32 ||
-                               kest_scalar_of(what) == KEST_L_F32);
+                bool narrow =
+                    what->slots == 1 && (kest_scalar_of(what) == KEST_L_U32 ||
+                                         kest_scalar_of(what) == KEST_L_F32);
                 bool to_bits = kest_word_same("bits", called, length);
                 if (!narrow) {
                     *out = held;
@@ -1128,18 +1113,16 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
         const KestType *from = expr->call.args[0]->type;
         bool from_real = from != NULL && from->tag == KEST_T_FLOAT;
         if (to->tag == KEST_T_INT) {
-            out->integer = from_real
-                               ? kest_real_to_int(kest_scalar_of(to),
-                                                  held.real)
-                               : kest_narrow_to(kest_scalar_of(to),
-                                                held.integer);
+            out->integer =
+                from_real ? kest_real_to_int(kest_scalar_of(to), held.real)
+                          : kest_narrow_to(kest_scalar_of(to), held.integer);
             return true;
         }
-        double as_real = from_real ? held.real
-                         : (from != NULL && from->tag == KEST_T_INT &&
-                            !from->is_signed)
-                             ? (double)(uint64_t)held.integer
-                             : (double)held.integer;
+        double as_real =
+            from_real ? held.real
+            : (from != NULL && from->tag == KEST_T_INT && !from->is_signed)
+                ? (double)(uint64_t)held.integer
+                : (double)held.integer;
         // A slot holds a double either way, so widening is nothing and
         // narrowing is a rounding.
         out->real = to->width == 32 ? (double)(float)as_real : as_real;
@@ -1198,7 +1181,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
     case KEST_EXPR_BINARY: {
         KestValue left = {0};
         KestValue right = {0};
-        
+
         if (!fold(program, expr->binary.left, &left, depth + 1, why) ||
             !fold(program, expr->binary.right, &right, depth + 1, why)) {
             return false;
@@ -1314,8 +1297,8 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
                 out->integer = INT64_MIN;
                 break;
             }
-            out->integer = unsigned_ ? (int64_t)((uint64_t)a / (uint64_t)b)
-                                     : a / b;
+            out->integer =
+                unsigned_ ? (int64_t)((uint64_t)a / (uint64_t)b) : a / b;
             break;
         case KEST_TOK_PERCENT:
             if (b == 0) {
@@ -1326,8 +1309,8 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
                 out->integer = 0;
                 break;
             }
-            out->integer = unsigned_ ? (int64_t)((uint64_t)a % (uint64_t)b)
-                                     : a % b;
+            out->integer =
+                unsigned_ ? (int64_t)((uint64_t)a % (uint64_t)b) : a % b;
             break;
         case KEST_TOK_AMP:
             out->integer = a & b;
@@ -1501,9 +1484,9 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
         expr->kind == KEST_EXPR_ARRAY) {
         uint32_t used = 0;
         for (uint32_t i = 0; i < expr->array.count; i++) {
-            uint32_t wrote = fold_slots(program, expr->array.items[i],
-                                        out + used, room - used, depth + 1,
-                                        why);
+            uint32_t wrote =
+                fold_slots(program, expr->array.items[i], out + used,
+                           room - used, depth + 1, why);
             if (wrote == 0) {
                 return 0;
             }
@@ -1519,15 +1502,13 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
     if (type != NULL && type->tag == KEST_T_ENUM &&
         (expr->kind == KEST_EXPR_FIELD || expr->kind == KEST_EXPR_CALL) &&
         builds_rather_than_calls(expr)) {
-        const KestExpr *named = expr->kind == KEST_EXPR_CALL
-                                    ? expr->call.callee
-                                    : expr;
+        const KestExpr *named =
+            expr->kind == KEST_EXPR_CALL ? expr->call.callee : expr;
         if (named == NULL || named->kind != KEST_EXPR_FIELD ||
             room < type->slots) {
             return 0;
         }
-        const char *word =
-            kest_span_text(program->source, named->field.name);
+        const char *word = kest_span_text(program->source, named->field.name);
         uint32_t written = named->field.name.length;
         const KestVariantType *which = NULL;
         uint32_t at = 0;
@@ -1593,12 +1574,11 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
                                      : expr->field.object;
         const KestType *held = object == NULL ? NULL : object->type;
         uint32_t wide = held == NULL ? 0 : held->slots;
-        if (wide == 0 || (held->tag != KEST_T_FIXED &&
-                          held->tag != KEST_T_STRUCT)) {
+        if (wide == 0 ||
+            (held->tag != KEST_T_FIXED && held->tag != KEST_T_STRUCT)) {
             return 0;
         }
-        KestValue *inside =
-            KEST_ARENA_ARRAY(program->arena, KestValue, wide);
+        KestValue *inside = KEST_ARENA_ARRAY(program->arena, KestValue, wide);
         if (inside == NULL ||
             fold_slots(program, object, inside, wide, depth + 1, why) != wide) {
             return 0;
@@ -1618,10 +1598,10 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
             const KestMember *member = NULL;
             for (uint32_t i = 0; i < held->member_count; i++) {
                 if (held->members[i].name != NULL &&
-                    kest_word_same(held->members[i].name,
-                                   kest_span_text(program->source,
-                                                  expr->field.name),
-                                   expr->field.name.length)) {
+                    kest_word_same(
+                        held->members[i].name,
+                        kest_span_text(program->source, expr->field.name),
+                        expr->field.name.length)) {
                     member = &held->members[i];
                     break;
                 }
@@ -1698,8 +1678,8 @@ uint64_t kest_hash_value(const KestType *type, const KestValue *slots) {
         }
         const KestVariantType *variant = &type->cases[which];
         for (uint32_t p = 0; p < variant->payload_count; p++) {
-            bits = bits * 31 ^
-                   kest_hash_value(variant->payload[p], slots + variant->offsets[p]);
+            bits = bits * 31 ^ kest_hash_value(variant->payload[p],
+                                               slots + variant->offsets[p]);
         }
         return bits;
     }
@@ -1845,9 +1825,9 @@ int64_t kest_real_to_int(uint16_t scalar, double value) {
         return scalar == KEST_L_I64 ? INT64_MIN : (int64_t)low;
     }
     if (value >= high) {
-        return scalar == KEST_L_U64    ? (int64_t)UINT64_MAX
-               : scalar == KEST_L_I64  ? INT64_MAX
-                                       : (int64_t)high;
+        return scalar == KEST_L_U64   ? (int64_t)UINT64_MAX
+               : scalar == KEST_L_I64 ? INT64_MAX
+                                      : (int64_t)high;
     }
     // A `u64` is converted through one. Everything else here fits an `int64_t`
     // by the time it reaches this line, and a `u64` does not: the whole top
@@ -1994,7 +1974,6 @@ const char *kest_type_written(const KestType *type) {
     return dot == NULL ? type->name : dot + 1;
 }
 
-
 // The closest declared type name, or NULL when nothing is close enough to be
 // worth putting in front of a reader. A wrong suggestion costs more than none.
 // The way a file writes a registered name: the last part of its module and
@@ -2026,7 +2005,7 @@ const char *kest_written_as(KestProgram *program, const char *whole) {
 }
 
 static const char *nearest_type(KestProgram *program, const char *name,
-                                     size_t length) {
+                                size_t length) {
     // Every one or two character name is one edit from every other, so a
     // suggestion at that length carries no information.
     if (length < 3) {
@@ -2063,7 +2042,7 @@ static const char *nearest_type(KestProgram *program, const char *name,
         // Reachable by the last piece alone means this file declared it, and
         // that is how it is written back.
         best = kest_lookup_type(program, tail, strlen(tail)) != NULL ? tail
-                                                                    : written;
+                                                                     : written;
     }
     return best;
 }
@@ -2088,9 +2067,8 @@ static const char *type_names(KestArena *arena, const KestType *type) {
     // said as names, and where they were written is what the note carries.
     size_t room = 1;
     for (uint32_t i = 0; i < type->type_param_count; i++) {
-        const char *held = type->type_param_names == NULL
-                               ? NULL
-                               : type->type_param_names[i];
+        const char *held =
+            type->type_param_names == NULL ? NULL : type->type_param_names[i];
         room += strlen(held == NULL ? "T" : held) + strlen("`` and ");
     }
     char *out = kest_arena_alloc(arena, room, 1);
@@ -2099,22 +2077,20 @@ static const char *type_names(KestArena *arena, const KestType *type) {
     }
     size_t used = 0;
     for (uint32_t i = 0; i < type->type_param_count; i++) {
-        const char *held = type->type_param_names == NULL
-                               ? NULL
-                               : type->type_param_names[i];
+        const char *held =
+            type->type_param_names == NULL ? NULL : type->type_param_names[i];
         // A list a person reads: nothing before the first, ` and ` before the
         // last, a comma between the rest.
-        const char *before = i == 0                                ? ""
-                             : i + 1 == type->type_param_count     ? " and "
-                                                                   : ", ";
+        const char *before = i == 0                            ? ""
+                             : i + 1 == type->type_param_count ? " and "
+                                                               : ", ";
         used = kest_put(out, room, used, "%s`%s`", before,
                         held == NULL ? "T" : held);
     }
     return out;
 }
 
-KestType *kest_resolve_type_ref(KestProgram *program,
-                                const KestTypeRef *ref);
+KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref);
 
 // What a composed type is made of, as a number: the kind, what it holds and
 // how many. The element is compared by address rather than by shape, which is
@@ -2181,9 +2157,9 @@ static KestType *compose(KestProgram *program, KestTypeTag tag,
         return program->composed[program->composed_by_shape[slot] - 1u];
     }
     if (program->composed_count == program->composed_capacity) {
-        void *moved = grow(program->arena, program->composed,
-                           program->composed_count,
-                           &program->composed_capacity, sizeof(KestType *));
+        void *moved =
+            grow(program->arena, program->composed, program->composed_count,
+                 &program->composed_capacity, sizeof(KestType *));
         if (moved == NULL) {
             return NULL;
         }
@@ -2435,12 +2411,11 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
         // Where the module ends is wherever this name begins, because a name
         // lives under the whole of its module.
         size_t reach = strlen(whole);
-        const char *dot = reach > length + 1 &&
-                                  whole[reach - length - 1] == '.' &&
-                                  kest_word_same(whole + reach - length, name,
-                                                 length)
-                              ? whole + reach - length - 1
-                              : NULL;
+        const char *dot =
+            reach > length + 1 && whole[reach - length - 1] == '.' &&
+                    kest_word_same(whole + reach - length, name, length)
+                ? whole + reach - length - 1
+                : NULL;
         if (dot == NULL || !kest_needs_import(program, whole, strlen(whole))) {
             continue;
         }
@@ -2461,8 +2436,7 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     const char *dot = memchr(name, '.', length);
     if (dot != NULL && program->files != NULL &&
         !kest_file_reaches(program, name, (size_t)(dot - name)) &&
-        kest_library_has(program->files->library, name,
-                         (size_t)(dot - name))) {
+        kest_library_has(program->files->library, name, (size_t)(dot - name))) {
         kest_diags_suggest(program->diags,
                            "`std.%.*s` is in the library, and this file does "
                            "not import it",
@@ -2517,16 +2491,15 @@ KestType *kest_fixed_of(KestProgram *program, KestType *element,
 // where one that does not is wanted, and not the other way round, which is
 // what keeps a cost contract provable through an indirect call.
 // A function as a value. What it promises is part of what it is.
-static KestType *fn_of(KestProgram *program, KestType **params,
-                            uint32_t count,
-                     KestType *result, bool no_alloc, bool no_host,
-                     bool deterministic) {
+static KestType *fn_of(KestProgram *program, KestType **params, uint32_t count,
+                       KestType *result, bool no_alloc, bool no_host,
+                       bool deterministic) {
     KestType *type = new_type(program, KEST_T_FN);
     if (type == NULL) {
         return NULL;
     }
-    type->params = KEST_ARENA_ARRAY(program->arena, KestType *,
-                                    count == 0 ? 1 : count);
+    type->params =
+        KEST_ARENA_ARRAY(program->arena, KestType *, count == 0 ? 1 : count);
     if (type->params == NULL) {
         return NULL;
     }
@@ -2630,8 +2603,8 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     made->decl = shape->decl;
     made->unit = shape->unit;
     made->shape = shape;
-    made->type_args = KEST_ARENA_ARRAY(program->arena, KestType *,
-                                       count == 0 ? 1 : count);
+    made->type_args =
+        KEST_ARENA_ARRAY(program->arena, KestType *, count == 0 ? 1 : count);
     if (made->type_args == NULL) {
         return error_type(program);
     }
@@ -2681,9 +2654,8 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
         // that refuses two cases of one name ran when the shape was resolved,
         // so it is not run again here.
         uint32_t how_many = decl->choice.case_count;
-        KestVariantType *cases = KEST_ARENA_ARRAY(program->arena,
-                                                  KestVariantType,
-                                                  how_many == 0 ? 1 : how_many);
+        KestVariantType *cases = KEST_ARENA_ARRAY(
+            program->arena, KestVariantType, how_many == 0 ? 1 : how_many);
         if (cases == NULL) {
             return error_type(program);
         }
@@ -2718,8 +2690,8 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
             return error_type(program);
         }
         for (uint32_t f = 0; f < fields; f++) {
-            members[f].name = span_string(program,
-                                          decl->record.fields[f]->name);
+            members[f].name =
+                span_string(program, decl->record.fields[f]->name);
             members[f].span = decl->record.fields[f]->name;
             members[f].own = decl->record.fields[f]->own.length != 0;
             members[f].type =
@@ -2739,8 +2711,7 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     return made;
 }
 
-KestType *kest_resolve_type_ref(KestProgram *program,
-                                const KestTypeRef *ref) {
+KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref) {
     if (ref == NULL) {
         return error_type(program);
     }
@@ -2801,11 +2772,9 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                     args[i] = kest_resolve_type_ref(program, ref->args[i]);
                 }
                 if (ref->arg_count != shape->type_param_count) {
-                    wrong_type_count(program, ref->span, name,
-                                     ref->name.length,
+                    wrong_type_count(program, ref->span, name, ref->name.length,
                                      shape->type_param_count, ref->arg_count,
-                                     shape,
-                                     type_names(program->arena, shape));
+                                     shape, type_names(program->arena, shape));
                     return error_type(program);
                 }
                 return kest_struct_of(program, shape, args, count);
@@ -2824,8 +2793,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                            (int)ref->name.length, name);
             // `ref` and `store` are the two the language has; the rest are
             // declared, so the nearest declared name is the likelier answer.
-            const char *nearest =
-                nearest_type(program, name, ref->name.length);
+            const char *nearest = nearest_type(program, name, ref->name.length);
             if (nearest != NULL) {
                 kest_diags_suggest(program->diags, "did you mean `%s`?",
                                    nearest);
@@ -2840,8 +2808,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
         }
         if (ref->arg_count != 1) {
             wrong_type_count(program, ref->span, name, ref->name.length, 1,
-                             ref->arg_count, NULL,
-                             "`T`");
+                             ref->arg_count, NULL, "`T`");
             return error_type(program);
         }
         return compose(program, is_ref ? KEST_T_REF : KEST_T_STORE,
@@ -2907,9 +2874,8 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                 if (dot != NULL && declared == NULL) {
                     uint32_t named = (uint32_t)(dot - digits);
                     bool anywhere = false;
-                    for (uint32_t f = 0;
-                         program->files != NULL && f < program->files->count &&
-                         !anywhere;
+                    for (uint32_t f = 0; program->files != NULL &&
+                                         f < program->files->count && !anywhere;
                          f++) {
                         const char *called = program->files->items[f].alias;
                         anywhere = called != NULL &&
@@ -2927,12 +2893,11 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                                            "reads");
                         return error_type(program);
                     }
-                    kest_diags_add(program->diags, KEST_SEVERITY_ERROR,
-                                   "K0326", ref->count,
-                                   "`%.*s` has no constant called `%.*s`",
-                                   (int)named, digits,
-                                   (int)(ref->count.length - named - 1),
-                                   dot + 1);
+                    kest_diags_add(
+                        program->diags, KEST_SEVERITY_ERROR, "K0326",
+                        ref->count, "`%.*s` has no constant called `%.*s`",
+                        (int)named, digits,
+                        (int)(ref->count.length - named - 1), dot + 1);
                     kest_diags_suggest(program->diags,
                                        "`const N: i32 = 16` there, and "
                                        "`[T; %.*s.N]` here",
@@ -2940,8 +2905,8 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                     return error_type(program);
                 }
                 if (declared != NULL) {
-                    kest_diags_add(program->diags, KEST_SEVERITY_ERROR,
-                                   "K0326", ref->count,
+                    kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0326",
+                                   ref->count,
                                    "`%.*s` is a constant and not a number",
                                    (int)ref->count.length, digits);
                     kest_diags_suggest(program->diags,
@@ -2956,11 +2921,11 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                                    "`const N: i32 = 16` and then `[T; N]`");
                 return error_type(program);
             }
-            uint32_t worked = declared == NULL
-                                  ? 0
-                                  : kest_fold_const(program,
-                                                    declared->constant.value,
-                                                    &value, 1, &why, NULL);
+            uint32_t worked =
+                declared == NULL
+                    ? 0
+                    : kest_fold_const(program, declared->constant.value, &value,
+                                      1, &why, NULL);
             program->source = was_reading;
             if (worked != 1) {
                 kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0326",
@@ -2992,11 +2957,10 @@ KestType *kest_resolve_type_ref(KestProgram *program,
         // where it is held. Where it is already known, it is known here.
         KestType *run = kest_fixed_of(program, element, (uint32_t)how_many);
         if (element != NULL && element->byte_size != 0 &&
-            !sized_within(program,
-                          (uint32_t)(element->byte_size * how_many),
+            !sized_within(program, (uint32_t)(element->byte_size * how_many),
                           (uint32_t)(element->slots * how_many),
-                          program->source,
-                          ref->count, kest_type_name(program->arena, run))) {
+                          program->source, ref->count,
+                          kest_type_name(program->arena, run))) {
             return error_type(program);
         }
         return run;
@@ -3070,8 +3034,8 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
             if (one == UNNAMED) {
                 return UNNAMED;
             }
-            used = kest_put(written, room, used, "%s%s", i == 0 ? "" : ", ",
-                            one);
+            used =
+                kest_put(written, room, used, "%s%s", i == 0 ? "" : ", ", one);
         }
         used = kest_put(written, room, used, ")");
         if (result != NULL) {
@@ -3158,18 +3122,19 @@ typedef struct {
 } Retired;
 
 static const Retired RETIRED[] = {
-    {"std.vec", "Vec2", "it is the language's own now: `vec2` is the same two "
-                        "`f32`s"},
-    {"std.vec", "Vec3", "it is the language's own now: `vec3` is the same "
-                        "three `f32`s"},
+    {"std.vec", "Vec2",
+     "it is the language's own now: `vec2` is the same two "
+     "`f32`s"},
+    {"std.vec", "Vec3",
+     "it is the language's own now: `vec3` is the same "
+     "three `f32`s"},
     {"std.vec", "add", "the language adds vectors now: write `a + b`"},
     {"std.vec", "sub", "the language takes vectors away now: write `a - b`"},
     {"std.vec", "scale", "the language scales vectors now: write `v * k`"},
 };
 
 const char *kest_retired(KestProgram *program, const char *alias,
-                         size_t alias_length, const char *name,
-                         size_t length) {
+                         size_t alias_length, const char *name, size_t length) {
     const char *module = kest_module_for(program, alias, alias_length);
     if (module == NULL) {
         return NULL;
@@ -3300,8 +3265,9 @@ static void index_agrees(const KestProgram *program, const char *after) {
         const KestType *first =
             kest_find_type((KestProgram *)program, named, strlen(named));
         if (first == NULL) {
-            fprintf(stderr, "kest: after %s the type `%s` is not in the index\n",
-                    after, named);
+            fprintf(stderr,
+                    "kest: after %s the type `%s` is not in the index\n", after,
+                    named);
             abort();
         }
     }
@@ -3460,8 +3426,7 @@ static uint32_t under_one_name(KestProgram *program, const char *name,
 
 void kest_program_used(KestProgram *program, const KestSource *source,
                        KestSpan span, const KestSource *declared_in,
-                       KestSpan declared, const KestType *type,
-                       bool is_local) {
+                       KestSpan declared, const KestType *type, bool is_local) {
     if (program == NULL || source == NULL || !program->index_names) {
         return;
     }
@@ -3476,8 +3441,7 @@ void kest_program_used(KestProgram *program, const KestSource *source,
             return;
         }
         if (program->use_count > 0) {
-            memcpy(moved, program->uses,
-                   sizeof(KestUse) * program->use_count);
+            memcpy(moved, program->uses, sizeof(KestUse) * program->use_count);
         }
         program->uses = moved;
         program->use_capacity = grown;
@@ -3716,8 +3680,8 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
         // themselves, so a use can put what it was given beside them and see
         // what each one has to be. It is never measured; a copy is.
         uint32_t generics = type->type_param_count;
-        const char **names = KEST_ARENA_ARRAY(program->arena, const char *,
-                                              generics);
+        const char **names =
+            KEST_ARENA_ARRAY(program->arena, const char *, generics);
         KestType **stands =
             KEST_ARENA_ARRAY(program->arena, KestType *, generics);
         if (names == NULL || stands == NULL) {
@@ -3823,11 +3787,10 @@ static bool measure_held(KestProgram *program, KestType *type,
             return false;
         }
         const KestType *element = type->element;
-        uint32_t one = element == NULL || element->slots == 0 ? 1
-                                                              : element->slots;
-        uint32_t bytes = element == NULL || element->byte_size == 0
-                             ? 8
-                             : element->byte_size;
+        uint32_t one =
+            element == NULL || element->slots == 0 ? 1 : element->slots;
+        uint32_t bytes =
+            element == NULL || element->byte_size == 0 ? 8 : element->byte_size;
         type->byte_align = element == NULL || element->byte_align == 0
                                ? 8
                                : element->byte_align;
@@ -3892,8 +3855,8 @@ static bool refuse_cycle(KestProgram *program, KestType *type) {
 // that crossed is seen rather than wrapped: two fields of 64000 bytes each
 // were a struct of 62464, and eight shapes each holding two of the one before
 // were one that wrote its layout past the end of where it was being written.
-static bool within_a_value(KestProgram *program, KestType *type,
-                           uint32_t bytes, uint32_t slots) {
+static bool within_a_value(KestProgram *program, KestType *type, uint32_t bytes,
+                           uint32_t slots) {
     if (bytes <= UINT16_MAX && slots <= UINT16_MAX) {
         return true;
     }
@@ -3923,9 +3886,8 @@ static bool measure_struct(KestProgram *program, KestType *type) {
         // The bytes are laid out the way a C compiler would, so an array of
         // these can be the array the host already has.
         uint16_t member_size = member == NULL ? 8 : member->byte_size;
-        uint16_t member_align = member == NULL || member->byte_align == 0
-                                    ? 8
-                                    : member->byte_align;
+        uint16_t member_align =
+            member == NULL || member->byte_align == 0 ? 8 : member->byte_align;
         bytes = (bytes + member_align - 1) / member_align * member_align;
         type->members[i].byte_offset = (uint16_t)bytes;
         bytes += member_size;
@@ -3960,9 +3922,8 @@ static bool measure_enum(KestProgram *program, KestType *type) {
             if (!measure_held(program, held, type)) {
                 return refuse_cycle(program, type);
             }
-            uint16_t held_align = held == NULL || held->byte_align == 0
-                                      ? 8
-                                      : held->byte_align;
+            uint16_t held_align =
+                held == NULL || held->byte_align == 0 ? 8 : held->byte_align;
             if (held_align > align) {
                 align = held_align;
             }
@@ -3984,8 +3945,7 @@ static bool measure_enum(KestProgram *program, KestType *type) {
     // alignment puts it after that.
     uint16_t start = (uint16_t)((4 + align - 1) / align * align);
     uint32_t whole = start + payload_bytes;
-    if (!within_a_value(program, type,
-                        (whole + align - 1) / align * align,
+    if (!within_a_value(program, type, (whole + align - 1) / align * align,
                         payload_slots + 1)) {
         return true;
     }
@@ -4129,9 +4089,8 @@ static bool resolve_flags_cases(KestProgram *program, const KestUnit *unit) {
         type->byte_align = type->byte_size;
 
         uint32_t count = decl->choice.case_count;
-        KestVariantType *cases = KEST_ARENA_ARRAY(program->arena,
-                                                  KestVariantType,
-                                                  count == 0 ? 1 : count);
+        KestVariantType *cases = KEST_ARENA_ARRAY(
+            program->arena, KestVariantType, count == 0 ? 1 : count);
         if (cases == NULL) {
             return false;
         }
@@ -4160,12 +4119,10 @@ static bool resolve_flags_cases(KestProgram *program, const KestUnit *unit) {
                 continue;
             }
             if (used >= over->width) {
-                kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0338",
-                               written->name,
-                               "`%s` is flag %u, and a `%s` holds %u",
-                               case_name, used + 1,
-                               kest_type_name(program->arena, over),
-                               over->width);
+                kest_diags_add(
+                    program->diags, KEST_SEVERITY_ERROR, "K0338", written->name,
+                    "`%s` is flag %u, and a `%s` holds %u", case_name, used + 1,
+                    kest_type_name(program->arena, over), over->width);
                 kest_diags_suggest(program->diags,
                                    "widen the type the flags sit over");
                 continue;
@@ -4212,8 +4169,8 @@ static bool resolve_enum_cases(KestProgram *program, const KestUnit *unit) {
         // is a `T` until a copy says what `T` is. It is never measured; a copy
         // is.
         uint32_t generics = type->type_param_count;
-        const char **stand_names = KEST_ARENA_ARRAY(program->arena,
-                                                    const char *, generics);
+        const char **stand_names =
+            KEST_ARENA_ARRAY(program->arena, const char *, generics);
         KestType **stands =
             KEST_ARENA_ARRAY(program->arena, KestType *, generics);
         if (stand_names == NULL || stands == NULL) {
@@ -4233,9 +4190,8 @@ static bool resolve_enum_cases(KestProgram *program, const KestUnit *unit) {
         kest_bind_types(program, stand_names, stands, generics);
 
         uint32_t count = decl->choice.case_count;
-        KestVariantType *cases = KEST_ARENA_ARRAY(program->arena,
-                                                  KestVariantType,
-                                                  count == 0 ? 1 : count);
+        KestVariantType *cases = KEST_ARENA_ARRAY(
+            program->arena, KestVariantType, count == 0 ? 1 : count);
         if (cases == NULL) {
             return false;
         }
@@ -4268,12 +4224,12 @@ static bool resolve_enum_cases(KestProgram *program, const KestUnit *unit) {
             cases[used].name = case_name;
             cases[used].span = written->name;
             cases[used].payload_count = held;
-            cases[used].payload =
-                KEST_ARENA_ARRAY(program->arena, KestType *, held == 0 ? 1 : held);
-            cases[used].offsets =
-                KEST_ARENA_ARRAY(program->arena, uint16_t, held == 0 ? 1 : held);
-            cases[used].byte_offsets =
-                KEST_ARENA_ARRAY(program->arena, uint16_t, held == 0 ? 1 : held);
+            cases[used].payload = KEST_ARENA_ARRAY(program->arena, KestType *,
+                                                   held == 0 ? 1 : held);
+            cases[used].offsets = KEST_ARENA_ARRAY(program->arena, uint16_t,
+                                                   held == 0 ? 1 : held);
+            cases[used].byte_offsets = KEST_ARENA_ARRAY(
+                program->arena, uint16_t, held == 0 ? 1 : held);
             if (cases[used].payload == NULL || cases[used].offsets == NULL ||
                 cases[used].byte_offsets == NULL) {
                 return false;
@@ -4341,9 +4297,8 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
     }
     switch (type->tag) {
     case KEST_T_ARRAY:
-        return kest_array_of(
-            program,
-            kest_substitute(program, type->element, names, bindings, count));
+        return kest_array_of(program, kest_substitute(program, type->element,
+                                                      names, bindings, count));
     case KEST_T_OPTIONAL:
         return kest_optional_of(
             program,
@@ -4356,9 +4311,8 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
             kest_substitute(program, type->element, names, bindings, count),
             type->count);
     case KEST_T_REF:
-        return kest_ref_of(
-            program,
-            kest_substitute(program, type->element, names, bindings, count));
+        return kest_ref_of(program, kest_substitute(program, type->element,
+                                                    names, bindings, count));
     case KEST_T_STORE:
         return compose(
             program, KEST_T_STORE,
@@ -4373,8 +4327,7 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
         KestType *made = fn_of(
             program, params, used,
             kest_substitute(program, type->result, names, bindings, count),
-            type->no_alloc, type->no_host,
-            type->deterministic);
+            type->no_alloc, type->no_host, type->deterministic);
         if (made != NULL) {
             made->block = type->block;
         }
@@ -4389,8 +4342,8 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
             return type;
         }
         uint32_t used = type->type_arg_count;
-        KestType **args = KEST_ARENA_ARRAY(program->arena, KestType *,
-                                           used == 0 ? 1 : used);
+        KestType **args =
+            KEST_ARENA_ARRAY(program->arena, KestType *, used == 0 ? 1 : used);
         if (args == NULL) {
             return type;
         }
@@ -4451,9 +4404,8 @@ bool kest_unify(const KestType *declared, const KestType *given,
         if (declared->shape == NULL || declared->shape != given->shape) {
             return true;
         }
-        for (uint32_t i = 0; i < declared->type_arg_count &&
-                             i < given->type_arg_count;
-             i++) {
+        for (uint32_t i = 0;
+             i < declared->type_arg_count && i < given->type_arg_count; i++) {
             if (!kest_unify(declared->type_args[i], given->type_args[i], names,
                             bindings, count)) {
                 return false;
@@ -4513,8 +4465,7 @@ bool kest_unify(const KestType *declared, const KestType *given,
 // module is one copy -- so the `K` inside it is whichever of them asked first,
 // and what that one said about `K` is not what this one says. The name is what
 // is meant; which name is bound here is the question.
-static KestType *stands_here(const KestProgram *program,
-                             const KestType *type) {
+static KestType *stands_here(const KestProgram *program, const KestType *type) {
     if (type == NULL || type->tag != KEST_T_PARAM || type->name == NULL) {
         return NULL;
     }
@@ -4538,8 +4489,8 @@ bool kest_wants(KestProgram *program, const KestType *type,
     return true;
 }
 
-void kest_bind_types(KestProgram *program, const char **names,
-                     KestType **types, uint32_t count) {
+void kest_bind_types(KestProgram *program, const char **names, KestType **types,
+                     uint32_t count) {
     if (count > program->bound_capacity) {
         const char **grown_names =
             KEST_ARENA_ARRAY(program->arena, const char *, count);
@@ -4577,7 +4528,8 @@ static uint32_t binding_hash(const KestType *type) {
     hash = hash * 16777619u + (type->is_signed ? 1u : 0u);
     hash = hash * 16777619u + type->count;
     if (type->name != NULL) {
-        hash = hash * 16777619u + kest_name_hash(type->name, strlen(type->name));
+        hash =
+            hash * 16777619u + kest_name_hash(type->name, strlen(type->name));
     }
     // One step into what it holds, which is what tells `[i32]` from `[text]`.
     // Not all the way down: a hash is a bucket and the comparison below is
@@ -4586,9 +4538,9 @@ static uint32_t binding_hash(const KestType *type) {
         hash = hash * 16777619u + (uint32_t)type->element->tag;
         hash = hash * 16777619u + type->element->width;
         if (type->element->name != NULL) {
-            hash = hash * 16777619u +
-                   kest_name_hash(type->element->name,
-                                  strlen(type->element->name));
+            hash =
+                hash * 16777619u + kest_name_hash(type->element->name,
+                                                  strlen(type->element->name));
         }
     }
     return hash;
@@ -4648,8 +4600,7 @@ static bool use_room(KestProgram *program) {
     program->instances_by_use_slots = slots;
     for (uint32_t i = 0; i < program->instance_count; i++) {
         const KestInstance *one = &program->instances[i];
-        uint32_t slot =
-            use_slot(program, one->decl, one->bindings, one->count);
+        uint32_t slot = use_slot(program, one->decl, one->bindings, one->count);
         program->instances_by_use[slot] = i + 1u;
     }
     return true;
@@ -4688,10 +4639,10 @@ KestInstance *kest_instance_of(KestProgram *program, const KestDecl *decl,
     made->decl = decl;
     made->unit = unit;
     made->count = count;
-    made->names = KEST_ARENA_ARRAY(program->arena, const char *,
-                                   count == 0 ? 1 : count);
-    made->bindings = KEST_ARENA_ARRAY(program->arena, KestType *,
-                                      count == 0 ? 1 : count);
+    made->names =
+        KEST_ARENA_ARRAY(program->arena, const char *, count == 0 ? 1 : count);
+    made->bindings =
+        KEST_ARENA_ARRAY(program->arena, KestType *, count == 0 ? 1 : count);
     if (made->names == NULL || made->bindings == NULL) {
         return NULL;
     }
@@ -4722,9 +4673,8 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
         // The signature of a generic function mentions names that stand for
         // themselves until a call says what they are.
         uint32_t generics = decl->type_param_count;
-        const char **names =
-            KEST_ARENA_ARRAY(program->arena, const char *,
-                             generics == 0 ? 1 : generics);
+        const char **names = KEST_ARENA_ARRAY(program->arena, const char *,
+                                              generics == 0 ? 1 : generics);
         KestType **stands = KEST_ARENA_ARRAY(program->arena, KestType *,
                                              generics == 0 ? 1 : generics);
         if (names == NULL || stands == NULL) {
@@ -4747,7 +4697,8 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
         if (generics > 0) {
             type->type_param_names =
                 KEST_ARENA_ARRAY(program->arena, const char *, generics);
-            uint8_t *wants = KEST_ARENA_ARRAY(program->arena, uint8_t, generics);
+            uint8_t *wants =
+                KEST_ARENA_ARRAY(program->arena, uint8_t, generics);
             if (type->type_param_names == NULL || wants == NULL) {
                 return false;
             }
@@ -4762,8 +4713,8 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
         }
 
         uint32_t count = decl->function.param_count;
-        type->params =
-            KEST_ARENA_ARRAY(program->arena, KestType *, count == 0 ? 1 : count);
+        type->params = KEST_ARENA_ARRAY(program->arena, KestType *,
+                                        count == 0 ? 1 : count);
         if (type->params == NULL) {
             return false;
         }
@@ -4787,10 +4738,10 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
                 // bytes of an empty name reads past the end of it -- which a
                 // run that refused the allocation under this found, and which
                 // was there before anything asked.
-                if (kest_word_same(param_name,
-                                   kest_span_text(program->source,
-                                                  earlier->name),
-                                   earlier->name.length)) {
+                if (kest_word_same(
+                        param_name,
+                        kest_span_text(program->source, earlier->name),
+                        earlier->name.length)) {
                     kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0305",
                                    param->name,
                                    "parameter `%s` is declared twice",
@@ -4802,9 +4753,10 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
             }
         }
 
-        type->result = decl->function.result == NULL
-                           ? kest_find_type(program, "void", 4)
-                           : kest_resolve_type_ref(program, decl->function.result);
+        type->result =
+            decl->function.result == NULL
+                ? kest_find_type(program, "void", 4)
+                : kest_resolve_type_ref(program, decl->function.result);
         type->no_alloc = decl->function.no_alloc;
         type->no_host = decl->function.no_host;
         type->deterministic = decl->function.deterministic;
@@ -4852,9 +4804,9 @@ static bool declare_constants(KestProgram *program, const KestUnit *unit) {
         KestType *type = kest_resolve_type_ref(program, decl->constant.type);
         // What it is written as, kept so that working it out is possible
         // wherever it is used and wherever a count asks for it.
-        if (name == NULL || !add_global_value(program, name, type, decl->name,
-                                              true, decl->constant.value,
-                                              NULL)) {
+        if (name == NULL ||
+            !add_global_value(program, name, type, decl->name, true,
+                              decl->constant.value, NULL)) {
             return false;
         }
     }
@@ -4872,8 +4824,8 @@ const char *kest_nearest_global(KestProgram *program, const char *name,
 
     for (uint32_t i = 0; i < program->global_count; i++) {
         const char *candidate = program->globals[i].name;
-        uint32_t distance =
-            kest_word_distance(name, length, candidate, strlen(candidate), limit);
+        uint32_t distance = kest_word_distance(name, length, candidate,
+                                               strlen(candidate), limit);
         if (distance < best_distance) {
             best_distance = distance;
             best = candidate;
@@ -4893,8 +4845,8 @@ const char *kest_nearest_member(const KestType *type, const char *name,
 
     for (uint32_t i = 0; i < type->member_count; i++) {
         const char *candidate = type->members[i].name;
-        uint32_t distance =
-            kest_word_distance(name, length, candidate, strlen(candidate), limit);
+        uint32_t distance = kest_word_distance(name, length, candidate,
+                                               strlen(candidate), limit);
         if (distance < best_distance) {
             best_distance = distance;
             best = candidate;
@@ -4986,8 +4938,8 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
 // under one last part is fine; a file reaching two of them is not, and the
 // file is where the fix goes.
 static const KestUnitInfo *one_file_reaches_both(const KestUnits *units,
-                                                const KestUnitInfo *first,
-                                                const KestUnitInfo *second) {
+                                                 const KestUnitInfo *first,
+                                                 const KestUnitInfo *second) {
     for (uint32_t u = 0; u < units->count; u++) {
         const KestUnitInfo *file = &units->items[u];
         bool saw_first = strcmp(file->module, first->module) == 0;
@@ -5102,8 +5054,7 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
             KestSpan at_second = where_imported(reaching, second);
             kest_diags_in(diags, &reaching->source);
             kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0328",
-                           at_first.length > 0 ? at_first
-                                               : module_span(first),
+                           at_first.length > 0 ? at_first : module_span(first),
                            "this file reaches two modules called `%s`",
                            first->alias);
             kest_diags_suggest(diags,
@@ -5383,9 +5334,8 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
     size_t root_length = root == NULL ? 0 : strlen(root);
     uint32_t elsewhere = 0;
     uint32_t said = 0;
-    Held *held = KEST_ARENA_ARRAY(arena, Held,
-                                  program->type_count + program->global_count +
-                                      1);
+    Held *held = KEST_ARENA_ARRAY(
+        arena, Held, program->type_count + program->global_count + 1);
     // What this says about the file it was asked about depends on holding
     // every module it is not about, so an arena with no room for that list is
     // one this cannot answer from. It used to answer anyway, and what it wrote
@@ -5405,8 +5355,7 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
             type->vector) {
             continue;
         }
-        if (type->name != NULL &&
-            !same_module(type->name, root, root_length)) {
+        if (type->name != NULL && !same_module(type->name, root, root_length)) {
             if (type->tag == KEST_T_STRUCT || type->tag == KEST_T_ENUM ||
                 type->tag == KEST_T_FLAGS) {
                 held_of(held, &elsewhere, type->name)->types++;
@@ -5432,10 +5381,10 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
             for (uint32_t c = 0; c < type->case_count; c++) {
                 fprintf(out, "  %u %s", c, type->cases[c].name);
                 for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
-                    fprintf(out, " slot +%u byte +%u %s",
-                            type->cases[c].offsets[p],
-                            type->cases[c].byte_offsets[p],
-                            listed_name(&whole, arena, type->cases[c].payload[p]));
+                    fprintf(
+                        out, " slot +%u byte +%u %s", type->cases[c].offsets[p],
+                        type->cases[c].byte_offsets[p],
+                        listed_name(&whole, arena, type->cases[c].payload[p]));
                 }
                 fputc('\n', out);
             }
@@ -5445,10 +5394,9 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
             continue;
         }
         said++;
-        fprintf(out, "struct %s  %u slot%s, %u byte%s aligned %u\n",
-                type->name, type->slots, type->slots == 1 ? "" : "s",
-                type->byte_size, type->byte_size == 1 ? "" : "s",
-                type->byte_align);
+        fprintf(out, "struct %s  %u slot%s, %u byte%s aligned %u\n", type->name,
+                type->slots, type->slots == 1 ? "" : "s", type->byte_size,
+                type->byte_size == 1 ? "" : "s", type->byte_align);
         for (uint32_t m = 0; m < type->member_count; m++) {
             fprintf(out, "  slot +%u  byte +%-3u %s: %s\n",
                     type->members[m].offset, type->members[m].byte_offset,
@@ -5492,9 +5440,8 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
         for (uint32_t g = 0; g < type->type_param_count; g++) {
             fputs(g == 0 ? "<" : ", ", out);
             fputs(type->type_param_names[g], out);
-            uint8_t wants = type->type_param_wants == NULL
-                                ? 0
-                                : type->type_param_wants[g];
+            uint8_t wants =
+                type->type_param_wants == NULL ? 0 : type->type_param_wants[g];
             if (wants == 0) {
                 continue;
             }
@@ -5556,7 +5503,6 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
     return whole;
 }
 
-
 // Where something was declared, which is what a tool wants in order to go
 // there.
 static void write_where(const KestSource *source, KestSpan span, FILE *out) {
@@ -5603,7 +5549,8 @@ static const char *where_it_stands(KestArena *arena, const char *written,
     while (written[at] != '\0' && put + 8 < room) {
         // Only where a name begins: `Pair` is not two names because it ends
         // in one, and a field of a module is not one either.
-        if (at > 0 && (a_name_byte(written[at - 1]) || written[at - 1] == '.')) {
+        if (at > 0 &&
+            (a_name_byte(written[at - 1]) || written[at - 1] == '.')) {
             out[put++] = written[at++];
             continue;
         }
@@ -5643,8 +5590,9 @@ void kest_program_costs(const KestProgram *program, FILE *out) {
             // What each column is, because a table of `yes` and `no` with no
             // heading is a table nobody can read, and because the last one is
             // the only one that is advice rather than a fact.
-            fprintf(out, "%-40s %-6s %-6s %-6s %s\n", "what the compiler "
-                                                       "proved",
+            fprintf(out, "%-40s %-6s %-6s %-6s %s\n",
+                    "what the compiler "
+                    "proved",
                     "heap", "host", "varies", "could promise");
         }
         said++;
@@ -5676,8 +5624,8 @@ void kest_program_costs(const KestProgram *program, FILE *out) {
             snprintf(could, sizeof(could), "%s", "");
         }
         fprintf(out, "%-40s %-6s %-6s %-6s %s\n", symbol->name,
-                heap ? "yes" : "no", host ? "yes" : "no",
-                varies ? "yes" : "no", could);
+                heap ? "yes" : "no", host ? "yes" : "no", varies ? "yes" : "no",
+                could);
     }
     if (said == 0) {
         fprintf(out, "this program declares no function\n");
@@ -5782,7 +5730,8 @@ bool kest_program_dump_json(const KestProgram *program, KestArena *arena,
                     fputs(p == 0 ? "" : ",", out);
                     fputs("{\"type\":", out);
                     kest_json_text(
-                        listed_name(&whole, arena, type->cases[c].payload[p]), out);
+                        listed_name(&whole, arena, type->cases[c].payload[p]),
+                        out);
                     fprintf(out, ",\"slot\":%u,\"byte\":%u}",
                             type->cases[c].offsets[p],
                             type->cases[c].byte_offsets[p]);
@@ -5798,7 +5747,8 @@ bool kest_program_dump_json(const KestProgram *program, KestArena *arena,
             fputs("{\"name\":", out);
             kest_json_text(type->members[m].name, out);
             fputs(",\"type\":", out);
-            kest_json_text(listed_name(&whole, arena, type->members[m].type), out);
+            kest_json_text(listed_name(&whole, arena, type->members[m].type),
+                           out);
             fprintf(out, ",\"slot\":%u,\"byte\":%u,\"own\":%s}",
                     type->members[m].offset, type->members[m].byte_offset,
                     type->members[m].own ? "true" : "false");
@@ -5844,7 +5794,8 @@ bool kest_program_dump_json(const KestProgram *program, KestArena *arena,
         fputs("],\"parameters\":[", out);
         for (uint32_t p = 0; p < symbol->type->param_count; p++) {
             fputs(p == 0 ? "" : ",", out);
-            kest_json_text(listed_name(&whole, arena, symbol->type->params[p]), out);
+            kest_json_text(listed_name(&whole, arena, symbol->type->params[p]),
+                           out);
         }
         // What it gives back, under a name of its own: `result` is what a
         // call answered and is null when there is none, and this is the type
@@ -5852,9 +5803,10 @@ bool kest_program_dump_json(const KestProgram *program, KestArena *arena,
         // One name for one thing, and these were two things.
         fputs("],\"gives\":", out);
         kest_json_text(listed_name(&whole, arena, symbol->type->result), out);
-        fprintf(out, ",\"noAlloc\":%s,\"noHost\":%s,"
-                     "\"deterministic\":%s,\"foreign\":%s,"
-                     "\"named\":%s",
+        fprintf(out,
+                ",\"noAlloc\":%s,\"noHost\":%s,"
+                "\"deterministic\":%s,\"foreign\":%s,"
+                "\"named\":%s",
                 symbol->type->no_alloc ? "true" : "false",
                 symbol->type->no_host ? "true" : "false",
                 symbol->type->deterministic ? "true" : "false",
@@ -5874,20 +5826,18 @@ bool kest_program_dump_json(const KestProgram *program, KestArena *arena,
             bool heap = foreign || symbol->decl->function.reaches_heap;
             bool host = foreign || symbol->decl->function.reaches_host;
             bool varies = foreign || symbol->decl->function.not_deterministic;
-            fprintf(out,
-                    ",\"proved\":{\"walked\":%s,\"reachesHeap\":%s,"
-                    "\"reachesHost\":%s,\"notDeterministic\":%s,"
-                    "\"couldPromiseNoAlloc\":%s,\"couldPromiseNoHost\":%s,"
-                    "\"couldPromiseDeterministic\":%s}",
-                    foreign ? "false" : "true", heap ? "true" : "false",
-                    host ? "true" : "false", varies ? "true" : "false",
-                    !foreign && !heap && !symbol->type->no_alloc ? "true"
-                                                                 : "false",
-                    !foreign && !host && !symbol->type->no_host ? "true"
-                                                                : "false",
-                    !foreign && !varies && !symbol->type->deterministic
-                        ? "true"
-                        : "false");
+            fprintf(
+                out,
+                ",\"proved\":{\"walked\":%s,\"reachesHeap\":%s,"
+                "\"reachesHost\":%s,\"notDeterministic\":%s,"
+                "\"couldPromiseNoAlloc\":%s,\"couldPromiseNoHost\":%s,"
+                "\"couldPromiseDeterministic\":%s}",
+                foreign ? "false" : "true", heap ? "true" : "false",
+                host ? "true" : "false", varies ? "true" : "false",
+                !foreign && !heap && !symbol->type->no_alloc ? "true" : "false",
+                !foreign && !host && !symbol->type->no_host ? "true" : "false",
+                !foreign && !varies && !symbol->type->deterministic ? "true"
+                                                                    : "false");
         }
         // And a number standing for this declaration and what it promises a
         // caller, folded from what is already printed beside it rather than

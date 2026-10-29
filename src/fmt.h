@@ -33,8 +33,7 @@ typedef enum {
 // what a file is read as, which a read-back of the formatted text cannot see,
 // is otherwise a person's code deleted without a word: a nought byte ended a
 // file where it stood, and `fmt -w` wrote it back without the rest.
-KestWords kest_format_same_words(KestArena *arena,
-                                 const KestSource *before,
+KestWords kest_format_same_words(KestArena *arena, const KestSource *before,
                                  const KestSource *after);
 
 #endif

@@ -220,8 +220,8 @@ int main(int argc, char **argv) {
 
     fill(world, BODIES);
     size_t bytes = sizeof *world * BODIES;
-    JSValue memory = JS_NewArrayBuffer(ctx, (uint8_t *)world, bytes, 0,
-                                       NULL, NULL, false);
+    JSValue memory =
+        JS_NewArrayBuffer(ctx, (uint8_t *)world, bytes, 0, NULL, NULL, false);
     for (int f = -20; f < FRAMES; f++) {
         long long before = now_ns();
         JSValue args[3] = {memory, JS_NewInt32(ctx, BODIES),
@@ -282,8 +282,7 @@ int main(int argc, char **argv) {
     for (int r = 0; r < 9; r++) {
         long long before = now_ns();
         JSValue args[1] = {JS_NewInt32(ctx, ASKS)};
-        answer = number(ctx, JS_Call(ctx, asks, JS_UNDEFINED, 1, args),
-                        "asks");
+        answer = number(ctx, JS_Call(ctx, asks, JS_UNDEFINED, 1, args), "asks");
         asked[r] = now_ns() - before;
     }
     said("QuickJS", "ask", (double)middle_of(asked, 9) / ASKS, answer);

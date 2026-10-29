@@ -144,8 +144,8 @@ static void text_remarks(Text *text, Remarks *remarks, uint32_t first,
                          uint32_t end) {
     for (uint32_t at = first; at < end; at++) {
         if (at > first) {
-            bool apart = remarks->remarks[at].line >
-                         remarks->remarks[at - 1].line + 1;
+            bool apart =
+                remarks->remarks[at].line > remarks->remarks[at - 1].line + 1;
             text_add(text, apart ? "\n\n" : "\n", apart ? 2 : 1);
         }
         const char *words = NULL;
@@ -189,9 +189,9 @@ static KestSpan written_part(const KestSource *source, const KestDecl *decl) {
             span.length = (uint32_t)(body - text);
         }
     }
-    while (span.length > 0 && (text[span.length - 1] == ' ' ||
-                               text[span.length - 1] == '\n' ||
-                               text[span.length - 1] == '\r')) {
+    while (span.length > 0 &&
+           (text[span.length - 1] == ' ' || text[span.length - 1] == '\n' ||
+            text[span.length - 1] == '\r')) {
         span.length--;
     }
     return span;
@@ -284,12 +284,11 @@ bool kest_doc(const KestUnitInfo *file, KestArena *arena,
             continue;
         }
         KestSpan written = written_part(source, decl);
-        writtens[i] = piece(arena, kest_span_text(source, written),
-                            written.length);
+        writtens[i] =
+            piece(arena, kest_span_text(source, written), written.length);
         // A method is named with what it is called on, `Shelf.fill`.
         Text name = {NULL, 0, 0, arena, false};
-        if (decl->kind == KEST_DECL_FN &&
-            decl->function.receiver.length > 0) {
+        if (decl->kind == KEST_DECL_FN && decl->function.receiver.length > 0) {
             const KestSpan *receiver = &decl->function.receiver;
             text_add(&name, kest_span_text(source, *receiver),
                      receiver->length);

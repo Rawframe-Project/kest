@@ -439,8 +439,7 @@ double kest_left_over(double left, double right);
 // `index_names` keeps the answers the checker works out for every name, which
 // is what an editor reads and what nothing else does.
 bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
-                bool index_names,
-                KestProgram **out);
+                bool index_names, KestProgram **out);
 
 // Points the program at one file, so what follows resolves names the way that
 // file writes them.
@@ -546,8 +545,8 @@ const KestSymbol *kest_first_under(KestProgram *program, const char *name,
 
 // One copy of a generic struct per set of types, made the first time that set
 // is written and found again after that.
-KestType *kest_struct_of(KestProgram *program, KestType *shape,
-                         KestType **args, uint32_t count);
+KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
+                         uint32_t count);
 
 // Whether a type mentions a name that is standing for itself.
 bool kest_mentions_name(const KestType *type);
@@ -570,10 +569,9 @@ bool kest_unify(const KestType *declared, const KestType *given,
 // the name inside it belongs to whichever of them asked for it first. One door
 // rather than a question and a mark beside it, because a question asked
 // without the mark is a requirement that reads as one nothing uses.
-bool kest_wants(KestProgram *program, const KestType *type,
-                KestCapability bit);
-void kest_bind_types(KestProgram *program, const char **names,
-                     KestType **types, uint32_t count);
+bool kest_wants(KestProgram *program, const KestType *type, KestCapability bit);
+void kest_bind_types(KestProgram *program, const char **names, KestType **types,
+                     uint32_t count);
 void kest_unbind_types(KestProgram *program);
 
 // The copy of a generic function for one set of types, made if it is the
@@ -581,7 +579,6 @@ void kest_unbind_types(KestProgram *program);
 KestInstance *kest_instance_of(KestProgram *program, const KestDecl *decl,
                                const KestUnitInfo *unit, const char **names,
                                KestType **bindings, uint32_t count);
-
 
 KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref);
 
@@ -595,8 +592,7 @@ KestType *kest_ref_of(KestProgram *program, KestType *element);
 KestType *kest_fixed_of(KestProgram *program, KestType *element,
                         uint32_t count);
 
-KestType *kest_find_type(KestProgram *program, const char *name,
-                         size_t length);
+KestType *kest_find_type(KestProgram *program, const char *name, size_t length);
 KestSymbol *kest_find_global(KestProgram *program, const char *name,
                              size_t length);
 
@@ -604,7 +600,6 @@ KestSymbol *kest_find_global(KestProgram *program, const char *name,
 // is registered under: a type declared in `examples.flags` is `State` there.
 // One place, because a lend matches on it and a message prints it.
 const char *kest_type_written(const KestType *type);
-
 
 // The closest declared name, or NULL when nothing is close enough to be worth
 // putting in front of a reader. A wrong suggestion costs more than none.
@@ -723,13 +718,12 @@ static inline uint8_t kest_scalar_of(const KestType *type) {
     }
 }
 
-
 // And the one round of a mixer a number is hashed with, which is the machine's
-// and the folder's alike: a constant that hashes a number is worked out where it
-// is written and has to answer what the machine would have.
-// The number standing for a value, over the same parts that decide whether two
-// of them are equal. The machine asks it of what is on its stack and the folder
-// asks it of what it worked out, and they are one walk rather than two.
+// and the folder's alike: a constant that hashes a number is worked out where
+// it is written and has to answer what the machine would have. The number
+// standing for a value, over the same parts that decide whether two of them are
+// equal. The machine asks it of what is on its stack and the folder asks it of
+// what it worked out, and they are one walk rather than two.
 uint64_t kest_hash_value(const KestType *type, const KestValue *slots);
 
 uint64_t kest_mix(uint64_t bits);
@@ -814,8 +808,7 @@ bool kest_import_by_path(KestProgram *program, const char *module,
 // as a sentence, or NULL for one it never had. `alias` is the word the file
 // wrote in front of it.
 const char *kest_retired(KestProgram *program, const char *alias,
-                         size_t alias_length, const char *name,
-                         size_t length);
+                         size_t alias_length, const char *name, size_t length);
 
 // Prints what was resolved, for seeing what the checker built.
 // What the program holds, for a person. The file that was named is written out

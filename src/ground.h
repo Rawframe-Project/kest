@@ -112,8 +112,7 @@ void kest_ground_free(KestGround *ground);
 // alignment every place has, which is sixteen: the machine asks for eight and
 // for sixteen and nothing wider, so one alignment serves both and a place does
 // not have to say which it is.
-void *kest_ground_take(KestGround *ground, size_t bytes,
-                       KestGroundKind kind);
+void *kest_ground_take(KestGround *ground, size_t bytes, KestGroundKind kind);
 
 // What the place an address is in holds, and PLAIN for an address this did not
 // hand out -- which is safe to read as nothing to follow, because it is.

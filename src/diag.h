@@ -127,8 +127,6 @@ typedef struct {
     bool worked_out;
 } KestDiags;
 
-
-
 // FNV-1a, which is the one arithmetic every mark in this compiler is made of:
 // a file's own, a program's, and what the machine does for `hash` over text.
 // Written once rather than four times, because four copies of one arithmetic

@@ -45,8 +45,7 @@ static int32_t breaks_in(const KestModule *module, uint32_t which,
         if (op == KEST_OP_CALL) {
             uint16_t callee = kest_chunk_u16(chunk, at + 1);
             if (callee < module->count) {
-                int32_t found =
-                    breaks_in(module, callee, state, where, about);
+                int32_t found = breaks_in(module, callee, state, where, about);
                 if (found >= 0) {
                     return found;
                 }
@@ -80,7 +79,8 @@ static const char *names_only_what_is_there(const KestModule *module,
                                             uint8_t *starts, char *said,
                                             size_t room) {
     memset(starts, 0, ((size_t)chunk->code_count + 8) / 8);
-    for (uint32_t at = 0; at < chunk->code_count; at += kest_op_wide(chunk->code[at])) {
+    for (uint32_t at = 0; at < chunk->code_count;
+         at += kest_op_wide(chunk->code[at])) {
         starts[at / 8] = (uint8_t)(starts[at / 8] | (1u << (at % 8)));
     }
     for (uint32_t at = 0; at < chunk->code_count;) {
@@ -135,7 +135,8 @@ static const char *names_only_what_is_there(const KestModule *module,
                 break;
             }
             case KEST_OPERAND_BACKWARD:
-                if (value > at + wide || !starts_at(starts, at + wide - value)) {
+                if (value > at + wide ||
+                    !starts_at(starts, at + wide - value)) {
                     snprintf(said, room,
                              "`%s` at %u jumps back %u, to where no "
                              "instruction starts",
@@ -146,8 +147,8 @@ static const char *names_only_what_is_there(const KestModule *module,
             }
             if (wrong != NULL) {
                 snprintf(said, room,
-                         "`%s` at %u names %s %u of the %u there are",
-                         name, at, wrong,
+                         "`%s` at %u names %s %u of the %u there are", name, at,
+                         wrong,
                          operand_of(op, k) == KEST_OPERAND_SLOT_RUN ||
                                  operand_of(op, k) == KEST_OPERAND_CONSTANT_RUN
                              ? previous + value
@@ -162,13 +163,14 @@ static const char *names_only_what_is_there(const KestModule *module,
         if (op == KEST_OP_CONST_AT || op == KEST_OP_LOAD_SLOTS ||
             op == KEST_OP_STORE_SLOTS) {
             uint32_t first = kest_chunk_u16(chunk, at + 1);
-            uint32_t reach = first + kest_chunk_u16(chunk, at + 3) * kest_chunk_u16(chunk, at + 5);
+            uint32_t reach = first + kest_chunk_u16(chunk, at + 3) *
+                                         kest_chunk_u16(chunk, at + 5);
             uint32_t has = op == KEST_OP_CONST_AT ? chunk->constant_count
                                                   : chunk->slot_count;
             if (reach > has) {
                 snprintf(said, room,
-                         "`%s` at %u reads to %u of the %u there are",
-                         name, at, reach, has);
+                         "`%s` at %u reads to %u of the %u there are", name, at,
+                         reach, has);
                 return "K0408";
             }
         }
@@ -190,8 +192,8 @@ static const char *names_only_what_is_there(const KestModule *module,
         }
         if (into != UINT32_MAX && into + width > chunk->slot_count) {
             snprintf(said, room,
-                     "`%s` at %u reaches to slot %u of the %u there are",
-                     name, at, into + width, chunk->slot_count);
+                     "`%s` at %u reaches to slot %u of the %u there are", name,
+                     at, into + width, chunk->slot_count);
             return "K0408";
         }
         // And two that move what is on the stack by counts the machine does
@@ -206,11 +208,10 @@ static const char *names_only_what_is_there(const KestModule *module,
         if (op == KEST_OP_FIELD &&
             kest_chunk_u16(chunk, at + 1) + kest_chunk_u16(chunk, at + 3) >
                 kest_chunk_u16(chunk, at + 5)) {
-            snprintf(said, room,
-                     "`%s` at %u takes %u from %u of a value %u wide", name,
-                     at, kest_chunk_u16(chunk, at + 3),
-                     kest_chunk_u16(chunk, at + 1),
-                     kest_chunk_u16(chunk, at + 5));
+            snprintf(
+                said, room, "`%s` at %u takes %u from %u of a value %u wide",
+                name, at, kest_chunk_u16(chunk, at + 3),
+                kest_chunk_u16(chunk, at + 1), kest_chunk_u16(chunk, at + 5));
             return "K0410";
         }
         at += wide;
@@ -226,9 +227,9 @@ static const char *names_only_what_is_there(const KestModule *module,
 // asking any of that, so this is what makes an operand an operand. What cannot
 // be reached is not walked, because nothing runs it.
 static const char *stack_on_every_path(const KestModule *module,
-                                       const KestChunk *chunk,
-                                       uint16_t *depth, uint32_t *work,
-                                       char *said, size_t room) {
+                                       const KestChunk *chunk, uint16_t *depth,
+                                       uint32_t *work, char *said,
+                                       size_t room) {
     const uint16_t unknown = UINT16_MAX;
     for (uint32_t at = 0; at < chunk->code_count; at++) {
         depth[at] = unknown;
@@ -249,14 +250,13 @@ static const char *stack_on_every_path(const KestModule *module,
             uint32_t gives = 0;
             const char *why = kest_op_stack(module, chunk, at, &takes, &gives);
             if (why != NULL) {
-                snprintf(said, room, "`%s` at %u %s", name, at,
-                         why);
+                snprintf(said, room, "`%s` at %u %s", name, at, why);
                 return "K0410";
             }
             if (takes > here) {
                 snprintf(said, room,
-                         "`%s` at %u takes %u slot(s) and %u are there",
-                         name, at, takes, here);
+                         "`%s` at %u takes %u slot(s) and %u are there", name,
+                         at, takes, here);
                 return "K0410";
             }
             uint32_t after = here - takes + gives;
@@ -300,8 +300,7 @@ static const char *stack_on_every_path(const KestModule *module,
                     snprintf(said, room,
                              "`%s` at %u arrives at %u with %u slot(s) where "
                              "another way arrives with %u",
-                             name, at, lands, after,
-                             depth[lands]);
+                             name, at, lands, after, depth[lands]);
                     return "K0410";
                 }
             }
@@ -310,8 +309,7 @@ static const char *stack_on_every_path(const KestModule *module,
             }
             uint32_t next = at + wide;
             if (next >= chunk->code_count) {
-                snprintf(said, room, "`%s` at %u runs off the end",
-                         name, at);
+                snprintf(said, room, "`%s` at %u runs off the end", name, at);
                 return "K0410";
             }
             if (depth[next] != unknown) {
@@ -434,8 +432,8 @@ static uint32_t enum_number(Verifying *v, const KestType *type) {
 // working memory gives back when it closes.
 static bool made_on_the_heap(Holds holds) {
     return holds == HOLDS_TEXT || holds == HOLDS_LENGTH ||
-           holds == HOLDS_ARRAY || holds == HOLDS_STORE ||
-           holds == HOLDS_TAG || holds == HOLDS_PAYLOAD;
+           holds == HOLDS_ARRAY || holds == HOLDS_STORE || holds == HOLDS_TAG ||
+           holds == HOLDS_PAYLOAD;
 }
 
 // A kind made at least `depth` blocks deep.
@@ -447,15 +445,23 @@ static Kind deeper_of(Kind kind, uint32_t depth) {
 }
 
 static bool same_enum(const Verifying *v, uint32_t a, uint32_t b) {
-    return a == b || (a != 0 && b != 0 && kest_type_equal(v->enums[a - 1],
-                                                          v->enums[b - 1]));
+    return a == b || (a != 0 && b != 0 &&
+                      kest_type_equal(v->enums[a - 1], v->enums[b - 1]));
 }
 
 static const char *const HOLDS_NAMES[] = {
-    "nothing this body wrote", "nought",         "a number",
-    "text",                    "the length of text", "an array",
-    "a store",                 "an address",     "a function",
-    "a tag",                   "what a case carries", "one of several things",
+    "nothing this body wrote",
+    "nought",
+    "a number",
+    "text",
+    "the length of text",
+    "an array",
+    "a store",
+    "an address",
+    "a function",
+    "a tag",
+    "what a case carries",
+    "one of several things",
 };
 
 typedef struct {
@@ -644,7 +650,8 @@ static Kind joined(Verifying *v, Kind a, Kind b) {
         (x == HOLDS_NUMBER && y == HOLDS_NUMBER)) {
         return HOLDS_NUMBER;
     }
-    if (x == HOLDS_TAG && y == HOLDS_TAG && same_enum(v, LAID_OF(a), LAID_OF(b))) {
+    if (x == HOLDS_TAG && y == HOLDS_TAG &&
+        same_enum(v, LAID_OF(a), LAID_OF(b))) {
         return deeper_of(KIND(HOLDS_TAG, LAID_OF(a)) |
                              ((Kind)(BELOW_DEPTH(a) | BELOW_DEPTH(b)) << 32),
                          DEPTH_OF(a) > DEPTH_OF(b) ? DEPTH_OF(a) : DEPTH_OF(b));
@@ -664,7 +671,8 @@ static Kind joined(Verifying *v, Kind a, Kind b) {
         return HOLDS_NUMBER;
     }
     if (x == y && (x == HOLDS_ARRAY || x == HOLDS_STORE)) {
-        return deeper_of(same_laid(module, LAID_OF(a), LAID_OF(b)) ? a : KIND(x, 0),
+        return deeper_of(same_laid(module, LAID_OF(a), LAID_OF(b)) ? a
+                                                                   : KIND(x, 0),
                          DEPTH_OF(a) > DEPTH_OF(b) ? DEPTH_OF(a) : DEPTH_OF(b));
     }
     if (x == HOLDS_ADDRESS && y == HOLDS_ADDRESS) {
@@ -683,8 +691,8 @@ static Kind joined(Verifying *v, Kind a, Kind b) {
 }
 
 // What a value of a type holds, a slot at a time, from where `at` stands.
-static void typed(Verifying *v, const KestType *type, Kind *into,
-                  uint32_t *at, bool flat) {
+static void typed(Verifying *v, const KestType *type, Kind *into, uint32_t *at,
+                  bool flat) {
     const KestModule *module = v->module;
     if (type == NULL) {
         into[(*at)++] = HOLDS_ANY;
@@ -944,8 +952,9 @@ typedef enum {
 } Needs;
 
 static const char *const NEEDS_NAMES[] = {
-    "a number", "text",       "the length of text", "an array",
-    "a store",  "an address", "a function", "nought", "a value",
+    "a number",   "text",    "the length of text",
+    "an array",   "a store", "an address",
+    "a function", "nought",  "a value",
 };
 
 // Whether a slot holding `has` is read safely as `wants`, of layout `of` where
@@ -1040,9 +1049,8 @@ static const char *needs_top(Kinds *w, uint32_t n, Needs wants) {
 static const char *needs_slot_of(Kinds *w, uint32_t s, Needs wants,
                                  uint32_t of) {
     Kind has = resolved(w->v, w->now, 0, s);
-    return will_do(w->v, has, wants, of)
-               ? NULL
-               : wrong_kind(w, "slot", s, has, wants);
+    return will_do(w->v, has, wants, of) ? NULL
+                                         : wrong_kind(w, "slot", s, has, wants);
 }
 
 static const char *needs_slot(Kinds *w, uint32_t s, Needs wants) {
@@ -1130,8 +1138,8 @@ static const char *fits_enum(Kinds *w, uint32_t laid, uint32_t pos) {
         Kind carried[64];
         uint32_t payload = case_payload(v, type, c, carried);
         if (payload + 1u < type->slots) {
-            return wrong_kind(w, "what a case carries at", pos + 1,
-                              HOLDS_ANY, NEEDS_ANYTHING);
+            return wrong_kind(w, "what a case carries at", pos + 1, HOLDS_ANY,
+                              NEEDS_ANYTHING);
         }
         for (uint32_t k = 1; k <= payload; k++) {
             Kind want = carried[k - 1];
@@ -1184,9 +1192,9 @@ static const char *fits_top(Kinds *w, uint32_t which, uint32_t n_from_top) {
             return wrong;
         }
         if (HOLDS_OF(laid) == HOLDS_TEXT && s + 1 < slots &&
-            !one_piece(resolved(w->v, w->now, w->chunk->slot_count, base + s),
-                       resolved(w->v, w->now, w->chunk->slot_count,
-                                base + s + 1))) {
+            !one_piece(
+                resolved(w->v, w->now, w->chunk->slot_count, base + s),
+                resolved(w->v, w->now, w->chunk->slot_count, base + s + 1))) {
             return not_one_piece(w, base + s);
         }
     }
@@ -1322,8 +1330,8 @@ static const char *element_field(Kinds *w, Kind array, uint32_t offset,
     if (HOLDS_OF(array) == HOLDS_ZERO) {
         return NULL;
     }
-    if (of == 0 || !field_of(w->module, w->module->layout_types[of - 1],
-                             offset, w->module->layout_types[field])) {
+    if (of == 0 || !field_of(w->module, w->module->layout_types[of - 1], offset,
+                             w->module->layout_types[field])) {
         snprintf(w->said, w->room,
                  "`%s` at %u reads layout %u at %u bytes into an element that "
                  "has no such field there",
@@ -1464,9 +1472,9 @@ static const char *simply(Kinds *w, const char *reads, const char *leaves) {
             }
             if (wrong == NULL) {
                 uint32_t at = w->chunk->slot_count + w->depth - n + 1;
-                if (!one_piece(resolved(w->v, w->now, w->chunk->slot_count, at),
-                               resolved(w->v, w->now, w->chunk->slot_count,
-                                        at + 1))) {
+                if (!one_piece(
+                        resolved(w->v, w->now, w->chunk->slot_count, at),
+                        resolved(w->v, w->now, w->chunk->slot_count, at + 1))) {
                     wrong = not_one_piece(w, at);
                 }
             }
@@ -1677,7 +1685,8 @@ static const char *kinds_step(Kinds *w) {
         if ((wrong = fits_top(w, u[0], slots)) != NULL ||
             (wrong = needs_top_of(w, slots + 1, NEEDS_ARRAY, u[0] + 1)) !=
                 NULL ||
-            (wrong = kept_in(w, FROM_TOP(w, slots + 1), slots, slots)) != NULL) {
+            (wrong = kept_in(w, FROM_TOP(w, slots + 1), slots, slots)) !=
+                NULL) {
             return wrong;
         }
         w->depth -= slots + 1;
@@ -1850,12 +1859,11 @@ static const char *kinds_step(Kinds *w) {
         uint32_t of = LAID_OF(FROM_TOP(w, 1));
         uint32_t stepped = STEPPED(FROM_TOP(w, 1));
         if (of == 0 ||
-            !(stepped == 0
-                  ? field_of(module, module->layout_types[of - 1], u[0],
-                             module->layout_types[u[1]])
-                  : run_holds(module->layout_types[of - 1], stepped >> 16,
-                              stepped & 0xFFFFu, u[0],
-                              module->layout_types[u[1]]))) {
+            !(stepped == 0 ? field_of(module, module->layout_types[of - 1],
+                                      u[0], module->layout_types[u[1]])
+                           : run_holds(module->layout_types[of - 1],
+                                       stepped >> 16, stepped & 0xFFFFu, u[0],
+                                       module->layout_types[u[1]]))) {
             snprintf(w->said, w->room,
                      "`%s` at %u reads layout %u at %u bytes into what an "
                      "address is at, which has no such field there",
@@ -1881,7 +1889,8 @@ static const char *kinds_step(Kinds *w) {
             (wrong = needs_top(w, slots + 2, NEEDS_ARRAY)) != NULL ||
             (wrong = element_field(w, FROM_TOP(w, slots + 2), u[0], u[1])) !=
                 NULL ||
-            (wrong = kept_in(w, FROM_TOP(w, slots + 2), slots, slots)) != NULL) {
+            (wrong = kept_in(w, FROM_TOP(w, slots + 2), slots, slots)) !=
+                NULL) {
             return wrong;
         }
         w->depth -= slots + 2;
@@ -1919,10 +1928,10 @@ static const char *kinds_step(Kinds *w) {
         for (uint32_t row = 0; row < u[2]; row++) {
             for (uint32_t k = 0; k < u[1]; k++) {
                 uint32_t s = u[0] + row * u[1] + k;
-                SLOT(w, s) = joined(
-                    v, resolved(v, w->now, 0, s),
-                    resolved(v, w->now, chunk->slot_count,
-                             chunk->slot_count + w->depth - (u[1] - k)));
+                SLOT(w, s) =
+                    joined(v, resolved(v, w->now, 0, s),
+                           resolved(v, w->now, chunk->slot_count,
+                                    chunk->slot_count + w->depth - (u[1] - k)));
             }
         }
         w->depth -= u[1] + 1;
@@ -2692,8 +2701,8 @@ static bool weighs_a_slot(const KestChunk *chunk, const uint8_t *lands,
 
 // Whether a way arriving at `place` has as many blocks of working memory open
 // as every way before it did.
-static const char *same_blocks(uint8_t *opened, uint32_t place,
-                               uint32_t region, Kinds *w) {
+static const char *same_blocks(uint8_t *opened, uint32_t place, uint32_t region,
+                               Kinds *w) {
     if (opened[place] == 0xFF) {
         opened[place] = (uint8_t)region;
         return NULL;
@@ -2777,9 +2786,8 @@ static void tell_asked(Verifying *v, Asked *asked, const Kind *now,
 
 static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
                                        const uint16_t *depth, Kind *laid,
-                                       uint32_t laid_room,
-                                       KestArena *scratch, char *said,
-                                       size_t room, Asked *asked) {
+                                       uint32_t laid_room, KestArena *scratch,
+                                       char *said, size_t room, Asked *asked) {
     const KestModule *module = v->module;
     uint32_t wide = (uint32_t)chunk->slot_count + chunk->stack_needed + 1;
     uint32_t count = chunk->code_count;
@@ -2831,12 +2839,13 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
     place_push(work, &waiting, 0);
     queued[0] = 1;
     const char *wrong = NULL;
-    Kinds w = {module, v, chunk, now, 0, laid, laid_room, spare, 0, 0, NULL,
-               said, room};
+    Kinds w = {module, v, chunk, now,  0,    laid, laid_room,
+               spare,  0, 0,     NULL, said, room};
     while (waiting > 0 && wrong == NULL && !starved) {
         uint32_t at = place_pop(work, &waiting);
         queued[at] = 0;
-        memcpy(now, kept[at], sizeof(Kind) * ((size_t)chunk->slot_count + depth[at]));
+        memcpy(now, kept[at],
+               sizeof(Kind) * ((size_t)chunk->slot_count + depth[at]));
         w.region = opened[at];
         // Out of work is a build that stops, which it has already been told:
         // what is left of this body is not walked.
@@ -2891,7 +2900,8 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
                               &leaves_on_equal) &&
                 weighed < chunk->slot_count) {
                 Kind tag = resolved(v, now, 0, weighed);
-                if (HOLDS_OF(tag) == HOLDS_TAG && against >= 0 && against < 24) {
+                if (HOLDS_OF(tag) == HOLDS_TAG && against >= 0 &&
+                    against < 24) {
                     tag_slot = weighed;
                     equal = BELOW_DEPTH(tag) & (1u << against);
                     other = BELOW_DEPTH(tag) & ~(1u << against);
@@ -2899,19 +2909,21 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
             }
             Kind weighed_tag = HOLDS_JUNK;
             if (tag_slot != UINT32_MAX) {
-                weighed_tag = resolved(v, now, 0, tag_slot) &
-                              ~((Kind)ALL_CASES << 32);
-                now[tag_slot] =
-                    weighed_tag | ((Kind)(leaves_on_equal ? equal : other) << 32);
+                weighed_tag =
+                    resolved(v, now, 0, tag_slot) & ~((Kind)ALL_CASES << 32);
+                now[tag_slot] = weighed_tag |
+                                ((Kind)(leaves_on_equal ? equal : other) << 32);
             }
             for (uint32_t k = 0; k < (size - 1) / 2; k++) {
                 uint32_t value = kest_chunk_u16(chunk, at + 1 + 2 * k);
                 KestOperand is = operand_of(op, k);
-                uint32_t place = is == KEST_OPERAND_FORWARD    ? at + size + value
-                                 : is == KEST_OPERAND_BACKWARD ? at + size - value
-                                                               : UINT32_MAX;
+                uint32_t place = is == KEST_OPERAND_FORWARD ? at + size + value
+                                 : is == KEST_OPERAND_BACKWARD
+                                     ? at + size - value
+                                     : UINT32_MAX;
                 if (place != UINT32_MAX &&
-                    (wrong = same_blocks(opened, place, w.region, &w)) != NULL) {
+                    (wrong = same_blocks(opened, place, w.region, &w)) !=
+                        NULL) {
                     break;
                 }
                 if (place != UINT32_MAX &&
@@ -2927,8 +2939,8 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
                 break;
             }
             if (tag_slot != UINT32_MAX) {
-                now[tag_slot] =
-                    weighed_tag | ((Kind)(leaves_on_equal ? other : equal) << 32);
+                now[tag_slot] = weighed_tag |
+                                ((Kind)(leaves_on_equal ? other : equal) << 32);
             }
             uint32_t next = at + size;
             if (lands[next]) {
@@ -3004,7 +3016,8 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
             widest = module->layouts[i].slots;
         }
     }
-    Kind *laid = scratch == NULL ? NULL : KEST_ARENA_ARRAY(scratch, Kind, widest);
+    Kind *laid =
+        scratch == NULL ? NULL : KEST_ARENA_ARRAY(scratch, Kind, widest);
     Verifying verifying = {module, NULL, 0, 0, diags};
     if (scratch != NULL) {
         verifying.enums = KEST_ARENA_ARRAY(scratch, const KestType *, 256);
@@ -3072,8 +3085,7 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
             char said[200];
             const char *code = NULL;
             if (starts == NULL) {
-                snprintf(said, sizeof said,
-                         WANTED_ROOM);
+                snprintf(said, sizeof said, WANTED_ROOM);
                 code = "K0408";
             }
             if (code == NULL) {
@@ -3087,12 +3099,11 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
             if (code == NULL) {
                 code = laid == NULL
                            ? "K0411"
-                           : holds_on_every_path(&verifying, chunk, depth,
-                                                 laid, widest, scratch, said,
+                           : holds_on_every_path(&verifying, chunk, depth, laid,
+                                                 widest, scratch, said,
                                                  sizeof said, NULL);
                 if (code != NULL && laid == NULL) {
-                    snprintf(said, sizeof said,
-                             WANTED_ROOM);
+                    snprintf(said, sizeof said, WANTED_ROOM);
                 }
             }
             // A walk that ran out of room found nothing wrong: it is said
@@ -3164,26 +3175,23 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
             const char *written = module->functions[i]->wrote;
 
             kest_diags_in(diags, guilty->source);
-            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0405", span,
-                           about == 2
-                               ? "this reaches outside the simulation "
-                                 "profile, and `%s` promises `deterministic`"
-                           : about == 1
-                               ? "this calls the host, and `%s` promises "
-                                 "`no.host`"
-                               : "this reaches the heap, and `%s` promises "
-                                 "`no.alloc`",
-                           written);
-            kest_diags_fault(diags,
-                             "the promise was allowed and the code says "
-                             "otherwise");
+            kest_diags_add(
+                diags, KEST_SEVERITY_ERROR, "K0405", span,
+                about == 2   ? "this reaches outside the simulation "
+                               "profile, and `%s` promises `deterministic`"
+                : about == 1 ? "this calls the host, and `%s` promises "
+                               "`no.host`"
+                             : "this reaches the heap, and `%s` promises "
+                               "`no.alloc`",
+                written);
+            kest_diags_fault(diags, "the promise was allowed and the code says "
+                                    "otherwise");
             held = false;
         }
     }
     kest_arena_free(scratch);
     return held;
 }
-
 
 KestProved kest_module_proved(const KestModule *module, uint32_t which,
                               uint32_t at, uint32_t slot, KestArena *under) {
@@ -3248,9 +3256,9 @@ KestProved kest_module_proved(const KestModule *module, uint32_t which,
                      (LAID_OF(asked.kinds[0]) & PAIRED) != 0 &&
                      (LAID_OF(asked.kinds[1]) & PAIRED) != 0;
         bool nothing = one == HOLDS_ZERO && two == HOLDS_ZERO;
-        proved = one == HOLDS_JUNK        ? KEST_PROVED_UNWRITTEN
-                 : piece || nothing       ? KEST_PROVED_TEXT
-                                          : KEST_PROVED_WRITTEN;
+        proved = one == HOLDS_JUNK  ? KEST_PROVED_UNWRITTEN
+                 : piece || nothing ? KEST_PROVED_TEXT
+                                    : KEST_PROVED_WRITTEN;
     }
     kest_arena_free(scratch);
     return proved;

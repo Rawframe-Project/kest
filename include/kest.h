@@ -255,7 +255,8 @@ typedef enum {
     KEST_S_REAL,
     // `KEST_L_WORD`: `object`, which is what a handle is. `KEST_L_REF` and
     // `KEST_L_FN` used to be ones of these and are not words: each is a
-    // number, and each answers `KEST_S_INTEGER` like every other number. `KEST_L_TEXT` used to be one
+    // number, and each answers `KEST_S_INTEGER` like every other number.
+    // `KEST_L_TEXT` used to be one
     // too, and answers `KEST_S_TEXT`: every kind names one member now, which
     // is what makes this answer worth asking for.
     KEST_S_WORD,
@@ -856,7 +857,6 @@ typedef enum {
 // cannot come to disagree about what the machine has.
 KestKept kest_kept_where(const KestRuntime *runtime, KestValue kept);
 
-
 // Calls a function the program defines, by the name it lives under. `frame`
 // holds the arguments laid out the way the declaration says and receives the
 // result over them, which is the same convention a host function is called
@@ -1058,8 +1058,8 @@ const KestLayout *kest_frame_gives(KestRuntime *runtime, int32_t entry);
 //
 // True when they agree. False when they do not, and when there is nothing at
 // `entry`; both say why into `kest_report`.
-bool kest_frame_fills(KestRuntime *runtime, int32_t entry,
-                      const uint8_t *kinds, uint32_t count);
+bool kest_frame_fills(KestRuntime *runtime, int32_t entry, const uint8_t *kinds,
+                      uint32_t count);
 
 // And what this host is about to read back out of one, which is the same
 // mistake in the other direction: a slot holding a float read as a number of
@@ -1072,8 +1072,8 @@ bool kest_frame_fills(KestRuntime *runtime, int32_t entry,
 // is in it are two questions, and this asks both.
 //
 // True when they agree, and false in the same three ways.
-bool kest_frame_reads(KestRuntime *runtime, int32_t entry,
-                      const uint8_t *kinds, uint32_t count);
+bool kest_frame_reads(KestRuntime *runtime, int32_t entry, const uint8_t *kinds,
+                      uint32_t count);
 
 // The arguments handed over as words, written the way a program writes them:
 // `12`, `1.5`, `true`, and a piece of text as itself. The machine reads each
@@ -1410,11 +1410,12 @@ uint64_t kest_counted_entry(const KestRuntime *runtime, int32_t entry);
 // And what the allocation that was refused was asking for, or nought when
 // nothing has been refused -- which a heap thrown away with `kest_heap_reset`
 // is: the refusal belonged to the heap that is gone, and a host raising a
-// ceiling by it would be raising this one by a number about another. A ceiling stops a program at the allocation that
-// would have crossed it, so what it has used stops short of what it was
-// allowed -- by this much, which is the difference between a frame that missed
-// by eight bytes and one that missed by a megabyte. A host raising a ceiling
-// reads it to know what it is raising it by.
+// ceiling by it would be raising this one by a number about another. A ceiling
+// stops a program at the allocation that would have crossed it, so what it has
+// used stops short of what it was allowed -- by this much, which is the
+// difference between a frame that missed by eight bytes and one that missed by
+// a megabyte. A host raising a ceiling reads it to know what it is raising it
+// by.
 size_t kest_heap_wanted(const KestRuntime *runtime);
 
 // Which of the two said no. `kest_heap_wanted` is one number for two things
@@ -1507,8 +1508,7 @@ uint8_t *kest_code_of(KestRuntime *runtime, int32_t entry, uint32_t *count);
 // byte where a wider instruction was, and the walk past it is a walk through
 // the middle of instructions. Put back the bytes written over first and write
 // them again after, which is what `kest debug` does.
-int64_t kest_came_from(const KestRuntime *runtime, int32_t entry,
-                       uint32_t at);
+int64_t kest_came_from(const KestRuntime *runtime, int32_t entry, uint32_t at);
 
 // Which file a body was written in: the path as the build read it, which is
 // the one every message about that body names. It lives as long as the build
@@ -2018,7 +2018,6 @@ const KestLayout *kest_extern_gives(const KestBuild *build, uint32_t at);
 uint32_t kest_build_layout(const KestBuild *build, const char *name,
                            const KestLayout **layout);
 
-
 // What has to outlive what, which is the whole of it: the build outlives the
 // machine, and nothing else has to outlive anything. Starting reads what the
 // host bound and keeps its own copy, so a host may be freed as soon as a
@@ -2137,6 +2136,5 @@ bool kest_held_changed(KestHeld *held);
 // did, and what would not build goes to the errors this was made with.
 bool kest_held_reload(KestHeld *held, const char *path, char *said,
                       size_t room);
-
 
 #endif

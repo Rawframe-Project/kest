@@ -79,12 +79,10 @@ static const struct {
                                                 KEST_IR_EFFECT_WRITES |
                                                 KEST_IR_EFFECT_MOVES},
     [KEST_IR_FIT_TEXT] = {"fit.text", KEST_IR_EFFECT_WRITES},
-    [KEST_IR_ROOM] = {"room", KEST_IR_EFFECT_ALLOCATES |
-                                  KEST_IR_EFFECT_WRITES |
+    [KEST_IR_ROOM] = {"room", KEST_IR_EFFECT_ALLOCATES | KEST_IR_EFFECT_WRITES |
                                   KEST_IR_EFFECT_MOVES},
     [KEST_IR_POP_LAST] = {"pop.last", KEST_IR_EFFECT_WRITES},
-    [KEST_IR_TAKE] = {"take",
-                      KEST_IR_EFFECT_WRITES | KEST_IR_EFFECT_WEIGHED},
+    [KEST_IR_TAKE] = {"take", KEST_IR_EFFECT_WRITES | KEST_IR_EFFECT_WEIGHED},
     [KEST_IR_CLEAR] = {"clear", KEST_IR_EFFECT_WRITES},
 
     [KEST_IR_STORE_NEW] = {"store.new",
@@ -496,9 +494,8 @@ static bool grows_the_heap(KestIrKind kind) {
 
 const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
                             KestSpan *where) {
-    bool *made = KEST_ARENA_ARRAY(arena, bool,
-                                  body->value_count == 0 ? 1
-                                                         : body->value_count);
+    bool *made = KEST_ARENA_ARRAY(
+        arena, bool, body->value_count == 0 ? 1 : body->value_count);
     bool *kept = KEST_ARENA_ARRAY(arena, bool,
                                   body->slot_count == 0 ? 1 : body->slot_count);
     uint16_t inside[16];
@@ -553,15 +550,14 @@ const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
             if (place->kind == KEST_IR_PLACE_SLOT) {
                 for (uint16_t s = 0; s < place->slots; s++) {
                     uint32_t at = (uint32_t)place->slot + s;
-                    reads_one = reads_one ||
-                                (at < body->slot_count && kept[at]);
+                    reads_one =
+                        reads_one || (at < body->slot_count && kept[at]);
                 }
             } else if (place->base < body->value_count) {
                 reads_one = reads_one || made[place->base];
             }
         }
-        if (op->dest != KEST_IR_NONE &&
-            can_hold(body->values[op->dest].type) &&
+        if (op->dest != KEST_IR_NONE && can_hold(body->values[op->dest].type) &&
             (reads_one || !passes_through(op->kind))) {
             made[op->dest] = true;
         }
@@ -1073,9 +1069,8 @@ static bool take_the_copy(KestIrProgram *program, KestIrBody *body,
     // changed: a walk that rewrote as it went would be one that had half done
     // the job when it met the thing that made it stop.
     uint32_t many = 0;
-    uint32_t *reads =
-        KEST_ARENA_ARRAY(program->arena, uint32_t,
-                         body->op_count == 0 ? 1 : body->op_count);
+    uint32_t *reads = KEST_ARENA_ARRAY(
+        program->arena, uint32_t, body->op_count == 0 ? 1 : body->op_count);
     if (reads == NULL) {
         program->out_of_memory = true;
         return false;
@@ -1253,11 +1248,11 @@ static void jump_straight_out(KestIrBody *body) {
         bool landed = false;
         for (uint32_t k = 0; k < body->op_count && !landed; k++) {
             const KestIrOp *one = &body->ops[k];
-            landed = (one->kind == KEST_IR_GO || one->kind == KEST_IR_ASK ||
-                      one->kind == KEST_IR_NEXT ||
-                      one->kind == KEST_IR_SEEK_FROM ||
-                      one->kind == KEST_IR_SEEK_NEXT) &&
-                     one->target == i + 1;
+            landed =
+                (one->kind == KEST_IR_GO || one->kind == KEST_IR_ASK ||
+                 one->kind == KEST_IR_NEXT || one->kind == KEST_IR_SEEK_FROM ||
+                 one->kind == KEST_IR_SEEK_NEXT) &&
+                one->target == i + 1;
         }
         if (landed) {
             continue;
@@ -1270,8 +1265,8 @@ static void jump_straight_out(KestIrBody *body) {
                 break;
             }
         }
-        KestIrKind other = compare == NULL ? KEST_IR_OP_COUNT
-                                           : turned_round(compare);
+        KestIrKind other =
+            compare == NULL ? KEST_IR_OP_COUNT : turned_round(compare);
         if (other != KEST_IR_OP_COUNT && asked < body->value_count &&
             body->values[asked].read_by == i) {
             compare->kind = (uint16_t)other;

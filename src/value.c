@@ -112,8 +112,7 @@ int kest_write_whole(char *buffer, uint64_t bits, bool is_signed) {
 
 static void *grow_from(KestArena *arena, void *items, uint32_t count,
                        uint32_t *capacity, size_t size, uint32_t floor) {
-    uint32_t grown = *capacity == 0 ? (floor == 0 ? 1 : floor)
-                                    : *capacity * 2;
+    uint32_t grown = *capacity == 0 ? (floor == 0 ? 1 : floor) : *capacity * 2;
     void *moved = kest_arena_alloc(arena, size * grown, 16);
     if (moved == NULL) {
         return NULL;
@@ -165,8 +164,7 @@ static uint32_t place_of(const KestModule *module, const char *name) {
     uint32_t mask = module->place_capacity - 1;
     uint32_t at = name_hash(name) & mask;
     while (module->places[at] != 0 &&
-           strcmp(module->functions[module->places[at] - 1]->name, name) !=
-               0) {
+           strcmp(module->functions[module->places[at] - 1]->name, name) != 0) {
         at = (at + 1) & mask;
     }
     return at;
@@ -174,9 +172,8 @@ static uint32_t place_of(const KestModule *module, const char *name) {
 
 // The table made again at twice the size, with every function in it.
 static bool places_grown(KestModule *module) {
-    uint32_t wanted = module->place_capacity == 0
-                          ? 64
-                          : module->place_capacity * 2;
+    uint32_t wanted =
+        module->place_capacity == 0 ? 64 : module->place_capacity * 2;
     uint32_t *places = KEST_ARENA_ARRAY(module->arena, uint32_t, wanted);
     if (places == NULL) {
         return false;
@@ -229,10 +226,9 @@ KestChunk *kest_module_add(KestModule *module, const char *name) {
     // And the same name as somebody wrote it, once. A name with nothing after
     // it is its own written form, so most functions share the one string.
     const char *hash = strchr(name, '#');
-    chunk->wrote = hash == NULL
-                       ? name
-                       : kest_arena_strndup(module->arena, name,
-                                            (size_t)(hash - name));
+    chunk->wrote = hash == NULL ? name
+                                : kest_arena_strndup(module->arena, name,
+                                                     (size_t)(hash - name));
     if (chunk->wrote == NULL) {
         module->out_of_room = true;
         return NULL;
@@ -309,8 +305,7 @@ void kest_module_holds(const KestModule *module, uint32_t *code,
         const KestChunk *chunk = module->functions[i];
         *code += chunk->code_capacity;
         *origins += (uint32_t)(chunk->origin_capacity * sizeof(uint32_t));
-        *constants +=
-            (uint32_t)(chunk->constant_capacity * sizeof(KestValue));
+        *constants += (uint32_t)(chunk->constant_capacity * sizeof(KestValue));
     }
 }
 
@@ -566,8 +561,8 @@ const char *kest_module_nearest(const KestModule *module, const char *name) {
         if (written == NULL) {
             continue;
         }
-        uint32_t distance = kest_word_distance(name, length, written,
-                                               strlen(written), limit);
+        uint32_t distance =
+            kest_word_distance(name, length, written, strlen(written), limit);
         if (distance < nearest) {
             nearest = distance;
             best = type;
@@ -796,8 +791,8 @@ static void walk_size(const KestType *type, uint32_t *steps, uint32_t *ranges) {
 static uint32_t flatten(KestMoveStep *steps, uint32_t n, const KestType *type,
                         uint16_t slot, uint32_t byte) {
     if (type == NULL) {
-        steps[n] = (KestMoveStep){.kind = KEST_L_WORD, .slot = slot,
-                                  .byte = byte};
+        steps[n] =
+            (KestMoveStep){.kind = KEST_L_WORD, .slot = slot, .byte = byte};
         return n + 1;
     }
     switch (type->tag) {
@@ -832,8 +827,8 @@ static uint32_t flatten(KestMoveStep *steps, uint32_t n, const KestType *type,
                                   .type = type};
         return n + 1;
     default:
-        steps[n] = (KestMoveStep){.kind = kest_scalar_of(type), .slot = slot,
-                                  .byte = byte};
+        steps[n] = (KestMoveStep){
+            .kind = kest_scalar_of(type), .slot = slot, .byte = byte};
         return n + 1;
     }
 }
@@ -903,8 +898,7 @@ static uint32_t merged(KestMoveStep *steps, uint32_t first, uint32_t end) {
         if (kept > first && step.kind != KEST_MOVE_CASES) {
             KestMoveStep *run = &steps[kept - 1];
             uint32_t apart = bytes_apart(step.kind);
-            if (run->kind == step.kind &&
-                run->many + step.many <= UINT16_MAX &&
+            if (run->kind == step.kind && run->many + step.many <= UINT16_MAX &&
                 step.byte == run->byte + run->many * apart &&
                 step.slot == run->slot + run->many) {
                 run->many = (uint16_t)(run->many + step.many);
@@ -992,8 +986,9 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
     }
     if (module->layout_count == module->layout_capacity) {
         uint32_t capacity = module->layout_capacity;
-        void *layouts = grow(module->arena, module->layouts,
-                             module->layout_count, &capacity, sizeof(KestLayout));
+        void *layouts =
+            grow(module->arena, module->layouts, module->layout_count,
+                 &capacity, sizeof(KestLayout));
         uint32_t types_capacity = module->layout_capacity;
         void *types =
             grow(module->arena, module->layout_types, module->layout_count,
@@ -1037,7 +1032,8 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
         return -1;
     }
     layout->size = type == NULL || type->byte_size == 0 ? 8 : type->byte_size;
-    layout->align = type == NULL || type->byte_align == 0 ? 8 : type->byte_align;
+    layout->align =
+        type == NULL || type->byte_align == 0 ? 8 : type->byte_align;
     module->layout_types[module->layout_count] = type;
     return (int32_t)module->layout_count++;
 }
@@ -1076,9 +1072,8 @@ int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
         }
     }
     if (module->extern_count == module->extern_capacity) {
-        void *moved =
-            grow(module->arena, module->externs, module->extern_count,
-                 &module->extern_capacity, sizeof(KestExtern));
+        void *moved = grow(module->arena, module->externs, module->extern_count,
+                           &module->extern_capacity, sizeof(KestExtern));
         if (moved == NULL) {
             return -1;
         }
@@ -1128,9 +1123,9 @@ bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
     if (chunk->code_count == chunk->next_instruction) {
         if (chunk->origin_count == chunk->origin_capacity) {
             uint32_t capacity = chunk->origin_capacity;
-            void *origins = grow_from(module->arena, chunk->origins,
-                                      chunk->origin_count, &capacity,
-                                      sizeof(uint32_t), FLOOR_ORIGINS);
+            void *origins =
+                grow_from(module->arena, chunk->origins, chunk->origin_count,
+                          &capacity, sizeof(uint32_t), FLOOR_ORIGINS);
             if (origins == NULL) {
                 module->out_of_room = true;
                 return false;
@@ -1221,8 +1216,7 @@ bool kest_chunk_names(KestModule *module, KestChunk *chunk, const char *name,
 }
 
 const char *kest_chunk_named(const KestChunk *chunk, uint16_t slot,
-                             uint16_t *slots, uint8_t *kind,
-                             bool *at_address) {
+                             uint16_t *slots, uint8_t *kind, bool *at_address) {
     if (chunk == NULL) {
         return NULL;
     }
@@ -1547,12 +1541,24 @@ static const Instruction INSTRUCTIONS[] = {
     {"mul.i.narrow.k", U16_U16_U16, {IS_NUMBER, IS_SLOT, IS_CONSTANT}},
     {"float.bits", U16, {IS_NUMBER}},
     {"bits.f32", NONE, {}},
-    {"jump.false.lt.e", WEIGH_ELEMENT, {IS_SLOT, IS_SLOT, IS_LAYOUT, IS_CONSTANT, IS_FORWARD}},
-    {"jump.false.le.e", WEIGH_ELEMENT, {IS_SLOT, IS_SLOT, IS_LAYOUT, IS_CONSTANT, IS_FORWARD}},
-    {"jump.false.gt.e", WEIGH_ELEMENT, {IS_SLOT, IS_SLOT, IS_LAYOUT, IS_CONSTANT, IS_FORWARD}},
-    {"jump.false.ge.e", WEIGH_ELEMENT, {IS_SLOT, IS_SLOT, IS_LAYOUT, IS_CONSTANT, IS_FORWARD}},
-    {"jump.false.eq.e", WEIGH_ELEMENT, {IS_SLOT, IS_SLOT, IS_LAYOUT, IS_CONSTANT, IS_FORWARD}},
-    {"jump.false.ne.e", WEIGH_ELEMENT, {IS_SLOT, IS_SLOT, IS_LAYOUT, IS_CONSTANT, IS_FORWARD}},
+    {"jump.false.lt.e",
+     WEIGH_ELEMENT,
+     {IS_SLOT, IS_SLOT, IS_LAYOUT, IS_CONSTANT, IS_FORWARD}},
+    {"jump.false.le.e",
+     WEIGH_ELEMENT,
+     {IS_SLOT, IS_SLOT, IS_LAYOUT, IS_CONSTANT, IS_FORWARD}},
+    {"jump.false.gt.e",
+     WEIGH_ELEMENT,
+     {IS_SLOT, IS_SLOT, IS_LAYOUT, IS_CONSTANT, IS_FORWARD}},
+    {"jump.false.ge.e",
+     WEIGH_ELEMENT,
+     {IS_SLOT, IS_SLOT, IS_LAYOUT, IS_CONSTANT, IS_FORWARD}},
+    {"jump.false.eq.e",
+     WEIGH_ELEMENT,
+     {IS_SLOT, IS_SLOT, IS_LAYOUT, IS_CONSTANT, IS_FORWARD}},
+    {"jump.false.ne.e",
+     WEIGH_ELEMENT,
+     {IS_SLOT, IS_SLOT, IS_LAYOUT, IS_CONSTANT, IS_FORWARD}},
     {"loop", BACK, {IS_BACKWARD}},
     {"next.less.i", WALK, {IS_SLOT, IS_SLOT, IS_BACKWARD}},
     {"next.less.u", WALK, {IS_SLOT, IS_SLOT, IS_BACKWARD}},
@@ -1912,8 +1918,8 @@ void kest_module_cycles(const KestModule *module, KestArena *arena,
             return;
         }
         for (uint32_t i = 0; i < module->count; i++) {
-            to_a_host[i] = (uint8_t)(state[i] != 0 &&
-                                     calls_a_host(module->functions[i]));
+            to_a_host[i] =
+                (uint8_t)(state[i] != 0 && calls_a_host(module->functions[i]));
         }
         for (bool moved = true; moved;) {
             moved = false;
@@ -2240,7 +2246,8 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
     // guard has had its turn.
     for (uint32_t k = 0; k < (kest_op_wide(op) - 1) / 2 && k < 5; k++) {
         u[k] = read_u16(chunk, at + 1 + 2 * k);
-        if ((INSTRUCTIONS[op].is[k] == IS_LAYOUT && u[k] >= module->layout_count) ||
+        if ((INSTRUCTIONS[op].is[k] == IS_LAYOUT &&
+             u[k] >= module->layout_count) ||
             (INSTRUCTIONS[op].is[k] == IS_FUNCTION && u[k] >= module->count)) {
             return "names what the program has not got";
         }
@@ -2251,8 +2258,9 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
     // counts as one.
 #define LAID(k) ((uint32_t)module->layouts[u[k]].slots)
 #define TYPED(k)                                                               \
-    (module->layout_types[u[k]] == NULL ? UINT32_MAX                           \
-                                        : (uint32_t)module->layout_types[u[k]]->slots)
+    (module->layout_types[u[k]] == NULL                                        \
+         ? UINT32_MAX                                                          \
+         : (uint32_t)module->layout_types[u[k]]->slots)
     uint32_t t = 0;
     uint32_t g = 0;
     switch ((KestOp)op) {
@@ -2629,11 +2637,10 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
     return NULL;
 }
 
-bool kest_module_needs(const KestModule *module, KestArena *arena,
-                       int32_t only, uint32_t *stack_slots,
-                       uint32_t *call_depth, uint32_t *from_host_slots,
-                       uint32_t *from_host_frames, KestNoLeast *reasons,
-                       KestReason *why) {
+bool kest_module_needs(const KestModule *module, KestArena *arena, int32_t only,
+                       uint32_t *stack_slots, uint32_t *call_depth,
+                       uint32_t *from_host_slots, uint32_t *from_host_frames,
+                       KestNoLeast *reasons, KestReason *why) {
     why->reach = KEST_REACH_KNOWN;
     why->where = NULL;
     if (from_host_slots != NULL) {
@@ -2653,8 +2660,8 @@ bool kest_module_needs(const KestModule *module, KestArena *arena,
     uint32_t *host_depth = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
     uint32_t *host_slots = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
     uint32_t *host_from = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
-    if (state == NULL || depth == NULL || slots == NULL ||
-        host_depth == NULL || host_slots == NULL || host_from == NULL) {
+    if (state == NULL || depth == NULL || slots == NULL || host_depth == NULL ||
+        host_slots == NULL || host_from == NULL) {
         // Not that there is no answer: a host that frees something and asks
         // again may be told one, and a host told nothing was asked would not
         // know to.
@@ -2784,8 +2791,7 @@ static uint32_t disassemble_one(const KestModule *module,
                         (long long)value.integer);
                 break;
             case KEST_CONST_INT:
-                fprintf(out, "%u  ; %lld\n", operand,
-                        (long long)value.integer);
+                fprintf(out, "%u  ; %lld\n", operand, (long long)value.integer);
                 break;
             }
         } else {
@@ -2860,12 +2866,10 @@ static uint32_t disassemble_one(const KestModule *module,
     return offset + kest_op_wide(op);
 }
 
-static const char *const SCALARS[] = {"i8",  "i16", "i32",     "i64",
-                                     "u8",  "u16", "u32",     "u64",
-                                     "f32", "f64", "word",    "text",
-                                     "payload", "tag", "held", "bool",
-                                     "nothing", "flags8", "flags16",
-                                     "flags32", "flags64", "fn", "ref"};
+static const char *const SCALARS[] = {
+    "i8",      "i16",    "i32",     "i64",     "u8",      "u16", "u32",  "u64",
+    "f32",     "f64",    "word",    "text",    "payload", "tag", "held", "bool",
+    "nothing", "flags8", "flags16", "flags32", "flags64", "fn",  "ref"};
 
 // A reason built where it is kept, because it names the type the word did not
 // fit in.
@@ -2895,8 +2899,7 @@ static void ends_of(const KestType *type, long long *low, long long *high) {
         return;
     }
     *low = 0;
-    *high = type->width >= 63 ? LLONG_MAX
-                              : ((long long)1 << type->width) - 1;
+    *high = type->width >= 63 ? LLONG_MAX : ((long long)1 << type->width) - 1;
 }
 
 bool kest_value_read(KestArena *arena, const char *text, const KestType *type,
@@ -2993,8 +2996,7 @@ const char *kest_reach_name(KestReach reach) {
     return "not worked out";
 }
 
-bool kest_module_needs_json(const KestModule *module, int32_t only,
-                            FILE *out) {
+bool kest_module_needs_json(const KestModule *module, int32_t only, FILE *out) {
     uint32_t stack = 0;
     uint32_t deep = 0;
     KestReason why = {KEST_REACH_UNASKED, NULL};
@@ -3120,8 +3122,8 @@ static uint64_t body_mark(const KestChunk *chunk) {
         fold_number(&mark, chunk->constant_classes[which], 1);
         if (chunk->constant_classes[which] == KEST_CONST_TEXT) {
             fold_text_bytes(&mark, chunk->constants[which].text,
-                            text_constant_length(
-                                chunk, which, chunk->constants[which].text));
+                            text_constant_length(chunk, which,
+                                                 chunk->constants[which].text));
         } else {
             fold_number(&mark, (uint64_t)chunk->constants[which].integer, 8);
         }
@@ -3150,12 +3152,13 @@ uint64_t kest_module_mark(const KestModule *module) {
         for (uint32_t which = 0; which < chunk->constant_count; which++) {
             fold_number(&mark, chunk->constant_classes[which], 1);
             if (chunk->constant_classes[which] == KEST_CONST_TEXT) {
-                fold_text_bytes(&mark, chunk->constants[which].text,
-                            text_constant_length(
-                                chunk, which, chunk->constants[which].text));
+                fold_text_bytes(
+                    &mark, chunk->constants[which].text,
+                    text_constant_length(chunk, which,
+                                         chunk->constants[which].text));
             } else {
-                fold_number(&mark,
-                            (uint64_t)chunk->constants[which].integer, 8);
+                fold_number(&mark, (uint64_t)chunk->constants[which].integer,
+                            8);
             }
         }
         for (uint16_t which = 0; which < chunk->takes_count; which++) {
@@ -3228,9 +3231,9 @@ bool kest_module_disassemble_json(const KestModule *module,
         }
         fputs(",\"pieces\":[", out);
         for (uint16_t p = 0; p < layout->count; p++) {
-            fprintf(out, "%s{\"byte\":%u,\"is\":\"%s\",\"name\":",
-                    p == 0 ? "" : ",", layout->pieces[p].offset,
-                    SCALARS[layout->pieces[p].kind]);
+            fprintf(out,
+                    "%s{\"byte\":%u,\"is\":\"%s\",\"name\":", p == 0 ? "" : ",",
+                    layout->pieces[p].offset, SCALARS[layout->pieces[p].kind]);
             // Null rather than left out where a piece is nobody's field, so a
             // tool reading these reads the same shape for every piece.
             if (layout->pieces[p].name == NULL) {
@@ -3343,8 +3346,8 @@ bool kest_module_disassemble_json(const KestModule *module,
                 ",\"folded\":%u,\"foldedSlots\":%u"
                 ",\"noAlloc\":%s,\"noHost\":%s,\"deterministic\":%s"
                 ",\"body\":\"%016llx\",\"why\":",
-                chunk->code_count, chunk->code_capacity,
-                chunk->constant_count, chunk->param_slots, chunk->slot_count, chunk->stack_needed,
+                chunk->code_count, chunk->code_capacity, chunk->constant_count,
+                chunk->param_slots, chunk->slot_count, chunk->stack_needed,
                 chunk->folded, chunk->folded_slots,
                 chunk->no_alloc ? "true" : "false",
                 chunk->no_host ? "true" : "false",
@@ -3356,8 +3359,9 @@ bool kest_module_disassemble_json(const KestModule *module,
             kest_json_text(module->functions[reasons[i].from]->name, out);
             fputs(",\"least\":null", out);
         } else if (reasons != NULL) {
-            fprintf(out, "null,\"where\":null,\"least\":{\"slots\":%u,"
-                         "\"frames\":%u}",
+            fprintf(out,
+                    "null,\"where\":null,\"least\":{\"slots\":%u,"
+                    "\"frames\":%u}",
                     reasons[i].slots, reasons[i].frames);
         } else {
             fputs("null,\"where\":null,\"least\":null", out);
@@ -3503,15 +3507,14 @@ bool kest_module_disassemble(const KestModule *module,
                 came_from = module->functions[reasons[i].from]->name;
             }
         }
-        fprintf(out,
-                "fn %s  %u parameter slot%s, %u slot%s, %u deep%s%s%s%s%s\n",
-                chunk->name, chunk->param_slots,
-                chunk->param_slots == 1 ? "" : "s", chunk->slot_count,
-                chunk->slot_count == 1 ? "" : "s", chunk->stack_needed,
-                chunk->no_alloc ? ", promises `no.alloc`" : "",
-                chunk->no_host ? ", promises `no.host`" : "",
-                chunk->deterministic ? ", promises `deterministic`" : "",
-                stopped_at[0] == '\0' ? "" : ", ", stopped_at);
+        fprintf(
+            out, "fn %s  %u parameter slot%s, %u slot%s, %u deep%s%s%s%s%s\n",
+            chunk->name, chunk->param_slots, chunk->param_slots == 1 ? "" : "s",
+            chunk->slot_count, chunk->slot_count == 1 ? "" : "s",
+            chunk->stack_needed, chunk->no_alloc ? ", promises `no.alloc`" : "",
+            chunk->no_host ? ", promises `no.host`" : "",
+            chunk->deterministic ? ", promises `deterministic`" : "",
+            stopped_at[0] == '\0' ? "" : ", ", stopped_at);
         if (came_from[0] != '\0') {
             fprintf(out, "     in %s\n", came_from);
         }
@@ -3611,7 +3614,8 @@ static double cosine_kernel(double x, double y) {
     double c6 = of_bits(UINT64_C(0xBDA8FAE9BE8838D4));
     double z = x * x;
     double w = z * z;
-    double r = z * (c1 + z * (c2 + z * c3)) + (w * w) * (c4 + z * (c5 + z * c6));
+    double r =
+        z * (c1 + z * (c2 + z * c3)) + (w * w) * (c4 + z * (c5 + z * c6));
     double hz = 0.5 * z;
     double v = 1.0 - hz;
     return v + (((1.0 - v) - hz) + (z * r - x * y));

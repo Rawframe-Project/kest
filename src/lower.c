@@ -335,7 +335,7 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
             take_back(lower);
             emit(lower,
                  made == KEST_OP_ADD_I_NARROW_TO ? KEST_OP_ADD_K_SELF
-                                                  : KEST_OP_SUB_K_SELF,
+                                                 : KEST_OP_SUB_K_SELF,
                  origin);
             emit_u16(lower, kind, origin);
             emit_u16(lower, slot, origin);
@@ -361,7 +361,8 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
             return;
         }
         emit(lower, made, origin);
-        if (made == KEST_OP_ADD_I_NARROW_TO || made == KEST_OP_SUB_I_NARROW_TO) {
+        if (made == KEST_OP_ADD_I_NARROW_TO ||
+            made == KEST_OP_SUB_I_NARROW_TO) {
             emit_u16(lower, kind, origin);
         }
         emit_u16(lower, slot, origin);
@@ -564,8 +565,8 @@ static uint8_t compares(uint16_t operation, const KestType *type) {
         if (COMPARISONS[i].operation != operation) {
             continue;
         }
-        return text ? COMPARISONS[i].text
-               : real ? COMPARISONS[i].real
+        return text           ? COMPARISONS[i].text
+               : real         ? COMPARISONS[i].real
                : without_sign ? COMPARISONS[i].without_sign
                               : COMPARISONS[i].whole;
     }
@@ -1002,16 +1003,14 @@ static uint8_t answered_here(const Lower *lower, uint16_t index) {
 }
 
 static bool may_carry(const Lower *lower, uint16_t index) {
-    if (!fusing() || lower->module->carrying_off ||
-        index >= lower->next - 1 ||
+    if (!fusing() || lower->module->carrying_off || index >= lower->next - 1 ||
         index >= lower->module->count) {
         return false;
     }
     const KestChunk *callee = lower->module->functions[index];
     if (callee == NULL || callee->native != NULL || callee->code_count == 0 ||
         callee->code_count > MOST_CARRIED ||
-        callee->source != lower->chunk->source ||
-        callee->origin_count == 0) {
+        callee->source != lower->chunk->source || callee->origin_count == 0) {
         return false;
     }
     for (uint32_t at = 0; at < callee->code_count;) {
@@ -1079,9 +1078,9 @@ static bool writes_a_parameter(const Lower *lower, const KestChunk *callee) {
                       op == KEST_OP_STORE_K || op == KEST_OP_ADD_K_SELF ||
                       op == KEST_OP_SUB_K_SELF ||
                       op == KEST_OP_ADD_I_NARROW_TO ||
-                      op == KEST_OP_SUB_I_NARROW_TO ||
-                      op == KEST_OP_ADD_F_TO || op == KEST_OP_SUB_F_TO ||
-                      op == KEST_OP_ADD_F_LL || op == KEST_OP_SUB_F_LL;
+                      op == KEST_OP_SUB_I_NARROW_TO || op == KEST_OP_ADD_F_TO ||
+                      op == KEST_OP_SUB_F_TO || op == KEST_OP_ADD_F_LL ||
+                      op == KEST_OP_SUB_F_LL;
         uint32_t read = at + 1;
         for (int o = 0; writes && o < 3 && operands[o] != NO_OPERAND; o++) {
             if (operands[o] == A_SLOT &&
@@ -1132,9 +1131,9 @@ static uint16_t loaded_just_now(const Lower *lower, uint16_t wanted,
 // other slots after the stored ones.
 static uint16_t carried_slot(uint16_t value, uint16_t stored, uint16_t aliased,
                              const uint16_t *from, uint16_t base) {
-    return value < stored ? (uint16_t)(value + base)
+    return value < stored             ? (uint16_t)(value + base)
            : value < stored + aliased ? from[value - stored]
-                                       : (uint16_t)(value - aliased + base);
+                                      : (uint16_t)(value - aliased + base);
 }
 
 // Whether every run of slots the body reads or writes as one is still one run
@@ -1164,8 +1163,7 @@ static bool runs_hold(const KestChunk *callee, uint16_t stored,
 // Whether the operation at `at` writes what is on the stack into one slot,
 // and which. A carried body whose answer goes there writes a constant it
 // answers with there itself.
-static bool puts_one_slot(const KestIrBody *body, uint32_t at,
-                          uint16_t *slot) {
+static bool puts_one_slot(const KestIrBody *body, uint32_t at, uint16_t *slot) {
     if (at >= body->op_count || body->ops[at].kind != KEST_IR_PUT ||
         body->ops[at].place == KEST_IR_NO_PLACE) {
         return false;
@@ -1191,7 +1189,8 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
     KestChunk *into = lower->chunk;
     if (into->carried_count == into->carried_room) {
         uint16_t room = into->carried_room == 0 ? 4 : into->carried_room * 2;
-        uint16_t *grown = KEST_ARENA_ARRAY(lower->module->arena, uint16_t, room);
+        uint16_t *grown =
+            KEST_ARENA_ARRAY(lower->module->arena, uint16_t, room);
         if (grown == NULL) {
             lower->out_of_memory = true;
             return;
@@ -1226,10 +1225,9 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
     }
     uint32_t first = 0;
     if (callee->constant_count > 0) {
-        first = kest_chunk_constant_run(lower->module, lower->chunk,
-                                        callee->constants,
-                                        callee->constant_classes,
-                                        (uint16_t)callee->constant_count);
+        first = kest_chunk_constant_run(
+            lower->module, lower->chunk, callee->constants,
+            callee->constant_classes, (uint16_t)callee->constant_count);
         if (lower->module->out_of_room) {
             lower->out_of_memory = true;
             return;
@@ -1292,9 +1290,8 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
     for (uint32_t at = 0; at < end; which++) {
         uint8_t op = callee->code[at];
         uint32_t wide = kest_op_wide(op);
-        KestSpan where = {which < callee->origin_count
-                              ? callee->origins[which]
-                              : span.offset,
+        KestSpan where = {which < callee->origin_count ? callee->origins[which]
+                                                       : span.offset,
                           1};
         const Operand *operands = carried_operands(lower, op);
         if (op == KEST_OP_CONST && at + wide < end && fused[at + wide]) {
@@ -1333,8 +1330,8 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
                 // Into the returns the body ends with, none of which is
                 // written: where they were is the end.
                 uint32_t lands_at = at + wide + value;
-                uint32_t moved = lands_at >= end ? moved_end
-                                                 : moved_to[lands_at];
+                uint32_t moved =
+                    lands_at >= end ? moved_end : moved_to[lands_at];
                 value = (uint16_t)(moved - moved_to[at] - wide);
             }
             emit_u16(lower, value, where);
@@ -1662,8 +1659,8 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
                     lower->chunk->fused_slots = 2;
                 }
                 take_back(lower);
-                emit(lower, does == KEST_OP_MOD_I ? KEST_OP_MOD_I_K
-                                                  : KEST_OP_DIV_I_K,
+                emit(lower,
+                     does == KEST_OP_MOD_I ? KEST_OP_MOD_I_K : KEST_OP_DIV_I_K,
                      span);
                 emit_u16(lower, slot, span);
                 emit_u16(lower, which, span);
@@ -1674,8 +1671,8 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
                     lower->chunk->fused_slots = 1;
                 }
                 take_back(lower);
-                emit(lower, does == KEST_OP_MOD_I ? KEST_OP_MOD_I_C
-                                                  : KEST_OP_DIV_I_C,
+                emit(lower,
+                     does == KEST_OP_MOD_I ? KEST_OP_MOD_I_C : KEST_OP_DIV_I_C,
                      span);
                 emit_u16(lower, which, span);
                 return;
@@ -1757,8 +1754,8 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
     case KEST_IR_EQ:
     case KEST_IR_NE:
         if (kest_is_a_run(op->type)) {
-            emit(lower, op->kind == KEST_IR_EQ ? KEST_OP_EQ_VALUE
-                                               : KEST_OP_NE_VALUE,
+            emit(lower,
+                 op->kind == KEST_IR_EQ ? KEST_OP_EQ_VALUE : KEST_OP_NE_VALUE,
                  span);
             emit_u16(lower, op->imm[0], span);
             return;
@@ -1787,7 +1784,7 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         }
         emit(lower,
              op->type != NULL && op->type->tag == KEST_T_TEXT ? KEST_OP_HASH_T
-             : kest_is_float(op->type)                             ? KEST_OP_HASH_F
+             : kest_is_float(op->type)                        ? KEST_OP_HASH_F
                                                               : KEST_OP_HASH_I,
              span);
         return;
@@ -1911,8 +1908,9 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         emit(lower, KEST_OP_STORE_REF, span);
         return;
     case KEST_IR_NEXT:
-        emit(lower, kest_is_unsigned(op->type) ? KEST_OP_NEXT_LESS_U
-                                               : KEST_OP_NEXT_LESS_I,
+        emit(lower,
+             kest_is_unsigned(op->type) ? KEST_OP_NEXT_LESS_U
+                                        : KEST_OP_NEXT_LESS_I,
              span);
         emit_u16(lower, op->imm[0], span);
         emit_u16(lower, op->imm[1], span);
@@ -1986,10 +1984,11 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         uint16_t slot = 0;
         uint16_t which = 0;
         // Two locals: every `while i < n`, and every `<=`.
-        uint8_t locals = !fusing()                          ? 0
-                         : jump == KEST_OP_JUMP_FALSE_LT_I ? KEST_OP_JUMP_FALSE_LT_LL
-                         : jump == KEST_OP_JUMP_FALSE_LE_I ? KEST_OP_JUMP_FALSE_LE_LL
-                                                           : 0;
+        uint8_t locals =
+            !fusing()                         ? 0
+            : jump == KEST_OP_JUMP_FALSE_LT_I ? KEST_OP_JUMP_FALSE_LT_LL
+            : jump == KEST_OP_JUMP_FALSE_LE_I ? KEST_OP_JUMP_FALSE_LE_LL
+                                              : 0;
         if (locals != 0 && two_locals_before(lower, &slot, &which)) {
             if (lower->chunk->fused_slots < 2) {
                 lower->chunk->fused_slots = 2;
@@ -2023,8 +2022,7 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
             uint16_t at = 0;
             uint16_t layout = 0;
             uint8_t element = weighed_element(jump);
-            if (element != 0 &&
-                element_before(lower, &holds, &at, &layout)) {
+            if (element != 0 && element_before(lower, &holds, &at, &layout)) {
                 // Nor is the element: `index.ll` said as slack the two
                 // slots it read in place, and this is fewer than that.
                 take_back(lower);
@@ -2133,8 +2131,7 @@ static bool lower_body(Lower *lower, const KestIrBody *body, KestChunk *chunk) {
         // one of its returns can land.
         uint16_t slot = 0;
         if (op->kind == KEST_IR_CALL && i + 2 < body->op_count &&
-            may_carry(lower, op->imm[0]) &&
-            puts_one_slot(body, i + 1, &slot)) {
+            may_carry(lower, op->imm[0]) && puts_one_slot(body, i + 1, &slot)) {
             lower->landed_on[i + 2] = true;
         }
     }
@@ -2214,8 +2211,7 @@ bool kest_lower_body(void *reading, const KestIrBody *body) {
     // pass; this is the second reader.
     for (uint32_t i = 0; i < body->name_count; i++) {
         const KestIrName *one = &body->names[i];
-        kest_chunk_names(lower->module, into, one->name, one->slot,
-                         one->slots,
+        kest_chunk_names(lower->module, into, one->name, one->slot, one->slots,
                          one->type == NULL ? (uint8_t)KEST_L_WORD
                                            : kest_scalar_of(one->type),
                          one->by_address);

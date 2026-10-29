@@ -119,8 +119,8 @@ static void a_whole(Written *out, const KestType *type, uint64_t *state) {
 
 static void a_float(Written *out, const KestType *type, uint64_t *state) {
     static const char *const ENDS[] = {
-        "0.0", "-0.0", "(0.0 / 0.0)", "(1.0 / 0.0)", "(-1.0 / 0.0)", "1.0",
-        "-1.0", "0.000001",
+        "0.0",          "-0.0", "(0.0 / 0.0)", "(1.0 / 0.0)",
+        "(-1.0 / 0.0)", "1.0",  "-1.0",        "0.000001",
     };
     uint64_t which = next(state) % 10;
     if (which < 8) {
@@ -130,8 +130,9 @@ static void a_float(Written *out, const KestType *type, uint64_t *state) {
     // The largest and the smallest the width holds, written so they are that
     // width's and not rounded into infinity on the way.
     bool narrow = type->width == 32;
-    put(out, "%s", which == 8 ? (narrow ? "3.4e38" : "1.7e308")
-                              : (narrow ? "1.0e-45" : "5.0e-324"));
+    put(out, "%s",
+        which == 8 ? (narrow ? "3.4e38" : "1.7e308")
+                   : (narrow ? "1.0e-45" : "5.0e-324"));
 }
 
 static void a_text(Written *out, uint64_t *state) {
@@ -297,9 +298,8 @@ static bool a_value(Written *out, const KestType *type, const char *module,
 }
 
 const char *kest_hostile_calls(KestProgram *program, KestArena *arena,
-                               const char *path, uint64_t seed,
-                               uint32_t rounds, uint32_t *called,
-                               uint32_t *passed) {
+                               const char *path, uint64_t seed, uint32_t rounds,
+                               uint32_t *called, uint32_t *passed) {
     Written out = {arena, NULL, 0, 0, false};
     uint64_t state = seed * 2654435761u + 1;
     *called = 0;
@@ -316,8 +316,7 @@ const char *kest_hostile_calls(KestProgram *program, KestArena *arena,
         const KestSymbol *symbol = &program->globals[i];
         const KestType *door = symbol->type;
         if (door == NULL || door->tag != KEST_T_FN || !door->is_foreign ||
-            symbol->source == NULL ||
-            strcmp(symbol->source->path, path) != 0) {
+            symbol->source == NULL || strcmp(symbol->source->path, path) != 0) {
             continue;
         }
         // The file's module is what is in front of the door's own name, which

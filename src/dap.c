@@ -98,10 +98,10 @@ static void answer(Adapter *adapter, const KestJson *request, bool success,
     const KestJson *seq = kest_wire_member(request, "seq");
     const KestJson *command = kest_wire_member(request, "command");
     KestSaid said = {0};
-    kest_wire_sayf(&said, "{\"seq\":%u,\"type\":\"response\",\"request_seq\":%u,"
-                          "\"success\":%s,\"command\":",
-                   ++adapter->sent,
-                   seq == NULL ? 0u : (unsigned)seq->number,
+    kest_wire_sayf(&said,
+                   "{\"seq\":%u,\"type\":\"response\",\"request_seq\":%u,"
+                   "\"success\":%s,\"command\":",
+                   ++adapter->sent, seq == NULL ? 0u : (unsigned)seq->number,
                    success ? "true" : "false");
     kest_wire_escaped(&said, command == NULL ? "" : command->text,
                       command == NULL ? 0 : command->length);
@@ -124,8 +124,8 @@ static void answer(Adapter *adapter, const KestJson *request, bool success,
 
 static void event(Adapter *adapter, const char *name, const char *body) {
     KestSaid said = {0};
-    kest_wire_sayf(&said, "{\"seq\":%u,\"type\":\"event\",\"event\":",
-                   ++adapter->sent);
+    kest_wire_sayf(
+        &said, "{\"seq\":%u,\"type\":\"event\",\"event\":", ++adapter->sent);
     kest_wire_text(&said, name);
     if (body != NULL) {
         kest_wire_say(&said, ",\"body\":");
@@ -187,9 +187,10 @@ static void after(Adapter *adapter, KestDebugState state, const char *why) {
     relay(adapter, adapter->wrote, &adapter->read_to, "stdout");
     if (state == KEST_DEBUG_STOPPED) {
         char body[160];
-        snprintf(body, sizeof body,
-                 "{\"reason\":\"%s\",\"threadId\":1,\"allThreadsStopped\":true}",
-                 why);
+        snprintf(
+            body, sizeof body,
+            "{\"reason\":\"%s\",\"threadId\":1,\"allThreadsStopped\":true}",
+            why);
         event(adapter, "stopped", body);
         return;
     }
@@ -264,16 +265,15 @@ static void breakpoints(Adapter *adapter, const KestJson *request) {
     const KestJson *wanted = kest_wire_member(arguments, "breakpoints");
     KestSaid said = {0};
     kest_wire_say(&said, "{\"breakpoints\":[");
-    const char *file = path != NULL && path->kind == KEST_JSON_TEXT
-                           ? path->text
-                           : NULL;
+    const char *file =
+        path != NULL && path->kind == KEST_JSON_TEXT ? path->text : NULL;
     // The editor sends a file's whole list every time, so what was there
     // before is taken out first.
     if (adapter->debugging && file != NULL) {
         kest_debugger_unbreak(&adapter->debugger, file);
     }
-    for (uint32_t i = 0; wanted != NULL && wanted->kind == KEST_JSON_LIST &&
-                         i < wanted->count;
+    for (uint32_t i = 0;
+         wanted != NULL && wanted->kind == KEST_JSON_LIST && i < wanted->count;
          i++) {
         const KestJson *line = kest_wire_member(wanted->items[i], "line");
         uint32_t at = line == NULL ? 0 : (uint32_t)line->number;
@@ -302,9 +302,8 @@ static const char *last_piece(const char *path) {
 // also the number its locals are asked for by.
 static void stack(Adapter *adapter, const KestJson *request) {
     KestSaid said = {0};
-    uint32_t deep = adapter->debugging
-                        ? kest_debugger_frames(&adapter->debugger)
-                        : 0;
+    uint32_t deep =
+        adapter->debugging ? kest_debugger_frames(&adapter->debugger) : 0;
     kest_wire_say(&said, "{\"stackFrames\":[");
     for (uint32_t i = deep; i > 0; i--) {
         const char *body = NULL;
@@ -405,8 +404,8 @@ static void handle(Adapter *adapter, const KestJson *request) {
                "\"supportsTerminateRequest\":true}");
         event(adapter, "initialized", NULL);
     } else if (command_is(command, "launch")) {
-        const KestJson *program = kest_wire_down(request, "arguments",
-                                                 "program");
+        const KestJson *program =
+            kest_wire_down(request, "arguments", "program");
         if (program == NULL || program->kind != KEST_JSON_TEXT) {
             answer(adapter, request, false,
                    "`launch` names the program to run as `program`", NULL);

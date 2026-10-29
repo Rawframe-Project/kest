@@ -148,9 +148,9 @@ const KestSpent *kest_build_spent(const KestBuild *build);
 typedef struct KestCWriter {
     KestEmitC *(*begin)(KestArena *arena, const KestModule *module);
     bool (*body)(void *writing, const KestIrBody *body);
-    const char *(*done)(KestEmitC *writing, const char *entry,
-                        const char *from, const KestFile *carried,
-                        uint32_t carried_count, const char *library);
+    const char *(*done)(KestEmitC *writing, const char *entry, const char *from,
+                        const KestFile *carried, uint32_t carried_count,
+                        const char *library);
     void (*drop)(KestEmitC *writing);
 } KestCWriter;
 void kest_build_writes_c(KestBuild *build, const KestCWriter *writer);

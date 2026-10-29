@@ -190,7 +190,6 @@ struct KestLambda {
     KestBlock body;
 };
 
-
 // One arm of a match: the case it is for, the names it gives what that case
 // carries, and what to do. A zero-length name is the `else` arm.
 //

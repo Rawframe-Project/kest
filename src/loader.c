@@ -331,7 +331,8 @@ static const char *last_segment(KestArena *arena, const char *dotted,
             start = i + 1;
         }
     }
-    const char *kept = kest_arena_strndup(arena, dotted + start, length - start);
+    const char *kept =
+        kest_arena_strndup(arena, dotted + start, length - start);
     // An alias nobody could write is an alias nothing matches, which is what a
     // file that named no module already has.
     return kept == NULL ? "" : kept;
@@ -389,8 +390,8 @@ static const char *tidied(KestArena *arena, const char *path) {
             while (back > 0 && out[back - 1] != '/') {
                 back--;
             }
-            bool upwards = used - back == 3 && out[back] == '.' &&
-                           out[back + 1] == '.';
+            bool upwards =
+                used - back == 3 && out[back] == '.' && out[back + 1] == '.';
             if (!upwards) {
                 used = back;
                 i += 3;
@@ -475,8 +476,8 @@ typedef struct {
 // program is rather than about who asked for it -- and a host embedding one
 // file of a project then resolves what the command line resolves. Bounded,
 // because a walk up a path is a walk with a machine at the end of it.
-static void roots_above(KestArena *arena, KestUnits *units,
-                        const char *path, Roots *roots) {
+static void roots_above(KestArena *arena, KestUnits *units, const char *path,
+                        Roots *roots) {
     roots->count = 0;
     roots->where = NULL;
     roots->broken = NULL;
@@ -521,8 +522,8 @@ static void roots_above(KestArena *arena, KestUnits *units,
         if (why != NULL) {
             char manifest[1024];
             kest_project_path(at, manifest, sizeof(manifest));
-            roots->broken = kest_arena_strndup(arena, manifest,
-                                               strlen(manifest));
+            roots->broken =
+                kest_arena_strndup(arena, manifest, strlen(manifest));
             roots->why = why;
             return;
         }
@@ -540,8 +541,8 @@ static void roots_above(KestArena *arena, KestUnits *units,
         while (length > 0 && at[length - 1] != '/') {
             length--;
         }
-        const char *up_one = length == 0 ? "" : kest_arena_strndup(arena, at,
-                                                                   length);
+        const char *up_one =
+            length == 0 ? "" : kest_arena_strndup(arena, at, length);
         if (up_one == NULL || strcmp(up_one, at) == 0) {
             return;
         }
@@ -598,9 +599,9 @@ static void refuse_to_read(KestDiags *diags, const char *path, KestSpan blame,
 }
 
 static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
-                     const char *library, const Roots *roots,
-                     const char *given, KestUnits *units,
-                     KestSpan blame, const KestSource *blamed_in, bool follow,
+                     const char *library, const Roots *roots, const char *given,
+                     KestUnits *units, KestSpan blame,
+                     const KestSource *blamed_in, bool follow,
                      bool from_library, const char **root_out) {
     // One spelling per file, whether it was named on a command line or worked
     // out from an import.
@@ -613,9 +614,8 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         kest_diags_in(diags, blamed_in);
         kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0704", blame,
                        "this file imports itself");
-        kest_diags_suggest(diags,
-                           "its own names are its own already, written "
-                           "without a module in front of them");
+        kest_diags_suggest(diags, "its own names are its own already, written "
+                                  "without a module in front of them");
         return true;
     }
     if (already_loaded(units, path)) {
@@ -651,11 +651,10 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
                 // path that happened to be tried first.
                 char under[512];
                 size_t written = 0;
-                for (uint32_t r = 0; r < roots->count && written + 1 < sizeof
-                                                             under; r++) {
-                    int said = snprintf(under + written,
-                                        sizeof under - written, "%s`%s`",
-                                        r == 0 ? "" : ", ",
+                for (uint32_t r = 0;
+                     r < roots->count && written + 1 < sizeof under; r++) {
+                    int said = snprintf(under + written, sizeof under - written,
+                                        "%s`%s`", r == 0 ? "" : ", ",
                                         roots->sources[r]);
                     if (said < 0) {
                         break;
@@ -758,12 +757,10 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         if (units->items[self].unit.items[i]->kind == KEST_DECL_MODULE) {
             module = units->items[self].unit.items[i];
             units->items[self].alias = last_segment(
-                arena,
-                kest_span_text(&units->items[self].source, module->name),
+                arena, kest_span_text(&units->items[self].source, module->name),
                 module->name.length);
             const char *whole = kest_arena_strndup(
-                arena,
-                kest_span_text(&units->items[self].source, module->name),
+                arena, kest_span_text(&units->items[self].source, module->name),
                 module->name.length);
             units->items[self].module = whole == NULL ? "" : whole;
             units->items[self].from_library = is_library(
@@ -817,13 +814,12 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     }
 
     if (root_out != NULL) {
-        *root_out = root_of(arena, path,
-                            module == NULL
-                                ? NULL
-                                : kest_span_text(
-                                      &units->items[self].source,
-                                      module->name),
-                            module == NULL ? 0 : module->name.length);
+        *root_out =
+            root_of(arena, path,
+                    module == NULL ? NULL
+                                   : kest_span_text(&units->items[self].source,
+                                                    module->name),
+                    module == NULL ? 0 : module->name.length);
         root = *root_out;
     }
 
@@ -838,8 +834,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
 
         bool library_import = is_library(name, decl->name.length);
         const char *from = library_import ? library : root;
-        const char *next =
-            path_of_import(arena, from, name, decl->name.length);
+        const char *next = path_of_import(arena, from, name, decl->name.length);
         if (next == NULL) {
             kest_diags_starve(diags);
             return false;
@@ -917,8 +912,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     for (uint32_t i = 0; i < loaded->unit.count; i++) {
         const KestDecl *decl = loaded->unit.items[i];
         if (decl->kind == KEST_DECL_IMPORT) {
-            const char *written =
-                kest_span_text(&loaded->source, decl->name);
+            const char *written = kest_span_text(&loaded->source, decl->name);
             const char *whole =
                 kest_arena_strndup(arena, written, decl->name.length);
             loaded->import_paths[loaded->import_count] =
@@ -1076,10 +1070,9 @@ static bool found_on_path(const char *program, char *into, size_t room) {
         // read as the root.
         if (end != at) {
             size_t length = (size_t)(end - at);
-            int written = snprintf(into, room, "%.*s%s%s", (int)length, at,
-                                   KEST_PATH_SEPARATOR(at[length - 1]) ? ""
-                                                                       : "/",
-                                   program);
+            int written = snprintf(
+                into, room, "%.*s%s%s", (int)length, at,
+                KEST_PATH_SEPARATOR(at[length - 1]) ? "" : "/", program);
             if (written > 0 && (size_t)written < room) {
                 FILE *file = fopen(into, "rb");
                 if (file != NULL) {
@@ -1153,8 +1146,7 @@ bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,
         return false;
     }
     const char *owned = kest_arena_strndup(arena, tidy, strlen(tidy));
-    if (owned == NULL ||
-        !kest_source_init(into, arena, owned, text, length)) {
+    if (owned == NULL || !kest_source_init(into, arena, owned, text, length)) {
         kest_diags_starve(diags);
         return false;
     }
@@ -1162,9 +1154,8 @@ bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,
 }
 
 bool kest_read_unit(KestArena *arena, KestDiags *diags, const char *path,
-                     KestUnits *units) {
+                    KestUnits *units) {
     KestSpan nowhere = {0, 0};
     return load_one(arena, diags, "", "", NULL, path, units, nowhere, NULL,
-                    false,
-                    false, NULL);
+                    false, false, NULL);
 }

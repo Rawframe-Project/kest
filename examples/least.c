@@ -141,8 +141,8 @@ int main(int argc, char **argv) {
     // NULL where there is no host, and everything below the loop is then a
     // host this program would never have called. That is the smallest a host
     // gets -- a build, a call and what came back.
-    KestHost *host = kest_build_extern(build, 0) == NULL ? NULL
-                                                         : kest_host_new();
+    KestHost *host =
+        kest_build_extern(build, 0) == NULL ? NULL : kest_host_new();
     if (host == NULL && kest_build_extern(build, 0) != NULL) {
         kest_build_free(build);
         return 1;
@@ -266,8 +266,7 @@ int main(int argc, char **argv) {
         KestLimits about_main = {0, 0, 0, 0};
         KestReason bounded = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound_of(build, "main", 16, &about_main, &bounded) ||
-            about_main.call_depth != 16 ||
-            about_main.stack_slots == 0 ||
+            about_main.call_depth != 16 || about_main.stack_slots == 0 ||
             about_main.stack_slots >= had_few.stack_slots ||
             bounded.reach == KEST_REACH_KNOWN) {
             fprintf(stderr,
@@ -291,8 +290,7 @@ int main(int argc, char **argv) {
         if (!kest_bound_from(build, "main", 16, &back_in, &from_where) ||
             back_in.stack_slots == 0 ||
             back_in.stack_slots >= about_main.stack_slots ||
-            back_in.call_depth != 16 ||
-            from_where.reach == KEST_REACH_KNOWN) {
+            back_in.call_depth != 16 || from_where.reach == KEST_REACH_KNOWN) {
             fprintf(stderr,
                     "a call back into `%s` starts at %u slots where `main` "
                     "wants %u\n",
@@ -382,17 +380,16 @@ int main(int argc, char **argv) {
     // them into the frame itself and says what it wrote with
     // `kest_frame_fills`, which is `examples/embed.c`.
     uint32_t given = argc > 3 ? (uint32_t)(argc - 3) : 0;
-    if (given > 0 &&
-        !kest_takes_text(runtime, entry, frame,
-                         sizeof(frame) / sizeof(frame[0]),
-                         (const char *const *)&argv[3], given)) {
+    if (given > 0 && !kest_takes_text(runtime, entry, frame,
+                                      sizeof(frame) / sizeof(frame[0]),
+                                      (const char *const *)&argv[3], given)) {
         kest_report(runtime, stderr, KEST_FORM_TEXT);
         kest_runtime_free(runtime);
         kest_build_free(build);
         return 1;
     }
-    if (entry < 0 || !kest_call(runtime, entry, frame,
-                                sizeof(frame) / sizeof(frame[0]))) {
+    if (entry < 0 ||
+        !kest_call(runtime, entry, frame, sizeof(frame) / sizeof(frame[0]))) {
         say_what_happened(runtime, NULL, called);
         kest_runtime_free(runtime);
         kest_build_free(build);

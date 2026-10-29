@@ -106,7 +106,6 @@ static bool check(Parser *parser, KestTokenKind kind) {
     return peek(parser).kind == kind;
 }
 
-
 static KestToken advance(Parser *parser) {
     KestToken token = peek(parser);
     if (token.kind != KEST_TOK_EOF) {
@@ -421,10 +420,9 @@ static void end_statement(Parser *parser) {
     // rather than that there is none. The reference says there is no ternary;
     // this is the reader who has not read it yet.
     if (found.kind == KEST_TOK_QUESTION) {
-        suggest(parser,
-                "there is no ternary here and `?` means optional: "
-                "an `if` gives a value with `->`, as "
-                "`if c -> a else -> b`");
+        suggest(parser, "there is no ternary here and `?` means optional: "
+                        "an `if` gives a value with `->`, as "
+                        "`if c -> a else -> b`");
     }
     // `Thing { x: 1.0 }`, a struct built the way a language with struct
     // literals builds one. Here it is built by position, the way a function
@@ -444,9 +442,9 @@ static void end_statement(Parser *parser) {
     // which is the one thing in the line that is not wrong. So the word is
     // pointed at as well.
     if (parser->spoke && parser->began_with.kind == KEST_TOK_IDENT) {
-        const char *nearly = kest_nearest_keyword(
-            span_text(parser, parser->began_with.span),
-            parser->began_with.span.length);
+        const char *nearly =
+            kest_nearest_keyword(span_text(parser, parser->began_with.span),
+                                 parser->began_with.span.length);
         if (nearly != NULL) {
             kest_diags_note(parser->diags, parser->source,
                             parser->began_with.span, "did you mean `%s`?",
@@ -506,12 +504,12 @@ static const struct {
 static void promise_list(char *out, size_t room) {
     size_t written = 0;
     for (size_t at = 0; at < PROMISE_COUNT && written + 1 < room; at++) {
-        const char *between = at == 0                    ? ""
-                              : at + 1 == PROMISE_COUNT  ? " and "
-                                                         : ", ";
-        int said = snprintf(out + written, room - written, "%s`%s%s`", between,
-                            PROMISES[at].after_no ? "no." : "",
-                            PROMISES[at].word);
+        const char *between = at == 0                   ? ""
+                              : at + 1 == PROMISE_COUNT ? " and "
+                                                        : ", ";
+        int said =
+            snprintf(out + written, room - written, "%s`%s%s`", between,
+                     PROMISES[at].after_no ? "no." : "", PROMISES[at].word);
         if (said < 0) {
             break;
         }
@@ -540,7 +538,8 @@ static void match_promises(Parser *parser, bool *no_alloc, bool *no_host,
     for (;;) {
         bool took = false;
         for (size_t at = 0; at < PROMISE_COUNT && !took; at++) {
-            if (PROMISES[at].after_no || !is_word(parser, 0, PROMISES[at].word)) {
+            if (PROMISES[at].after_no ||
+                !is_word(parser, 0, PROMISES[at].word)) {
                 continue;
             }
             if (*written[at]) {
@@ -562,7 +561,8 @@ static void match_promises(Parser *parser, bool *no_alloc, bool *no_host,
         KestSpan whole = span_between(peek(parser).span, word.span);
         bool *which = NULL;
         for (size_t at = 0; at < PROMISE_COUNT; at++) {
-            if (PROMISES[at].after_no && is_word(parser, 2, PROMISES[at].word)) {
+            if (PROMISES[at].after_no &&
+                is_word(parser, 2, PROMISES[at].word)) {
                 which = written[at];
             }
         }
@@ -722,17 +722,14 @@ static KestTypeRef *parse_type(Parser *parser) {
         // Which of the three it is, because what somebody wrote says which
         // language they came from and each has a different answer here.
         if (found.kind == KEST_TOK_STAR || found.kind == KEST_TOK_AMP) {
-            suggest(parser,
-                    "there are no pointers here: what names a slot "
-                    "in a store is `ref<T>`");
+            suggest(parser, "there are no pointers here: what names a slot "
+                            "in a store is `ref<T>`");
         } else if (found.kind == KEST_TOK_LPAREN) {
-            suggest(parser,
-                    "there are no tuples here: a `struct` is what "
-                    "holds several things");
+            suggest(parser, "there are no tuples here: a `struct` is what "
+                            "holds several things");
         } else {
-            suggest(parser,
-                    "a type is a name, `[T]`, `[T; N]` or "
-                    "`fn(...)`, and `?` after any of them");
+            suggest(parser, "a type is a name, `[T]`, `[T; N]` or "
+                            "`fn(...)`, and `?` after any of them");
         }
         return NULL;
     }
@@ -979,9 +976,8 @@ static KestExpr *parse_match(Parser *parser) {
                     // number or `true` here and hears about a token. What it
                     // chooses between is said where the subject is read, and
                     // the subject is not read until the arms parse.
-                    suggest(parser,
-                            "a `match` arm names a case of an "
-                            "enum, and `else` answers the rest");
+                    suggest(parser, "a `match` arm names a case of an "
+                                    "enum, and `else` answers the rest");
                     skip_arms(parser);
                     return NULL;
                 }
@@ -1078,12 +1074,12 @@ static KestExpr *parse_match(Parser *parser) {
     if (gives && blocks) {
         error_at(parser, start, "K0208",
                  "every arm gives a value or none does");
-        suggest(parser,
-                "an arm gives one with `-> value` and does "
-                "something with a block");
+        suggest(parser, "an arm gives one with `-> value` and does "
+                        "something with a block");
     }
 
-    KestExpr *expr = new_expr(parser, KEST_EXPR_MATCH, span_between(start, close));
+    KestExpr *expr =
+        new_expr(parser, KEST_EXPR_MATCH, span_between(start, close));
     if (expr == NULL) {
         return NULL;
     }
@@ -1096,8 +1092,8 @@ static KestExpr *parse_match(Parser *parser) {
     expr->choose->subjects = (KestExpr **)list_taken(parser, &subjects);
     expr->choose->subject_count = subjects.count;
     expr->choose->gives = gives;
-    expr->choose->arms =
-        KEST_ARENA_ARRAY(parser->arena, KestArm, arms.count == 0 ? 1 : arms.count);
+    expr->choose->arms = KEST_ARENA_ARRAY(parser->arena, KestArm,
+                                          arms.count == 0 ? 1 : arms.count);
     if (expr->choose->arms == NULL) {
         parser->out_of_memory = true;
         return NULL;
@@ -1119,13 +1115,15 @@ static bool parse_binding(Parser *parser, KestSpan *name, const char *what) {
     if (!expect(parser, KEST_TOK_IDENT)) {
         suggest(parser,
                 "`%s let` names what is held rather than comparing "
-                "with it", what);
+                "with it",
+                what);
         return false;
     }
     if (!expect(parser, KEST_TOK_EQ)) {
         suggest(parser,
                 "`%s let` names what an optional holds: "
-                "`%s let held = ...`", what, what);
+                "`%s let held = ...`",
+                what, what);
         return false;
     }
     return true;
@@ -1211,16 +1209,16 @@ static KestExpr *parse_if(Parser *parser) {
     if (branch.gives && blocks) {
         error_at(parser, whole, "K0208",
                  "every arm gives a value or none does");
-        suggest(parser,
-                "an arm gives one with `-> value` and does "
-                "something with a block");
+        suggest(parser, "an arm gives one with `-> value` and does "
+                        "something with a block");
     }
 
     KestExpr *expr = new_expr(parser, KEST_EXPR_IF, whole);
     if (expr == NULL) {
         return NULL;
     }
-    KestBranch *held = kest_arena_alloc(parser->arena, sizeof *held, _Alignof(KestBranch));
+    KestBranch *held =
+        kest_arena_alloc(parser->arena, sizeof *held, _Alignof(KestBranch));
     if (held == NULL) {
         parser->out_of_memory = true;
         return NULL;
@@ -1290,8 +1288,8 @@ static KestExpr *parse_primary(Parser *parser) {
         KestSpan close = current_span(parser);
         expect(parser, KEST_TOK_RBRACKET);
 
-        KestExpr *array = new_expr(parser, KEST_EXPR_ARRAY,
-                                   span_between(token.span, close));
+        KestExpr *array =
+            new_expr(parser, KEST_EXPR_ARRAY, span_between(token.span, close));
         if (array == NULL) {
             return NULL;
         }
@@ -1300,16 +1298,16 @@ static KestExpr *parse_primary(Parser *parser) {
         return array;
     }
     default:
-        error_at(parser, token.span, "K0204", "expected an expression, found %s",
+        error_at(parser, token.span, "K0204",
+                 "expected an expression, found %s",
                  kest_token_name(token.kind));
         // A block where a value was wanted, which is what somebody writes who
         // has met a language whose blocks are expressions. Here a block is a
         // statement and an `if` is the one thing that gives a value out of
         // arms.
         if (token.kind == KEST_TOK_LBRACE) {
-            suggest(parser,
-                    "a block is not a value: an `if` gives one "
-                    "with `->`");
+            suggest(parser, "a block is not a value: an `if` gives one "
+                            "with `->`");
         }
         // A comparison with its right side on the next line, which is the one
         // thing a reader writes that this language will not take. A line ends
@@ -1329,10 +1327,9 @@ static KestExpr *parse_primary(Parser *parser) {
             token.kind == KEST_TOK_GT || token.kind == KEST_TOK_LT ||
             token.kind == KEST_TOK_GTEQ || token.kind == KEST_TOK_LTEQ;
         if (ended_after_gt || began_with_compare) {
-            suggest(parser,
-                    "a line may end after `>` because a type may: "
-                    "`ref<Npc>` is a whole field. So a comparison "
-                    "stays on the line it is on");
+            suggest(parser, "a line may end after `>` because a type may: "
+                            "`ref<Npc>` is a whole field. So a comparison "
+                            "stays on the line it is on");
         }
         return NULL;
     }
@@ -1399,8 +1396,8 @@ static KestExpr *parse_postfix(Parser *parser) {
         // and that is worth saying where it was written.
         uint32_t angles = type_arguments(parser, expr);
         if (angles > 0) {
-            KestSpan written = span_between(
-                expr->span, peek_at(parser, angles - 1).span);
+            KestSpan written =
+                span_between(expr->span, peek_at(parser, angles - 1).span);
             bool nothing_passed =
                 peek_at(parser, angles + 1).kind == KEST_TOK_RPAREN;
             error_at(parser, written, "K0211",
@@ -1459,9 +1456,8 @@ static KestExpr *parse_postfix(Parser *parser) {
             if (!expect(parser, KEST_TOK_IDENT)) {
                 // `t.0` is what somebody writes who has met tuples. There are
                 // none here: what a struct holds is named.
-                suggest(parser,
-                        "a field is named, so there is nothing at "
-                        "a position to read");
+                suggest(parser, "a field is named, so there is nothing at "
+                                "a position to read");
                 return NULL;
             }
             KestExpr *field = new_expr(parser, KEST_EXPR_FIELD,
@@ -1599,9 +1595,8 @@ static KestExpr *parse_expr(Parser *parser) {
         if (!parser->recovering) {
             error_at(parser, peek(parser).span, "K0215",
                      "expressions nest more than %d deep", MAX_NESTING);
-            suggest(parser,
-                    "give a piece of it a name: a `let` is a place "
-                    "to stop and the checker reads it the same way");
+            suggest(parser, "give a piece of it a name: a `let` is a place "
+                            "to stop and the checker reads it the same way");
         }
         return NULL;
     }
@@ -1660,8 +1655,7 @@ static KestStmt *parse_statement(Parser *parser) {
             // The rule behind the expectation, which is the part worth
             // hearing: a name is given its value where it is written, and
             // there is no declaring one now and filling it in later.
-            suggest(parser,
-                    "a `let` gives its value where it is written");
+            suggest(parser, "a `let` gives its value where it is written");
             return NULL;
         }
         KestExpr *value = parse_expr(parser);
@@ -1749,9 +1743,8 @@ static KestStmt *parse_statement(Parser *parser) {
             // The same rule in the third place it is written: what stands
             // here is a name for what comes out, and there is nothing else it
             // could be.
-            suggest(parser,
-                    "a `for` names what it walks over: "
-                    "`for one in ...`");
+            suggest(parser, "a `for` names what it walks over: "
+                            "`for one in ...`");
             return NULL;
         }
         // `for i, x in a`: the position first, because that is the order it
@@ -1760,9 +1753,8 @@ static KestStmt *parse_statement(Parser *parser) {
             index = name;
             name = current_span(parser);
             if (!expect(parser, KEST_TOK_IDENT)) {
-                suggest(parser,
-                        "a `for` names the position first and what "
-                        "it walks over second: `for at, one in ...`");
+                suggest(parser, "a `for` names the position first and what "
+                                "it walks over second: `for at, one in ...`");
                 return NULL;
             }
         }
@@ -1813,8 +1805,8 @@ static KestStmt *parse_statement(Parser *parser) {
         if (stmt == NULL) {
             return NULL;
         }
-        if (!check(parser, KEST_TOK_NEWLINE) && !check(parser, KEST_TOK_RBRACE) &&
-            !check(parser, KEST_TOK_EOF)) {
+        if (!check(parser, KEST_TOK_NEWLINE) &&
+            !check(parser, KEST_TOK_RBRACE) && !check(parser, KEST_TOK_EOF)) {
             stmt->result = parse_expr(parser);
             if (stmt->result != NULL) {
                 stmt->span = span_between(start, stmt->result->span);
@@ -1897,9 +1889,8 @@ static KestStmt *parse_statement(Parser *parser) {
         if (!is_assignable(expr)) {
             error_at(parser, expr->span, "K0205",
                      "this expression cannot be assigned to");
-            suggest(parser,
-                    "only a name, a field or an element can be a "
-                    "target");
+            suggest(parser, "only a name, a field or an element can be a "
+                            "target");
         }
         KestStmt *stmt = new_stmt(parser, KEST_STMT_ASSIGN,
                                   span_between(start, value->span));
@@ -2034,8 +2025,7 @@ static KestField *parse_field(Parser *parser) {
     if (!expect(parser, KEST_TOK_COLON)) {
         // `x i32` is what somebody writes who has met Go, and the token this
         // wanted says nothing about which of the two orders is right.
-        suggest(parser,
-                "a field is written `name: type`");
+        suggest(parser, "a field is written `name: type`");
         return NULL;
     }
     field->type = parse_type(parser);
@@ -2128,7 +2118,8 @@ static bool parse_type_params(Parser *parser, KestDecl *decl) {
     return true;
 }
 
-static KestDecl *parse_function(Parser *parser, KestSpan start, bool is_extern) {
+static KestDecl *parse_function(Parser *parser, KestSpan start,
+                                bool is_extern) {
     advance(parser);
 
     KestDecl *decl = new_decl(parser, KEST_DECL_FN, start);
@@ -2200,8 +2191,8 @@ static KestDecl *parse_function(Parser *parser, KestSpan start, bool is_extern) 
             return NULL;
         }
     }
-    match_promises(parser, &decl->function.no_alloc,
-                   &decl->function.no_host, &decl->function.deterministic);
+    match_promises(parser, &decl->function.no_alloc, &decl->function.no_host,
+                   &decl->function.deterministic);
 
     if (is_extern) {
         decl->span =
@@ -2252,16 +2243,14 @@ static KestDecl *parse_declaration(Parser *parser) {
             // `const N = 1` is what a reader writes first, and the rule it
             // meets is the one above this line: the type is written because
             // the name crosses a boundary.
-            suggest(parser,
-                    "a `const` is written with its type: "
-                    "`const N: i32 = 1`");
+            suggest(parser, "a `const` is written with its type: "
+                            "`const N: i32 = 1`");
             return NULL;
         }
         decl->constant.type = parse_type(parser);
         if (!expect(parser, KEST_TOK_EQ)) {
-            suggest(parser,
-                    "a `const` gives its value where it is "
-                    "written");
+            suggest(parser, "a `const` gives its value where it is "
+                            "written");
             return NULL;
         }
         decl->constant.value = parse_expr(parser);
@@ -2287,7 +2276,8 @@ static KestDecl *parse_declaration(Parser *parser) {
 
         List fields = {0};
         skip_newlines(parser);
-        while (!check(parser, KEST_TOK_RBRACE) && !check(parser, KEST_TOK_EOF)) {
+        while (!check(parser, KEST_TOK_RBRACE) &&
+               !check(parser, KEST_TOK_EOF)) {
             uint32_t was = parser->position;
             // A word rather than a keyword, for the reason `scratch` is one:
             // a field is a name and a colon, so `own keys: [K]` is a shape no
@@ -2340,7 +2330,8 @@ static KestDecl *parse_declaration(Parser *parser) {
 
         List cases = {0};
         skip_newlines(parser);
-        while (!check(parser, KEST_TOK_RBRACE) && !check(parser, KEST_TOK_EOF)) {
+        while (!check(parser, KEST_TOK_RBRACE) &&
+               !check(parser, KEST_TOK_EOF)) {
             KestVariant *variant = KEST_ARENA_NEW(parser->arena, KestVariant);
             if (variant == NULL) {
                 parser->out_of_memory = true;
@@ -2395,7 +2386,8 @@ static KestDecl *parse_declaration(Parser *parser) {
             return NULL;
         }
         decl->name = current_span(parser);
-        if (!expect(parser, KEST_TOK_IDENT) || !expect(parser, KEST_TOK_COLON)) {
+        if (!expect(parser, KEST_TOK_IDENT) ||
+            !expect(parser, KEST_TOK_COLON)) {
             return NULL;
         }
         // The width is what a host sees, so it is written rather than counted
@@ -2407,7 +2399,8 @@ static KestDecl *parse_declaration(Parser *parser) {
 
         List cases = {0};
         skip_newlines(parser);
-        while (!check(parser, KEST_TOK_RBRACE) && !check(parser, KEST_TOK_EOF)) {
+        while (!check(parser, KEST_TOK_RBRACE) &&
+               !check(parser, KEST_TOK_EOF)) {
             KestVariant *variant = KEST_ARENA_NEW(parser->arena, KestVariant);
             if (variant == NULL) {
                 parser->out_of_memory = true;
@@ -2438,8 +2431,7 @@ static KestDecl *parse_declaration(Parser *parser) {
         if (!check(parser, KEST_TOK_FN)) {
             KestToken found = peek(parser);
             error_at(parser, found.span, "K0201", "expected %s, found %s",
-                     kest_token_name(KEST_TOK_FN),
-                     kest_token_name(found.kind));
+                     kest_token_name(KEST_TOK_FN), kest_token_name(found.kind));
             return NULL;
         }
         return parse_function(parser, start, true);
@@ -2452,7 +2444,8 @@ static KestDecl *parse_declaration(Parser *parser) {
     // A flag set that does not say how wide it is. It is refused either way;
     // what changes is whether the reader is told which of the eight things a
     // file holds they nearly wrote.
-    if (is_word(parser, 0, "flags") && peek_at(parser, 1).kind == KEST_TOK_IDENT &&
+    if (is_word(parser, 0, "flags") &&
+        peek_at(parser, 1).kind == KEST_TOK_IDENT &&
         peek_at(parser, 2).kind == KEST_TOK_LBRACE) {
         KestSpan name = peek_at(parser, 1).span;
         error_at(parser, peek(parser).span, "K0212",
@@ -2474,16 +2467,15 @@ static KestDecl *parse_declaration(Parser *parser) {
             KestToken after = peek(parser);
             error_at(parser, after.span, "K0201", "expected `:`, found %s",
                      kest_token_name(after.kind));
-            suggest(parser,
-                    "a flag set says how wide it is: "
-                    "`flags Name: u8 {`");
+            suggest(parser, "a flag set says how wide it is: "
+                            "`flags Name: u8 {`");
         }
         return NULL;
     }
 
     KestToken found = peek(parser);
-    error_at(parser, found.span, "K0202",
-             "expected a declaration, found %s", kest_token_name(found.kind));
+    error_at(parser, found.span, "K0202", "expected a declaration, found %s",
+             kest_token_name(found.kind));
     const char *nearly =
         found.kind == KEST_TOK_IDENT
             ? kest_nearest_keyword(span_text(parser, found.span),
@@ -2492,9 +2484,8 @@ static KestDecl *parse_declaration(Parser *parser) {
     if (nearly != NULL) {
         suggest(parser, "did you mean `%s`?", nearly);
     } else {
-        suggest(parser,
-                "a file holds `module`, `import`, `const`, "
-                "`struct`, `enum`, `flags`, `fn` and `extern fn`");
+        suggest(parser, "a file holds `module`, `import`, `const`, "
+                        "`struct`, `enum`, `flags`, `fn` and `extern fn`");
     }
     return NULL;
 }

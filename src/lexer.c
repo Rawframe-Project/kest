@@ -10,36 +10,44 @@ typedef struct {
 } Keyword;
 
 static const Keyword KEYWORDS[] = {
-    {"break", KEST_TOK_BREAK}, {"const", KEST_TOK_CONST},
-    {"continue", KEST_TOK_CONTINUE}, {"defer", KEST_TOK_DEFER},
-    {"else", KEST_TOK_ELSE}, {"enum", KEST_TOK_ENUM},
-    {"extern", KEST_TOK_EXTERN}, {"false", KEST_TOK_FALSE},
-    {"fn", KEST_TOK_FN}, {"for", KEST_TOK_FOR},
-    {"if", KEST_TOK_IF}, {"import", KEST_TOK_IMPORT},
-    {"in", KEST_TOK_IN}, {"let", KEST_TOK_LET},
-    {"match", KEST_TOK_MATCH}, {"module", KEST_TOK_MODULE},
-    {"none", KEST_TOK_NONE}, {"return", KEST_TOK_RETURN},
-    {"struct", KEST_TOK_STRUCT}, {"true", KEST_TOK_TRUE},
+    {"break", KEST_TOK_BREAK},
+    {"const", KEST_TOK_CONST},
+    {"continue", KEST_TOK_CONTINUE},
+    {"defer", KEST_TOK_DEFER},
+    {"else", KEST_TOK_ELSE},
+    {"enum", KEST_TOK_ENUM},
+    {"extern", KEST_TOK_EXTERN},
+    {"false", KEST_TOK_FALSE},
+    {"fn", KEST_TOK_FN},
+    {"for", KEST_TOK_FOR},
+    {"if", KEST_TOK_IF},
+    {"import", KEST_TOK_IMPORT},
+    {"in", KEST_TOK_IN},
+    {"let", KEST_TOK_LET},
+    {"match", KEST_TOK_MATCH},
+    {"module", KEST_TOK_MODULE},
+    {"none", KEST_TOK_NONE},
+    {"return", KEST_TOK_RETURN},
+    {"struct", KEST_TOK_STRUCT},
+    {"true", KEST_TOK_TRUE},
     {"while", KEST_TOK_WHILE},
 };
 
 static const char *const TOKEN_NAMES[] = {
-    "end of file", "end of line", "identifier", "integer",  "float",
-    "string",      "byte",        "`break`",     "`const`",    "`continue`",
-    "`defer`",     "`else`",
-    "`enum`",      "`extern`",    "`false`",    "`fn`",     "`for`",
-    "`if`",        "`import`",    "`in`",       "`let`",    "`match`",
-    "`module`",    "`none`",
-    "`return`",    "`struct`",    "`true`",     "`while`",  "`(`",  "`)`",
-    "`{`",         "`}`",         "`[`",        "`]`",      "`,`",
-    "`;`",
-    "`.`",         "`..`",        "`:`",        "`?`",      "`->`",
-    "`=`",
-    "`==`",        "`!=`",        "`<`",        "`<=`",     "`>`",
-    "`>=`",        "`+`",         "`-`",        "`*`",      "`/`",
-    "`%`",         "`!`",         "`&&`",       "`||`",     "`&`",
-    "`|`",         "`^`",         "`~`",        "`<<`",     "`>>`",
-    "`+=`",        "`-=`",        "`*=`",       "`/=`",     "invalid token",
+    "end of file", "end of line",   "identifier", "integer",  "float",
+    "string",      "byte",          "`break`",    "`const`",  "`continue`",
+    "`defer`",     "`else`",        "`enum`",     "`extern`", "`false`",
+    "`fn`",        "`for`",         "`if`",       "`import`", "`in`",
+    "`let`",       "`match`",       "`module`",   "`none`",   "`return`",
+    "`struct`",    "`true`",        "`while`",    "`(`",      "`)`",
+    "`{`",         "`}`",           "`[`",        "`]`",      "`,`",
+    "`;`",         "`.`",           "`..`",       "`:`",      "`?`",
+    "`->`",        "`=`",           "`==`",       "`!=`",     "`<`",
+    "`<=`",        "`>`",           "`>=`",       "`+`",      "`-`",
+    "`*`",         "`/`",           "`%`",        "`!`",      "`&&`",
+    "`||`",        "`&`",           "`|`",        "`^`",      "`~`",
+    "`<<`",        "`>>`",          "`+=`",       "`-=`",     "`*=`",
+    "`/=`",        "invalid token",
 };
 
 // What an escape is written as and what it stands for. One list: what a piece
@@ -263,9 +271,8 @@ const char *kest_literal_text(KestArena *arena, const KestSource *source,
 }
 
 uint32_t kest_escape_width(const KestSource *source, uint32_t at) {
-    const Escape *escape = at + 1 < source->length
-                               ? escape_named(source->text[at + 1])
-                               : NULL;
+    const Escape *escape =
+        at + 1 < source->length ? escape_named(source->text[at + 1]) : NULL;
     if (escape == NULL || !escape->reads) {
         return 2;
     }
@@ -439,9 +446,9 @@ static KestSpan span_from(uint32_t start, uint32_t end) {
 static uint32_t scan_character_escape(KestLexer *lexer, uint32_t at) {
     uint32_t width = 0;
     uint32_t code = 0;
-    NumberRead read = character_number(lexer->source->text,
-                                       (uint32_t)lexer->source->length, at + 2,
-                                       &width, &code);
+    NumberRead read =
+        character_number(lexer->source->text, (uint32_t)lexer->source->length,
+                         at + 2, &width, &code);
     KestSpan span = span_from(at, at + 2);
     switch (read) {
     case NUMBER_READ:
@@ -705,9 +712,8 @@ static KestToken scan_string(KestLexer *lexer, uint32_t start) {
                 lexer->offset += 2;
                 continue;
             }
-            lexer->offset += known->reads
-                                 ? scan_character_escape(lexer, lexer->offset)
-                                 : 2;
+            lexer->offset +=
+                known->reads ? scan_character_escape(lexer, lexer->offset) : 2;
             continue;
         }
         // A byte that ends a line on another machine, written inside text as
@@ -812,22 +818,18 @@ static KestToken lexer_next(KestLexer *lexer) {
                     // text are one spelling, and one spelling is one list.
                     const Escape *known = escape_named(at(lexer, 1));
                     if (known == NULL) {
-                        kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR,
-                                       "K0103",
-                                       span_from(lexer->offset,
-                                                 lexer->offset + 2),
-                                       "unknown escape sequence `\\%c`",
-                                       at(lexer, 1));
-                        kest_diags_suggest(lexer->diags,
-                                           "known escapes are %s",
-                                           escapes_written(
-                                               lexer->diags->arena));
+                        kest_diags_add(
+                            lexer->diags, KEST_SEVERITY_ERROR, "K0103",
+                            span_from(lexer->offset, lexer->offset + 2),
+                            "unknown escape sequence `\\%c`", at(lexer, 1));
+                        kest_diags_suggest(
+                            lexer->diags, "known escapes are %s",
+                            escapes_written(lexer->diags->arena));
                     }
-                    lexer->offset += known != NULL && known->reads
-                                         ? scan_character_escape(lexer,
-                                                                 lexer->offset)
-                                               - 1
-                                         : 1;
+                    lexer->offset +=
+                        known != NULL && known->reads
+                            ? scan_character_escape(lexer, lexer->offset) - 1
+                            : 1;
                 } else if (at(lexer, 0) == '\r') {
                     kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0109",
                                    span_from(lexer->offset, lexer->offset + 1),
@@ -984,10 +986,10 @@ static KestToken lexer_next(KestLexer *lexer) {
             break;
         }
 
-        kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0102",
-                       span_from(start, lexer->offset),
-                       "unexpected character `%.*s`",
-                       (int)(lexer->offset - start), lexer->source->text + start);
+        kest_diags_add(
+            lexer->diags, KEST_SEVERITY_ERROR, "K0102",
+            span_from(start, lexer->offset), "unexpected character `%.*s`",
+            (int)(lexer->offset - start), lexer->source->text + start);
         if (lexer->source->text[start] == '\\') {
             // The mistake everybody makes once: escaping a quote inside a
             // hole. What is in one is code, so a string in it is written the
@@ -1116,15 +1118,15 @@ static void check_text(const KestSource *source, KestDiags *diags) {
         }
 
         uint32_t code = 0;
-        uint32_t width = decoded(source->text, (uint32_t)source->length, at,
-                                 &code);
+        uint32_t width =
+            decoded(source->text, (uint32_t)source->length, at, &code);
         if (width == 0) {
             KestSpan span = {at, 1};
             kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0107", span,
                            "the byte `0x%02x` starts no character",
                            (unsigned char)source->text[at]);
-            kest_diags_suggest(diags,
-                               "a file this language reads is UTF-8 throughout");
+            kest_diags_suggest(
+                diags, "a file this language reads is UTF-8 throughout");
             at++;
             continue;
         }
@@ -1146,7 +1148,6 @@ static void check_text(const KestSource *source, KestDiags *diags) {
         at += width;
     }
 }
-
 
 // Whether a run of bytes is UTF-8, and where it stops being so. Text in this
 // language is UTF-8 -- a file is held to it by `K0107` and this is the same
@@ -1256,8 +1257,7 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
             // 15094 slots of the 46592 this tree asks for. A quarter more is
             // an eighth, and the number of extensions stays a logarithm
             // rather than becoming a count of the file.
-            uint32_t grown =
-                capacity == 0 ? 256 : capacity + capacity / 4;
+            uint32_t grown = capacity == 0 ? 256 : capacity + capacity / 4;
             // And never room for more tokens than there are bytes left to
             // make them out of: the shortest token there is is one byte, so
             // what is still to come cannot outnumber what is still to be
@@ -1276,11 +1276,10 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
             // and fifty-six, five hundred and twelve, a thousand and two
             // thousand, and kept all four.
             KestToken *moved =
-                capacity == 0
-                    ? NULL
-                    : kest_arena_extend(arena, tokens,
-                                        sizeof(KestToken) * capacity,
-                                        sizeof(KestToken) * grown);
+                capacity == 0 ? NULL
+                              : kest_arena_extend(arena, tokens,
+                                                  sizeof(KestToken) * capacity,
+                                                  sizeof(KestToken) * grown);
             if (moved == NULL) {
                 // A diagnostic was recorded since the last token, so something
                 // else is the last thing handed out. Then it is what it was
@@ -1325,9 +1324,8 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
         } else if (tokens[used].kind == KEST_TOK_RBRACE && braces > 0) {
             braces--;
             lexer->bracket_depth =
-                braces < (uint32_t)(sizeof held / sizeof held[0])
-                    ? held[braces]
-                    : 0;
+                braces < (uint32_t)(sizeof held / sizeof held[0]) ? held[braces]
+                                                                  : 0;
         }
         if (tokens[used++].kind == KEST_TOK_EOF) {
             break;
@@ -1350,8 +1348,8 @@ uint64_t kest_token_integer(const char *text, size_t length, bool *overflow) {
     *overflow = false;
     for (; at < length; at++) {
         char c = text[at];
-        uint64_t digit = c <= '9' ? (uint64_t)(c - '0')
-                                  : (uint64_t)((c | 0x20) - 'a' + 10);
+        uint64_t digit =
+            c <= '9' ? (uint64_t)(c - '0') : (uint64_t)((c | 0x20) - 'a' + 10);
         if (value > (UINT64_MAX - digit) / base) {
             *overflow = true;
             return UINT64_MAX;
