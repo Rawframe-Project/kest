@@ -369,6 +369,14 @@ static void publish(Server *server) {
             put_said(server, &out, &first, file->text, file->length, start,
                      true, code, words, NULL);
         }
+    } else if (file->path != NULL) {
+        // No build at all, which is a build that had no room to begin: said
+        // as the command line says it, rather than as a file with nothing
+        // wrong with it.
+        KestSpan start = {0, 0};
+        put_said(server, &out, &first, file->text, file->length, start, true,
+                 "K0705", "there is not enough memory to read a program",
+                 NULL);
     }
     kest_wire_say(&out, "]}}");
     if (!out.broke && out.bytes != NULL) {

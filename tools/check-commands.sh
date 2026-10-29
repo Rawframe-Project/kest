@@ -6451,10 +6451,12 @@ esac
 
 # And a build that ran out. Running out is a bit beside the list rather than an
 # item in it, and the server published only the list, so a file whose build ran
-# out was published with nothing wrong, or with only what it found first. In the
-# build that checks itself, every allocation is refused from 64 points spread
-# over a session that opens a file with one mistake in it: every list published
-# has to be the one published with nothing refused, or say it ran out.
+# out was published with nothing wrong, or with only what it found first; and
+# one that could not begin, with no list at all, was published as an empty one.
+# In the build that checks itself, every allocation is refused from each point
+# in turn of a session that opens a file with one mistake in it, which is about
+# a hundred and twenty: every list published has to be the one published with
+# nothing refused, or say it ran out.
 printf 'fn main() -> i32 {\n    return nothing_at_all(0)\n}\n' \
     >"$scratch"/serving/wrong.kest
 starved=$(timeout 600 python3 - "$build_dir"/kest-debug \
@@ -6509,8 +6511,7 @@ while high - low > 1:
     else:
         low = middle
 wrong = []
-for k in range(64):
-    refused_at = 1 + k * high // 64
+for refused_at in range(1, high + 1):
     for got in published(refused_at):
         if got != whole[0] and not {"K0639", "K0658", "K0705"} & set(got):
             wrong.append("%d: %s" % (refused_at, got))
