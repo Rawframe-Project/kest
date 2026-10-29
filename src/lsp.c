@@ -203,15 +203,10 @@ static uint32_t nibble(char c) {
 static char *path_of_uri(const char *uri, size_t length) {
     const char *from = uri;
     size_t left = length;
-    if (left > 7 && memcmp(from, "file://", 7) == 0) {
+    bool file = left > 7 && memcmp(from, "file://", 7) == 0;
+    if (file) {
         from += 7;
         left -= 7;
-        // `file:///c:/x` on Windows has a slash before the drive letter that
-        // is part of the URI and not part of the path.
-        if (left > 2 && from[0] == '/' && from[2] == ':') {
-            from++;
-            left--;
-        }
     }
     char *out = malloc(left + 1);
     if (out == NULL) {
@@ -228,11 +223,22 @@ static char *path_of_uri(const char *uri, size_t length) {
         out[used++] = from[i];
     }
     out[used] = '\0';
+    // `file:///c:/x` on Windows has a slash before the drive letter that is
+    // part of the URI and not part of the path. Looked for once the escapes
+    // are read, because VS Code writes the colon as one: `file:///c%3A/x`.
+    if (file && used > 2 && out[0] == '/' && out[2] == ':') {
+        memmove(out, out + 1, used);
+    }
     return out;
 }
 
 static void put_uri(KestSaid *out, const char *path) {
     kest_wire_say(out, "\"file://");
+    // And the slash back before a drive letter, without which `C:` reads as
+    // the URI's host.
+    if (path[0] != '\0' && path[1] == ':') {
+        kest_wire_char(out, '/');
+    }
     for (const char *at = path; *at != '\0'; at++) {
         unsigned char c = (unsigned char)*at;
         bool plain = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
