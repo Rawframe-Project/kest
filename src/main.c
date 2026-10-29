@@ -2611,9 +2611,18 @@ static int look_over(const char *executable, const char *where, bool json) {
     return wrong ? 1 : 0;
 }
 
+// The library's archive as the compiler that built this command line names
+// one, which is what a release links: MSVC's `kest.lib` beside everybody
+// else's `libkest.a`, so a Windows archive looked for a file it never had.
+#if defined(_MSC_VER)
+#define KEST_ARCHIVE "kest.lib"
+#else
+#define KEST_ARCHIVE "libkest.a"
+#endif
+
 // Where a release is made from: the header and the library this command line
 // was built with, found beside it the way its standard library is -- in a
-// source tree `include/` and `libkest.a` sit beside `lib/`, and once installed
+// source tree `include/` and the archive sit beside `lib/`, and once installed
 // `include/` is one further up. Nought for one that is not there.
 static bool release_parts(const char *executable, char *header, char *archive,
                           size_t room) {
@@ -2629,7 +2638,7 @@ static bool release_parts(const char *executable, char *header, char *archive,
             snprintf(header, room, "%.*s", (int)(strlen(probe) - 6), probe);
         }
     }
-    snprintf(archive, room, "%s../libkest.a", library);
+    snprintf(archive, room, "%s../" KEST_ARCHIVE, library);
     FILE *there = fopen(archive, "rb");
     if (there == NULL) {
         return false;
@@ -2798,6 +2807,53 @@ static int ran_program(char **words) {
 #endif
 }
 
+// What a path names once the directories before it are taken off, with either
+// separator, since a path on Windows is written with both.
+static const char *after_directory(const char *path) {
+    const char *base = path;
+    for (const char *at = path; *at != '\0'; at++) {
+        if (*at == '/' || *at == '\\') {
+            base = at + 1;
+        }
+    }
+    return base;
+}
+
+// The compiler a release is made with when `CC` names none: the one every
+// Unix has, and on Windows MSVC's, which is what built this command line.
+#if defined(_WIN32)
+#define KEST_COMPILER "cl"
+#else
+#define KEST_COMPILER "cc"
+#endif
+
+// Whether a compiler takes MSVC's flags rather than the ones `cc` takes:
+// `cl`, and `clang-cl`, which reads them, by name and in any case, with or
+// without its directory and `.exe`.
+static bool msvc_compiler(const char *word) {
+    const char *base = after_directory(word);
+    size_t length = strlen(base);
+    if (length > 4) {
+        const char *tail = base + length - 4;
+        if (tail[0] == '.' && (tail[1] | 0x20) == 'e' &&
+            (tail[2] | 0x20) == 'x' && (tail[3] | 0x20) == 'e') {
+            length -= 4;
+        }
+    }
+    static const char *const NAMES[] = {"cl", "clang-cl"};
+    for (size_t i = 0; i < sizeof(NAMES) / sizeof(NAMES[0]); i++) {
+        size_t wide = strlen(NAMES[i]);
+        bool same = wide == length;
+        for (size_t at = 0; same && at < wide; at++) {
+            same = (base[at] | 0x20) == NAMES[i][at];
+        }
+        if (same) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // A release of the program at `program`: the C that carries it, written beside
 // where the binary goes, compiled by the compiler this machine names -- `CC`,
 // or `cc` -- against the header and the library above, and taken away again.
@@ -2812,14 +2868,14 @@ static char *made_release(const char *executable, const char *program,
         !release_parts(executable, header, archive, sizeof(header))) {
         kest_diags_in(diags, NULL);
         kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0663", nowhere,
-                       "a release needs `kest.h` and `libkest.a` where this "
-                       "command line is, and they are not there");
+                       "a release needs `kest.h` and `" KEST_ARCHIVE
+                       "` where this command line is, and they are not "
+                       "there");
         kest_diags_suggest(diags, "`cmake --install` puts all three in one "
                                   "place");
         return NULL;
     }
-    const char *base = strrchr(program, '/');
-    base = base == NULL ? program : base + 1;
+    const char *base = after_directory(program);
     size_t length = strlen(base);
     if (length > 5 && strcmp(base + length - 5, ".kest") == 0) {
         length -= 5;
@@ -2851,17 +2907,14 @@ static char *made_release(const char *executable, const char *program,
     const char *compiler = getenv("CC");
     size_t extra = compiler == NULL ? 0 : compiler_words(compiler, NULL, NULL);
     if (extra == 0) {
-        compiler = "cc";
+        compiler = KEST_COMPILER;
         extra = 1;
     }
-    // Each path is one word of its own, so a space or a quote in one is a
-    // character of that path and nothing more.
-    char include[1030];
-    snprintf(include, sizeof(include), "-I%s", header);
-    const char *after[] = {"-std=c11", "-O2",  include, "-o",
-                           out,        source, archive, "-lm"};
-    size_t fixed = sizeof(after) / sizeof(after[0]);
-    char **words = malloc((extra + fixed + 1) * sizeof(char *));
+    // The compiler's words, and after them the flags and paths, each path
+    // one word of its own so a space or a quote in one is a character of
+    // that path and nothing more. Eight is the most either compiler is
+    // handed.
+    char **words = malloc((extra + 8 + 1) * sizeof(char *));
     char *split = malloc(strlen(compiler) + 1);
     if (words == NULL || split == NULL) {
         // No room to say what to run is not a compiler that could not make
@@ -2874,21 +2927,45 @@ static char *made_release(const char *executable, const char *program,
         return NULL;
     }
     compiler_words(compiler, split, words);
-    for (size_t i = 0; i < fixed; i++) {
-        words[extra + i] = (char *)after[i];
+    char include[1030];
+    char named[1030];
+    size_t fixed = 0;
+    bool msvc = msvc_compiler(words[0]);
+    if (msvc) {
+        // MSVC's flags, which `clang-cl` reads too. The archive is built
+        // with the static C runtime, which is what `cl` links when it is
+        // told nothing, and the mathematics is in that runtime.
+        snprintf(include, sizeof(include), "/I%s", header);
+        snprintf(named, sizeof(named), "/Fe%s", out);
+        const char *to_cl[] = {"/nologo", "/std:c11", "/O2",  include,
+                               named,     source,     archive};
+        fixed = sizeof(to_cl) / sizeof(to_cl[0]);
+        memcpy(words + extra, to_cl, sizeof(to_cl));
+    } else {
+        snprintf(include, sizeof(include), "-I%s", header);
+        const char *to_cc[] = {"-std=c11", "-O2",  include, "-o",
+                               out,        source, archive, "-lm"};
+        fixed = sizeof(to_cc) / sizeof(to_cc[0]);
+        memcpy(words + extra, to_cc, sizeof(to_cc));
     }
     words[extra + fixed] = NULL;
     int status = wrote ? ran_program(words) : -1;
     free(words);
     free(split);
     remove(source);
+    if (msvc) {
+        // And the object `cl` leaves beside its source, which `cc` does not.
+        char object[1100];
+        snprintf(object, sizeof(object), "%s.release.obj", out);
+        remove(object);
+    }
     if (status != 0) {
         kest_diags_in(diags, NULL);
         kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0663", nowhere,
                        "`%s` could not make a release of `%s`", compiler,
                        program);
         kest_diags_suggest(diags, "a release is compiled by the C compiler "
-                                  "`CC` names, or `cc`");
+                                  "`CC` names, or `" KEST_COMPILER "`");
         free(out);
         return NULL;
     }

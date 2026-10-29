@@ -251,6 +251,21 @@ jobs:
           cat VERSION
           (cd "$RUNNER_TEMP/elsewhere" &&
             PATH="$unpacked/bin:$PATH" kest run "$GITHUB_WORKSPACE/examples/math.kest")
+          # And a release made from it with the platform's own compiler, `cl`
+          # on Windows, which has to answer what the program answers.
+          (cd "$RUNNER_TEMP/elsewhere" &&
+            PATH="$unpacked/bin:$PATH" kest run "$GITHUB_WORKSPACE/examples/math.kest" \
+              >ran.txt &&
+            PATH="$unpacked/bin:$PATH" kest build --release \
+              "$GITHUB_WORKSPACE/examples/math.kest" &&
+            ./math >released.txt &&
+            cmp ran.txt released.txt)
+          left=$(ls -A "$RUNNER_TEMP/elsewhere" |
+            grep -v -x -E 'math(\.exe)?|ran\.txt|released\.txt' || true)
+          if [ -n "$left" ]; then
+            echo "a release left behind: $left"
+            exit 1
+          fi
           printf '%s\n' '#include "kest.h"' '#include <stdio.h>' \
               'int main(void) {' \
               '    if (kest_abi_version() != KEST_ABI_VERSION) { return 1; }' \

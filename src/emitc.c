@@ -3419,6 +3419,8 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry, const char *from,
         "#pragma STDC FP_CONTRACT OFF\n"
         "#elif defined(__GNUC__)\n"
         "#pragma GCC optimize (\"fp-contract=off\")\n"
+        "#elif defined(_MSC_VER)\n"
+        "#pragma fp_contract (off)\n"
         "#endif\n"
         "\n"
         "// A slot, under the name the machine's own backend gives it.\n"
