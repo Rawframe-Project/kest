@@ -42,7 +42,7 @@ These read each file on its own and follow no imports, since what a file is does
 
 | Command | What it does |
 | --- | --- |
-| `fmt <file>...` | prints the file in the one form. `-w` rewrites each file and names the ones it changed; `--check` names the files `-w` would rewrite and exits non-zero. A file that does not parse is reported and never rewritten. A rewrite goes through a file beside the target and a rename, so an interrupted run leaves the original |
+| `fmt <file>...` | prints the file in the one form. `-w` rewrites each file and names the ones it changed; `--check` names the files `-w` would rewrite and exits non-zero. A file that does not parse is reported and never rewritten, and neither is one whose formatted text does not hold every word and comment the file holds, in order; the editor's formatting through `kest lsp` is held to the same. A rewrite goes through a file beside the target and a rename, so an interrupted run leaves the original |
 | `parse <file>...` | prints the syntax tree |
 | `lex <file>...` | prints the tokens, whatever else is wrong with the file |
 | `doc <file>` | prints what the module declares, each declaration as written with the comment above it, as Markdown. A comment directly above a declaration is about it; comments before the first declaration are about the file |

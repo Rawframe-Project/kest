@@ -754,15 +754,27 @@ static void formatting(Server *server, const KestJson *id) {
     // The formatter hands back the file as it should be written, in arena
     // memory, which is the same call `kest fmt` makes: an editor formatting a
     // file gets exactly what the command line would have written.
+    // Only a file that was read whole and without a mistake, as `kest fmt`
+    // formats only one that parses, and only into the words it holds: the
+    // edit replaces the whole of the file, so a tree that was read short --
+    // a file a nought byte ended -- was the rest of the file deleted.
     const char *formatted = NULL;
     size_t formatted_size = 0;
-    if (server->build != NULL && server->build->units.count > 0) {
-        formatted = kest_format(&server->build->units.items[0].unit,
-                                &server->build->units.items[0].source,
+    if (server->build != NULL && server->build->units.count > 0 &&
+        server->build->diags.error_count == 0) {
+        const KestSource *source = &server->build->units.items[0].source;
+        formatted = kest_format(&server->build->units.items[0].unit, source,
                                 server->build->arena, &formatted_size);
+        KestSource written;
+        if (formatted != NULL &&
+            (!kest_source_init(&written, server->build->arena, source->path,
+                               formatted, formatted_size) ||
+             kest_format_same_words(server->build->arena, source,
+                                    &written) != KEST_WORDS_SAME)) {
+            formatted = NULL;
+        }
     }
-    bool worked = formatted != NULL;
-    if (!worked || formatted == NULL) {
+    if (formatted == NULL) {
         kest_wire_say(&out, "null");
     } else {
         Open *file = here(server);

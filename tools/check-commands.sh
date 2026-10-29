@@ -4347,6 +4347,50 @@ not say so"
     esac
 done
 
+# And a nought byte, which the lexer reads as the end of its input: between two
+# declarations, in a string, in a comment and between two tokens. Everything
+# after it went unread: `check` came back 0 over a function that does not
+# compile, and `fmt -w` wrote the file back without the rest. A fuzz run over
+# the formatter found it in a comment. Each has to say `K0108` and come back 1,
+# and `fmt -w` has to leave the file as it was, byte for byte. So does a control
+# character, which is not on the screen either.
+while IFS='|' read -r named body; do
+    printf '%b' "$body" >"$scratch"/refused/nought.kest
+    cp "$scratch"/refused/nought.kest "$scratch"/refused/nought.was
+    nought=$("$kest" check "$scratch"/refused/nought.kest 2>&1 </dev/null)
+    nought_was=$?
+    case "$nought_was:$nought" in
+    1:*K0108*) ;;
+    *)
+        complain "check: $named came back $nought_was without saying K0108"
+        ;;
+    esac
+    "$kest" fmt -w "$scratch"/refused/nought.kest >/dev/null 2>&1 </dev/null
+    if ! cmp -s "$scratch"/refused/nought.kest "$scratch"/refused/nought.was; then
+        complain "fmt -w: $named was written over"
+    fi
+done <<'NOUGHT'
+a nought between declarations|fn main() -> i32 {\n    return 0\n}\n\0\nfn broken() -> i32 {\n    return nothing_at_all\n}\n
+a nought in a string|fn main() -> i32 {\n    let s = "a\0b"\n    return 0\n}\n
+a nought in a comment|fn main() -> i32 {\n    // a\0b\n    return 0\n}\n
+a nought between tokens|fn main() -> i32 {\n    let a = 1 \0 + 2\n    return a\n}\n
+a control character in a comment|fn main() -> i32 {\n    // a\017b\n    return 0\n}\n
+NOUGHT
+# And what the formatter writes back other than as it was written, which `fmt`
+# now holds to the words the file holds: brackets the tree does not need,
+# outside a string's hole and inside one, and the spaces in a hole. Each is
+# formatted, not refused as a fault in the formatter.
+printf 'fn main() -> i32 {\n    let x = (1 + 2)\n    let s = "{(x)} { x  +  1 }"\n    return x\n}\n' \
+    >"$scratch"/refused/reprinted.kest
+reprinted=$("$kest" fmt "$scratch"/refused/reprinted.kest 2>&1 </dev/null)
+case "$?:$reprinted" in
+0:*'let x = 1 + 2'*'"{x} {x + 1}"'*) ;;
+*)
+    complain "fmt: brackets and spaces it writes back otherwise were refused: \
+\`$(printf '%s' "$reprinted" | head -1)\`"
+    ;;
+esac
+
 # And the one a command is refused for rather than a file: `call` with nothing
 # to call.
 cat > "$scratch"/refused/calling.kest <<'KEST'

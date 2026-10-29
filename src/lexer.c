@@ -687,9 +687,10 @@ static KestToken scan_string(KestLexer *lexer, uint32_t start) {
             char escape = at(lexer, 1);
             // A backslash with nothing after it on its line, or in its file,
             // is no escape: the string ends unterminated there, and is said
-            // so. A line may end `\r\n`, which the lexer reads. Read as one, the line break was taken into the string and
-            // written into the message, and at the end of the file the token
-            // ran a byte past it.
+            // so. A line may end `\r\n`, which the lexer reads. Read as one,
+            // the line break was taken into the string and written into the
+            // message, and at the end of the file the token ran a byte past
+            // it.
             if (escape == '\0' || escape == '\n' || escape == '\r') {
                 lexer->offset++;
                 continue;
@@ -1014,8 +1015,16 @@ typedef struct {
 // Characters that are in a file without being on the screen. A name may hold
 // any character the writer's language has, and none of these are one: they
 // either look like a space and are not one, or take no room at all, or say
-// which way the rest of the line is to be read.
+// which way the rest of the line is to be read. The control characters a file
+// has no use for are among them, a nought first: the lexer reads one as the end
+// of its input, so everything after it went unread, and `fmt -w` wrote the file
+// back without it.
 static const Unseen UNSEEN[] = {
+    {0x0000, 0x0000, "a nought byte, which ends what the lexer reads"},
+    {0x0001, 0x0008, "a control character"},
+    {0x000b, 0x000c, "a control character"},
+    {0x000e, 0x001f, "a control character"},
+    {0x007f, 0x007f, "a control character"},
     {0x00a0, 0x00a0, "a space that is not the space"},
     {0x00ad, 0x00ad, "a hyphen that is not shown"},
     {0x1680, 0x1680, "a space that is not the space"},
@@ -1092,7 +1101,16 @@ static uint32_t decoded(const char *text, uint32_t length, uint32_t at,
 static void check_text(const KestSource *source, KestDiags *diags) {
     uint32_t at = 0;
     while (at < source->length) {
-        if ((unsigned char)source->text[at] < 0x80) {
+        unsigned char byte = (unsigned char)source->text[at];
+        if (byte < 0x80) {
+            const char *control = unseen_what(byte);
+            if (control != NULL) {
+                KestSpan span = {at, 1};
+                kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0108", span,
+                               "`U+%04X` is %s", (unsigned)byte, control);
+                kest_diags_suggest(diags, "take it out: what a file looks "
+                                          "like is what it is");
+            }
             at++;
             continue;
         }

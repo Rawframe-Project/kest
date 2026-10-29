@@ -1455,6 +1455,21 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 } else if (twice_length != length ||
                            memcmp(twice, text, length) != 0) {
                     unreadable = "is not itself in the one form";
+                } else {
+                    // And the same words as the file, which reading it back
+                    // cannot tell: what was never read is not in what was
+                    // written either, and reads back as a whole program.
+                    switch (kest_format_same_words(
+                        arena, &units.items[0].source, &again)) {
+                    case KEST_WORDS_SAME:
+                        break;
+                    case KEST_WORDS_CHANGED:
+                        unreadable = "does not hold the words the file holds";
+                        break;
+                    case KEST_WORDS_NO_ROOM:
+                        starved_back = true;
+                        break;
+                    }
                 }
             }
             if (starved_back) {

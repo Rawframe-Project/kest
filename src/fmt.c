@@ -1245,3 +1245,135 @@ const char *kest_format(const KestUnit *unit, const KestSource *source,
     *length = printer.used;
     return printer.buffer;
 }
+
+// Whether a token is one the formatter may write differently or not at all.
+static bool reshaped(KestTokenKind kind) {
+    return kind == KEST_TOK_NEWLINE || kind == KEST_TOK_LPAREN ||
+           kind == KEST_TOK_RPAREN || kind == KEST_TOK_EOF;
+}
+
+// The same text, leaving out spaces, tabs and brackets inside a string's
+// holes, which the formatter writes back from the tree as it does the code
+// around them: `"{ a  +  1 }"` and `"{a + 1}"` are the same words, and so are
+// `"{(x)}"` and `"{x}"`.
+static bool reprinted(char c) {
+    return c == ' ' || c == '\t' || c == '(' || c == ')';
+}
+
+static bool same_text(const char *a, size_t a_length, const char *b,
+                      size_t b_length, bool in_string) {
+    if (!in_string) {
+        return a_length == b_length && memcmp(a, b, a_length) == 0;
+    }
+    size_t i = 0;
+    size_t j = 0;
+    uint32_t a_depth = 0;
+    uint32_t b_depth = 0;
+    while (true) {
+        while (i < a_length && a_depth > 0 && reprinted(a[i])) {
+            i++;
+        }
+        while (j < b_length && b_depth > 0 && reprinted(b[j])) {
+            j++;
+        }
+        if (i == a_length || j == b_length) {
+            return i == a_length && j == b_length;
+        }
+        if (a[i] != b[j]) {
+            return false;
+        }
+        // An escaped brace is a character of the text, not a hole.
+        if (a[i] == '\\' && i + 1 < a_length && j + 1 < b_length) {
+            if (a[i + 1] != b[j + 1]) {
+                return false;
+            }
+            i += 2;
+            j += 2;
+            continue;
+        }
+        if (a[i] == '{') {
+            a_depth++;
+            b_depth++;
+        } else if (a[i] == '}' && a_depth > 0) {
+            a_depth--;
+            b_depth--;
+        }
+        i++;
+        j++;
+    }
+}
+
+// A comment's text without what ends its line, which a file may end `\r\n`
+// and the formatter ends `\n`.
+static size_t comment_length(const KestSource *source, KestSpan span) {
+    const char *text = kest_span_text(source, span);
+    size_t length = span.length;
+    while (length > 0 && (text[length - 1] == ' ' || text[length - 1] == '\t' ||
+                          text[length - 1] == '\r')) {
+        length--;
+    }
+    return length;
+}
+
+KestWords kest_format_same_words(KestArena *arena,
+                                 const KestSource *before,
+                                 const KestSource *after) {
+    KestDiags quiet;
+    kest_diags_init(&quiet, arena);
+    kest_diags_mute(&quiet, true);
+    uint32_t before_count = 0;
+    uint32_t after_count = 0;
+    KestToken *was = kest_lex_all(arena, before, &quiet, &before_count);
+    KestToken *now = kest_lex_all(arena, after, &quiet, &after_count);
+    if (was == NULL || now == NULL) {
+        return KEST_WORDS_NO_ROOM;
+    }
+    uint32_t i = 0;
+    uint32_t j = 0;
+    while (true) {
+        while (i < before_count && reshaped(was[i].kind)) {
+            i++;
+        }
+        while (j < after_count && reshaped(now[j].kind)) {
+            j++;
+        }
+        if (i == before_count || j == after_count) {
+            if (i != before_count || j != after_count) {
+                return KEST_WORDS_CHANGED;
+            }
+            break;
+        }
+        if (was[i].kind != now[j].kind ||
+            !same_text(kest_span_text(before, was[i].span), was[i].span.length,
+                       kest_span_text(after, now[j].span), now[j].span.length,
+                       was[i].kind == KEST_TOK_STRING)) {
+            return KEST_WORDS_CHANGED;
+        }
+        i++;
+        j++;
+    }
+
+    uint32_t comments = kest_comments(before, NULL, 0);
+    if (kest_comments(after, NULL, 0) != comments) {
+        return KEST_WORDS_CHANGED;
+    }
+    if (comments == 0) {
+        return KEST_WORDS_SAME;
+    }
+    KestSpan *had = KEST_ARENA_ARRAY(arena, KestSpan, comments);
+    KestSpan *has = KEST_ARENA_ARRAY(arena, KestSpan, comments);
+    if (had == NULL || has == NULL) {
+        return KEST_WORDS_NO_ROOM;
+    }
+    kest_comments(before, had, comments);
+    kest_comments(after, has, comments);
+    for (uint32_t k = 0; k < comments; k++) {
+        size_t had_length = comment_length(before, had[k]);
+        if (comment_length(after, has[k]) != had_length ||
+            memcmp(kest_span_text(before, had[k]),
+                   kest_span_text(after, has[k]), had_length) != 0) {
+            return KEST_WORDS_CHANGED;
+        }
+    }
+    return KEST_WORDS_SAME;
+}
