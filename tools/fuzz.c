@@ -23,6 +23,13 @@
 #include "build.h"
 #include "value.h"
 #include "verify.h"
+// And the formatter and the manifest reader, which are asked about what they
+// answer rather than run.
+#include "diag.h"
+#include "fmt.h"
+#include "mem.h"
+#include "parser.h"
+#include "project.h"
 
 // The one mixer this tree has, written out rather than reached for: a fuzzer
 // that depended on the library it is fuzzing would say nothing about a day the
@@ -174,6 +181,118 @@ static const char *const SEEDS[] = {
     "lib/std/table.kest",  "examples/registry.kest",
 };
 
+// A program to put through it: half of the time one of the seeds with between
+// one and eight things done to it, and otherwise pieces of the language one
+// after another. Terminated, and its length answered.
+static size_t made(uint64_t *state, char *program, size_t room) {
+    size_t used = 0;
+    bool from_a_seed = (next_number(state) & 1) != 0;
+    char *seeded = NULL;
+    size_t seeded_length = 0;
+    if (from_a_seed) {
+        const char *which =
+            SEEDS[next_number(state) % (sizeof(SEEDS) / sizeof(SEEDS[0]))];
+        seeded = seed_program(which, &seeded_length);
+    }
+    if (seeded != NULL && seeded_length > 0) {
+        used = seeded_length < room - 1 ? seeded_length : room - 1;
+        memcpy(program, seeded, used);
+        // Between one and eight things done to it. One is often not
+        // enough to reach anything new and a hundred is random bytes
+        // again.
+        uint32_t doings = (uint32_t)(next_number(state) % 8) + 1;
+        // Half of them changed only in their numbers, which is a program
+        // that still reads as one and so reaches the compiler and the
+        // machine rather than the parser's refusal.
+        bool gently = (next_number(state) & 1) != 0;
+        for (uint32_t i = 0; i < doings && used > 4; i++) {
+            size_t at = (size_t)(next_number(state) % used);
+            switch (gently ? 3 : next_number(state) % 4) {
+            case 3: {
+                // A number changed to another, which is the one change
+                // that mostly leaves a program a program: the three
+                // above break what they touch, and of the inputs they
+                // made one in eighty compiled, so the fold below was
+                // over forty programs a gate. This one runs the same
+                // program down another path.
+                // A number standing on its own, and not the digits of a
+                // name: `i32` made `i857` is no type at all.
+                size_t digit = at;
+                while (digit < used &&
+                       (program[digit] < '0' || program[digit] > '9' ||
+                        (digit > 0 &&
+                         (isalnum((unsigned char)program[digit - 1]) ||
+                          program[digit - 1] == '_' ||
+                          program[digit - 1] == '.')))) {
+                    digit++;
+                }
+                size_t end = digit;
+                while (end < used && program[end] >= '0' &&
+                       program[end] <= '9') {
+                    end++;
+                }
+                if (digit == end) {
+                    break;
+                }
+                char number[8];
+                int wrote = snprintf(number, sizeof number, "%u",
+                                     (unsigned)(next_number(state) % 1000));
+                size_t length = (size_t)wrote;
+                if (used - (end - digit) + length >= room - 1) {
+                    break;
+                }
+                memmove(program + digit + length, program + end, used - end);
+                memcpy(program + digit, number, length);
+                used = used - (end - digit) + length;
+                break;
+            }
+            case 0:
+                // A byte changed, which is what a typo is.
+                program[at] = (char)(next_number(state) % 256);
+                break;
+            case 1: {
+                // A run cut out, which is what a half-saved file is.
+                size_t cut = (size_t)(next_number(state) % 64) + 1;
+                if (at + cut >= used) {
+                    cut = used - at - 1;
+                }
+                memmove(program + at, program + at + cut, used - at - cut);
+                used -= cut;
+                break;
+            }
+            default: {
+                // A piece of the language put in the middle of it.
+                const char *piece =
+                    PIECES[next_number(state) %
+                           (sizeof(PIECES) / sizeof(PIECES[0]))];
+                size_t length = strlen(piece);
+                if (used + length < room - 1) {
+                    memmove(program + at + length, program + at, used - at);
+                    memcpy(program + at, piece, length);
+                    used += length;
+                }
+                break;
+            }
+            }
+        }
+        free(seeded);
+    } else {
+        uint32_t pieces = (uint32_t)(next_number(state) % 120) + 1;
+        for (uint32_t i = 0; i < pieces && used < room - 64; i++) {
+            const char *piece = PIECES[next_number(state) %
+                                       (sizeof(PIECES) / sizeof(PIECES[0]))];
+            size_t length = strlen(piece);
+            if (used + length >= room - 1) {
+                break;
+            }
+            memcpy(program + used, piece, length);
+            used += length;
+        }
+    }
+    program[used] = '\0';
+    return used;
+}
+
 // Bytes the compiler was not written for, which is the target this file began
 // as and the one that reaches the most code: reading, checking, compiling and
 // running, all of it over something nobody wrote.
@@ -190,116 +309,7 @@ static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
     for (unsigned long round = 0; round < many; round++) {
         uint64_t state = seed + round;
         static char program[1 << 17];
-        size_t used = 0;
-        bool from_a_seed = (next_number(&state) & 1) != 0;
-        char *seeded = NULL;
-        size_t seeded_length = 0;
-        if (from_a_seed) {
-            const char *which =
-                SEEDS[next_number(&state) % (sizeof(SEEDS) / sizeof(SEEDS[0]))];
-            seeded = seed_program(which, &seeded_length);
-        }
-        if (seeded != NULL && seeded_length > 0) {
-            used = seeded_length < sizeof(program) - 1 ? seeded_length
-                                                       : sizeof(program) - 1;
-            memcpy(program, seeded, used);
-            // Between one and eight things done to it. One is often not
-            // enough to reach anything new and a hundred is random bytes
-            // again.
-            uint32_t doings = (uint32_t)(next_number(&state) % 8) + 1;
-            // Half of them changed only in their numbers, which is a program
-            // that still reads as one and so reaches the compiler and the
-            // machine rather than the parser's refusal.
-            bool gently = (next_number(&state) & 1) != 0;
-            for (uint32_t i = 0; i < doings && used > 4; i++) {
-                size_t at = (size_t)(next_number(&state) % used);
-                switch (gently ? 3 : next_number(&state) % 4) {
-                case 3: {
-                    // A number changed to another, which is the one change
-                    // that mostly leaves a program a program: the three
-                    // above break what they touch, and of the inputs they
-                    // made one in eighty compiled, so the fold below was
-                    // over forty programs a gate. This one runs the same
-                    // program down another path.
-                    // A number standing on its own, and not the digits of a
-                    // name: `i32` made `i857` is no type at all.
-                    size_t digit = at;
-                    while (digit < used &&
-                           (program[digit] < '0' || program[digit] > '9' ||
-                            (digit > 0 &&
-                             (isalnum((unsigned char)program[digit - 1]) ||
-                              program[digit - 1] == '_' ||
-                              program[digit - 1] == '.')))) {
-                        digit++;
-                    }
-                    size_t end = digit;
-                    while (end < used && program[end] >= '0' &&
-                           program[end] <= '9') {
-                        end++;
-                    }
-                    if (digit == end) {
-                        break;
-                    }
-                    char number[8];
-                    int wrote =
-                        snprintf(number, sizeof number, "%u",
-                                 (unsigned)(next_number(&state) % 1000));
-                    size_t length = (size_t)wrote;
-                    if (used - (end - digit) + length >= sizeof(program) - 1) {
-                        break;
-                    }
-                    memmove(program + digit + length, program + end,
-                            used - end);
-                    memcpy(program + digit, number, length);
-                    used = used - (end - digit) + length;
-                    break;
-                }
-                case 0:
-                    // A byte changed, which is what a typo is.
-                    program[at] = (char)(next_number(&state) % 256);
-                    break;
-                case 1: {
-                    // A run cut out, which is what a half-saved file is.
-                    size_t cut = (size_t)(next_number(&state) % 64) + 1;
-                    if (at + cut >= used) {
-                        cut = used - at - 1;
-                    }
-                    memmove(program + at, program + at + cut, used - at - cut);
-                    used -= cut;
-                    break;
-                }
-                default: {
-                    // A piece of the language put in the middle of it.
-                    const char *piece =
-                        PIECES[next_number(&state) %
-                               (sizeof(PIECES) / sizeof(PIECES[0]))];
-                    size_t length = strlen(piece);
-                    if (used + length < sizeof(program) - 1) {
-                        memmove(program + at + length, program + at, used - at);
-                        memcpy(program + at, piece, length);
-                        used += length;
-                    }
-                    break;
-                }
-                }
-            }
-            free(seeded);
-        } else {
-            uint32_t pieces = (uint32_t)(next_number(&state) % 120) + 1;
-            for (uint32_t i = 0; i < pieces && used < sizeof(program) - 64;
-                 i++) {
-                const char *piece =
-                    PIECES[next_number(&state) %
-                           (sizeof(PIECES) / sizeof(PIECES[0]))];
-                size_t length = strlen(piece);
-                if (used + length >= sizeof(program) - 1) {
-                    break;
-                }
-                memcpy(program + used, piece, length);
-                used += length;
-            }
-        }
-        program[used] = '\0';
+        size_t used = made(&state, program, sizeof(program));
 
         FILE *file = fopen(where, "wb");
         if (file == NULL) {
@@ -1133,6 +1143,250 @@ static int fuzz_chunks(uint64_t seed, unsigned long many, const char *where) {
     return 0;
 }
 
+// What `kest fmt -w` asks of what it writes before a file is written over: it
+// parses clean, it is its own form again, and it holds the words the file
+// held. The gate asks that of the files in this tree, which are the shapes
+// this project already writes; these are programs nobody wrote, which is where
+// a formatter that changes what a program means would be. Answers what was
+// wrong with what it wrote, or NULL: for a program that does not parse clean,
+// which there is nothing to format, for running out of room, and for the
+// formatter keeping all three.
+static const char *formatted_wrong(KestArena *arena, const char *where,
+                                   const char *program, size_t used,
+                                   bool *formatted) {
+    KestDiags diags;
+    kest_diags_init(&diags, arena);
+    KestSource source;
+    KestUnit unit = {0};
+    if (!kest_source_init(&source, arena, where, program, used)) {
+        return NULL;
+    }
+    kest_diags_in(&diags, &source);
+    if (!kest_parse(arena, &source, &diags, &unit) || diags.error_count > 0) {
+        return NULL;
+    }
+    size_t length = 0;
+    const char *text = kest_format(&unit, &source, arena, &length);
+    if (text == NULL) {
+        return NULL;
+    }
+    KestDiags back;
+    kest_diags_init(&back, arena);
+    KestSource again;
+    KestUnit twice_over = {0};
+    if (!kest_source_init(&again, arena, where, text, length)) {
+        return NULL;
+    }
+    kest_diags_in(&back, &again);
+    if (!kest_parse(arena, &again, &back, &twice_over)) {
+        return NULL;
+    }
+    if (back.error_count > 0) {
+        return "does not parse";
+    }
+    size_t twice_length = 0;
+    const char *twice = kest_format(&twice_over, &again, arena, &twice_length);
+    if (twice == NULL) {
+        return NULL;
+    }
+    if (twice_length != length || memcmp(twice, text, length) != 0) {
+        return "is not itself in the one form";
+    }
+    switch (kest_format_same_words(arena, &source, &again)) {
+    case KEST_WORDS_SAME:
+        break;
+    case KEST_WORDS_CHANGED:
+        return "does not hold the words the file held";
+    case KEST_WORDS_NO_ROOM:
+        return NULL;
+    }
+    *formatted = true;
+    return NULL;
+}
+
+// The programs `source` makes, formatted. Most of them do not parse and are
+// passed over; the ones that do are the seeds with their numbers changed and
+// the pieces that happened to make a file, which is the formatter met with
+// shapes nobody chose. A finding is the program, written where it was told.
+static int fuzz_fmt(uint64_t seed, unsigned long many, const char *where) {
+    unsigned long formatted = 0;
+    for (unsigned long round = 0; round < many; round++) {
+        uint64_t state = seed + round;
+        static char program[1 << 17];
+        size_t used = made(&state, program, sizeof(program));
+        KestArena *arena = kest_arena_new();
+        if (arena == NULL) {
+            fprintf(stderr, "fuzz: there was no room for an arena\n");
+            return 1;
+        }
+        bool done = false;
+        const char *wrong = formatted_wrong(arena, where, program, used, &done);
+        kest_arena_free(arena);
+        if (wrong != NULL) {
+            FILE *file = fopen(where, "wb");
+            if (file != NULL) {
+                fwrite(program, 1, used, file);
+                fclose(file);
+            }
+            fprintf(stderr,
+                    "fuzz: input %lu from seed %llu parses clean, and what "
+                    "`fmt` wrote %s; it is in `%s`\n",
+                    round + 1, (unsigned long long)seed, wrong, where);
+            return 1;
+        }
+        if (done) {
+            formatted++;
+        }
+    }
+    printf("fuzz: %lu source input(s) from seed %llu formatted, %lu of them "
+           "parsed clean and were written back as the same program, and none "
+           "of them stopped this\n",
+           many, (unsigned long long)seed, formatted);
+    return 0;
+}
+
+// A manifest as `kest new` writes one, with every line it can hold, and the
+// pieces another is made of.
+static const char MANIFEST[] = "# a project\n"
+                               "project slice\n"
+                               "\n"
+                               "entry src/main.kest\n"
+                               "source src\n"
+                               "source vendor\n"
+                               "tests tests\n"
+                               "\n"
+                               "kest 0.0.1\n"
+                               "profile kest-det 3\n"
+                               "edition " KEST_EDITION_STRING "\n";
+
+static const char *const MANIFEST_PIECES[] = {
+    "project ", "entry ",
+    "source ",  "tests ",
+    "kest ",    "profile ",
+    "edition ", "# ",
+    "\n",       " ",
+    "\t",       "\r",
+    "\r\n",     "src",
+    "a b",      "..",
+    "/",        "\xc4\xb1",
+    "\xff",     "x",
+    "9999",     KEST_EDITION_STRING,
+};
+
+// A manifest is what a release binary carries and what a directory holds, and
+// is read by a reader with no parser worth the name, which is the kind that
+// reads past a line. What it answers has to be a project inside its limits,
+// every line of it text the manifest held, or a reason it would not read.
+static int fuzz_manifest(uint64_t seed, unsigned long many, const char *where) {
+    (void)where;
+    unsigned long read = 0;
+    unsigned long refused = 0;
+    size_t pieces_count = sizeof(MANIFEST_PIECES) / sizeof(MANIFEST_PIECES[0]);
+    for (unsigned long round = 0; round < many; round++) {
+        uint64_t state = seed + round;
+        char text[4096];
+        size_t used = 0;
+        if ((next_number(&state) & 1) != 0) {
+            used = sizeof(MANIFEST) - 1;
+            memcpy(text, MANIFEST, used);
+            uint32_t doings = (uint32_t)(next_number(&state) % 8) + 1;
+            for (uint32_t i = 0; i < doings && used > 1; i++) {
+                size_t at = (size_t)(next_number(&state) % used);
+                switch (next_number(&state) % 3) {
+                case 0:
+                    // A nought ends what is handed over, as a C string does,
+                    // so it is not one of the bytes a manifest can hold.
+                    text[at] = (char)(next_number(&state) % 255 + 1);
+                    break;
+                case 1: {
+                    size_t cut = (size_t)(next_number(&state) % 16) + 1;
+                    if (at + cut >= used) {
+                        cut = used - at - 1;
+                    }
+                    memmove(text + at, text + at + cut, used - at - cut);
+                    used -= cut;
+                    break;
+                }
+                default: {
+                    const char *piece =
+                        MANIFEST_PIECES[next_number(&state) % pieces_count];
+                    size_t length = strlen(piece);
+                    if (used + length < sizeof(text) - 1) {
+                        memmove(text + at + length, text + at, used - at);
+                        memcpy(text + at, piece, length);
+                        used += length;
+                    }
+                    break;
+                }
+                }
+            }
+        } else {
+            uint32_t pieces = (uint32_t)(next_number(&state) % 80) + 1;
+            for (uint32_t i = 0; i < pieces; i++) {
+                const char *piece =
+                    MANIFEST_PIECES[next_number(&state) % pieces_count];
+                size_t length = strlen(piece);
+                if (used + length >= sizeof(text) - 1) {
+                    break;
+                }
+                memcpy(text + used, piece, length);
+                used += length;
+            }
+        }
+        text[used] = '\0';
+
+        KestArena *arena = kest_arena_new();
+        if (arena == NULL) {
+            fprintf(stderr, "fuzz: there was no room for an arena\n");
+            return 1;
+        }
+        const char *why = NULL;
+        KestProject *project =
+            kest_project_from(arena, "/nowhere/fuzz", text, &why);
+        const char *wrong = NULL;
+        if (project == NULL) {
+            refused++;
+            if (why == NULL) {
+                wrong = "was refused without a reason";
+            }
+        } else {
+            read++;
+            const char *lines[KEST_MOST_SOURCES + 6] = {
+                project->name,    project->entry, project->needs_kest,
+                project->profile, project->tests, project->edition};
+            size_t count = 6;
+            if (project->source_count > KEST_MOST_SOURCES) {
+                wrong = "holds more places to look than it can";
+            } else {
+                for (uint32_t i = 0; i < project->source_count; i++) {
+                    lines[count++] = project->sources[i];
+                }
+            }
+            for (size_t i = 0; i < count && wrong == NULL; i++) {
+                if (lines[i] == NULL) {
+                    wrong = "left a line it read as nothing at all";
+                } else if (strchr(lines[i], '\n') != NULL) {
+                    wrong = "read a line past its end";
+                } else if (lines[i][0] != '\0' &&
+                           strcmp(lines[i], KEST_EDITION_STRING) != 0 &&
+                           strstr(text, lines[i]) == NULL) {
+                    wrong = "read a line the manifest does not hold";
+                }
+            }
+        }
+        kest_arena_free(arena);
+        if (wrong != NULL) {
+            fprintf(stderr, "fuzz: manifest %lu from seed %llu %s\n", round + 1,
+                    (unsigned long long)seed, wrong);
+            return 1;
+        }
+    }
+    printf("fuzz: %lu manifest(s) from seed %llu: %lu read and %lu refused "
+           "with a reason, and none of them stopped this\n",
+           many, (unsigned long long)seed, read, refused);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     uint64_t seed = argc > 1 ? strtoull(argv[1], NULL, 10) : 1;
     unsigned long many = argc > 2 ? strtoul(argv[2], NULL, 10) : 200;
@@ -1163,9 +1417,16 @@ int main(int argc, char **argv) {
     if (strcmp(what, "chunks") == 0) {
         return fuzz_chunks(seed, many, where);
     }
+    if (strcmp(what, "fmt") == 0) {
+        return fuzz_fmt(seed, many, where);
+    }
+    if (strcmp(what, "manifest") == 0) {
+        return fuzz_manifest(seed, many, where);
+    }
     fprintf(stderr,
             "fuzz: `%s` is not a boundary this puts anything through; they "
-            "are source, handles, lends, refs, text, migrate and chunks\n",
+            "are source, handles, lends, refs, text, migrate, chunks, fmt and "
+            "manifest\n",
             what);
     return 2;
 }
