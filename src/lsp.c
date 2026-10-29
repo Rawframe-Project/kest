@@ -54,6 +54,7 @@ typedef struct {
     KestBuild *build;
     char *built;
     KestKestFiles files;
+    KestResolve resolve;
     // The other files a build read that this server has published something
     // wrong with, so that one published clean later is told it is clean: a
     // client keeps the last list it was sent for a file until it is sent
@@ -920,9 +921,10 @@ static bool under_directory(const char *path, const char *directory) {
 
 // Every file of the project the open file is in, built as one program with
 // its index kept. NULL with `why` said when that cannot be had whole: a rename
-// made from part of a project leaves the rest naming what is not there.
-// Without a project, the program is the open file and what it reaches, which
-// is the build in hand.
+// made from part of a project leaves the rest naming what is not there. A
+// file in no project is refused too, because nothing says which other files
+// are its program's: two files importing a third are each a program, and a
+// rename made from one leaves the other naming what is not there.
 static KestBuild *whole_project(Server *server, const char **project,
                                 const char **why) {
     Open *file = here(server);
@@ -932,7 +934,15 @@ static KestBuild *whole_project(Server *server, const char **project,
     if (!kest_project_above(server->arena, file->path, project, roots,
                             &root_count)) {
         *project = NULL;
-        return server->build;
+        *why = "this file is in no project, so the files that name this "
+               "cannot be known; a `kest.project` beside it says which they "
+               "are";
+        return NULL;
+    }
+    if (server->resolve == NULL) {
+        *why = "this server cannot follow a path's links, so it cannot tell "
+               "what is inside the project";
+        return NULL;
     }
     if (server->files == NULL) {
         *why = "this server cannot list a project's files, so it cannot find "
@@ -1041,12 +1051,23 @@ static void rename_in(KestSaid *out, const KestUse *uses, uint32_t count,
     kest_wire_char(out, ']');
 }
 
+// Whether a path is inside a directory once every link in both is followed.
+// What a rename may change is decided here and not on the spelling: a link in
+// the project leads wherever it was pointed, and a file reached through one
+// may be a checkout other projects share.
+static bool really_inside(Server *server, const char *path,
+                          const char *directory) {
+    char at[4096];
+    return server->resolve(path, at, sizeof(at)) &&
+           under_directory(at, directory);
+}
+
 // A name more than one file may write: every file of the project that names
 // it, the declaration's included, in one edit across them. Never some of
 // them, because a rename that leaves one file naming the old word is a
 // program that no longer compiles; what cannot be had whole is refused, and
-// so is a declaration somewhere the person cannot change -- the standard
-// library, or a dependency put outside the project.
+// so is a declaration, or a file that names it, somewhere the person cannot
+// change -- the standard library, or anywhere outside the project.
 static void rename_across(Server *server, const KestJson *id,
                           const KestUse *wanted, const KestJson *fresh) {
     const char *path = wanted->declared_in->path;
@@ -1065,20 +1086,23 @@ static void rename_across(Server *server, const KestJson *id,
         refuse(server, id, why);
         return;
     }
-    bool own = whole == server->build;
-    if (project != NULL && !under_directory(path, project)) {
-        if (!own) {
-            kest_build_free(whole);
-        }
+    char root[4096];
+    if (!server->resolve(project, root, sizeof(root))) {
+        kest_build_free(whole);
+        refuse(server, id,
+               "where this project really is could not be said, so neither "
+               "could what is inside it");
+        return;
+    }
+    if (!really_inside(server, path, root)) {
+        kest_build_free(whole);
         refuse(server, id,
                "this is declared outside the project, which a rename does "
                "not change");
         return;
     }
     if (whole->program->uses_short) {
-        if (!own) {
-            kest_build_free(whole);
-        }
+        kest_build_free(whole);
         refuse(server, id, USES_SHORT);
         return;
     }
@@ -1089,9 +1113,7 @@ static void rename_across(Server *server, const KestJson *id,
     const KestSource **files =
         KEST_ARENA_ARRAY(server->arena, const KestSource *, count + 1);
     if (files == NULL) {
-        if (!own) {
-            kest_build_free(whole);
-        }
+        kest_build_free(whole);
         refuse(server, id, USES_SHORT);
         return;
     }
@@ -1115,13 +1137,20 @@ static void rename_across(Server *server, const KestJson *id,
         }
     }
     if (!declaring) {
-        if (!own) {
-            kest_build_free(whole);
-        }
+        kest_build_free(whole);
         refuse(server, id,
                "the file that declares this was not part of the project's "
                "build, so the rename would leave it as it is");
         return;
+    }
+    for (uint32_t f = 0; f < file_count; f++) {
+        if (!really_inside(server, files[f]->path, root)) {
+            kest_build_free(whole);
+            refuse(server, id,
+                   "a file that names this is outside the project, which a "
+                   "rename does not change");
+            return;
+        }
     }
     KestSaid out = {0};
     start_answer(&out, id);
@@ -1131,9 +1160,7 @@ static void rename_across(Server *server, const KestJson *id,
         rename_in(&out, uses, count, files[f], path, offset, declared, fresh);
     }
     kest_wire_say(&out, "}}");
-    if (!own) {
-        kest_build_free(whole);
-    }
+    kest_build_free(whole);
     finish_answer(server, &out);
 }
 
@@ -1544,9 +1571,10 @@ static void handle(Server *server, const KestJson *message) {
 }
 
 int kest_lsp_serve(const char *library, FILE *in, FILE *out,
-                   KestKestFiles files) {
+                   KestKestFiles files, KestResolve resolve) {
     Server server = {0};
     server.files = files;
+    server.resolve = resolve;
     server.arena = kest_arena_new();
     if (server.arena == NULL) {
         return 1;

@@ -7,6 +7,11 @@
 #if !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200809L
 #endif
+// And where a path really leads, which the language server's rename asks:
+// `realpath` is declared for the X/Open edition of the same standard.
+#if !defined(_XOPEN_SOURCE)
+#define _XOPEN_SOURCE 700
+#endif
 
 #if defined(_WIN32)
 // And two more: making a directory, which `kest new` has to, and reading what
@@ -3757,13 +3762,9 @@ static int by_name(const void *left, const void *right) {
     return strcmp(*(const char *const *)left, *(const char *const *)right);
 }
 
-// How deep a walk of a project goes, and how many entries it reads in all.
-// A project is nowhere near either; what they bound is a tree that is not one.
-// A link back up makes a directory its own descendant, and two of them in one
-// directory double the walk at every level, so a walk that only stopped at a
-// depth could read two to the thirty-second entries. On Windows, where the C
-// library cannot tell a junction from a directory, these are what stop it;
-// elsewhere a directory already walked is not walked again either.
+// How deep a walk of a project goes, and how many entries it reads in all. A
+// project is nowhere near either; what they bound is a tree that is not a
+// project's, which is refused rather than read to the end.
 #define DEEPEST_WALK 32
 #define MOST_WALKED 100000
 
@@ -3771,44 +3772,13 @@ typedef struct {
     KestFileFound each;
     void *context;
     uint32_t entries;
-#if !defined(_WIN32)
-    // Every directory walked, by device and file number, which is the
-    // directory however many links lead to it.
-    struct {
-        dev_t device;
-        ino_t node;
-    } *walked;
-    uint32_t walked_count;
-    uint32_t walked_room;
-#endif
 } Walk;
 
-#if !defined(_WIN32)
-// Whether a directory is new to this walk, writing it down when it is. False
-// with `*whole` cleared when there was no room to write it down, because a
-// walk that cannot tell where it has been cannot say it has been everywhere.
-static bool walked_first(Walk *walk, const struct stat *seen, bool *whole) {
-    for (uint32_t i = 0; i < walk->walked_count; i++) {
-        if (walk->walked[i].device == seen->st_dev &&
-            walk->walked[i].node == seen->st_ino) {
-            return false;
-        }
-    }
-    if (walk->walked_count == walk->walked_room) {
-        uint32_t room = walk->walked_room == 0 ? 16 : walk->walked_room * 2;
-        void *grown = realloc(walk->walked, room * sizeof(*walk->walked));
-        if (grown == NULL) {
-            *whole = false;
-            return false;
-        }
-        walk->walked = grown;
-        walk->walked_room = room;
-    }
-    walk->walked[walk->walked_count].device = seen->st_dev;
-    walk->walked[walk->walked_count].node = seen->st_ino;
-    walk->walked_count++;
-    return true;
-}
+#if defined(_WIN32)
+// What a directory entry is that leads somewhere else: a junction or a link.
+// `_findfirst` hands the entry's attributes on as the platform gave them, and
+// this is the platform's bit for it.
+#define KEST_REPARSE_POINT 0x400u
 #endif
 
 // Every `.kest` under a directory and the directories under it, handed to
@@ -3816,10 +3786,12 @@ static bool walked_first(Walk *walk, const struct stat *seen, bool *whole) {
 // one file writes has to find every file of the project, and the server is
 // the library's, which has only libc and so no way to list a directory. A
 // directory whose name begins with a dot is an editor's or a version
-// control's and is passed over. False when the walk could not say every file
-// -- a directory that would not open, a path too long to write, or a walk
-// past either bound above -- and a directory that is not there has none to
-// say.
+// control's and is passed over, and so is a link to a directory: it is not
+// part of the project, wherever it leads. A chain of them went on until the
+// depth ran out, and through a link a rename could reach a checkout other
+// projects share. False when the walk could not say every file -- a
+// directory that would not open, a path too long to write, or a walk past
+// either bound above -- and a directory that is not there has none to say.
 static bool files_beneath(Walk *walk, const char *directory, int depth) {
     if (depth > DEEPEST_WALK) {
         return false;
@@ -3839,6 +3811,7 @@ static bool files_beneath(Walk *walk, const char *directory, int depth) {
     do {
         const char *name = entry.name;
         bool inner = (entry.attrib & _A_SUBDIR) != 0;
+        bool linked = (entry.attrib & KEST_REPARSE_POINT) != 0;
 #else
     DIR *walking = opendir(directory);
     if (walking == NULL) {
@@ -3864,21 +3837,20 @@ static bool files_beneath(Walk *walk, const char *directory, int depth) {
         }
 #if !defined(_WIN32)
         struct stat seen;
-        if (stat(path, &seen) != 0) {
+        if (lstat(path, &seen) != 0) {
             whole = false;
             break;
         }
-        bool inner = S_ISDIR(seen.st_mode);
-        if (inner && !walked_first(walk, &seen, &whole)) {
-            if (!whole) {
-                break;
-            }
+        bool linked = S_ISLNK(seen.st_mode);
+        if (linked && stat(path, &seen) != 0) {
+            // A link that leads nowhere is not a file of the project.
             continue;
         }
+        bool inner = S_ISDIR(seen.st_mode);
 #endif
         size_t length = strlen(name);
         if (inner) {
-            if (!files_beneath(walk, path, depth + 1)) {
+            if (!linked && !files_beneath(walk, path, depth + 1)) {
                 whole = false;
                 break;
             }
@@ -3897,23 +3869,71 @@ static bool files_beneath(Walk *walk, const char *directory, int depth) {
 
 static bool project_files(const char *directory, KestFileFound each,
                           void *context) {
-    Walk walk = {0};
-    walk.each = each;
-    walk.context = context;
-    bool whole = true;
-#if !defined(_WIN32)
-    // The directory the walk starts in is walked, so a link back up to it is
-    // a directory already walked.
-    struct stat seen;
-    if (stat(directory, &seen) == 0) {
-        walked_first(&walk, &seen, &whole);
+    Walk walk = {each, context, 0};
+    return files_beneath(&walk, directory, 0);
+}
+
+#if defined(_WIN32)
+// Three more doors out of the platform, declared as the two above are, for
+// where a path really leads. A `HANDLE` is a pointer, a `DWORD` an unsigned
+// thirty-two-bit number, and a handle that could not be opened is all ones.
+__declspec(dllimport) void *__stdcall
+CreateFileA(const char *name, unsigned long access, unsigned long share,
+            void *security, unsigned long creation, unsigned long flags,
+            void *template_file);
+__declspec(dllimport) unsigned long __stdcall
+GetFinalPathNameByHandleA(void *file, char *path, unsigned long room,
+                          unsigned long flags);
+__declspec(dllimport) int __stdcall CloseHandle(void *object);
+#endif
+
+// Where a path really is, every link followed, for the language server to
+// decide what a rename may change. With `/` between the parts on every
+// platform, as the loader writes a path.
+static bool resolved_path(const char *path, char *into, size_t room) {
+#if defined(_WIN32)
+    // Opened for nothing but its name: no access, shared every way, and with
+    // the flag that lets a directory be opened at all.
+    void *file = CreateFileA(path, 0, 7, NULL, 3, 0x02000000u, NULL);
+    if (file == (void *)(intptr_t)-1) {
+        return false;
     }
+    unsigned long wrote =
+        GetFinalPathNameByHandleA(file, into, (unsigned long)room, 0);
+    CloseHandle(file);
+    if (wrote == 0 || wrote >= room) {
+        return false;
+    }
+    // `\\?\C:\...` is how the platform says it: the prefix off, and the
+    // separators the loader's.
+    size_t from = strncmp(into, "\\\\?\\", 4) == 0 ? 4 : 0;
+    memmove(into, into + from, wrote - from + 1);
+    for (char *at = into; *at != '\0'; at++) {
+        if (*at == '\\') {
+            *at = '/';
+        }
+    }
+    return true;
+#elif defined(__wasi__)
+    // The playground runs no language server, and a path there leads where
+    // the page put it.
+    (void)path;
+    (void)into;
+    (void)room;
+    return false;
+#else
+    char *real = realpath(path, NULL);
+    if (real == NULL) {
+        return false;
+    }
+    size_t length = strlen(real);
+    bool fits = length < room;
+    if (fits) {
+        memcpy(into, real, length + 1);
+    }
+    free(real);
+    return fits;
 #endif
-    whole = whole && files_beneath(&walk, directory, 0);
-#if !defined(_WIN32)
-    free(walk.walked);
-#endif
-    return whole;
 }
 
 // Every `.kest` directly under a directory, in that order. Besides the walk
@@ -4141,7 +4161,7 @@ int main(int argc, char **argv) {
         int served =
             kest_lsp_serve(library_from_root(kest_library_path(NULL, argv[0]),
                                              rooted, sizeof(rooted)),
-                           stdin, stdout, project_files);
+                           stdin, stdout, project_files, resolved_path);
         if (served != 0) {
             kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
                                KEST_STARVED_SAYS);

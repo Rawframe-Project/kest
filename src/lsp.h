@@ -16,15 +16,23 @@
 // name another file declares edits every file of the project that names it,
 // so it has to know every file there is, and listing a directory is a thing
 // libc cannot do. The host that runs this server answers it.
+// A link to a directory is not part of the project, and the walk does not go
+// into one.
 typedef void (*KestFileFound)(void *context, const char *path);
 typedef bool (*KestKestFiles)(const char *directory, KestFileFound each,
                               void *context);
 
+// Where a path really is, every link followed, written into `into`: false
+// when the host cannot say. What a rename may change is decided on these,
+// because a path a project spells inside itself may lead out of it, to a
+// checkout somebody else's projects share.
+typedef bool (*KestResolve)(const char *path, char *into, size_t room);
+
 // `library` is where the standard library is, the same answer the command line
-// works out for itself. `files` lists a project's files, and NULL is a server
-// that refuses a rename it would need them for. Returns what the process
-// should exit with.
+// works out for itself. `files` lists a project's files and `resolve` says
+// where a path leads; a server without either refuses a rename it would need
+// them for. Returns what the process should exit with.
 int kest_lsp_serve(const char *library, FILE *in, FILE *out,
-                   KestKestFiles files);
+                   KestKestFiles files, KestResolve resolve);
 
 #endif

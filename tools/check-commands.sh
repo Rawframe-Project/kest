@@ -7024,12 +7024,46 @@ fi
 # outside the project -- is refused with a reason. And a rename is never part
 # of one: with the build that checks itself refused from points spread over a
 # session, every answer is a refusal, nothing, or the whole of what it answers
-# with room. Two links in the project lead back into it, which a walk that
-# followed every directory it met would go down without end; the walk passes
-# over a directory it has been in, and finds the same files.
-mkdir -p "$scratch"/renaming/ren/src/pack "$scratch"/renaming/dep/lib
+# with room. A link to a directory is not part of the project: two in `src`
+# lead back into it, and the walk passes over them and finds the same files;
+# one leads out of it, to a checkout of other modules, and the walk passes
+# over that too, so a file there naming `Point` is not edited, and a name
+# declared there and reached through the link is refused as outside. And a
+# file in no project is refused a rename of a name it does not declare in a
+# body: two files importing a third are two programs, and a rename made from
+# one left the other naming what was not there.
+mkdir -p "$scratch"/renaming/ren/src/pack "$scratch"/renaming/dep/lib \
+    "$scratch"/renaming/shared "$scratch"/renaming/loose
 ln -s .. "$scratch"/renaming/ren/src/up
 ln -s . "$scratch"/renaming/ren/src/here
+ln -s ../../shared "$scratch"/renaming/ren/src/shared
+cat >"$scratch"/renaming/shared/x.kest <<'KEST'
+module shared.x
+
+fn g() -> i32 {
+    return 1
+}
+KEST
+cat >"$scratch"/renaming/shared/y.kest <<'KEST'
+module shared.y
+
+import pack.thing
+
+fn h() -> thing.Point {
+    return thing.Point(1)
+}
+KEST
+cat >"$scratch"/renaming/loose/util.kest <<'KEST'
+module util
+
+fn helper(n: i32) -> i32 {
+    return n
+}
+KEST
+for one in a b; do
+    printf 'module %s\n\nimport util\n\nfn main() -> i32 {\n    let n = 2\n    return util.helper(n)\n}\n' \
+        "$one" >"$scratch"/renaming/loose/$one.kest
+done
 printf 'project ren\nsource src\nsource ../dep\n' \
     >"$scratch"/renaming/ren/kest.project
 cat >"$scratch"/renaming/ren/src/main.kest <<'KEST'
@@ -7037,11 +7071,12 @@ module main
 
 import pack.thing
 import lib.far
+import shared.x
 import std.math
 
 fn main() -> i32 {
     let p: thing.Point = thing.Point(2)
-    return math.min(p.x, far.f())
+    return math.min(p.x, far.f()) + x.g()
 }
 KEST
 cat >"$scratch"/renaming/ren/src/other.kest <<'KEST'
@@ -7095,13 +7130,15 @@ session = [
      "params": {"textDocument": {"uri": uri, "languageId": "kest",
                                  "version": 1, "text": text}}},
     {"jsonrpc": "2.0", "id": 1, "method": "textDocument/rename",
-     "params": renaming(at(7, "thing.Point", 1), "Spot")},
+     "params": renaming(at(8, "thing.Point", 1), "Spot")},
     {"jsonrpc": "2.0", "id": 2, "method": "textDocument/rename",
-     "params": renaming(at(8, "math.min", 1), "least")},
+     "params": renaming(at(9, "math.min", 1), "least")},
     {"jsonrpc": "2.0", "id": 3, "method": "textDocument/rename",
-     "params": renaming(at(8, "far.f", 1), "g")},
+     "params": renaming(at(9, "far.f", 1), "g")},
     {"jsonrpc": "2.0", "id": 4, "method": "textDocument/references",
-     "params": at(7, "thing.Point", 1)},
+     "params": at(8, "thing.Point", 1)},
+    {"jsonrpc": "2.0", "id": 5, "method": "textDocument/rename",
+     "params": renaming(at(9, "x.g", 1), "k")},
 ]
 body = b""
 for one in session:
@@ -7135,10 +7172,11 @@ changes = said.get(1, {}).get("result", {}).get("changes", {})
 edited = {os.path.relpath(u[len("file://"):], root):
           sorted(e["range"]["start"]["line"] for e in edits)
           for u, edits in changes.items()}
-if edited != {"main.kest": [7, 7], "other.kest": [4, 5],
+if edited != {"main.kest": [8, 8], "other.kest": [4, 5],
               "pack/thing.kest": [2]}:
     wrong.append("renaming thing.Point edited %s" % edited)
-for asked, words in ((2, "standard library"), (3, "outside the project")):
+for asked, words in ((2, "standard library"), (3, "outside the project"),
+                     (5, "outside the project")):
     error = said.get(asked, {}).get("error", {})
     if error.get("code") != -32803 or words not in error.get("message", ""):
         wrong.append("request %d was answered %s" %
@@ -7149,6 +7187,7 @@ copy = os.path.join(top, "after")
 shutil.copytree(os.path.join(top, "ren"), os.path.join(copy, "ren"),
                 symlinks=True)
 shutil.copytree(os.path.join(top, "dep"), os.path.join(copy, "dep"))
+shutil.copytree(os.path.join(top, "shared"), os.path.join(copy, "shared"))
 for u, edits in changes.items():
     path = os.path.join(copy, "ren", "src",
                         os.path.relpath(u[len("file://"):], root))
@@ -7169,6 +7208,44 @@ for name in ("main.kest", "other.kest"):
         wrong.append("%s after the rename: %s" %
                      (name, (checked.stdout + checked.stderr).strip()
                       .splitlines()[-1:]))
+
+# A file in no project: the name from the third file is refused, saying what
+# would make it a project, and a local is renamed where it is.
+loose = os.path.join(top, "loose", "a.kest")
+loose_text = open(loose).read()
+loose_uri = "file://" + loose
+alone = b""
+for one in (
+        {"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {}},
+        {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+         "params": {"textDocument": {"uri": loose_uri, "languageId": "kest",
+                                     "version": 1, "text": loose_text}}},
+        {"jsonrpc": "2.0", "id": 1, "method": "textDocument/rename",
+         "params": {"textDocument": {"uri": loose_uri},
+                    "position": {"line": 6, "character": 16},
+                    "newName": "aid"}},
+        {"jsonrpc": "2.0", "id": 2, "method": "textDocument/rename",
+         "params": {"textDocument": {"uri": loose_uri},
+                    "position": {"line": 6, "character": 23},
+                    "newName": "m"}}):
+    written = json.dumps(one).encode()
+    alone += b"Content-Length: %d\r\n\r\n" % len(written) + written
+out = subprocess.run([kest, "lsp"], input=alone, capture_output=True).stdout
+heard = {}
+for chunk in out.split(b"Content-Length: ")[1:]:
+    one = json.loads(chunk.split(b"\r\n\r\n", 1)[1])
+    if "id" in one:
+        heard[one["id"]] = one
+error = heard.get(1, {}).get("error", {})
+if error.get("code") != -32803 or "kest.project" not in error.get("message",
+                                                                   ""):
+    wrong.append("a rename in no project was answered %s" %
+                 json.dumps(heard.get(1)))
+local = heard.get(2, {}).get("result", {}).get("changes", {})
+if sorted(local) != [loose_uri] or sorted(
+        e["range"]["start"]["line"] for e in local[loose_uri]) != [5, 6]:
+    wrong.append("a local renamed in no project was answered %s" %
+                 json.dumps(heard.get(2)))
 
 # Refused from points spread over the session, in the build that checks
 # itself: a rename or a reference list is refused, answers nothing, or answers
