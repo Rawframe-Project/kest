@@ -2329,6 +2329,7 @@ static void *(*real_realloc)(void *, size_t);
 static long size = -1;
 static long nth = 0;
 static long seen = 0;
+static int from = 0;
 static int ready = 0;
 static char early[4096];
 static size_t early_used = 0;
@@ -2345,6 +2346,9 @@ static void setup(void) {
     const char *n = getenv("REFUSE_NTH");
     size = s != NULL ? atol(s) : -1;
     nth = n != NULL ? atol(n) : 0;
+    /* And every one of that size from the nth on, for a refusal a machine
+       would otherwise get past by asking again. */
+    from = getenv("REFUSE_FROM") != NULL;
     ready = 1;
 }
 
@@ -2359,7 +2363,7 @@ static int refused(size_t asked) {
     if (ready != 1 || (long)asked != size) {
         return 0;
     }
-    return ++seen == nth;
+    return from ? ++seen >= nth : ++seen == nth;
 }
 
 void *malloc(size_t asked) {
@@ -2468,6 +2472,52 @@ C
             failed=1
             ;;
         esac
+        # And the lists a `scratch { }` block keeps: the blocks open, which
+        # grows to eight of 24 bytes, and what the block took, which grows from
+        # 32 to 64 places of 8. Neither said what it had asked for, so a
+        # machine with no room for one said the program had asked for nought
+        # more. Each is refused from its first ask on, and has to be said
+        # with its size.
+        cat >"$scratch"/own/lists.kest <<'KEST'
+module lists
+
+fn main() -> i32 {
+    let seen = 0
+    scratch {
+        for i in 0..40 {
+            let line = "number {i}"
+            seen += len(line)
+        }
+    }
+    if seen == 0 {
+        return 1
+    }
+    return 0
+}
+KEST
+        for size in 192 512; do
+            named=no
+            for refuse_nth in 1 2 3 4 5 6 7 8; do
+                said=$(LD_PRELOAD="$scratch"/own/refuse.so REFUSE_FROM=1 \
+                       REFUSE_SIZE=$size REFUSE_NTH=$refuse_nth \
+                       "$build_dir"/kest run "$scratch"/own/lists.kest \
+                       2>&1 </dev/null)
+                case "$said" in
+                *"asked for 0 more"*)
+                    echo "ceilings: a scratch block with no room for $size" \
+                         "bytes of its list said the program asked for none"
+                    failed=1
+                    ;;
+                *"asked for $size more"*) named=yes ;;
+                esac
+            done
+            if [ $named = no ]; then
+                echo "ceilings: no run refused a scratch block's list of" \
+                     "$size bytes; if the list is no longer that size, this" \
+                     "check names the wrong one"
+                failed=1
+            fi
+        done
 
         # And the doors that keep a world across a reload, which take theirs
         # the same way. A reload with no room to copy what `save` answered

@@ -548,6 +548,11 @@ static bool remember(KestGround *ground, void *at) {
         size_t bigger = block->capacity == 0 ? 32 : block->capacity * 2;
         void **grown = realloc(block->took, bigger * sizeof(void *));
         if (grown == NULL) {
+            // Said as a refusal like a plot the host would not give, because
+            // it is one: the machine reads what was asked from here, and with
+            // nothing here said the program had asked for nought more.
+            ground->refused = bigger * sizeof(void *);
+            ground->refused_by_ceiling = false;
             return false;
         }
         block->took = grown;
@@ -913,6 +918,8 @@ bool kest_ground_open(KestGround *ground) {
         struct Block *grown =
             realloc(ground->blocks, (size_t)bigger * sizeof(struct Block));
         if (grown == NULL) {
+            ground->refused = (size_t)bigger * sizeof(struct Block);
+            ground->refused_by_ceiling = false;
             return false;
         }
         memset(grown + ground->block_room, 0,
