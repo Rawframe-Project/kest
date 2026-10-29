@@ -4376,6 +4376,20 @@ a nought in a comment|fn main() -> i32 {\n    // a\0b\n    return 0\n}\n
 a nought between tokens|fn main() -> i32 {\n    let a = 1 \0 + 2\n    return a\n}\n
 a control character in a comment|fn main() -> i32 {\n    // a\017b\n    return 0\n}\n
 NOUGHT
+# And what the formatter writes back other than as it was written, which `fmt`
+# now holds to the words the file holds: brackets the tree does not need,
+# outside a string's hole and inside one, and the spaces in a hole. Each is
+# formatted, not refused as a fault in the formatter.
+printf 'fn main() -> i32 {\n    let x = (1 + 2)\n    let s = "{(x)} { x  +  1 }"\n    return x\n}\n' \
+    >"$scratch"/refused/reprinted.kest
+reprinted=$("$kest" fmt "$scratch"/refused/reprinted.kest 2>&1 </dev/null)
+case "$?:$reprinted" in
+0:*'let x = 1 + 2'*'"{x} {x + 1}"'*) ;;
+*)
+    complain "fmt: brackets and spaces it writes back otherwise were refused: \
+\`$(printf '%s' "$reprinted" | head -1)\`"
+    ;;
+esac
 
 # And the one a command is refused for rather than a file: `call` with nothing
 # to call.

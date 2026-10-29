@@ -1252,9 +1252,14 @@ static bool reshaped(KestTokenKind kind) {
            kind == KEST_TOK_RPAREN || kind == KEST_TOK_EOF;
 }
 
-// The same text, leaving out spaces and tabs inside a string's holes, which
-// the formatter writes back from what they mean: `"{ a  +  1 }"` and
-// `"{a + 1}"` are the same words.
+// The same text, leaving out spaces, tabs and brackets inside a string's
+// holes, which the formatter writes back from the tree as it does the code
+// around them: `"{ a  +  1 }"` and `"{a + 1}"` are the same words, and so are
+// `"{(x)}"` and `"{x}"`.
+static bool reprinted(char c) {
+    return c == ' ' || c == '\t' || c == '(' || c == ')';
+}
+
 static bool same_text(const char *a, size_t a_length, const char *b,
                       size_t b_length, bool in_string) {
     if (!in_string) {
@@ -1265,10 +1270,10 @@ static bool same_text(const char *a, size_t a_length, const char *b,
     uint32_t a_depth = 0;
     uint32_t b_depth = 0;
     while (true) {
-        while (i < a_length && a_depth > 0 && (a[i] == ' ' || a[i] == '\t')) {
+        while (i < a_length && a_depth > 0 && reprinted(a[i])) {
             i++;
         }
-        while (j < b_length && b_depth > 0 && (b[j] == ' ' || b[j] == '\t')) {
+        while (j < b_length && b_depth > 0 && reprinted(b[j])) {
             j++;
         }
         if (i == a_length || j == b_length) {
