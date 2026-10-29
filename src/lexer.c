@@ -1303,6 +1303,16 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
             break;
         }
         tokens[used] = lexer_next(lexer);
+        // And what starts past the end is not in what was asked for: the
+        // spaces before the `}` that closes a hole are skipped on the way to
+        // it, and the brace was read as the last thing in the hole.
+        if (tokens[used].kind != KEST_TOK_EOF &&
+            tokens[used].span.offset >= end) {
+            KestSpan stop = {end, 0};
+            KestToken done = {KEST_TOK_EOF, stop};
+            tokens[used++] = done;
+            break;
+        }
         // A block holds statements, so a line inside one ends where it is
         // written even when the block is inside brackets: what the count of
         // brackets is for is a line break inside `(` and `[`, and a brace puts

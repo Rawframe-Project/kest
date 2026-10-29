@@ -875,6 +875,19 @@ static KestExpr *parse_string(Parser *parser, KestSpan span) {
         if (hole->value == NULL) {
             return NULL;
         }
+        // One value and nothing after it. What followed was dropped without a
+        // word: `{s:4}` printed `s`, and `kest fmt`, writing the hole back
+        // from what was read, wrote a file without the rest.
+        skip_newlines(&inner);
+        if (!check(&inner, KEST_TOK_EOF)) {
+            KestToken found = peek(&inner);
+            error_at(&inner, found.span, "K0201",
+                     "expected the end of the hole, found %s",
+                     kest_token_name(found.kind));
+            suggest(&inner, "a hole holds one value, and writes it the way "
+                            "the program would");
+            return NULL;
+        }
         list_push(parser, &parts, hole);
 
         i = close;
