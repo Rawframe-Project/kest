@@ -4052,6 +4052,7 @@ K0101|fn main() -> i32 {\n    let s = "unterminated\n    return 0\n}|string is n
 K0103|fn main() -> i32 {\n    let b = '\\q'\n    return 0\n}|unknown escape
 K0105|fn main() -> i32 {\n    let a = 1; let b = 2\n    return a + b\n}|are not separated
 K0106|fn main() -> i32 {\n    let b = 'a\n    return 0\n}|closing quote
+K0112|/* a note */\nfn main() -> i32 {\n    return 0\n}|block comments are not part of the language
 K0203|fn main() -> 3 {\n    return 0\n}|expected a type
 K0206|fn Host.name() -> i32 {\n    return 0\n}|names a receiver
 K0301|fn main() -> i32 {\n    let x: Nope = 1\n    return x\n}|unknown type `Nope`

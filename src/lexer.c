@@ -946,7 +946,7 @@ static KestToken lexer_next(KestLexer *lexer) {
             return make(lexer, KEST_TOK_STAR, start);
         case '/':
             if (next == '*') {
-                kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0106",
+                kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0112",
                                span_from(start, start + 2),
                                "block comments are not part of the language");
                 kest_diags_suggest(lexer->diags, "use `//` on each line");
