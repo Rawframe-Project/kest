@@ -6,7 +6,9 @@
 
 #include "build.h"
 #include "diag.h"
+#include "loader.h"
 #include "mem.h"
+#include "project.h"
 #include "fmt.h"
 #include "types.h"
 #include "wire.h"
@@ -51,6 +53,8 @@ typedef struct {
     size_t at;
     KestBuild *build;
     char *built;
+    KestKestFiles files;
+    KestResolve resolve;
     // The other files a build read that this server has published something
     // wrong with, so that one published clean later is told it is clean: a
     // client keeps the last list it was sent for a file until it is sent
@@ -815,9 +819,32 @@ static void definition(Server *server, const KestJson *id,
     finish_answer(server, &out);
 }
 
+// A request this server will not answer as it was asked, said as one that
+// failed (-32803), which a client shows the person instead of acting on.
+static void refuse(Server *server, const KestJson *id, const char *why) {
+    KestSaid out = {0};
+    kest_wire_say(&out, "{\"jsonrpc\":\"2.0\",\"id\":");
+    put_id(&out, id);
+    kest_wire_say(&out, ",\"error\":{\"code\":-32803,\"message\":");
+    kest_wire_text(&out, why);
+    kest_wire_char(&out, '}');
+    finish_answer(server, &out);
+}
+
+// What an index short of a use is told, which is whatever asks it for every
+// use of a name: what it would answer is some of them.
+#define USES_SHORT                                                             \
+    "there was no room to keep every place a name is written, so this "        \
+    "would answer some of them"
+
 static void references(Server *server, const KestJson *id,
                        const KestJson *params) {
     size_t offset = position_in(server, params);
+    if (server->build != NULL && server->build->program != NULL &&
+        server->build->program->uses_short) {
+        refuse(server, id, USES_SHORT);
+        return;
+    }
     const KestUse *wanted =
         offset == (size_t)-1 ? NULL : use_at(server, offset);
     KestSaid out = {0};
@@ -848,23 +875,322 @@ static void references(Server *server, const KestJson *id,
     finish_answer(server, &out);
 }
 
+// The files a host listed, kept in the arena a message is answered in.
+typedef struct {
+    KestArena *arena;
+    const char **paths;
+    uint32_t count;
+    uint32_t room;
+    bool short_of_room;
+} Listed;
+
+static void listed_one(void *context, const char *path) {
+    Listed *listed = context;
+    if (listed->short_of_room) {
+        return;
+    }
+    if (listed->count == listed->room) {
+        uint32_t room = listed->room == 0 ? 32 : listed->room * 2;
+        const char **grown =
+            KEST_ARENA_ARRAY(listed->arena, const char *, room);
+        if (grown == NULL) {
+            listed->short_of_room = true;
+            return;
+        }
+        if (listed->count > 0) {
+            memcpy(grown, listed->paths, listed->count * sizeof(const char *));
+        }
+        listed->paths = grown;
+        listed->room = room;
+    }
+    const char *kept = kest_arena_strndup(listed->arena, path, strlen(path));
+    if (kept == NULL) {
+        listed->short_of_room = true;
+        return;
+    }
+    listed->paths[listed->count++] = kept;
+}
+
+static bool under_directory(const char *path, const char *directory) {
+    size_t length = strlen(directory);
+    if (length == 0 || strncmp(path, directory, length) != 0) {
+        return false;
+    }
+    return directory[length - 1] == '/' || path[length] == '/';
+}
+
+// Every file of the project the open file is in, built as one program with
+// its index kept. NULL with `why` said when that cannot be had whole: a rename
+// made from part of a project leaves the rest naming what is not there. A
+// file in no project is refused too, because nothing says which other files
+// are its program's: two files importing a third are each a program, and a
+// rename made from one leaves the other naming what is not there.
+static KestBuild *whole_project(Server *server, const char **project,
+                                const char **why) {
+    Open *file = here(server);
+    *project = NULL;
+    const char *roots[KEST_MOST_SOURCES + 1];
+    uint32_t root_count = 0;
+    if (!kest_project_above(server->arena, file->path, project, roots,
+                            &root_count)) {
+        *project = NULL;
+        *why = "this file is in no project, so the files that name this "
+               "cannot be known; a `kest.project` beside it says which they "
+               "are";
+        return NULL;
+    }
+    if (server->resolve == NULL) {
+        *why = "this server cannot follow a path's links, so it cannot tell "
+               "what is inside the project";
+        return NULL;
+    }
+    if (server->files == NULL) {
+        *why = "this server cannot list a project's files, so it cannot find "
+               "every file that names this";
+        return NULL;
+    }
+    Listed listed = {server->arena, NULL, 0, 0, false};
+    listed_one(&listed, file->path);
+    for (uint32_t r = 0; r < root_count; r++) {
+        if (!server->files(roots[r], listed_one, &listed)) {
+            *why = "a directory of this project could not be listed, so not "
+                   "every file that names this could be found";
+            return NULL;
+        }
+    }
+    if (listed.short_of_room) {
+        *why = USES_SHORT;
+        return NULL;
+    }
+    // The open file first, because the first file names the root everything
+    // else resolves from, and once each.
+    char **paths = KEST_ARENA_ARRAY(server->arena, char *, listed.count);
+    if (paths == NULL) {
+        *why = USES_SHORT;
+        return NULL;
+    }
+    int count = 0;
+    for (uint32_t i = 0; i < listed.count; i++) {
+        bool again = false;
+        for (int j = 0; j < count && !again; j++) {
+            again = strcmp(paths[j], listed.paths[i]) == 0;
+        }
+        if (!again) {
+            paths[count++] = (char *)listed.paths[i];
+        }
+    }
+    for (size_t i = 0; i < server->count; i++) {
+        if (server->open[i].path != NULL) {
+            kest_loader_overlay(server->open[i].path, server->open[i].text,
+                                server->open[i].length);
+        }
+    }
+    KestBuild *whole = kest_build_open(server->library, paths, count, 0);
+    if (whole != NULL) {
+        kest_build_index_names(whole, true);
+        kest_build_check(whole);
+    }
+    kest_loader_overlay(NULL, NULL, 0);
+    if (whole == NULL || whole->program == NULL || whole->diags.starved) {
+        if (whole != NULL) {
+            kest_build_free(whole);
+        }
+        *why = "there was no room to read the whole project, so not every "
+               "place that names this could be found";
+        return NULL;
+    }
+    if (whole->diags.error_count > 0) {
+        kest_build_free(whole);
+        *why = "this project does not build, so not every place that names "
+               "this can be found";
+        return NULL;
+    }
+    return whole;
+}
+
+// The same place in another build: what is matched is the file it is in, by
+// name, and where in it.
+static bool declared_at(const KestUse *one, const char *path, uint32_t offset) {
+    return !one->is_local && one->declared_in != NULL &&
+           one->declared_in->path != NULL &&
+           strcmp(one->declared_in->path, path) == 0 &&
+           one->declared.offset == offset;
+}
+
+// One file's edits: every use of the declaration in it, and the declaration
+// when it is there.
+static void rename_in(KestSaid *out, const KestUse *uses, uint32_t count,
+                      const KestSource *source, const char *path,
+                      uint32_t offset, KestSpan declared,
+                      const KestJson *fresh) {
+    size_t length = 0;
+    const char *text = text_of(source, &length);
+    put_uri(out, source->path);
+    kest_wire_say(out, ":[");
+    bool first = true;
+    for (uint32_t i = 0; i < count; i++) {
+        if (uses[i].source != source || !declared_at(&uses[i], path, offset)) {
+            continue;
+        }
+        kest_wire_say(out, first ? "" : ",");
+        first = false;
+        kest_wire_say(out, "{\"range\":");
+        put_range(out, text, length, uses[i].span.offset, uses[i].span.length);
+        kest_wire_say(out, ",\"newText\":");
+        kest_wire_escaped(out, fresh->text, fresh->length);
+        kest_wire_char(out, '}');
+    }
+    if (strcmp(source->path, path) == 0) {
+        kest_wire_say(out, first ? "" : ",");
+        kest_wire_say(out, "{\"range\":");
+        put_range(out, text, length, declared.offset, declared.length);
+        kest_wire_say(out, ",\"newText\":");
+        kest_wire_escaped(out, fresh->text, fresh->length);
+        kest_wire_char(out, '}');
+    }
+    kest_wire_char(out, ']');
+}
+
+// Whether a path is inside a directory once every link in both is followed.
+// What a rename may change is decided here and not on the spelling: a link in
+// the project leads wherever it was pointed, and a file reached through one
+// may be a checkout other projects share.
+static bool really_inside(Server *server, const char *path,
+                          const char *directory) {
+    char at[4096];
+    return server->resolve(path, at, sizeof(at)) &&
+           under_directory(at, directory);
+}
+
+// A name more than one file may write: every file of the project that names
+// it, the declaration's included, in one edit across them. Never some of
+// them, because a rename that leaves one file naming the old word is a
+// program that no longer compiles; what cannot be had whole is refused, and
+// so is a declaration, or a file that names it, somewhere the person cannot
+// change -- the standard library, or anywhere outside the project.
+static void rename_across(Server *server, const KestJson *id,
+                          const KestUse *wanted, const KestJson *fresh) {
+    const char *path = wanted->declared_in->path;
+    uint32_t offset = wanted->declared.offset;
+    KestSpan declared = wanted->declared;
+    if (server->library != NULL && under_directory(path, server->library)) {
+        refuse(server, id,
+               "this is declared in the standard library, which a rename "
+               "does not change");
+        return;
+    }
+    const char *project = NULL;
+    const char *why = NULL;
+    KestBuild *whole = whole_project(server, &project, &why);
+    if (whole == NULL) {
+        refuse(server, id, why);
+        return;
+    }
+    char root[4096];
+    if (!server->resolve(project, root, sizeof(root))) {
+        kest_build_free(whole);
+        refuse(server, id,
+               "where this project really is could not be said, so neither "
+               "could what is inside it");
+        return;
+    }
+    if (!really_inside(server, path, root)) {
+        kest_build_free(whole);
+        refuse(server, id,
+               "this is declared outside the project, which a rename does "
+               "not change");
+        return;
+    }
+    if (whole->program->uses_short) {
+        kest_build_free(whole);
+        refuse(server, id, USES_SHORT);
+        return;
+    }
+    uint32_t count = 0;
+    const KestUse *uses = kest_program_uses(whole->program, &count);
+    // Each file once, in the order its first edit is met, and the declaring
+    // file whether or not anything in it names what it declares.
+    const KestSource **files =
+        KEST_ARENA_ARRAY(server->arena, const KestSource *, count + 1);
+    if (files == NULL) {
+        kest_build_free(whole);
+        refuse(server, id, USES_SHORT);
+        return;
+    }
+    uint32_t file_count = 0;
+    bool declaring = false;
+    for (uint32_t i = 0; i < count; i++) {
+        if (!declared_at(&uses[i], path, offset)) {
+            continue;
+        }
+        const KestSource *candidates[2] = {uses[i].source, uses[i].declared_in};
+        for (int c = 0; c < 2; c++) {
+            bool seen = false;
+            for (uint32_t f = 0; f < file_count && !seen; f++) {
+                seen = files[f] == candidates[c] ||
+                       strcmp(files[f]->path, candidates[c]->path) == 0;
+            }
+            if (!seen) {
+                files[file_count++] = candidates[c];
+            }
+            declaring = declaring || strcmp(candidates[c]->path, path) == 0;
+        }
+    }
+    if (!declaring) {
+        kest_build_free(whole);
+        refuse(server, id,
+               "the file that declares this was not part of the project's "
+               "build, so the rename would leave it as it is");
+        return;
+    }
+    for (uint32_t f = 0; f < file_count; f++) {
+        if (!really_inside(server, files[f]->path, root)) {
+            kest_build_free(whole);
+            refuse(server, id,
+                   "a file that names this is outside the project, which a "
+                   "rename does not change");
+            return;
+        }
+    }
+    KestSaid out = {0};
+    start_answer(&out, id);
+    kest_wire_say(&out, "{\"changes\":{");
+    for (uint32_t f = 0; f < file_count; f++) {
+        kest_wire_say(&out, f == 0 ? "" : ",");
+        rename_in(&out, uses, count, files[f], path, offset, declared, fresh);
+    }
+    kest_wire_say(&out, "}}");
+    kest_build_free(whole);
+    finish_answer(server, &out);
+}
+
 static void rename_everywhere(Server *server, const KestJson *id,
                               const KestJson *params) {
     size_t offset = position_in(server, params);
+    if (server->build != NULL && server->build->program != NULL &&
+        server->build->program->uses_short) {
+        refuse(server, id, USES_SHORT);
+        return;
+    }
     const KestUse *wanted =
         offset == (size_t)-1 ? NULL : use_at(server, offset);
     const KestJson *fresh = kest_wire_member(params, "newName");
-    KestSaid out = {0};
-    start_answer(&out, id);
     if (wanted == NULL || fresh == NULL || fresh->kind != KEST_JSON_TEXT ||
         server->build == NULL || server->build->program == NULL) {
+        KestSaid out = {0};
+        start_answer(&out, id);
         kest_wire_say(&out, "null");
         finish_answer(server, &out);
         return;
     }
-    // One file at a time, which is the file the request named. A rename that
-    // reaches another file is a rename this says nothing about rather than one
-    // it half does.
+    if (!wanted->is_local && wanted->declared_in != NULL &&
+        wanted->declared_in->path != NULL) {
+        rename_across(server, id, wanted, fresh);
+        return;
+    }
+    // A local is in one body, and a body is in the file the request named.
+    KestSaid out = {0};
+    start_answer(&out, id);
     Open *file = here(server);
     kest_wire_say(&out, "{\"changes\":{");
     put_uri(&out, file->path);
@@ -1244,8 +1570,11 @@ static void handle(Server *server, const KestJson *message) {
     }
 }
 
-int kest_lsp_serve(const char *library, FILE *in, FILE *out) {
+int kest_lsp_serve(const char *library, FILE *in, FILE *out,
+                   KestKestFiles files, KestResolve resolve) {
     Server server = {0};
+    server.files = files;
+    server.resolve = resolve;
     server.arena = kest_arena_new();
     if (server.arena == NULL) {
         return 1;

@@ -381,6 +381,11 @@ typedef struct {
     // What a slot holds is one more than the use it names.
     uint32_t *use_slots;
     uint32_t use_slot_room;
+    // Whether a use was left out for want of room. An index short of a use
+    // answers a reference list without it and a rename that edits the others,
+    // and the program that rename leaves does not compile; so what asks it
+    // for every use of a name is told it cannot have them.
+    bool uses_short;
     // Whether to keep them at all. A compile run out of a build does not want
     // an index of every name in the program and should not pay for one: the
     // library's is a third again of what a finished build holds. An editor
