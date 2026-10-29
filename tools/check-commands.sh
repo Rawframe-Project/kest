@@ -6494,6 +6494,90 @@ if [ "$served" != "yes" ]; then
     complain "lsp: the editor was not answered by this compiler: $served"
 fi
 
+# And the same asked from where each name is declared rather than where it is
+# used: a rename or a reference list asked from the `n` of `fn doubled(n:` or
+# the `twice` of `let twice` was answered with nothing, because the index
+# holds the places a name is used and a declaration is not one. And a list
+# asked with `includeDeclaration` has the declaration in it.
+cat > "$scratch"/serving/declared.kest <<'KEST'
+fn doubled(n: i32) -> i32 {
+    let twice = n * 2
+    return twice
+}
+
+fn main() -> i32 {
+    return doubled(0)
+}
+KEST
+declared=$(python3 - "$kest" "$scratch"/serving/declared.kest <<'PY'
+import json, os, subprocess, sys
+
+kest, path = sys.argv[1], os.path.abspath(sys.argv[2])
+text = open(path).read()
+uri = "file://" + path
+
+
+def place(line, column):
+    return {"textDocument": {"uri": uri},
+            "position": {"line": line, "character": column}}
+
+
+def listed(line, column, declaration):
+    return dict(place(line, column),
+                context={"includeDeclaration": declaration})
+
+
+asked = {
+    1: ("textDocument/rename", dict(place(0, 11), newName="m")),
+    2: ("textDocument/rename", dict(place(1, 8), newName="t")),
+    3: ("textDocument/references", listed(0, 11, True)),
+    4: ("textDocument/references", listed(0, 11, False)),
+    5: ("textDocument/references", listed(0, 3, True)),
+    6: ("textDocument/references", listed(0, 3, False)),
+    7: ("textDocument/references", listed(2, 11, True)),
+}
+messages = [
+    {"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": uri, "languageId": "kest",
+                                 "version": 1, "text": text}}},
+] + [{"jsonrpc": "2.0", "id": number, "method": method, "params": params}
+     for number, (method, params) in sorted(asked.items())]
+body = b""
+for one in messages:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+out = subprocess.run([kest, "lsp"], input=body, capture_output=True).stdout
+heard = {}
+for chunk in out.split(b"Content-Length: ")[1:]:
+    one = json.loads(chunk.split(b"\r\n\r\n", 1)[1])
+    if "id" in one:
+        heard[one["id"]] = one.get("result")
+
+
+def starts(answer):
+    if isinstance(answer, dict):
+        answer = [e for edits in answer.get("changes", {}).values()
+                  for e in edits]
+    return sorted((e["range"]["start"]["line"],
+                   e["range"]["start"]["character"]) for e in answer or [])
+
+
+wanted = {1: [(0, 11), (1, 16)], 2: [(1, 8), (2, 11)],
+          3: [(0, 11), (1, 16)], 4: [(1, 16)], 5: [(0, 3), (6, 11)],
+          6: [(6, 11)], 7: [(1, 8), (2, 11)]}
+wrong = ["%s from %s answered %s" % (asked[number][0].split("/")[1],
+                                      asked[number][1]["position"],
+                                      json.dumps(heard.get(number)))
+         for number in sorted(wanted)
+         if starts(heard.get(number)) != wanted[number]]
+print("; ".join(wrong[:3]) if wrong else "yes")
+PY
+)
+if [ "$declared" != "yes" ]; then
+    complain "lsp: a name asked about where it is declared: $declared"
+fi
+
 # And a file in a project whose manifest cannot be read. What is wrong is about
 # no file, and the server published only what was about the open one, so the
 # editor showed a file nothing could be read of as one with nothing wrong.
