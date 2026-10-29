@@ -373,6 +373,14 @@ typedef struct {
     KestUse *uses;
     uint32_t use_count;
     uint32_t use_capacity;
+    // Each of them once: what was written where, and what it named. A body
+    // or a signature can be read more than once on the way to a program -- a
+    // generic once and again for every copy, a constant's type where it is
+    // declared and where it is checked -- and a use listed twice is a
+    // reference shown twice and a rename that sends two edits to one place.
+    // What a slot holds is one more than the use it names.
+    uint32_t *use_slots;
+    uint32_t use_slot_room;
     // Whether to keep them at all. A compile run out of a build does not want
     // an index of every name in the program and should not pay for one: the
     // library's is a third again of what a finished build holds. An editor
