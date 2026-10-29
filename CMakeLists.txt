@@ -146,6 +146,11 @@ target_compile_options(kest_main PRIVATE ${kest_warn} ${kest_optimize})
 add_executable(kest $<TARGET_OBJECTS:kest_main>)
 target_link_libraries(kest PRIVATE libkest)
 kest_output(kest .)
+# A path on Windows in UTF-8, whatever the system's code page: the manifest
+# says so to the platform, and an MSVC linker embeds a `.manifest` source.
+if(MSVC)
+  target_sources(kest PRIVATE cmake/kest.manifest)
+endif()
 
 # A host compiled to an object of its own first, because what a host calls is
 # readable in an object and gone once it is linked.
