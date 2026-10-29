@@ -44,6 +44,8 @@ static const char *const READ[] = {
     "0x",
     "inf",
     "-nan",
+    "INFINITY",
+    "nan(0x1)",
     "1e400",
     "-1e-400",
     "4.9406564584124654e-324",
