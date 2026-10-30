@@ -54,6 +54,7 @@ Each check prints one summary line when it passes; anything else is a failure wi
 | `build-main` | on `main` and at night only: the seeded fuzzer under the checking build on arm64 (`linux-arm64-fuzz`), which takes ten minutes on that runner |
 | `package` | the release archive from the `release` preset on Linux, macOS and Windows, unpacked elsewhere, run, a release of a program made from it with the platform's own compiler (`cl` on Windows) that answers what `kest run` answers and leaves nothing else behind, and a host built against it |
 | `games`, `tetris-windows` | the raylib hosts built with warnings as errors and played under Xvfb, the colony run both ways, and a warning planted in each host refused; the Windows zip built |
+| `prune-caches` | on `main` and at night only, after `fuzz`, `build` and `build-main`: the organization's `cache-prune.yml` deletes every cache entry of `main` whose key ends in a commit or a run id when a newer entry has the same key up to that ending, so the repository's 10 GB holds the newest ccache of each cell and the newest fuzz corpus instead of one entry per commit |
 | `required` | passes when every job above passed or was skipped by `changes`; the ruleset requires this and the pull request title check |
 
 Every workflow sets `permissions: {}` and grants each job what it needs, runs its steps in bash unless a step names another shell (`scorecard.yml` sets no default shell, which Scorecard's publishing rejects), checks out without keeping credentials, and pins every action by commit SHA; Dependabot moves the pins weekly.
@@ -62,7 +63,7 @@ Other workflows:
 
 - `pr-title.yml` checks the pull request title against the scopes in `AGENTS.md`.
 - `pr-gate.yml` closes a pull request from outside the organization unless it closes an issue labeled `accepted`.
-- `codeql.yml` analyzes the C sources on every pull request, on `main` and weekly.
+- `codeql.yml` analyzes the C sources on every pull request, on `main` and weekly, then deletes the trap caches of `main` a newer one replaced, as `prune-caches` does.
 - `scorecard.yml` grades the repository's supply chain weekly for the README badge.
 - `release.yml` keeps the release pull request and builds a release's files, see [Release](release.md).
 - `pages.yml` publishes the playground and the documentation site from `main`.
