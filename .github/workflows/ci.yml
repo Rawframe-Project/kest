@@ -36,14 +36,14 @@ jobs:
   # docs/user is not documentation only here: tools/check_guide.py runs every
   # program on those pages.
   changes:
-    uses: Rawframe-Project/.github/.github/workflows/changes.yml@595e1c52a0fae00e49974c5152a7a6f3ed39753c # v0.0.28
+    uses: Rawframe-Project/.github/.github/workflows/changes.yml@8414d388d2116b581c5c5d8f6641e1da4d863244 # v0.0.42
     permissions:
       pull-requests: read
     with:
       docs: '^(docs/(internals|operations)/|docs/README\.md$|\.github/ISSUE_TEMPLATE/)|^[A-Z]+\.md$'
 
   zizmor:
-    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@595e1c52a0fae00e49974c5152a7a6f3ed39753c # v0.0.28
+    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@8414d388d2116b581c5c5d8f6641e1da4d863244 # v0.0.42
     permissions:
       contents: read
 
@@ -60,7 +60,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Rawframe-Project/.github/.github/actions/docs-check@595e1c52a0fae00e49974c5152a7a6f3ed39753c # v0.0.28
+      - uses: Rawframe-Project/.github/.github/actions/docs-check@8414d388d2116b581c5c5d8f6641e1da4d863244 # v0.0.42
 
   # The documentation site builds: every page, the standard library reference
   # `kest doc` writes, llms.txt and llms-full.txt. In the CI image, which has
@@ -189,7 +189,7 @@ jobs:
           - { preset: linux-arm64, runner: ubuntu-24.04-arm }
           - { preset: macos-clang, runner: macos-15 }
           - { preset: windows-msvc, runner: windows-2025 }
-    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@595e1c52a0fae00e49974c5152a7a6f3ed39753c # v0.0.28
+    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@8414d388d2116b581c5c5d8f6641e1da4d863244 # v0.0.42
     permissions:
       contents: read
     with:
@@ -207,7 +207,7 @@ jobs:
   build-main:
     needs: changes
     if: github.event_name != 'pull_request' && needs.changes.outputs.code == 'true'
-    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@595e1c52a0fae00e49974c5152a7a6f3ed39753c # v0.0.28
+    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@8414d388d2116b581c5c5d8f6641e1da4d863244 # v0.0.42
     permissions:
       contents: read
     with:
@@ -397,11 +397,22 @@ jobs:
           name: kest-tetris-windows-x86_64
           path: kest-tetris-windows-x86_64.zip
 
+  # Every save on main is keyed by its commit or run, and the repository holds
+  # 10 GB of them before GitHub evicts the least recently used, the fuzz corpus
+  # first. Once the jobs that save have ended, the entries a newer save of the
+  # same cache replaced are deleted; every other entry is kept.
+  prune-caches:
+    needs: [fuzz, build, build-main]
+    if: always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    uses: Rawframe-Project/.github/.github/workflows/cache-prune.yml@8414d388d2116b581c5c5d8f6641e1da4d863244 # v0.0.42
+    permissions:
+      actions: write
+
   # The one check the ruleset requires: every job above passed, a job the
   # changes job skipped counting as passed.
   required:
     if: always()
-    needs: [changes, zizmor, docs, site, format, fuzz, build, build-main, package, games, tetris-windows]
+    needs: [changes, zizmor, docs, site, format, fuzz, build, build-main, package, games, tetris-windows, prune-caches]
     permissions: {}
     runs-on: ubuntu-latest
     timeout-minutes: 2
