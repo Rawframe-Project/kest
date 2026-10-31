@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.1.0](https://github.com/Rawframe-Project/kest/compare/v0.0.4...v0.1.0) (2026-10-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** kest needs Windows 10 1903 or later for renames across files; on an older Windows, where the process code page cannot be UTF-8, such a rename is refused instead of risking an edit to another file.
+
+### Fixed
+
+* **api:** read and write numbers the same under every locale ([#105](https://github.com/Rawframe-Project/kest/issues/105)) ([fdc550d](https://github.com/Rawframe-Project/kest/commit/fdc550dd5cffb911b2126445fd6a6d0165a85254)), closes [#104](https://github.com/Rawframe-Project/kest/issues/104)
+* **cli:** make a release on Windows with the MSVC build ([#107](https://github.com/Rawframe-Project/kest/issues/107)) ([5899827](https://github.com/Rawframe-Project/kest/commit/58998271e03a7a51f4304e73a3110c0913c48f37)), closes [#103](https://github.com/Rawframe-Project/kest/issues/103)
+* **cli:** read every path on Windows in UTF-8 ([#102](https://github.com/Rawframe-Project/kest/issues/102)) ([a89ac3f](https://github.com/Rawframe-Project/kest/commit/a89ac3f09a962352977059fba1da2a7810943c34))
+* **lsp:** rename a name in every file of the project that names it ([#97](https://github.com/Rawframe-Project/kest/issues/97)) ([42551df](https://github.com/Rawframe-Project/kest/commit/42551df93bc746b8b17426e4f63e854e28c516eb)), closes [#96](https://github.com/Rawframe-Project/kest/issues/96)
+* **lsp:** rename and list references from where a name is declared ([#106](https://github.com/Rawframe-Project/kest/issues/106)) ([1dd2076](https://github.com/Rawframe-Project/kest/commit/1dd2076c7741562e912dd908a19994f85329cd16)), closes [#100](https://github.com/Rawframe-Project/kest/issues/100)
+
 ## 0.0.4 (2026-10-29)
 
 ### Fixed
