@@ -2239,19 +2239,41 @@ static bool literal_suits(Checker *checker, const KestExpr *expr,
     return kest_type_equal((KestType *)want, literal_alone(checker, literal));
 }
 
+// What each argument of a call is, found out rather than reported, because a
+// mismatch is said once the function or the copy is known. Every argument,
+// however many: one past a count kept here was never asked about, so a type
+// only the seventeenth tells was told by nothing. In `held` when they fit, so
+// a call of the usual length asks the arena for nothing.
+static KestType **found_out(Checker *checker, KestExpr *expr, KestType **held,
+                            uint32_t room) {
+    uint32_t count = expr == NULL ? 0 : expr->call.arg_count;
+    KestType **given = count <= room ? held
+                                     : KEST_ARENA_ARRAY(checker->program->arena,
+                                                        KestType *, count);
+    if (given == NULL) {
+        checker->out_of_memory = true;
+        return NULL;
+    }
+    KestDiags *diags = checker->program->diags;
+    kest_diags_mute(diags, true);
+    for (uint32_t i = 0; i < count; i++) {
+        given[i] = check_expr(checker, expr->call.args[i], NULL);
+    }
+    kest_diags_mute(diags, false);
+    return given;
+}
+
 static KestType *check_overloaded(Checker *checker, KestExpr *expr,
                                   KestSymbol **candidates, uint32_t count) {
     // What each argument is, found out rather than reported, because the
     // wrong choice would report against the wrong function.
     KestDiags *diags = checker->program->diags;
-    kest_diags_mute(diags, true);
-    KestType *given[16];
-    uint32_t argument_count =
-        expr->call.arg_count < 16 ? expr->call.arg_count : 16;
-    for (uint32_t i = 0; i < argument_count; i++) {
-        given[i] = check_expr(checker, expr->call.args[i], NULL);
+    KestType *held[16];
+    KestType **given = found_out(checker, expr, held, 16);
+    if (given == NULL) {
+        return error_type(checker);
     }
-    kest_diags_mute(diags, false);
+    uint32_t argument_count = expr->call.arg_count;
 
     // Once by family, so a literal fits any width of the right kind, and
     // again exactly, for when the literals are all there is to go on. The
@@ -2268,8 +2290,7 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
         matches = 0;
         for (uint32_t c = 0; c < count; c++) {
             const KestType *type = candidates[c]->type;
-            if (type->param_count != expr->call.arg_count ||
-                expr->call.arg_count > 16) {
+            if (type->param_count != expr->call.arg_count) {
                 continue;
             }
             bool fits = true;
@@ -2337,10 +2358,6 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
                     : kest_type_name(checker->program->arena, given[i]);
             wrote = kest_put(passed, sizeof(passed), wrote, "%s%s",
                              i == 0 ? "" : ", ", what);
-        }
-        if (expr->call.arg_count > argument_count) {
-            kest_put(passed, sizeof(passed), wrote, ", and %u more",
-                     expr->call.arg_count - argument_count);
         }
         // And which of the two happened. A pass over the families can find
         // several where a pass over the exact types finds none -- two `pick`s
@@ -2629,14 +2646,12 @@ static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
         return (KestType *)expected;
     }
 
-    KestDiags *diags = program->diags;
-    kest_diags_mute(diags, true);
-    KestType *given[16];
-    uint32_t count = expr->call.arg_count < 16 ? expr->call.arg_count : 16;
-    for (uint32_t i = 0; i < count; i++) {
-        given[i] = check_expr(checker, expr->call.args[i], NULL);
+    KestType *held[16];
+    KestType **given = found_out(checker, expr, held, 16);
+    if (given == NULL) {
+        return NULL;
     }
-    kest_diags_mute(diags, false);
+    uint32_t count = expr->call.arg_count;
 
     uint32_t generics = shape->type_param_count;
     const char **names = KEST_ARENA_ARRAY(checker->program->arena, const char *,
@@ -2707,16 +2722,12 @@ static KestType *copy_of_case(Checker *checker, KestExpr *expr, KestType *shape,
         return shape;
     }
 
-    KestDiags *diags = program->diags;
-    kest_diags_mute(diags, true);
-    KestType *given[16];
-    uint32_t count = expr == NULL                ? 0
-                     : expr->call.arg_count < 16 ? expr->call.arg_count
-                                                 : 16;
-    for (uint32_t i = 0; i < count; i++) {
-        given[i] = check_expr(checker, expr->call.args[i], NULL);
+    KestType *held[16];
+    KestType **given = found_out(checker, expr, held, 16);
+    if (given == NULL) {
+        return NULL;
     }
-    kest_diags_mute(diags, false);
+    uint32_t count = expr == NULL ? 0 : expr->call.arg_count;
 
     uint32_t generics = shape->type_param_count;
     const char **names = KEST_ARENA_ARRAY(program->arena, const char *,
@@ -2772,16 +2783,15 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
         return error_type(checker);
     }
 
-    // What was passed, found out rather than reported: a mismatch is said
-    // once, against the copy, after the names are known.
+    // What was passed: a mismatch is said once, against the copy, after the
+    // names are known.
     KestDiags *diags = program->diags;
-    kest_diags_mute(diags, true);
-    KestType *given[16];
-    uint32_t count = expr->call.arg_count < 16 ? expr->call.arg_count : 16;
-    for (uint32_t i = 0; i < count; i++) {
-        given[i] = check_expr(checker, expr->call.args[i], NULL);
+    KestType *held[16];
+    KestType **given = found_out(checker, expr, held, 16);
+    if (given == NULL) {
+        return error_type(checker);
     }
-    kest_diags_mute(diags, false);
+    uint32_t count = expr->call.arg_count;
 
     uint32_t generics = callee->type_param_count;
     const char **names = KEST_ARENA_ARRAY(checker->program->arena, const char *,

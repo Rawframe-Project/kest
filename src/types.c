@@ -2722,8 +2722,16 @@ KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref) {
 
     switch (ref->kind) {
     case KEST_TYPE_FN: {
-        KestType *params[16];
-        uint32_t count = ref->arg_count < 16 ? ref->arg_count : 16;
+        // Every parameter, however many: a function takes as many as it has
+        // names for, and a shape cut short is a different function's.
+        KestType *held[16];
+        uint32_t count = ref->arg_count;
+        KestType **params =
+            count <= 16 ? held
+                        : KEST_ARENA_ARRAY(program->arena, KestType *, count);
+        if (params == NULL) {
+            return error_type(program);
+        }
         for (uint32_t i = 0; i < count; i++) {
             params[i] = kest_resolve_type_ref(program, ref->args[i]);
         }
@@ -4400,8 +4408,14 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
             program, KEST_T_STORE,
             kest_substitute(program, type->element, names, bindings, count), 0);
     case KEST_T_FN: {
-        KestType *params[16];
-        uint32_t used = type->param_count < 16 ? type->param_count : 16;
+        KestType *held[16];
+        uint32_t used = type->param_count;
+        KestType **params =
+            used <= 16 ? held
+                       : KEST_ARENA_ARRAY(program->arena, KestType *, used);
+        if (params == NULL) {
+            return NULL;
+        }
         for (uint32_t i = 0; i < used; i++) {
             params[i] = kest_substitute(program, type->params[i], names,
                                         bindings, count);
