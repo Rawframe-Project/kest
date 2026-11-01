@@ -283,12 +283,11 @@ uint32_t kest_escape_width(const KestSource *source, uint32_t at) {
     return 2 + width;
 }
 
+// Read where it stands rather than copied out: a copy had sixty-four bytes,
+// and a literal longer than that was read as nothing at all, so
+// `1.5000...` written out to seventy places was nought.
 double kest_literal_real(const KestSource *source, KestSpan span) {
-    char buffer[64];
-    size_t length = span.length < sizeof(buffer) - 1 ? span.length : 0;
-    memcpy(buffer, kest_span_text(source, span), length);
-    buffer[length] = '\0';
-    return kest_real_read(buffer, NULL);
+    return kest_real_read_within(kest_span_text(source, span), span.length);
 }
 
 // One name a kind, and the compiler counts them. `check-tables.sh` holds the

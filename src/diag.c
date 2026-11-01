@@ -1050,33 +1050,48 @@ static int digit_value(char c, bool hex) {
     return -1;
 }
 
+// The character `ahead` places on from `at`, and the end of the text where
+// that is at or past `stop`: a number in a source file is a span with the rest
+// of the file after it and no end of its own, and a NULL `stop` is a string
+// that has one.
+static char char_at(const char *at, size_t ahead, const char *stop) {
+    return stop == NULL || (size_t)(stop - at) > ahead ? at[ahead] : '\0';
+}
+
 // The digits with the point taken out and the exponent moved to make up for
 // it, so what `strtod` is handed has no decimal point in it to be read in the
 // host's locale: `12.5e3` is read as `125e2`, and `0x1.8p0` as `0x18p-4`.
 // Nought before the first digit that is not and after the last that is are
 // left out, so a number written with a thousand of them still fits.
-double kest_real_read(const char *text, char **end) {
+static double real_read(const char *text, const char *stop, char **end) {
     const char *at = text;
-    while (*at == ' ' || (*at >= '\t' && *at <= '\r')) {
+    while (char_at(at, 0, stop) == ' ' ||
+           (char_at(at, 0, stop) >= '\t' && char_at(at, 0, stop) <= '\r')) {
         at++;
     }
-    bool negative = *at == '-';
-    if (*at == '+' || *at == '-') {
+    bool negative = char_at(at, 0, stop) == '-';
+    if (char_at(at, 0, stop) == '+' || char_at(at, 0, stop) == '-') {
         at++;
     }
-    bool hex = at[0] == '0' && (at[1] == 'x' || at[1] == 'X') &&
-               (digit_value(at[2], true) >= 0 ||
-                (at[2] == '.' && digit_value(at[3], true) >= 0));
+    bool hex = char_at(at, 0, stop) == '0' &&
+               (char_at(at, 1, stop) == 'x' || char_at(at, 1, stop) == 'X') &&
+               (digit_value(char_at(at, 2, stop), true) >= 0 ||
+                (char_at(at, 2, stop) == '.' &&
+                 digit_value(char_at(at, 3, stop), true) >= 0));
     if (hex) {
         at += 2;
     }
-    if (digit_value(*at, hex) < 0 &&
-        !(*at == '.' && digit_value(at[1], hex) >= 0)) {
+    if (digit_value(char_at(at, 0, stop), hex) < 0 &&
+        !(char_at(at, 0, stop) == '.' &&
+          digit_value(char_at(at, 1, stop), hex) >= 0)) {
         // `inf` and `nan`, which have no point in them, are `strtod`'s to
         // read. Anything else is no number, and is not handed to it either:
         // under `de_DE` it read `,5` as a half, and the C locale reads
         // nothing there.
-        if (*at == 'i' || *at == 'I' || *at == 'n' || *at == 'N') {
+        // A number with an end is a literal of the language, which is
+        // never one of those, so they are read only from a whole string.
+        if (stop == NULL &&
+            (*at == 'i' || *at == 'I' || *at == 'n' || *at == 'N')) {
             return strtod(text, end);
         }
         if (end != NULL) {
@@ -1100,36 +1115,41 @@ double kest_real_read(const char *text, char **end) {
     bool more = false;
     bool fraction = false;
     for (;; at++) {
-        if (*at == '.' && !fraction) {
+        char c = char_at(at, 0, stop);
+        if (c == '.' && !fraction) {
             fraction = true;
             continue;
         }
-        if (digit_value(*at, hex) < 0) {
+        if (digit_value(c, hex) < 0) {
             break;
         }
-        if (count == 0 && *at == '0') {
+        if (count == 0 && c == '0') {
             moved -= fraction ? step : 0;
         } else if (count < KEST_REAL_KEPT) {
-            kept[used + count++] = *at;
+            kept[used + count++] = c;
             moved -= fraction ? step : 0;
         } else {
-            more = more || *at != '0';
+            more = more || c != '0';
             moved += fraction ? 0 : step;
         }
     }
     long long exponent = 0;
     const char *mark = at;
-    if (hex ? (*at == 'p' || *at == 'P') : (*at == 'e' || *at == 'E')) {
+    char mark_at = char_at(at, 0, stop);
+    if (hex ? (mark_at == 'p' || mark_at == 'P')
+            : (mark_at == 'e' || mark_at == 'E')) {
         const char *after = at + 1;
-        bool below = *after == '-';
-        if (*after == '+' || *after == '-') {
+        char sign = char_at(after, 0, stop);
+        bool below = sign == '-';
+        if (sign == '+' || sign == '-') {
             after++;
         }
-        if (*after >= '0' && *after <= '9') {
-            for (; *after >= '0' && *after <= '9'; after++) {
+        char d = char_at(after, 0, stop);
+        if (d >= '0' && d <= '9') {
+            for (; d >= '0' && d <= '9'; d = char_at(++after, 0, stop)) {
                 // Far past where every number is nought or too wide to hold.
                 if (exponent < 100000000) {
-                    exponent = exponent * 10 + (*after - '0');
+                    exponent = exponent * 10 + (d - '0');
                 }
             }
             exponent = below ? -exponent : exponent;
@@ -1155,6 +1175,14 @@ double kest_real_read(const char *text, char **end) {
     snprintf(kept + used, sizeof(kept) - used, "%c%lld", hex ? 'p' : 'e',
              exponent + moved);
     return strtod(kept, NULL);
+}
+
+double kest_real_read(const char *text, char **end) {
+    return real_read(text, NULL, end);
+}
+
+double kest_real_read_within(const char *text, size_t length) {
+    return real_read(text, text + length, NULL);
 }
 
 size_t kest_real_write(char *into, size_t room, char conversion, int digits,

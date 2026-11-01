@@ -1,12 +1,21 @@
-// Guards against a name that is written taken for one that is not.
+// Guards against a literal longer than sixty-three characters being read as
+// nought: it was copied into a buffer of sixty-four bytes, and one that did not
+// fit was copied as nothing.
 
 module test.regress.written
 
-import std.io
-
 fn main() -> i32 {
-    let n = 1
-    n = 2
-    io.print("{n}")
-    return n - 2
+    let half = 1.5000000000000000000000000000000000000000000000000000000000000000000000
+    if half != 1.5 {
+        return 1
+    }
+    let tenth = 0.1000000000000000000000000000000000000000000000000000000000000000000000000001
+    if tenth != 0.1 {
+        return 2
+    }
+    let big = 12345678901234567890123456789012345678901234567890123456789012345678.0e-60
+    if big < 12345678.0 || big > 12345679.0 {
+        return 3
+    }
+    return 0
 }
