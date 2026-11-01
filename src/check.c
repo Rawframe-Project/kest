@@ -4554,8 +4554,13 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
         if (is_error(subjects[i])) {
             any_error = true;
         } else {
-            combinations *=
-                subjects[i]->case_count == 0 ? 1 : subjects[i]->case_count;
+            // Held at the most a `uint32_t` says rather than let round: four
+            // enums of 256 cases are 2^32 combinations, which wrapped to none,
+            // and a `match` with none to answer was taken as answering all.
+            uint64_t grown =
+                (uint64_t)combinations *
+                (subjects[i]->case_count == 0 ? 1 : subjects[i]->case_count);
+            combinations = grown > UINT32_MAX ? UINT32_MAX : (uint32_t)grown;
         }
     }
     for (uint32_t i = count; i < choose->subject_count; i++) {
@@ -4729,9 +4734,10 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
     if (!has_else && !any_error) {
         if (!countable) {
             report(checker, head, "K0333",
-                   "this `match` has %u combinations to answer, which is "
+                   "this `match` has %s%u combinations to answer, which is "
                    "more than %u",
-                   combinations, (uint32_t)MAX_COMBINATIONS);
+                   combinations == UINT32_MAX ? "at least " : "", combinations,
+                   (uint32_t)MAX_COMBINATIONS);
             kest_diags_suggest(checker->program->diags,
                                "`else` answers the rest in one place");
         } else {
