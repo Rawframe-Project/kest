@@ -872,6 +872,9 @@ static KestExpr *parse_string(Parser *parser, KestSpan span) {
         inner.recovering = false;
         hole->value = parse_expr(&inner);
         parser->out_of_memory = inner.out_of_memory;
+        // What the hole made is part of this file's tree, and a count left on
+        // the copy is a tree said to be smaller than what it cost.
+        parser->nodes = inner.nodes;
         if (hole->value == NULL) {
             return NULL;
         }

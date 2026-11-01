@@ -1794,6 +1794,26 @@ if (nodes is None or lexing is None or parsing is None or nodes == 0 or
           % (nodes, None if parsing is None or lexing is None
              else parsing - lexing, smallest))
     failed = 1
+# And what is written inside a hole, which the parser reads with a copy of
+# itself: a hole that grows by a sum grows its tree by two nodes, the sum and
+# the name it adds, and a count left on the copy said it grew by none.
+holes = tempfile.mkdtemp()
+try:
+    hole_nodes = []
+    for hole in ('s', 's + s'):
+        where = os.path.join(holes, 'hole.kest')
+        with open(where, 'w') as out:
+            out.write('module hole\n\nfn main() -> i32 {\n'
+                      '    let s = 1\n'
+                      '    return len("{%s}")\n'
+                      '}\n' % hole)
+        hole_nodes.append(what_it_said('parse', where, 'nodes'))
+finally:
+    shutil.rmtree(holes, ignore_errors=True)
+if None in hole_nodes or hole_nodes[1] - hole_nodes[0] != 2:
+    print("costs: a hole written `{s}` made a tree of %s nodes and `{s + s}` "
+          "one of %s, and the sum is two nodes more" % tuple(hole_nodes))
+    failed = 1
 checking = what_it_cost('check', LIBRARY)
 compiling = what_it_cost('emit', LIBRARY)
 # What that cost was paid for. A cost on its own has nothing to divide it by: a
