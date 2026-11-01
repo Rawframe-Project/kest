@@ -2,6 +2,18 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.1.1](https://github.com/Rawframe-Project/kest/compare/v0.1.0...v0.1.1) (2026-11-01)
+
+
+### Fixed
+
+* **checker:** read every argument of a call past the sixteenth ([#115](https://github.com/Rawframe-Project/kest/issues/115)) ([29e959d](https://github.com/Rawframe-Project/kest/commit/29e959df0dbaef8f0f9aaf9bfb51a9e19fb7947c)), closes [#112](https://github.com/Rawframe-Project/kest/issues/112)
+* **checker:** refuse a match whose combinations pass 2^32 ([#121](https://github.com/Rawframe-Project/kest/issues/121)) ([0ca37ff](https://github.com/Rawframe-Project/kest/commit/0ca37ff8b27c72a8e026111f51c42b4767cb5085)), closes [#120](https://github.com/Rawframe-Project/kest/issues/120)
+* **checker:** try every function of a name, however many there are ([#119](https://github.com/Rawframe-Project/kest/issues/119)) ([85770ce](https://github.com/Rawframe-Project/kest/commit/85770ceedce4488e608c705e399fb7fed1a3edb8)), closes [#113](https://github.com/Rawframe-Project/kest/issues/113)
+* **cli:** size kest call's machine for the function it chose ([#118](https://github.com/Rawframe-Project/kest/issues/118)) ([5eee414](https://github.com/Rawframe-Project/kest/commit/5eee4147ab27cc862f4bde2efc0a35fbb7d92465)), closes [#117](https://github.com/Rawframe-Project/kest/issues/117)
+* **lexer:** read a real literal of any length where it stands ([#124](https://github.com/Rawframe-Project/kest/issues/124)) ([28d715c](https://github.com/Rawframe-Project/kest/commit/28d715ca3f543d67f2c58b68e44fc311c7c896e9)), closes [#123](https://github.com/Rawframe-Project/kest/issues/123)
+* **parser:** count the nodes a string hole makes ([#116](https://github.com/Rawframe-Project/kest/issues/116)) ([7b22efe](https://github.com/Rawframe-Project/kest/commit/7b22efe418f9aa69208d052b952a55b059b76192)), closes [#114](https://github.com/Rawframe-Project/kest/issues/114)
+
 ## 0.1.0 (2026-10-31)
 
 ### Fixed
