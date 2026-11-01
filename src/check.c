@@ -580,8 +580,10 @@ static void as_component(Checker *checker, KestExpr *side, KestType **type) {
 // because where it is declared is what an editor is sent to.
 static KestSymbol *named_function(Checker *checker, const char *name,
                                   size_t length, const KestType *expected) {
-    KestSymbol *all[32];
-    uint32_t count = kest_overloads(checker->program, name, length, all, 32);
+    KestSymbol *held[32];
+    uint32_t count = 0;
+    KestSymbol **all =
+        kest_overloads(checker->program, name, length, held, 32, &count);
     if (count <= 1 || expected == NULL || expected->tag != KEST_T_FN) {
         return NULL;
     }
@@ -1532,9 +1534,10 @@ static bool is_builtin(Checker *checker, KestExpr *expr, KestSpan name,
     if (found == NULL) {
         return true;
     }
-    KestSymbol *all[32];
-    uint32_t count = kest_overloads(checker->program, found->name,
-                                    strlen(found->name), all, 32);
+    KestSymbol *held[32];
+    uint32_t count = 0;
+    KestSymbol **all = kest_overloads(checker->program, found->name,
+                                      strlen(found->name), held, 32, &count);
     if (count == 0) {
         return false;
     }
@@ -2169,14 +2172,17 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
 }
 
 // Every function the callee could name. A dotted callee is one name with a dot
-// in it, so both shapes are looked up the same way.
-static uint32_t find_callable(Checker *checker, const KestExpr *expr,
-                              KestSymbol **found, uint32_t room) {
+// in it, so both shapes are looked up the same way. In `held` when they fit and
+// in the arena when not, as `kest_overloads` answers them.
+static KestSymbol **find_callable(Checker *checker, const KestExpr *expr,
+                                  KestSymbol **held, uint32_t room,
+                                  uint32_t *count) {
+    *count = 0;
     const KestExpr *callee = expr->call.callee;
     if (callee->kind != KEST_EXPR_NAME &&
         !(callee->kind == KEST_EXPR_FIELD &&
           callee->field.object->kind == KEST_EXPR_NAME)) {
-        return 0;
+        return held;
     }
 
     const char *text = span_text(checker, callee->span);
@@ -2187,23 +2193,23 @@ static uint32_t find_callable(Checker *checker, const KestExpr *expr,
         int written = snprintf(joined, sizeof(joined), "%s.%.*s", alias,
                                (int)length, text);
         if (written > 0 && (size_t)written < sizeof(joined)) {
-            uint32_t count = kest_overloads(checker->program, joined,
-                                            (size_t)written, found, room);
-            if (count > 0) {
-                return count;
+            KestSymbol **found = kest_overloads(
+                checker->program, joined, (size_t)written, held, room, count);
+            if (found == NULL || *count > 0) {
+                return found;
             }
         }
     }
-    uint32_t count =
-        kest_overloads(checker->program, text, length, found, room);
-    if (count > 0) {
+    KestSymbol **found =
+        kest_overloads(checker->program, text, length, held, room, count);
+    if (found != NULL && *count > 0) {
         // A name with a dot in it, resolved: the other way a module is
         // reached, and the one a name several functions share takes -- the
         // lookups that ask for one symbol answer nothing for those, so this is
         // where `math.abs` says the import it came through is worth its place.
         kest_import_reached(checker->program, text, length);
     }
-    return count;
+    return found;
 }
 
 // A literal has no type of its own to lose, so it is the one thing that may
@@ -3066,7 +3072,8 @@ static KestType *check_method(Checker *checker, KestExpr *expr,
     KestSpan name = expr->call.callee->span;
     const char *text = span_text(checker, name);
 
-    KestSymbol *candidates[16];
+    KestSymbol *held[16];
+    KestSymbol **candidates = held;
     uint32_t count = 0;
     const char *places[2] = {checker->program->module, NULL};
     size_t lengths[2] = {strlen(checker->program->module), 0};
@@ -3088,17 +3095,26 @@ static KestType *check_method(Checker *checker, KestExpr *expr,
         if (written <= 0 || (size_t)written >= sizeof joined) {
             continue;
         }
-        KestSymbol *found[16];
-        uint32_t there = kest_overloads(checker->program, joined,
-                                        (size_t)written, found, 16);
-        for (uint32_t i = 0; i < there && count < 16; i++) {
+        uint32_t there = 0;
+        KestSymbol **found = kest_overloads(checker->program, joined,
+                                            (size_t)written, held, 16, &there);
+        if (found == NULL) {
+            checker->out_of_memory = true;
+            return error_type(checker);
+        }
+        // The ones that take this first, kept in place: none is written past
+        // the one being read.
+        uint32_t kept = 0;
+        for (uint32_t i = 0; i < there; i++) {
             const KestType *takes = found[i]->type;
             if (takes != NULL && takes->tag == KEST_T_FN &&
                 takes->param_count == expr->call.arg_count &&
                 could_take(object, takes->params[0])) {
-                candidates[count++] = found[i];
+                found[kept++] = found[i];
             }
         }
+        candidates = found;
+        count = kept;
         if (count > 0 && at == 1) {
             // Reached through the module the type came from, which the file
             // has to have asked for like any other name under it.
@@ -3371,8 +3387,14 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
 
     // Which function is meant is settled by what is passed, and only when
     // there is more than one to choose between.
-    KestSymbol *candidates[16];
-    uint32_t candidate_count = find_callable(checker, expr, candidates, 16);
+    KestSymbol *held[16];
+    uint32_t candidate_count = 0;
+    KestSymbol **candidates =
+        find_callable(checker, expr, held, 16, &candidate_count);
+    if (candidates == NULL) {
+        checker->out_of_memory = true;
+        return error_type(checker);
+    }
     if (candidate_count > 1) {
         return check_overloaded(checker, expr, candidates, candidate_count);
     }
@@ -3489,9 +3511,10 @@ static const KestSymbol *declared_at(Checker *checker, const KestType *callee) {
     const char *marked = strchr(callee->symbol, '#');
     size_t length = marked == NULL ? strlen(callee->symbol)
                                    : (size_t)(marked - callee->symbol);
-    KestSymbol *all[32];
-    uint32_t count =
-        kest_overloads(checker->program, callee->symbol, length, all, 32);
+    KestSymbol *held[32];
+    uint32_t count = 0;
+    KestSymbol **all = kest_overloads(checker->program, callee->symbol, length,
+                                      held, 32, &count);
     for (uint32_t i = 0; i < count; i++) {
         if (all[i]->type == callee) {
             return all[i];

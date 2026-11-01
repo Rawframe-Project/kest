@@ -1198,6 +1198,90 @@ if [ "$wider" != "3" ]; then
     printf '%s\n' "$wider" | sed 's/^/    /' | head -4
 fi
 
+# And a name more functions share than a call used to look at. The one that
+# takes nothing is declared last, eighteenth, and the first sixteen were all
+# `kest call` tried.
+cat > "$scratch"/many.kest <<'KEST'
+module many
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32, a7: i32, a8: i32, a9: i32, a10: i32, a11: i32, a12: i32, a13: i32, a14: i32, a15: i32, a16: i32) -> i32 {
+    return 17
+}
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32, a7: i32, a8: i32, a9: i32, a10: i32, a11: i32, a12: i32, a13: i32, a14: i32, a15: i32) -> i32 {
+    return 16
+}
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32, a7: i32, a8: i32, a9: i32, a10: i32, a11: i32, a12: i32, a13: i32, a14: i32) -> i32 {
+    return 15
+}
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32, a7: i32, a8: i32, a9: i32, a10: i32, a11: i32, a12: i32, a13: i32) -> i32 {
+    return 14
+}
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32, a7: i32, a8: i32, a9: i32, a10: i32, a11: i32, a12: i32) -> i32 {
+    return 13
+}
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32, a7: i32, a8: i32, a9: i32, a10: i32, a11: i32) -> i32 {
+    return 12
+}
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32, a7: i32, a8: i32, a9: i32, a10: i32) -> i32 {
+    return 11
+}
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32, a7: i32, a8: i32, a9: i32) -> i32 {
+    return 10
+}
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32, a7: i32, a8: i32) -> i32 {
+    return 9
+}
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32, a7: i32) -> i32 {
+    return 8
+}
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32, a6: i32) -> i32 {
+    return 7
+}
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32, a4: i32, a5: i32) -> i32 {
+    return 6
+}
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32, a4: i32) -> i32 {
+    return 5
+}
+
+fn count(a0: i32, a1: i32, a2: i32, a3: i32) -> i32 {
+    return 4
+}
+
+fn count(a0: i32, a1: i32, a2: i32) -> i32 {
+    return 3
+}
+
+fn count(a0: i32, a1: i32) -> i32 {
+    return 2
+}
+
+fn count(a0: i32) -> i32 {
+    return 1
+}
+
+fn count() -> i32 {
+    return 0
+}
+KEST
+many=$("$kest" call "$scratch"/many.kest count 2>&1 </dev/null)
+if [ "$many" != "0" ]; then
+    complain "call: the eighteenth function of a name was never tried"
+    printf '%s\n' "$many" | sed 's/^/    /' | head -4
+fi
+
 # And the two refusals that hold that rule for a program rather than for this
 # tree, neither of which anything here had ever run: a file that calls itself
 # something else, and an import of a file that is not there. Every file in this
