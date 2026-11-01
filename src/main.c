@@ -3135,13 +3135,17 @@ static int run(const char *command, const char *executable, char **paths,
                 // above it otherwise, with nothing to say which line is which.
                 // `--json` has always done this; the words do it too.
                 KestHost *host = make_host(stderr, stdin);
+                // Sized for the one that was chosen: the name typed is every
+                // function that shares it, and asked about on its own it
+                // answers for the first of them.
                 KestLimits least = {0, 0, 0, 0};
                 KestRuntime *runtime =
                     host == NULL
                         ? NULL
-                        : a_machine_within(build, host,
-                                           (const char *[]){paths[1], NULL},
-                                           &least, room);
+                        : a_machine_within(
+                              build, host,
+                              (const char *[]){chosen->type->symbol, NULL},
+                              &least, room);
                 kest_fuel_set(runtime, fuel);
                 if (runtime != NULL) {
                     // What comes back and what goes in, because the frame is

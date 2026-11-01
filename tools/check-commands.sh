@@ -1178,6 +1178,26 @@ for pair in "tooBig:isTooBig" "notANumber:isNotANumber"; do
     fi
 done
 
+# And a name several functions share, called at the wider one. The machine is
+# sized for what is called, and sized from the name typed it was sized for the
+# first function of that name, which takes nothing.
+cat > "$scratch"/wider.kest <<'KEST'
+module wider
+
+fn count() -> i32 {
+    return 0
+}
+
+fn count(a0: i32, a1: i32, a2: i32) -> i32 {
+    return 3
+}
+KEST
+wider=$("$kest" call "$scratch"/wider.kest count 1 2 3 2>&1 </dev/null)
+if [ "$wider" != "3" ]; then
+    complain "call: the wider of two functions of one name had no room to run"
+    printf '%s\n' "$wider" | sed 's/^/    /' | head -4
+fi
+
 # And a name more functions share than a call used to look at. The one that
 # takes nothing is declared last, eighteenth, and the first sixteen were all
 # `kest call` tried.
