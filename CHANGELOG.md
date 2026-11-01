@@ -2,6 +2,17 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## 0.1.1 (2026-11-01)
+
+### Fixed
+
+- A call with more than sixteen arguments is checked like any other. A function value of seventeen parameters was refused as the wrong type (`K0310`) or called with the wrong count (`K0309`); a generic function, struct or enum with more than sixteen fields or arguments could not tell what its type parameter was (`K0343`); and an overloaded name called with more than sixteen arguments had nothing that took them (`K0329`). ([#115](https://github.com/Rawframe-Project/kest/pull/115))
+- Every function of a name is tried, however many share it. Past the sixteenth or the thirty-second, a call or a method call was refused with `K0329`, `kest call` could not call it (`K0624`), and it was not found when named as a value. A second function taking the same parameters as one past the thirty-second was accepted, so one of the two could never be called; it is now refused with `K0304`. ([#119](https://github.com/Rawframe-Project/kest/pull/119))
+- A `match` whose subjects make 2^32 combinations or more is refused with `K0333`, as too many, and the message says "at least 4294967295 combinations". The count wrapped at 2^32: four enums of 256 cases made no combinations at all, so a `match a, b, c, d` with a single arm was accepted as answering every one and returned that arm's value for all of them. A program like that is now refused. ([#121](https://github.com/Rawframe-Project/kest/pull/121))
+- A real literal of 64 characters or more reads as its value, where it read as `0.0` without a word: `1.5` followed by seventy zeros was `0.0`. Every shorter literal reads the same bits as before. ([#124](https://github.com/Rawframe-Project/kest/pull/124))
+- `kest call` on a name several functions share makes the machine big enough for the function it chose, not for the first of that name: with `count()` and `count(a0, a1, a2)` in one file, `kest call file.kest count 1 2 3` was refused with `K0602` before it ran. ([#118](https://github.com/Rawframe-Project/kest/pull/118))
+- `kest parse --json` counts what a string's holes hold in `nodes`: a file returning `len("{s + s}")` and one returning `len("{s}")` both had 8. Only files with holes count differently. ([#116](https://github.com/Rawframe-Project/kest/pull/116))
+
 ## 0.1.0 (2026-10-31)
 
 ### Fixed
