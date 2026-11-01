@@ -223,6 +223,11 @@ size_t kest_put(char *out, size_t room, size_t at, const char *format, ...)
 // `end` when that is not NULL, and `text` there when there was none.
 double kest_real_read(const char *text, char **end);
 
+// The same, read from the `length` bytes at `text` and nothing past them: a
+// literal in a source file, which is as long as it was written and has the
+// rest of the file after it.
+double kest_real_read_within(const char *text, size_t length);
+
 // And written that way: `conversion` is `g` or `a`, as `printf` writes a
 // `double`, with `digits` its precision or below nought for none. Answers how
 // long the text is as written into `into`, as `kest_put` does.
