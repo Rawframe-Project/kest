@@ -3373,9 +3373,11 @@ static uint32_t under_one_name(KestProgram *program, const char *name,
 // Every function under one name, where the name may be written the way a file
 // writes it. The three forms are the ones `kest_lookup_global` tries and for
 // the same reason: a name lives under the whole of its module and a file
-// writes the last part.
-uint32_t kest_overloads(KestProgram *program, const char *name, size_t length,
-                        KestSymbol **found, uint32_t room) {
+// writes the last part. Answers how many there are, and writes as many of them
+// as there is room for.
+static uint32_t overloads_into(KestProgram *program, const char *name,
+                               size_t length, KestSymbol **found,
+                               uint32_t room) {
     if (program->module[0] != '\0') {
         char stack[256];
         const char *joined =
@@ -3413,17 +3415,40 @@ static uint32_t under_one_name(KestProgram *program, const char *name,
     // The same walk as above and it does not stop at the first: two functions
     // of one name are two entries on one run of slots, in the order they were
     // declared, and the run ends where the empty slot is.
+    // Counted to the end of the run, past the room: the ones that did not fit
+    // are still there, and a caller told only of the room would never try the
+    // seventeenth.
     uint32_t mask = program->by_name_slots - 1;
     uint32_t slot = name_hash(name, length) & mask;
-    while (program->by_name[slot] != 0 && count < room) {
+    while (program->by_name[slot] != 0) {
         KestSymbol *one = &program->globals[program->by_name[slot] - 1];
         if (kest_word_same(one->name, name, length) &&
             one->type->tag == KEST_T_FN) {
-            found[count++] = one;
+            if (count < room) {
+                found[count] = one;
+            }
+            count++;
         }
         slot = (slot + 1) & mask;
     }
     return count;
+}
+
+KestSymbol **kest_overloads(KestProgram *program, const char *name,
+                            size_t length, KestSymbol **held, uint32_t room,
+                            uint32_t *count) {
+    uint32_t there = overloads_into(program, name, length, held, room);
+    *count = there;
+    if (there <= room) {
+        return held;
+    }
+    KestSymbol **all = KEST_ARENA_ARRAY(program->arena, KestSymbol *, there);
+    if (all == NULL) {
+        *count = 0;
+        return NULL;
+    }
+    overloads_into(program, name, length, all, there);
+    return all;
 }
 
 static uint32_t written_hash(const KestSource *source, uint32_t offset,
@@ -3640,8 +3665,9 @@ static bool add_global_value(KestProgram *program, const char *name,
         existing->type->tag == KEST_T_FN && !type->is_foreign &&
         !existing->type->is_foreign) {
         uint32_t count = 0;
-        KestSymbol *all[32];
-        count = kest_overloads(program, name, strlen(name), all, 32);
+        KestSymbol *held[32];
+        KestSymbol **all =
+            kest_overloads(program, name, strlen(name), held, 32, &count);
         existing = NULL;
         for (uint32_t i = 0; i < count; i++) {
             if (same_parameters(all[i]->type, type)) {

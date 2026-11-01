@@ -1950,9 +1950,10 @@ static const char *all_of_them(KestArena *arena, KestSymbol **candidates,
 
 static const KestSymbol *choose(KestBuild *build, const char *name, char **args,
                                 int count) {
-    KestSymbol *candidates[16];
-    uint32_t found =
-        kest_overloads(build->program, name, strlen(name), candidates, 16);
+    KestSymbol *held[16];
+    uint32_t found = 0;
+    KestSymbol **candidates =
+        kest_overloads(build->program, name, strlen(name), held, 16, &found);
     const KestSymbol *chosen = NULL;
     uint32_t matches = 0;
     int refused = -1;

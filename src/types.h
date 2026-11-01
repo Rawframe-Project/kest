@@ -486,9 +486,12 @@ KestSymbol *kest_lookup_global(KestProgram *program, const char *name,
 
 // Every function declared under this name, in declaration order. A name with
 // one meaning has one; a name with several has several, and which is meant is
-// settled by what is passed.
-uint32_t kest_overloads(KestProgram *program, const char *name, size_t length,
-                        KestSymbol **found, uint32_t room);
+// settled by what is passed. They are written into `held` when `room` holds
+// them all and into the program's arena when it does not, and `count` says how
+// many; NULL, with a count of 0, is the arena with no room for them.
+KestSymbol **kest_overloads(KestProgram *program, const char *name,
+                            size_t length, KestSymbol **held, uint32_t room,
+                            uint32_t *count);
 
 // The one declared at this place. Two functions may share a name, so where a
 // declaration is is the only thing that names exactly one of them.
