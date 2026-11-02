@@ -211,7 +211,9 @@ void kest_diags_mute(KestDiags *diags, bool muted);
 // `at`, and answers where the text now ends. It never ends past the last byte,
 // which stays a nought: a run of these into a buffer that was measured too
 // small is a shorter text rather than a write past the end, and an `at` that
-// came back from one is always a place inside `out`.
+// came back from one is always a place inside `out`. A text that is cut ends
+// where a whole UTF-8 character does, with noughts after it, and is answered
+// as ending at the last byte, so a list being written stops there.
 size_t kest_put(char *out, size_t room, size_t at, const char *format, ...)
     KEST_SAYS(4, 5);
 

@@ -592,7 +592,18 @@ static Shown shown_part(const KestSource *source, uint32_t line,
     }
     shown.start = from;
     shown.end = from + SHOWN_COLUMNS;
-    shown.cut_before = from > start;
+    // And where whole characters start and end, never in the middle of one:
+    // a line of names that are not ASCII was shown cut inside a character,
+    // and the line it was shown on was not UTF-8.
+    while (shown.start < shown.end &&
+           ((unsigned char)source->text[shown.start] & 0xc0) == 0x80) {
+        shown.start++;
+    }
+    while (shown.end > shown.start && shown.end < end &&
+           ((unsigned char)source->text[shown.end] & 0xc0) == 0x80) {
+        shown.end--;
+    }
+    shown.cut_before = shown.start > start;
     shown.cut_after = shown.end < end;
     return shown;
 }
@@ -1029,7 +1040,30 @@ size_t kest_put(char *out, size_t room, size_t at, const char *format, ...) {
         return at;
     }
     size_t end = at + (size_t)wrote;
-    return end < room ? end : room - 1;
+    if (end < room) {
+        return end;
+    }
+    // Cut where the last whole character ends. A name is any UTF-8, and a
+    // list cut at the last byte that fit ended in half a character, which is
+    // a message no reader decodes. What was there before `at` is whole
+    // already. Still answered as full, so a list stops adding to it, with
+    // noughts where the half was.
+    size_t cut = room - 1;
+    size_t lead = cut;
+    while (lead > at && ((unsigned char)out[lead - 1] & 0xc0) == 0x80) {
+        lead--;
+    }
+    if (lead > at) {
+        unsigned char first = (unsigned char)out[lead - 1];
+        size_t width = first >= 0xf0   ? 4
+                       : first >= 0xe0 ? 3
+                       : first >= 0xc0 ? 2
+                                       : 1;
+        if (cut - (lead - 1) < width) {
+            memset(out + lead - 1, 0, cut - (lead - 1));
+        }
+    }
+    return room - 1;
 }
 
 // How many significant digits a number is read with. A `double` is decided by
