@@ -2516,6 +2516,7 @@ bool kest_parse_block_again(KestArena *arena, const KestSource *source,
     if (reading == NULL) {
         return false;
     }
+    kest_arena_watched_by(reading, arena);
     // Under the same ceiling and counted against it, the way a file's tokens
     // are.
     kest_arena_cap(reading, kest_arena_ceiling_left(arena));
@@ -2544,11 +2545,12 @@ bool kest_parse(KestArena *arena, const KestSource *source, KestDiags *diags,
     if (reading == NULL) {
         return false;
     }
+    kest_arena_watched_by(reading, arena);
     // The same ceiling, so a file too big to read is refused where it was
     // refused before: work moved out of an arena is not work moved out of what
     // a host allowed.
     kest_arena_cap(reading, kest_arena_ceiling_left(arena));
-    parser.tokens = kest_lex_all(reading, source, diags, &parser.count);
+    parser.tokens = kest_lex_all(reading, source, diags, &parser.count, NULL);
     if (parser.tokens == NULL) {
         // The bytes it did ask for before it ran out, which is what a ceiling
         // was refusing against -- and what it was refused, which belongs to the

@@ -23,12 +23,6 @@ typedef struct {
     size_t length;
 } Open;
 
-// What `here` answers when the client has opened nothing, so that a handler
-// reads a file rather than a null. Its text is empty and its path is no path,
-// which every walk below already asks about.
-static char no_text[1] = "";
-static Open nothing_open = {NULL, NULL, no_text, 0};
-
 // What this server keeps: every file the client has opened, which one the
 // message in hand is about, and the last build of one of them.
 //
@@ -66,6 +60,12 @@ typedef struct {
     // The id of the request being answered, for the answer that could not be
     // written: it is answered all the same, with an error.
     const KestJson *asking;
+    // What `here` answers when the client has opened nothing, so that a
+    // handler reads a file rather than a null. Its text is empty and its path
+    // is no path, which every walk below already asks about. The server's own,
+    // like everything else a server keeps.
+    Open nothing_open;
+    char no_text[1];
 } Server;
 
 // The file the message in hand is about. `handle` chooses it out of the open
@@ -73,7 +73,7 @@ typedef struct {
 // opened for is answered before a handler is reached.
 static Open *here(Server *server) {
     return server->at < server->count ? &server->open[server->at]
-                                      : &nothing_open;
+                                      : &server->nothing_open;
 }
 
 // A copy this server holds on to. Everything a message carries sits in an
@@ -264,6 +264,27 @@ static const char *text_of(const KestSource *source, size_t *length) {
     return source->text;
 }
 
+// The open files, as a build reads them in front of the disk. NULL with nought
+// when there is no room for the list, and then a build reads the saved copies,
+// which is where answering about an unsaved file began.
+static KestFile *open_files(const Server *server, uint32_t *count) {
+    *count = 0;
+    KestFile *files =
+        server->count == 0 ? NULL : malloc(server->count * sizeof(*files));
+    if (files == NULL) {
+        return NULL;
+    }
+    for (size_t i = 0; i < server->count; i++) {
+        if (server->open[i].path != NULL) {
+            files[*count].path = server->open[i].path;
+            files[*count].text = server->open[i].text;
+            files[*count].length = server->open[i].length;
+            (*count)++;
+        }
+    }
+    return files;
+}
+
 static void build_again(Server *server) {
     if (server->build != NULL) {
         kest_build_free(server->build);
@@ -278,20 +299,17 @@ static void build_again(Server *server) {
     // Every open file goes in front of the disk, not only the one being built:
     // a file that imports one the person has edited and not saved has to be
     // checked against what they can see rather than against what was saved.
-    for (size_t i = 0; i < server->count; i++) {
-        if (server->open[i].path != NULL) {
-            kest_loader_overlay(server->open[i].path, server->open[i].text,
-                                server->open[i].length);
-        }
-    }
+    uint32_t over_count = 0;
+    KestFile *over = open_files(server, &over_count);
     char *paths[1] = {file->path};
-    server->build = kest_build_open(server->library, paths, 1, 0);
+    server->build =
+        kest_build_open_over(server->library, paths, 1, over, over_count);
+    free(over);
     if (server->build != NULL) {
         kest_build_index_names(server->build, true);
         kest_build_check(server->build);
         server->built = copy_of(file->path, strlen(file->path));
     }
-    kest_loader_overlay(NULL, NULL, 0);
 }
 
 // The build a request is answered out of, which has to be of the file the
@@ -1018,18 +1036,15 @@ static KestBuild *whole_project(Server *server, const char **project,
             paths[count++] = (char *)listed.paths[i];
         }
     }
-    for (size_t i = 0; i < server->count; i++) {
-        if (server->open[i].path != NULL) {
-            kest_loader_overlay(server->open[i].path, server->open[i].text,
-                                server->open[i].length);
-        }
-    }
-    KestBuild *whole = kest_build_open(server->library, paths, count, 0);
+    uint32_t over_count = 0;
+    KestFile *over = open_files(server, &over_count);
+    KestBuild *whole =
+        kest_build_open_over(server->library, paths, count, over, over_count);
+    free(over);
     if (whole != NULL) {
         kest_build_index_names(whole, true);
         kest_build_check(whole);
     }
-    kest_loader_overlay(NULL, NULL, 0);
     if (whole == NULL || whole->program == NULL || whole->diags.starved) {
         if (whole != NULL) {
             kest_build_free(whole);
@@ -1459,7 +1474,7 @@ static void changed(Server *server, const KestJson *params) {
 // what it was built from has gone.
 static void closed(Server *server) {
     Open *file = here(server);
-    if (file == &nothing_open) {
+    if (file == &server->nothing_open) {
         return;
     }
     if (server->built != NULL && file->path != NULL &&
@@ -1612,6 +1627,7 @@ static void handle(Server *server, const KestJson *message) {
 int kest_lsp_serve(const char *library, FILE *in, FILE *out,
                    KestKestFiles files, KestResolve resolve) {
     Server server = {0};
+    server.nothing_open.text = server.no_text;
     server.files = files;
     server.resolve = resolve;
     server.arena = kest_arena_new();

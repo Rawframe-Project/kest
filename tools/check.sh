@@ -1192,6 +1192,7 @@ fn main() -> i32 {
 }
 KEST
 cat > "$races".c <<'EOF'
+#include <stdatomic.h>
 #include <stdio.h>
 #include <pthread.h>
 
@@ -1247,6 +1248,47 @@ static void *its_own(void *given) {
     one->answered = frame[0].integer;
     if (!kest_runtime_free(runtime)) {
         one->ran = 0;
+    }
+    return NULL;
+}
+
+// Two builds at once on two threads, which share nothing. One is given 2,000
+// bytes and refused every time; the other is given all the room there is and
+// has to build every time, costing and working what it did alone. Neither
+// names a library, so each works out where it is. A build that ran out of
+// room used to say so for every build in the process, and one on another
+// thread was refused with K0639 for it.
+typedef struct {
+    const char *path;
+    size_t room;
+    int rounds;
+    atomic_int *done;
+    size_t cost;
+    uint64_t work;
+    int refused;
+    int changed;
+} Building;
+
+static void *building(void *given) {
+    Building *one = given;
+    FILE *quiet = fopen("/dev/null", "w");
+    for (int i = 0; one->rounds == 0 ? !atomic_load(one->done) : i < one->rounds;
+         i++) {
+        KestBuild *build =
+            kest_build(one->path, NULL, quiet, KEST_FORM_TEXT, one->room);
+        if (build == NULL) {
+            one->refused++;
+        } else if (kest_build_cost(build) != one->cost ||
+                   kest_build_work(build) != one->work) {
+            one->changed++;
+        }
+        kest_build_free(build);
+    }
+    if (one->rounds != 0) {
+        atomic_store(one->done, 1);
+    }
+    if (quiet != NULL) {
+        fclose(quiet);
     }
     return NULL;
 }
@@ -1338,6 +1380,34 @@ int main(int argc, char **argv) {
     }
     printf("four machines each started, run and freed on a thread of its own\n");
 
+    // What one build costs and works alone, with no machine started on it.
+    KestBuild *alone_built =
+        kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT, 0);
+    if (alone_built == NULL) {
+        return 2;
+    }
+    atomic_int done = 0;
+    Building plain = {argv[1], 0, 300, &done, kest_build_cost(alone_built),
+                      kest_build_work(alone_built), 0, 0};
+    kest_build_free(alone_built);
+    Building starved = {argv[1], 2000, 0, &done, 0, 0, 0, 0};
+    pthread_t pair[2];
+    if (pthread_create(&pair[0], NULL, building, &plain) != 0 ||
+        pthread_create(&pair[1], NULL, building, &starved) != 0) {
+        fprintf(stderr, "a thread would not start\n");
+        return 2;
+    }
+    pthread_join(pair[0], NULL);
+    pthread_join(pair[1], NULL);
+    if (plain.refused != 0 || plain.changed != 0) {
+        fprintf(stderr,
+                "of 300 builds beside one with no room, %d were refused and %d "
+                "cost or worked otherwise than alone\n",
+                plain.refused, plain.changed);
+        return 2;
+    }
+    printf("300 builds beside one with no room each built, as they do alone\n");
+
     kest_build_free(build);
     return 0;
 }
@@ -1388,12 +1458,17 @@ answers for the whole of it"
         complain "races" "a machine started and freed on its own thread did \
 not answer what the others did"
         printf '%s\n' "$said" | sed 's/^/    /' | head -4
+    elif [ "${said#*each built, as they do alone}" = "$said" ]; then
+        complain "races" "a build beside another that ran out of room was \
+refused or changed by it"
+        printf '%s\n' "$said" | sed 's/^/    /' | head -4
     else
         say "races" "four machines of one build, each with a world of its \
 own, ran at once under a build that watches threads, and answered what one \
 machine answers for the whole of it -- and four more were started, run and \
 freed on four threads at once, which is the other half of what the reference \
-says a host may do"
+says a host may do -- and two builds on two threads, one with no room, left \
+each other alone"
     fi
 fi
 rm -f "$races" "$races".c "$races".kest "$scratch"/watching \

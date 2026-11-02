@@ -42,6 +42,12 @@ void kest_arena_free(KestArena *arena);
 // build.
 KestArena *kest_arena_new_under(KestArena *under);
 
+// Has `arena` answer `kest_arena_refused_anywhere` with `by`: a refusal in
+// either is a refusal in both. An arena taken under another is watched with
+// it already; this is for one taken apart from a build's and still working
+// for it, such as the one a file's tokens are read into. `by` outlives it.
+void kest_arena_watched_by(KestArena *arena, const KestArena *by);
+
 // What an arena holds, with the most everything taken under it ever held at
 // once on top -- never less than the most the two held together: what a
 // ceiling has to be for the same work to fit inside it again, and a number
@@ -157,14 +163,14 @@ void kest_arena_also_refused(KestArena *arena, const KestArena *other);
 // refused, which is why it is read beside the number and not instead of it.
 bool kest_arena_refused_by_ceiling(const KestArena *arena);
 
-// Whether anything has been refused since the last build opened, over every
-// arena rather than over one. A program is read into an arena of its own and
-// checked into another, so the one that runs out is rarely the one a list of
-// diagnostics is kept in -- and what a reader needs to know is not which arena
-// it was but that there was no room. Set where a refusal is, forgotten where a
-// build begins.
-bool kest_arena_refused_anywhere(void);
-void kest_arena_forget_refusals(void);
+// Whether anything has been refused by this arena or by any arena watched with
+// it, over every arena of a build rather than over one. A program is read into
+// an arena of its own and checked into another, so the one that runs out is
+// rarely the one a list of diagnostics is kept in -- and what a reader needs to
+// know is not which arena it was but that there was no room. A build's own: a
+// fresh arena has refused nothing, and a build on another thread is never
+// heard. False for NULL.
+bool kest_arena_refused_anywhere(const KestArena *arena);
 
 // What the allocation this arena last refused was asking for, and nought when
 // it has refused nothing. A ceiling stops a program at the allocation that

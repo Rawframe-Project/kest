@@ -13,6 +13,7 @@ bool kest_checked(void) {
     return KEST_CHECKED != 0;
 }
 
+#include <stdatomic.h>
 #include <stdbool.h>
 // Only the sanitised build says anything, and only when this arena has stopped
 // agreeing with itself. The release build includes nothing but what it uses.
@@ -117,6 +118,12 @@ struct KestArena {
     // nothing left. Read beside the number, because a refusal of nought bytes
     // is not a thing that happens.
     bool refused_by_ceiling;
+    // The arena that answers for every arena of one build whether any of them
+    // has refused anything, NULL when this one is that arena; and its answer.
+    // A build's own and not the process's: a build on another thread running
+    // out of room is not this one running out.
+    KestArena *watched_by;
+    bool refused_anywhere;
 };
 
 // The four things this arena keeps rather than works out: the block it started
@@ -211,9 +218,10 @@ static Block *block_new(size_t capacity) {
     return block;
 }
 
-// Whether any arena has refused anything since this build began, defined
-// with the rest of what refusals keep further down.
-static bool anybody_refused;
+// The arena that keeps this one's `refused_anywhere`.
+static KestArena *watcher(const KestArena *arena) {
+    return arena->watched_by != NULL ? arena->watched_by : (KestArena *)arena;
+}
 
 // What an arena holds with what is taken under it, which is what its ceiling
 // is asked about.
@@ -239,7 +247,7 @@ static bool crosses(KestArena *arena, size_t taking) {
         arena->refused = taking;
         arena->refused_by_ceiling = true;
         arena->refused_holding = holding(arena);
-        anybody_refused = true;
+        watcher(arena)->refused_anywhere = true;
     }
     return over;
 }
@@ -275,18 +283,31 @@ static void shrank(KestArena *arena, size_t lost) {
 // so every stage that takes an arena of its own -- the verifier, the bodies,
 // a machine -- had never been seen told no. `KEST_REFUSE_ARENA=n` refuses the
 // n-th, in the build that checks itself only.
-static uint64_t arenas_so_far;
+//
+// Counted for the process, which is what aiming at the n-th means, and so
+// atomic: two builds on two threads count at once.
+static atomic_ullong arenas_so_far;
+
+// The number the environment says for `name`, read once for the process:
+// `asked` is nought until then and one more than the number after. Two
+// threads that both read it read the same environment, so they agree.
+static unsigned long long asked_once(const char *name, atomic_ullong *asked) {
+    unsigned long long known =
+        atomic_load_explicit(asked, memory_order_relaxed);
+    if (known == 0) {
+        const char *said = getenv(name);
+        known = (said == NULL ? 0 : strtoull(said, NULL, 10)) + 1;
+        atomic_store_explicit(asked, known, memory_order_relaxed);
+    }
+    return known - 1;
+}
 
 static bool refuse_this_arena(void) {
-    static uint64_t refuse_arena_at;
-    static bool asked;
-    if (!asked) {
-        const char *said = getenv("KEST_REFUSE_ARENA");
-        refuse_arena_at = said == NULL ? 0 : strtoull(said, NULL, 10);
-        asked = true;
-    }
-    arenas_so_far++;
-    return refuse_arena_at != 0 && arenas_so_far == refuse_arena_at;
+    static atomic_ullong asked;
+    unsigned long long at = asked_once("KEST_REFUSE_ARENA", &asked);
+    unsigned long long counted =
+        atomic_fetch_add_explicit(&arenas_so_far, 1, memory_order_relaxed) + 1;
+    return at != 0 && counted == at;
 }
 #endif
 
@@ -317,8 +338,15 @@ KestArena *kest_arena_new_under(KestArena *under) {
     KestArena *arena = kest_arena_new();
     if (arena != NULL) {
         arena->under = under;
+        kest_arena_watched_by(arena, under);
     }
     return arena;
+}
+
+void kest_arena_watched_by(KestArena *arena, const KestArena *by) {
+    if (arena != NULL && by != NULL) {
+        arena->watched_by = watcher(by);
+    }
 }
 
 void kest_arena_free(KestArena *arena) {
@@ -463,32 +491,21 @@ void kest_arena_rewind(KestArena *arena, KestMark mark) {
 //
 // It is the only way to ask a compiler what it says when it has nothing left
 // and mean a particular nothing.
-static uint64_t allocations_so_far;
-static uint64_t refuse_at;
-static bool refuse_asked;
+static atomic_ullong allocations_so_far;
 
 static bool refuse_this_one(void) {
-    if (!refuse_asked) {
-        const char *said = getenv("KEST_REFUSE_AT");
-        refuse_at = said == NULL ? 0 : strtoull(said, NULL, 10);
-        refuse_asked = true;
-    }
-    allocations_so_far++;
-    return refuse_at != 0 && allocations_so_far >= refuse_at;
+    static atomic_ullong asked;
+    unsigned long long at = asked_once("KEST_REFUSE_AT", &asked);
+    unsigned long long counted =
+        atomic_fetch_add_explicit(&allocations_so_far, 1,
+                                  memory_order_relaxed) +
+        1;
+    return at != 0 && counted >= at;
 }
 #endif
 
-// Whether anything has been refused since the last build opened. One bit,
-// because that is what a reader needs: not which arena ran out but that one
-// did.
-static bool anybody_refused;
-
-bool kest_arena_refused_anywhere(void) {
-    return anybody_refused;
-}
-
-void kest_arena_forget_refusals(void) {
-    anybody_refused = false;
+bool kest_arena_refused_anywhere(const KestArena *arena) {
+    return arena != NULL && watcher(arena)->refused_anywhere;
 }
 
 void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
@@ -504,7 +521,7 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     if (refuse_this_one()) {
         arena->refused = taking;
         arena->refused_by_ceiling = false;
-        anybody_refused = true;
+        watcher(arena)->refused_anywhere = true;
         return NULL;
     }
 #endif
@@ -523,7 +540,7 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
             // being made when this happened.
             arena->refused = taking;
             arena->refused_by_ceiling = false;
-            anybody_refused = true;
+            watcher(arena)->refused_anywhere = true;
             return NULL;
         }
         block->next = arena->head;

@@ -1315,8 +1315,8 @@ KestWords kest_format_same_words(KestArena *arena, const KestSource *before,
     kest_diags_mute(&quiet, true);
     uint32_t before_count = 0;
     uint32_t after_count = 0;
-    KestToken *was = kest_lex_all(arena, before, &quiet, &before_count);
-    KestToken *now = kest_lex_all(arena, after, &quiet, &after_count);
+    KestToken *was = kest_lex_all(arena, before, &quiet, &before_count, NULL);
+    KestToken *now = kest_lex_all(arena, after, &quiet, &after_count, NULL);
     if (was == NULL || now == NULL) {
         return KEST_WORDS_NO_ROOM;
     }

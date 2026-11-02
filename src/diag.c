@@ -351,7 +351,7 @@ void kest_diags_addv(KestDiags *diags, KestSeverity severity, const char *code,
     // Asked before anything here takes room of its own, so that what it says
     // is whether the room had gone before this was worked out rather than
     // whether keeping it is what finished the room off.
-    bool after_the_room = kest_arena_refused_anywhere();
+    bool after_the_room = kest_arena_refused_anywhere(diags->arena);
     if (!room_to_keep(diags)) {
         return;
     }
@@ -378,7 +378,7 @@ void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
     if (diags->muted) {
         return;
     }
-    bool after_the_room = kest_arena_refused_anywhere();
+    bool after_the_room = kest_arena_refused_anywhere(diags->arena);
     if (!room_to_keep(diags)) {
         return;
     }

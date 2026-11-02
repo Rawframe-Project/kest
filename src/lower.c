@@ -426,7 +426,7 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
 // Read once, because a compiler that asked the environment per body would be
 // one whose answer could change half way through a program.
 static bool fusing(void) {
-    static int decided = -1;
+    static atomic_int decided = -1;
     return !kest_ir_asked_off("KEST_PLAIN", &decided);
 }
 

@@ -103,6 +103,12 @@ KestBuild *kest_build_open(const char *library, char **paths, int count,
 KestBuild *kest_build_open_within(const char *library, char **paths, int count,
                                   size_t room, uint64_t work);
 
+// The same with no ceiling, reading each of `over` in front of the disk where
+// its path is asked for: a language server's unsaved buffers. Every file is
+// read before this returns, so the texts are the caller's again then.
+KestBuild *kest_build_open_over(const char *library, char **paths, int count,
+                                const KestFile *over, uint32_t over_count);
+
 // The name something lives under in the file that was named. A host does not
 // need this -- `kest_entry` leaves the module off for it -- but the command
 // line asks the program's own symbol table, which is registered qualified.

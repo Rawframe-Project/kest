@@ -68,7 +68,7 @@ Every check script runs on its own from the root of the tree after a build, read
 - C11 and libc, nothing else. `-Wall -Wextra -Wshadow -Wconversion -Werror` for the library; the hosts drop `-Wshadow`. `.clang-format` is the layout, held by CI's `format` job with the CI image's clang-format.
 - A public function is `kest_` followed by snake case and is declared in `include/kest.h` or a module header; an internal function is plain snake case and `static`. `tools/check-dead.sh` holds every declared function to existing and being called from outside its own file, and every `kest_` name to being declared.
 - A module includes only modules above it in `tools/modules.txt`.
-- No global mutable state except the reference stamp counter.
+- No global mutable state except the reference stamp counter. A switch read from the environment is read once into an atomic, and two threads that read it agree. `tools/check.sh` runs two builds on two threads beside four machines under the thread sanitiser.
 - Every list that has to stay in step with another (instruction names, token names, keywords, builtins, commands and options, promise names, reach reasons) is held by `tools/check-tables.sh`. A `switch` over one of those enums has no `default`, so a new case is a compile error until it is handled.
 - Every allocation can fail, and every failure ends in a diagnostic, never a crash. Every limit is a named constant with a diagnostic that says the number.
 - A diagnostic code is never reused for another meaning. A new code needs a check that makes it happen.

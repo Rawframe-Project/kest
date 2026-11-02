@@ -9,11 +9,12 @@
 // path a read asks for is one of those or is not there.
 static KestBuild *opened(const char *library, char **paths, int count,
                          const KestFile *handed, uint32_t handed_count,
-                         size_t room, uint64_t work) {
-    // A build begins with nobody refused. What was refused before this one is
-    // the last build's afternoon, and a host that compiles twice should not
-    // have the first one's memory hold its tongue about the second.
-    kest_arena_forget_refusals();
+                         const KestFile *over, uint32_t over_count, size_t room,
+                         uint64_t work) {
+    // A build begins with nobody refused, because its arena is new: what was
+    // refused before this one, or beside it on another thread, is another
+    // build's, and a host that compiles twice should not have the first one's
+    // memory hold its tongue about the second.
     KestArena *arena = kest_arena_new();
     if (arena == NULL) {
         return NULL;
@@ -37,20 +38,34 @@ static KestBuild *opened(const char *library, char **paths, int count,
     kest_module_init(&build->module, arena);
     build->units.handed = handed;
     build->units.handed_count = handed_count;
-    kest_load_many(arena, &build->diags,
-                   library == NULL ? kest_library_path(arena, "") : library,
-                   paths, count, &build->units);
+    build->units.over = over;
+    build->units.over_count = over_count;
+    const char *where =
+        library == NULL ? kest_library_path(arena, "") : library;
+    if (where == NULL) {
+        kest_diags_starve(&build->diags);
+        return build;
+    }
+    kest_load_many(arena, &build->diags, where, paths, count, &build->units);
+    // Read while the build opens and not after: the texts are the caller's.
+    build->units.over = NULL;
+    build->units.over_count = 0;
     return build;
 }
 
 KestBuild *kest_build_open(const char *library, char **paths, int count,
                            size_t room) {
-    return opened(library, paths, count, NULL, 0, room, 0);
+    return opened(library, paths, count, NULL, 0, NULL, 0, room, 0);
+}
+
+KestBuild *kest_build_open_over(const char *library, char **paths, int count,
+                                const KestFile *over, uint32_t over_count) {
+    return opened(library, paths, count, NULL, 0, over, over_count, 0, 0);
 }
 
 KestBuild *kest_build_open_within(const char *library, char **paths, int count,
                                   size_t room, uint64_t work) {
-    return opened(library, paths, count, NULL, 0, room, work);
+    return opened(library, paths, count, NULL, 0, NULL, 0, room, work);
 }
 
 void kest_build_clock(KestBuild *build, uint64_t (*now)(void *), void *context,
@@ -205,11 +220,8 @@ bool kest_build_emit(KestBuild *build) {
     // who is not writing a pass. Read once so a compiler cannot change its
     // mind half way through.
     {
-        static int asked = -1;
-        if (asked < 0) {
-            asked = getenv("KEST_IRSAY") != NULL ? 1 : 0;
-        }
-        if (asked) {
+        static atomic_int asked = -1;
+        if (kest_ir_asked_off("KEST_IRSAY", &asked)) {
             ir.say_found = say_what_the_optimizer_found;
         }
     }
@@ -322,9 +334,9 @@ KestBuild *kest_build_from(const KestFile *files, uint32_t count,
     char *paths[1] = {(char *)files[0].path};
     // A library a build was not told of is looked for on no disk: everything
     // it reads is what it was handed.
-    return finished(
-        opened(library == NULL ? "" : library, paths, 1, files, count, room, 0),
-        errors, form, room);
+    return finished(opened(library == NULL ? "" : library, paths, 1, files,
+                           count, NULL, 0, room, 0),
+                    errors, form, room);
 }
 
 static KestBuild *finished(KestBuild *build, FILE *errors, KestForm form,

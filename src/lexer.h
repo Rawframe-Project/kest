@@ -103,14 +103,12 @@ typedef struct {
 
 // Tokenises the whole source into arena memory. The parser needs to look
 // further ahead than one token, and a file's token count is bounded by its
-// size, so there is nothing to stream.
-// How many tokens the last array had room for, against how many were put in
-// it. A chunk says `room` beside `bytes` for the same reason: a reader with
-// both can see what was taken against what was wanted.
-uint32_t kest_lex_room(void);
-
+// size, so there is nothing to stream. `room`, when it is not NULL, is how many
+// tokens the array had room for, against how many were put in it: a chunk says
+// `room` beside `bytes` for the same reason, that a reader with both can see
+// what was taken against what was wanted. Nought when nothing came back.
 KestToken *kest_lex_all(KestArena *arena, const KestSource *source,
-                        KestDiags *diags, uint32_t *count);
+                        KestDiags *diags, uint32_t *count, uint32_t *room);
 
 // Tokenises one region of the source. The offsets a token carries are into
 // the whole file either way, so what comes back from inside a string reports
