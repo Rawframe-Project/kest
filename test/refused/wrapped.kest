@@ -1,0 +1,20 @@
+// Refused with K0327. Guards against an optional of a 65528-byte struct, 65536 bytes, wrapping to nought: a struct holding one was laid out in 8 bytes, and pushing one into an array wrote past its element.
+
+module test.refused.wrapped
+
+struct Big {
+    xs: [i64; 8191]
+}
+
+struct Holder {
+    b: Big?
+    after: i64
+}
+
+fn main() -> i32 {
+    let bs: [Big?] = array()
+    push(bs, none)
+    push(bs, none)
+    let h = Holder(none, 7)
+    return len(bs) + i32(h.after) - 9
+}
