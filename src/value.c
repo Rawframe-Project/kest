@@ -2894,15 +2894,63 @@ static const char *reason_of(KestArena *arena, const char *format, ...) {
 // The ends of a whole number of that width and sign. `u64` is cut short at
 // what a signed read can carry, which is the widest thing the shell can hand
 // over anyway.
-static void ends_of(const KestType *type, long long *low, long long *high) {
-    if (type->is_signed) {
-        *high = type->width >= 64 ? LLONG_MAX
-                                  : ((long long)1 << (type->width - 1)) - 1;
-        *low = -*high - 1;
-        return;
+// What reading a whole number came to.
+typedef enum {
+    WHOLE_READ,
+    WHOLE_NOT,
+    WHOLE_PAST_64,
+} WholeRead;
+
+// A whole number as the language writes one: decimal digits, or `0x` and
+// hexadecimal ones, with a `-` in front for a negative one, and its size
+// apart from the sign in `magnitude`. `strtoll` read `010` as eight, took a
+// `+` and spaces the language does not write, and nothing past 2^63, so a
+// `u64` could not be handed most of what it holds.
+static WholeRead whole_written(const char *text, bool *negative,
+                               uint64_t *magnitude) {
+    *negative = text[0] == '-';
+    const char *at = *negative ? text + 1 : text;
+    bool hex = at[0] == '0' && (at[1] == 'x' || at[1] == 'X');
+    if (hex) {
+        at += 2;
     }
-    *low = 0;
-    *high = type->width >= 63 ? LLONG_MAX : ((long long)1 << type->width) - 1;
+    if (*at == '\0') {
+        return WHOLE_NOT;
+    }
+    uint64_t base = hex ? 16 : 10;
+    uint64_t value = 0;
+    bool past = false;
+    for (; *at != '\0'; at++) {
+        uint64_t digit = 0;
+        if (*at >= '0' && *at <= '9') {
+            digit = (uint64_t)(*at - '0');
+        } else if (hex && *at >= 'a' && *at <= 'f') {
+            digit = (uint64_t)(*at - 'a' + 10);
+        } else if (hex && *at >= 'A' && *at <= 'F') {
+            digit = (uint64_t)(*at - 'A' + 10);
+        } else {
+            return WHOLE_NOT;
+        }
+        if (value > (UINT64_MAX - digit) / base) {
+            past = true;
+        } else {
+            value = value * base + digit;
+        }
+    }
+    *magnitude = value;
+    return past ? WHOLE_PAST_64 : WHOLE_READ;
+}
+
+// Whether a number of this size and sign is one the type holds.
+static bool whole_fits(const KestType *type, bool negative,
+                       uint64_t magnitude) {
+    uint32_t width = type->width >= 64 ? 64 : type->width;
+    if (!type->is_signed) {
+        uint64_t most = width == 64 ? UINT64_MAX : ((uint64_t)1 << width) - 1;
+        return magnitude <= most && (!negative || magnitude == 0);
+    }
+    uint64_t most = ((uint64_t)1 << (width - 1)) - 1;
+    return magnitude <= (negative ? most + 1 : most);
 }
 
 bool kest_value_read(KestArena *arena, const char *text, const KestType *type,
@@ -2910,24 +2958,27 @@ bool kest_value_read(KestArena *arena, const char *text, const KestType *type,
     char *end = NULL;
     switch (type->tag) {
     case KEST_T_INT: {
-        errno = 0;
-        long long value = strtoll(text, &end, 0);
-        if (end == text || *end != '\0') {
+        bool negative = false;
+        uint64_t magnitude = 0;
+        WholeRead read = whole_written(text, &negative, &magnitude);
+        if (read == WHOLE_NOT) {
             *why = "is not a number";
             return false;
         }
-        long long low = 0;
-        long long high = 0;
-        ends_of(type, &low, &high);
         // A number the machine cannot carry, and one it can carry and the
         // type cannot hold. Both were taken before, and what the program got
         // was a number nobody typed.
-        if (errno == ERANGE || value < low || value > high) {
+        if (read == WHOLE_PAST_64 || !whole_fits(type, negative, magnitude)) {
             *why = reason_of(arena, "does not fit in `%s`",
                              kest_type_name(arena, type));
             return false;
         }
-        into->integer = value;
+        // A negative one as its two's complement, worked out without passing
+        // through a number `int64_t` cannot hold; a `u64` past 2^63 is the
+        // same bits the machine keeps it as.
+        into->integer = negative && magnitude > 0
+                            ? -(int64_t)(magnitude - 1) - 1
+                            : (int64_t)magnitude;
         return true;
     }
     case KEST_T_FLOAT: {
