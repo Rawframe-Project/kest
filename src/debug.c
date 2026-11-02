@@ -647,6 +647,28 @@ static void help(FILE *out) {
           out);
 }
 
+// The line a `break` names: digits and nothing else, and no more than a line
+// number holds. `strtoul` read past spaces and a sign, stopped at whatever was
+// not a digit and wrapped at 2^32, so `break 3x` and `break 4294967299` were
+// both a breakpoint at line 3.
+static bool line_number(const char *text, uint32_t *line) {
+    uint64_t number = 0;
+    if (*text == '\0') {
+        return false;
+    }
+    for (const char *at = text; *at != '\0'; at++) {
+        if (*at < '0' || *at > '9') {
+            return false;
+        }
+        number = number * 10 + (uint64_t)(*at - '0');
+        if (number > UINT32_MAX) {
+            return false;
+        }
+    }
+    *line = (uint32_t)number;
+    return true;
+}
+
 int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
                      FILE *in, FILE *out) {
     Debugger held;
@@ -695,8 +717,12 @@ int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
                     named_file = rest;
                     rest = colon + 1;
                 }
-                if (!break_at(&held, named_file,
-                              (uint32_t)strtoul(rest, NULL, 10))) {
+                uint32_t line_at = 0;
+                if (!line_number(rest, &line_at)) {
+                    fprintf(out,
+                            "`%s` is not a line: `break` wants its number\n",
+                            rest);
+                } else if (!break_at(&held, named_file, line_at)) {
                     fprintf(out, "no instruction came from line %s%s%s\n",
                             named_file == NULL ? "" : named_file,
                             named_file == NULL ? "" : ":", rest);
