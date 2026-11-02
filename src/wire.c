@@ -331,23 +331,80 @@ KestWireRead kest_wire_read(KestArena *arena, const char *bytes, size_t length,
     return reading.broke ? KEST_WIRE_NOT_JSON : KEST_WIRE_JSON;
 }
 
+// What one header line was: the blank one that ends the header, any other, or
+// the stream ending first.
+typedef enum {
+    HEADER_ENDED,
+    HEADER_BLANK,
+    HEADER_LINE,
+} HeaderLine;
+
+// One header line, read to its end whatever its length. It used to be read
+// into 512 bytes, and the rest of a longer line was read as a line of its own:
+// a rest of `\r\n` was the blank line, which ended the header before its
+// length, and a rest that began `Content-Length: ` was taken for the length.
+// Nothing here keeps the line, so nothing limits it. Anything that is not a
+// length is skipped: a client may send a content type and this does not care
+// what it says. A length too long to count is SIZE_MAX, which the caller
+// cannot hold.
+static HeaderLine header_line(FILE *in, bool *saw_length, size_t *wanted) {
+    static const char named[] = "Content-Length:";
+    enum { NAMING, SPACING, COUNTING, SKIPPING } at = NAMING;
+    size_t taken = 0;
+    bool first_return = false;
+    bool counted = false;
+    size_t number = 0;
+    int c;
+    while ((c = getc(in)) != EOF && c != '\n') {
+        if (taken == 0) {
+            first_return = c == '\r';
+        }
+        if (at == NAMING) {
+            at = c == named[taken] ? NAMING : SKIPPING;
+            if (at == NAMING && taken + 1 == sizeof(named) - 1) {
+                at = SPACING;
+            }
+        } else if (at == SPACING && c != ' ' && c != '\t') {
+            at = c >= '0' && c <= '9' ? COUNTING : SKIPPING;
+        }
+        if (at == COUNTING) {
+            if (c < '0' || c > '9') {
+                at = SKIPPING;
+            } else {
+                size_t digit = (size_t)(c - '0');
+                number = number > (SIZE_MAX - digit) / 10 ? SIZE_MAX
+                                                          : number * 10 + digit;
+                counted = true;
+            }
+        }
+        taken++;
+    }
+    if (c == EOF) {
+        return HEADER_ENDED;
+    }
+    if (taken == 0 || (taken == 1 && first_return)) {
+        return HEADER_BLANK;
+    }
+    if (counted) {
+        *wanted = number;
+        *saw_length = true;
+    }
+    return HEADER_LINE;
+}
+
 KestWireNext kest_wire_next(FILE *in, char **body, size_t *length) {
     *body = NULL;
     *length = 0;
-    char header[512];
     size_t wanted = 0;
     bool saw_length = false;
-    // The header, line by line, to the blank one. Anything that is not a
-    // length is skipped: a client may send a content type and this does not
-    // care what it says.
-    while (fgets(header, sizeof(header), in) != NULL) {
-        if (header[0] == '\r' || header[0] == '\n') {
-            break;
+    // The header, line by line, to the blank one.
+    for (;;) {
+        HeaderLine line = header_line(in, &saw_length, &wanted);
+        if (line == HEADER_ENDED) {
+            return KEST_WIRE_ENDED;
         }
-        unsigned long said = 0;
-        if (sscanf(header, "Content-Length: %lu", &said) == 1) {
-            wanted = (size_t)said;
-            saw_length = true;
+        if (line == HEADER_BLANK) {
+            break;
         }
     }
     // A length with no room for the nought after it cannot be held, and the
