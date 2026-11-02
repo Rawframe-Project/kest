@@ -2142,8 +2142,47 @@ static bool composed_room(KestProgram *program) {
     return true;
 }
 
-static KestType *compose(KestProgram *program, KestTypeTag tag,
-                         KestType *element, uint32_t count) {
+static bool sized_within(KestProgram *program, uint32_t bytes, uint32_t slots,
+                         const KestSource *where, KestSpan span,
+                         const char *what);
+
+// What an optional holds, then a byte saying whether it does, laid out the way
+// a C struct of the two would be, and held to being a value like anything
+// else. Worked out wide: a value of 65528 bytes or more is one, and the
+// optional of it is 65536, which wrapped to nought, so the machine wrote it
+// past the end of the element of an array it was put in. Too big, it is
+// refused at `where` and is one word from then on, as a struct too big is,
+// and one already refused is not said again where it is measured again: a
+// word over an element that has slots is no other optional's size.
+static void size_optional(KestProgram *program, KestType *type,
+                          const KestSource *where, KestSpan span) {
+    const KestType *element = type->element;
+    uint32_t align = element->byte_align == 0 ? 1 : element->byte_align;
+    uint32_t slots = (uint32_t)element->slots + 1;
+    uint32_t bytes =
+        ((uint32_t)element->byte_size + 1 + align - 1) / align * align;
+    bool said = type->slots == 1 && type->byte_size == 8 && element->slots > 0;
+    if ((bytes > UINT16_MAX || slots > UINT16_MAX) && said) {
+        return;
+    }
+    if (!sized_within(program, bytes, slots, where, span,
+                      kest_type_name(program->arena, type))) {
+        type->slots = 1;
+        type->byte_size = 8;
+        type->byte_align = 8;
+        return;
+    }
+    type->slots = (uint16_t)slots;
+    type->byte_align = element->byte_align;
+    type->byte_size = (uint16_t)bytes;
+}
+
+// Made where it was written, so an optional too big is said there; `where`
+// NULL is made by the compiler rather than written, and said where what it
+// holds was declared.
+static KestType *compose_at(KestProgram *program, KestTypeTag tag,
+                            KestType *element, uint32_t count,
+                            const KestSource *where, KestSpan span) {
     // What it is made of is all it is, so one already made of the same thing
     // is the same type. Asked by what went in rather than by what came out:
     // `kest_type_equal` is assignability and would answer yes for a
@@ -2181,21 +2220,22 @@ static KestType *compose(KestProgram *program, KestTypeTag tag,
     // nothing cost no allocation.
     // A reference is one slot: an index with the generation it was handed out
     // at packed above it, so a stale one is recognised rather than followed.
-    type->slots = tag == KEST_T_OPTIONAL && element != NULL
-                      ? (uint16_t)(element->slots + 1)
-                      : 1;
     if (tag == KEST_T_OPTIONAL && element != NULL) {
-        // What it holds, then a byte saying whether it does, laid out the way
-        // a C struct of the two would be.
-        type->byte_align = element->byte_align;
-        uint16_t used = (uint16_t)(element->byte_size + 1);
-        uint16_t align = type->byte_align == 0 ? 1 : type->byte_align;
-        type->byte_size = (uint16_t)((used + align - 1) / align * align);
+        size_optional(program, type,
+                      where != NULL ? where : element->declared_in,
+                      where != NULL ? span : element->span);
     } else {
+        type->slots = 1;
         type->byte_size = 8;
         type->byte_align = 8;
     }
     return type;
+}
+
+static KestType *compose(KestProgram *program, KestTypeTag tag,
+                         KestType *element, uint32_t count) {
+    KestSpan nowhere = {0, 0};
+    return compose_at(program, tag, element, count, NULL, nowhere);
 }
 
 // Which of the two kinds of name a global is. `is_const` does not say: a
@@ -2520,9 +2560,6 @@ static KestType *fn_of(KestProgram *program, KestType **params, uint32_t count,
 }
 
 static bool measure(KestProgram *program, KestType *type);
-static bool sized_within(KestProgram *program, uint32_t bytes, uint32_t slots,
-                         const KestSource *where, KestSpan span,
-                         const char *what);
 
 // One copy of a generic struct per set of types. The copy is a struct like any
 // other by the time anything else sees it: fields resolved, laid out, and
@@ -2978,8 +3015,9 @@ KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref) {
     }
 
     case KEST_TYPE_OPTIONAL:
-        return compose(program, KEST_T_OPTIONAL,
-                       kest_resolve_type_ref(program, ref->element), 0);
+        return compose_at(program, KEST_T_OPTIONAL,
+                          kest_resolve_type_ref(program, ref->element), 0,
+                          program->source, ref->span);
     }
     return error_type(program);
 }
@@ -3933,13 +3971,10 @@ static bool measure_held(KestProgram *program, KestType *type,
         if (!measure_held(program, type->element, whole)) {
             return false;
         }
-        const KestType *element = type->element;
-        if (element != NULL) {
-            type->slots = (uint16_t)(element->slots + 1);
-            type->byte_align = element->byte_align;
-            uint16_t used = (uint16_t)(element->byte_size + 1);
-            uint16_t align = type->byte_align == 0 ? 1 : type->byte_align;
-            type->byte_size = (uint16_t)((used + align - 1) / align * align);
+        if (type->element != NULL) {
+            size_optional(program, type,
+                          whole == NULL ? NULL : whole->declared_in,
+                          whole == NULL ? type->span : whole->span);
         }
         return true;
     }

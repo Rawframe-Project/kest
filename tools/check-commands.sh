@@ -4333,6 +4333,7 @@ K0338|flags S: u8 {\n    A\n    B\n    C\n    D\n    E\n    F\n    G\n    H\n   
 K0327|flags Marks: u8 {\n    Seen\n    Read\n}\n\nfn main() -> i32 {\n    let m = Marks(1)\n    return 0\n}|is made from a `u8`, found `i32`
 K0327|enum Door {\n    Shut\n    Open\n}\n\nfn main() -> i32 {\n    let d = Door(1)\n    return 0\n}|there is no way to make a `Door` from a value
 K0327|fn main() -> i32 {\n    let xs: [i32] = array()\n    let n = i32(xs)\n    return n\n}|there is no `i32` for `[i32]`
+K0327|struct Big {\n    xs: [i64; 8191]\n}\n\nfn main() -> i32 {\n    let bs: [Big?] = array()\n    return len(bs)\n}|`Big?` is 65536 bytes, and a value is at most 65535
 K0327|fn main() -> i32 {\n    let t = text(1)\n    return 0\n}|text is made from `[u8]`, found `i32`
 K0327|flags A: u8 {\n    One\n}\n\nfn main() -> i32 {\n    let n = u16(A.One)\n    return 0\n}|`A` is 8 bits, and `u16` is not
 K0314|fn main() -> i32 {\n    let v = vec2(1.0, 2.0) + vec3(1.0, 2.0, 3.0)\n    return 0\n}|`+` does not apply to `vec2` and `vec3`
