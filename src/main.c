@@ -684,21 +684,31 @@ static void nothing_read(KestRuntime *runtime, KestValue *frame) {
     }
 }
 
+// The path a door was handed, as C holds one, the way the C backend's host
+// reads it. A path longer than this is a path this host answers nothing for,
+// which is what it answers for a path that is not there; and so is one with a
+// zero byte in it. Text holds a zero like any other byte and C ends a path
+// there, so `keep.txt\0.other` wrote `keep.txt`.
+static bool named_it(const KestValue *frame, char *into, size_t room) {
+    uint32_t wide = 0;
+    const char *named = kest_text_bytes(frame, &wide);
+    if (named == NULL || (size_t)wide >= room ||
+        memchr(named, 0, wide) != NULL) {
+        return false;
+    }
+    memcpy(into, named, wide);
+    into[wide] = '\0';
+    return true;
+}
+
 // Reading a whole file. Nothing rather than empty text when it cannot be read:
 // a file that is not there and a file with nothing in it are different answers.
 static void os_file_read(KestValue *frame, KestRuntime *runtime,
                          void *context) {
     (void)context;
     char path[4096];
-    uint32_t wide = 0;
-    const char *named = kest_text_bytes(frame, &wide);
-    if (named == NULL || wide >= sizeof path) {
-        nothing_read(runtime, frame);
-        return;
-    }
-    memcpy(path, named, wide);
-    path[wide] = '\0';
-    FILE *reading = fopen(path, "rb");
+    FILE *reading =
+        named_it(frame, path, sizeof path) ? fopen(path, "rb") : NULL;
     if (reading == NULL) {
         nothing_read(runtime, frame);
         return;
@@ -761,17 +771,11 @@ static void os_file_write(KestValue *frame, KestRuntime *runtime,
     (void)runtime;
     (void)context;
     char path[4096];
-    uint32_t wide = 0;
-    const char *named = kest_text_bytes(frame, &wide);
     uint32_t length = 0;
     const char *bytes = kest_text_bytes(frame + 2, &length);
-    if (named == NULL || bytes == NULL || wide >= sizeof path) {
-        frame[0].integer = 0;
-        return;
-    }
-    memcpy(path, named, wide);
-    path[wide] = '\0';
-    FILE *writing = fopen(path, "wb");
+    FILE *writing = bytes != NULL && named_it(frame, path, sizeof path)
+                        ? fopen(path, "wb")
+                        : NULL;
     if (writing == NULL) {
         frame[0].integer = 0;
         return;
@@ -785,15 +789,7 @@ static void os_file_exists(KestValue *frame, KestRuntime *runtime,
     (void)runtime;
     (void)context;
     char path[4096];
-    uint32_t wide = 0;
-    const char *named = kest_text_bytes(frame, &wide);
-    if (named == NULL || wide >= sizeof path) {
-        frame[0].integer = 0;
-        return;
-    }
-    memcpy(path, named, wide);
-    path[wide] = '\0';
-    FILE *there = fopen(path, "rb");
+    FILE *there = named_it(frame, path, sizeof path) ? fopen(path, "rb") : NULL;
     if (there != NULL) {
         fclose(there);
         frame[0].integer = 1;
