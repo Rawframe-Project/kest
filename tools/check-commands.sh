@@ -4334,6 +4334,7 @@ K0327|flags Marks: u8 {\n    Seen\n    Read\n}\n\nfn main() -> i32 {\n    let m 
 K0327|enum Door {\n    Shut\n    Open\n}\n\nfn main() -> i32 {\n    let d = Door(1)\n    return 0\n}|there is no way to make a `Door` from a value
 K0327|fn main() -> i32 {\n    let xs: [i32] = array()\n    let n = i32(xs)\n    return n\n}|there is no `i32` for `[i32]`
 K0327|struct Big {\n    xs: [i64; 8191]\n}\n\nfn main() -> i32 {\n    let bs: [Big?] = array()\n    return len(bs)\n}|`Big?` is 65536 bytes, and a value is at most 65535
+K0327|fn two<T>(a: T, b: T) -> [T; 2] {\n    return [a, b]\n}\n\nfn pair(d: [i64; 4096]) -> i32 {\n    let p = two(d, d)\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|`[[i64; 4096]; 2]` is 65536 bytes, and a value is at most 65535
 K0327|fn main() -> i32 {\n    let t = text(1)\n    return 0\n}|text is made from `[u8]`, found `i32`
 K0327|flags A: u8 {\n    One\n}\n\nfn main() -> i32 {\n    let n = u16(A.One)\n    return 0\n}|`A` is 8 bits, and `u16` is not
 K0314|fn main() -> i32 {\n    let v = vec2(1.0, 2.0) + vec3(1.0, 2.0, 3.0)\n    return 0\n}|`+` does not apply to `vec2` and `vec3`
@@ -4496,6 +4497,25 @@ K0207|fn main() -> i32 {\n    let s = "a{}b"\n    return len(s)\n}|write what fi
 K0310|fn main() -> i32 {\n    let a: i32 = 1\n    let b: i32?? = a\n    if let inner = b {\n        if let n = inner {\n            return n\n        }\n    }\n    return 0\n}|a value becomes an optional once
 K0310|fn main() -> i32 {\n    let n = 1\n    room(n, 8)\n    return 0\n}|`room` makes room in an array or a store
 REFUSED
+
+# A `[T; N]` a literal makes too big, which is said at the literal, and what is
+# said after it is said about the same file. The element is the literal's when
+# the one written is not known, so two of 32768 bytes are 65536; it was sized
+# with no place, so the K0327 had no file or line, and the file the checker
+# reported into was left unset, so the K0310 on the next line had none either.
+printf 'fn pair(d: [i64; 4096]) -> i32 {\n    let p: [Nope; 2] = [d, d]\n    let m: i32 = true\n    return len(p) + m\n}\n\nfn main() -> i32 {\n    return 0\n}\n' \
+    > "$scratch"/refused/sized.kest
+refused=$("$kest" check "$scratch"/refused/sized.kest 2>&1 </dev/null)
+if ! printf '%s\n' "$refused" | grep -A1 '^error\[K0327\]' |
+    grep -q -- '--> .*/sized.kest:2:'; then
+    complain "check: a literal too big was not said at its line"
+    printf '%s\n' "$refused" | sed 's/^/    /' | head -12
+fi
+if ! printf '%s\n' "$refused" | grep -A1 '^error\[K0310\]' |
+    grep -q -- '--> .*/sized.kest:3:'; then
+    complain "check: what was said after a literal too big had no file"
+    printf '%s\n' "$refused" | sed 's/^/    /' | head -12
+fi
 
 # A `match` over two enums whose case names are long, which answers one of the
 # four combinations. Each combination it leaves was written into 128 bytes and

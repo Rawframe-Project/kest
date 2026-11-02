@@ -574,10 +574,13 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
 // Whether a type mentions a name that is standing for itself.
 bool kest_mentions_name(const KestType *type);
 
-// The same type with every type name replaced by what it stands for.
+// The same type with every type name replaced by what it stands for. A
+// `[T; N]` that comes out bigger than a value may be is refused with K0327 at
+// `where`, the call that asked for it, and is a type that is wrong.
 KestType *kest_substitute(KestProgram *program, KestType *type,
                           const char **names, KestType **bindings,
-                          uint32_t count);
+                          uint32_t count, const KestSource *where,
+                          KestSpan span);
 
 // Works out what each type name has to stand for by putting a declared type
 // beside the one that was passed. False when two uses disagree.
@@ -611,9 +614,10 @@ KestType *kest_array_of(KestProgram *program, KestType *element);
 KestType *kest_optional_of(KestProgram *program, KestType *element);
 KestType *kest_ref_of(KestProgram *program, KestType *element);
 // That many of something, laid out where it stands rather than behind a
-// handle. Copying one copies all of it.
-KestType *kest_fixed_of(KestProgram *program, KestType *element,
-                        uint32_t count);
+// handle. Copying one copies all of it. One bigger than a value may be is
+// refused with K0327 at `where`, and is a type that is wrong.
+KestType *kest_fixed_of(KestProgram *program, KestType *element, uint32_t count,
+                        const KestSource *where, KestSpan span);
 
 KestType *kest_find_type(KestProgram *program, const char *name, size_t length);
 KestSymbol *kest_find_global(KestProgram *program, const char *name,

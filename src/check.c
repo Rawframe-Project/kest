@@ -876,7 +876,7 @@ static bool wants_met(Checker *checker, const KestType *callee, KestSpan named,
 // them twice.
 static KestType *shape_of_call(Checker *checker, const KestType *callee,
                                const char **names, KestType **bindings,
-                               uint32_t generics) {
+                               uint32_t generics, KestSpan where) {
     bool abstract = false;
     for (uint32_t g = 0; g < generics && !abstract; g++) {
         abstract = kest_mentions_name(bindings[g]);
@@ -884,8 +884,9 @@ static KestType *shape_of_call(Checker *checker, const KestType *callee,
     if (!abstract) {
         return NULL;
     }
-    KestType *shape = kest_substitute(checker->program, (KestType *)callee,
-                                      names, bindings, generics);
+    KestType *shape =
+        kest_substitute(checker->program, (KestType *)callee, names, bindings,
+                        generics, checker->program->source, where);
     if (shape == NULL) {
         checker->out_of_memory = true;
         return error_type(checker);
@@ -2593,7 +2594,8 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
     if (!wants_met(checker, callee, where, bindings, generics, where)) {
         return error_type(checker);
     }
-    KestType *shape = shape_of_call(checker, callee, names, bindings, generics);
+    KestType *shape =
+        shape_of_call(checker, callee, names, bindings, generics, where);
     if (shape != NULL) {
         return shape;
     }
@@ -2610,8 +2612,9 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
             inside ? checker->asking_source : program->source;
     }
     if (instance->type == NULL) {
-        instance->type = kest_substitute(program, (KestType *)callee, names,
-                                         bindings, generics);
+        instance->type =
+            kest_substitute(program, (KestType *)callee, names, bindings,
+                            generics, program->source, where);
         // A copy that could not be made is nothing to write a name into, and
         // what is under this reads it as a signature: `symbol` is sixty-four
         // bytes into a type, which is where a run with nothing left used to
@@ -2911,8 +2914,9 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
         if (callee->params[i] == NULL || callee->params[i]->tag != KEST_T_FN) {
             continue;
         }
-        KestType *wanted = kest_substitute(program, callee->params[i], names,
-                                           bindings, generics);
+        KestType *wanted =
+            kest_substitute(program, callee->params[i], names, bindings,
+                            generics, program->source, expr->span);
         kest_diags_mute(diags, true);
         given[i] = check_expr(checker, expr->call.args[i], wanted);
         kest_diags_mute(diags, false);
@@ -2960,7 +2964,8 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
                    expr->span)) {
         return error_type(checker);
     }
-    KestType *shape = shape_of_call(checker, callee, names, bindings, generics);
+    KestType *shape =
+        shape_of_call(checker, callee, names, bindings, generics, expr->span);
     if (shape != NULL) {
         expr->call.callee->type = shape;
         return check_arguments(checker, expr, shape);
@@ -2981,8 +2986,9 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
             inside ? checker->asking_source : program->source;
     }
     if (instance->type == NULL) {
-        instance->type = kest_substitute(program, (KestType *)callee, names,
-                                         bindings, generics);
+        instance->type =
+            kest_substitute(program, (KestType *)callee, names, bindings,
+                            generics, program->source, expr->span);
         // The same guard as the one above, at the other place a copy is made:
         // a type that could not be made is read as a signature under this, and
         // `symbol` is sixty-four bytes into one.
@@ -4156,7 +4162,8 @@ static KestType *check_array(Checker *checker, KestExpr *expr,
         return error_type(checker);
     }
     if (fixed) {
-        return kest_fixed_of(checker->program, element, expr->array.count);
+        return kest_fixed_of(checker->program, element, expr->array.count,
+                             checker->program->source, expr->span);
     }
     return kest_array_of(checker->program, element);
 }

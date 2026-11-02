@@ -2507,8 +2507,14 @@ KestType *kest_ref_of(KestProgram *program, KestType *element) {
 // That many of something, laid out where it stands. Unlike an array it is a
 // value: copying one copies all of it, and a struct holding one holds the
 // whole thing rather than a handle to it.
-KestType *kest_fixed_of(KestProgram *program, KestType *element,
-                        uint32_t count) {
+// Sized each time it is asked for, because what it holds may have been
+// measured since, and worked out wide: `[T; 2]` in a generic's signature is
+// sized only once `T` is known, and two of a value of 32768 bytes are 65536,
+// which wrapped to nought, so the machine wrote it past the end of the element
+// of an array it was put in. Too big, it is refused at `where`: where it was
+// written, the literal that made it, or the call that asked for a copy.
+KestType *kest_fixed_of(KestProgram *program, KestType *element, uint32_t count,
+                        const KestSource *where, KestSpan span) {
     // Composed like an array or an optional, and like them not registered:
     // it has no name to be found under and two of them are one type by what
     // they hold rather than by being the same one.
@@ -2520,11 +2526,21 @@ KestType *kest_fixed_of(KestProgram *program, KestType *element,
     if (type == NULL) {
         return error_type(program);
     }
-    if (element != NULL) {
-        type->slots = (uint16_t)(element->slots * count);
-        type->byte_size = (uint16_t)(element->byte_size * count);
-        type->byte_align = element->byte_align;
+    if (element == NULL) {
+        return type;
     }
+    uint32_t slots = (uint32_t)element->slots * count;
+    uint32_t bytes = (uint32_t)element->byte_size * count;
+    if (!sized_within(program, bytes, slots, where, span,
+                      kest_type_name(program->arena, type))) {
+        type->slots = 1;
+        type->byte_size = 8;
+        type->byte_align = 8;
+        return error_type(program);
+    }
+    type->slots = (uint16_t)slots;
+    type->byte_size = (uint16_t)bytes;
+    type->byte_align = element->byte_align;
     return type;
 }
 
@@ -3003,15 +3019,8 @@ KestType *kest_resolve_type_ref(KestProgram *program, const KestTypeRef *ref) {
         // What it holds may not be measured yet -- a struct is measured after
         // the fields that name it are resolved -- and then this is sized again
         // where it is held. Where it is already known, it is known here.
-        KestType *run = kest_fixed_of(program, element, (uint32_t)how_many);
-        if (element != NULL && element->byte_size != 0 &&
-            !sized_within(program, (uint32_t)(element->byte_size * how_many),
-                          (uint32_t)(element->slots * how_many),
-                          program->source, ref->count,
-                          kest_type_name(program->arena, run))) {
-            return error_type(program);
-        }
-        return run;
+        return kest_fixed_of(program, element, (uint32_t)how_many,
+                             program->source, ref->count);
     }
 
     case KEST_TYPE_OPTIONAL:
@@ -3920,12 +3929,18 @@ static bool sized_within(KestProgram *program, uint32_t bytes, uint32_t slots,
     if (bytes <= UINT16_MAX && slots <= UINT16_MAX) {
         return true;
     }
+    // Said about the file it was written in, and the file reports were going
+    // to be said about afterwards is put back: the checker reports into the
+    // one it was set to, and a copy asked for in one file is refused here
+    // about another.
+    const KestSource *was = program->diags->source;
     kest_diags_in(program->diags, where);
     kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0327", span,
                    "`%s` is %u bytes, and a value is at most %u", what, bytes,
                    UINT16_MAX);
     kest_diags_suggest(program->diags,
                        "`[T]` holds that many on the heap and is a handle");
+    kest_diags_in(program->diags, was);
     return false;
 }
 
@@ -4435,7 +4450,8 @@ bool kest_mentions_name(const KestType *type) {
 
 KestType *kest_substitute(KestProgram *program, KestType *type,
                           const char **names, KestType **bindings,
-                          uint32_t count) {
+                          uint32_t count, const KestSource *where,
+                          KestSpan span) {
     if (type == NULL || !mentions_param(type)) {
         return type;
     }
@@ -4449,26 +4465,29 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
     }
     switch (type->tag) {
     case KEST_T_ARRAY:
-        return kest_array_of(program, kest_substitute(program, type->element,
-                                                      names, bindings, count));
+        return kest_array_of(program,
+                             kest_substitute(program, type->element, names,
+                                             bindings, count, where, span));
     case KEST_T_OPTIONAL:
-        return kest_optional_of(
-            program,
-            kest_substitute(program, type->element, names, bindings, count));
+        return kest_optional_of(program,
+                                kest_substitute(program, type->element, names,
+                                                bindings, count, where, span));
     // And the same run, made again with what its element turned out to be.
     // How many there are is the type's and not the copy's.
     case KEST_T_FIXED:
-        return kest_fixed_of(
-            program,
-            kest_substitute(program, type->element, names, bindings, count),
-            type->count);
+        return kest_fixed_of(program,
+                             kest_substitute(program, type->element, names,
+                                             bindings, count, where, span),
+                             type->count, where, span);
     case KEST_T_REF:
-        return kest_ref_of(program, kest_substitute(program, type->element,
-                                                    names, bindings, count));
+        return kest_ref_of(program,
+                           kest_substitute(program, type->element, names,
+                                           bindings, count, where, span));
     case KEST_T_STORE:
-        return compose(
-            program, KEST_T_STORE,
-            kest_substitute(program, type->element, names, bindings, count), 0);
+        return compose(program, KEST_T_STORE,
+                       kest_substitute(program, type->element, names, bindings,
+                                       count, where, span),
+                       0);
     case KEST_T_FN: {
         KestType *held[16];
         uint32_t used = type->param_count;
@@ -4480,12 +4499,13 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
         }
         for (uint32_t i = 0; i < used; i++) {
             params[i] = kest_substitute(program, type->params[i], names,
-                                        bindings, count);
+                                        bindings, count, where, span);
         }
-        KestType *made = fn_of(
-            program, params, used,
-            kest_substitute(program, type->result, names, bindings, count),
-            type->no_alloc, type->no_host, type->deterministic);
+        KestType *made =
+            fn_of(program, params, used,
+                  kest_substitute(program, type->result, names, bindings, count,
+                                  where, span),
+                  type->no_alloc, type->no_host, type->deterministic);
         if (made != NULL) {
             made->block = type->block;
         }
@@ -4507,7 +4527,7 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
         }
         for (uint32_t i = 0; i < used; i++) {
             args[i] = kest_substitute(program, type->type_args[i], names,
-                                      bindings, count);
+                                      bindings, count, where, span);
         }
         return kest_struct_of(program, type->shape, args, used);
     }
