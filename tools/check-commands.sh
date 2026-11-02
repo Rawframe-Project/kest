@@ -6737,6 +6737,73 @@ if [ "$headed" != "yes" ]; then
     complain "lsp: a message with a long header line was not answered: $headed"
 fi
 
+# And text that is not UTF-8 in what is written as JSON. A file name is any
+# bytes, and one with 0xFF in it was written raw into `check --json` and into
+# what the server said about a file under it, which no reader can decode. It
+# is U+FFFD there, and a name in UTF-8 is written as it is.
+mkdir -p "$scratch"/unread
+unread_name=$(printf 'bad\377.kest')
+printf 'fn main() -> i32 {\n    return x\n}\n' >"$scratch/unread/$unread_name"
+printf 'fn main() -> i32 {\n    return x\n}\n' >"$scratch/unread/caf$(printf '\303\251').kest"
+unread=$(cd "$scratch"/unread && python3 - "$kest" "$scratch"/unread <<'PY'
+import json, os, subprocess, sys
+
+kest, where = sys.argv[1], sys.argv[2]
+wrong = []
+for name, wanted in ((b"bad\xff.kest", "bad�.kest"),
+                     ("café.kest".encode(), "café.kest")):
+    out = subprocess.run([kest, "check", "--json", name],
+                         capture_output=True).stdout
+    try:
+        said = json.loads(out.decode("utf-8"))
+    except ValueError:
+        wrong.append("`check --json` on %r was not JSON" % name)
+        continue
+    files = [one.get("file") for one in said.get("diagnostics", [])]
+    if wanted not in files:
+        wrong.append("`check --json` named %r as %r" % (name, files[:1]))
+
+
+def framed(text):
+    body = text.encode()
+    return b"Content-Length: %d\r\n\r\n" % len(body) + body
+
+
+uri = "file://" + os.path.abspath(where) + "/d%FF/m.kest"
+messages = [
+    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {
+         "uri": uri, "languageId": "kest", "version": 1,
+         "text": "module m\n\nimport nothing.here\n\nfn main() -> i32 {\n"
+                 "    return 0\n}\n"}}},
+]
+out = subprocess.run([kest, "lsp"], capture_output=True,
+                     input=b"".join(framed(json.dumps(m))
+                                    for m in messages)).stdout
+at, read, unreadable = 0, 0, 0
+while True:
+    head = out.find(b"Content-Length: ", at)
+    blank = out.find(b"\r\n\r\n", head)
+    if head < 0 or blank < 0:
+        break
+    many = int(out[head + 16:blank])
+    try:
+        json.loads(out[blank + 4:blank + 4 + many].decode("utf-8"))
+        read += 1
+    except ValueError:
+        unreadable += 1
+    at = blank + 4 + many
+if unreadable or read < 2:
+    wrong.append("the server sent %d message(s) no reader can decode" %
+                 unreadable)
+print("; ".join(wrong) if wrong else "yes")
+PY
+)
+if [ "$unread" != "yes" ]; then
+    complain "json: text that is not UTF-8: $unread"
+fi
+
 # And the same asked from where each name is declared rather than where it is
 # used: a rename or a reference list asked from the `n` of `fn doubled(n:` or
 # the `twice` of `let twice` was answered with nothing, because the index

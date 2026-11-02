@@ -528,8 +528,19 @@ void kest_wire_escaped(KestSaid *out, const char *text, size_t length) {
         default:
             if (c < 0x20) {
                 kest_wire_sayf(out, "\\u%04x", c);
-            } else {
+            } else if (c < 0x80) {
                 kest_wire_char(out, (char)c);
+            } else {
+                // A byte that is not part of a character, as U+FFFD, the way
+                // `kest_json_bytes` writes one: an editor reading a message
+                // that is not UTF-8 reads none of it.
+                size_t width = kest_utf8_width(text + i, length - i);
+                if (width == 0) {
+                    kest_wire_say(out, "\\ufffd");
+                } else {
+                    said_bytes(out, text + i, width);
+                    i += width - 1;
+                }
             }
         }
     }

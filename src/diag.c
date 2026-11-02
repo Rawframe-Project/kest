@@ -848,6 +848,46 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
     }
 }
 
+size_t kest_utf8_width(const char *bytes, size_t length) {
+    if (length == 0) {
+        return 0;
+    }
+    unsigned char lead = (unsigned char)bytes[0];
+    if (lead < 0x80) {
+        return 1;
+    }
+    size_t width = 0;
+    uint32_t value = 0;
+    if ((lead & 0xe0) == 0xc0) {
+        width = 2;
+        value = lead & 0x1fu;
+    } else if ((lead & 0xf0) == 0xe0) {
+        width = 3;
+        value = lead & 0x0fu;
+    } else if ((lead & 0xf8) == 0xf0) {
+        width = 4;
+        value = lead & 0x07u;
+    } else {
+        return 0;
+    }
+    if (width > length) {
+        return 0;
+    }
+    for (size_t i = 1; i < width; i++) {
+        unsigned char next = (unsigned char)bytes[i];
+        if ((next & 0xc0) != 0x80) {
+            return 0;
+        }
+        value = (value << 6) | (next & 0x3fu);
+    }
+    static const uint32_t LEAST[] = {0, 0, 0x80, 0x800, 0x10000};
+    if (value < LEAST[width] || value > 0x10ffff ||
+        (value >= 0xd800 && value <= 0xdfff)) {
+        return 0;
+    }
+    return width;
+}
+
 void kest_json_text(const char *text, FILE *out) {
     kest_json_bytes(text, strlen(text), out);
 }
@@ -872,8 +912,17 @@ void kest_json_bytes(const char *text, size_t length, FILE *out) {
         default:
             if (*p < 0x20) {
                 fprintf(out, "\\u%04x", *p);
-            } else {
+            } else if (*p < 0x80) {
                 fputc(*p, out);
+            } else {
+                size_t width =
+                    kest_utf8_width((const char *)p, (size_t)(end - p));
+                if (width == 0) {
+                    fputs("\\ufffd", out);
+                } else {
+                    fwrite(p, 1, width, out);
+                    p += width - 1;
+                }
             }
         }
     }

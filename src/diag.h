@@ -377,9 +377,17 @@ bool kest_diags_worth_saying(const KestDiags *diags, const KestDiag *one);
 const char *kest_diags_starved_words(const KestDiags *diags, const char **code,
                                      char *room, size_t space);
 
+// How many bytes the UTF-8 character at the front of `bytes` is, of the
+// `length` there are, or 0 when they are not one: a byte that cannot start
+// one, one cut short, one written longer than it needs, a surrogate or past
+// U+10FFFF.
+size_t kest_utf8_width(const char *bytes, size_t length);
+
 // Writes a string the way JSON spells one, quotes and escapes and all. Three
 // files compose JSON and the string is the part that has to be right, so there
-// is one of these rather than one each.
+// is one of these rather than one each. JSON is UTF-8, so a byte that is not
+// part of a character is written as U+FFFD: a file name is any bytes, and one
+// written raw was an answer no reader could decode.
 void kest_json_text(const char *text, FILE *out);
 
 // The same for `length` bytes where they stand, for a piece of a file: what
