@@ -2,6 +2,16 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.1.4](https://github.com/Rawframe-Project/kest/compare/v0.1.3...v0.1.4) (2026-11-02)
+
+
+### Fixed
+
+* **checker:** hold a [T; N] copied through a signature to a value's size ([#186](https://github.com/Rawframe-Project/kest/issues/186)) ([3f37ee7](https://github.com/Rawframe-Project/kest/commit/3f37ee7f76312a78ff740d2a1d96b75ea05ae561)), closes [#184](https://github.com/Rawframe-Project/kest/issues/184)
+* **compiler:** refuse a body past 65535 slots with the number ([#187](https://github.com/Rawframe-Project/kest/issues/187)) ([e7bea34](https://github.com/Rawframe-Project/kest/commit/e7bea345e023ece6ce89cb1111eb11a1283a5e15)), closes [#185](https://github.com/Rawframe-Project/kest/issues/185)
+* **compiler:** refuse a function past 65536 constant values ([#190](https://github.com/Rawframe-Project/kest/issues/190)) ([62bebcf](https://github.com/Rawframe-Project/kest/commit/62bebcf8da94a0c9fb71c9ab68325b36a4d16f65)), closes [#189](https://github.com/Rawframe-Project/kest/issues/189)
+* **compiler:** say nothing more of a body refused for a limit ([#192](https://github.com/Rawframe-Project/kest/issues/192)) ([d96d2fe](https://github.com/Rawframe-Project/kest/commit/d96d2fe58be91ee8518220c8fcb49689da45aa22)), closes [#191](https://github.com/Rawframe-Project/kest/issues/191)
+
 ## 0.1.3 (2026-11-02)
 
 ### Fixed
