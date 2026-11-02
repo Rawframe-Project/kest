@@ -430,6 +430,19 @@ static bool fusing(void) {
     return !kest_ir_asked_off("KEST_PLAIN", &decided);
 }
 
+// Whether a run the chunk holds starts where an instruction can name it. The
+// compiler refuses a body holding more than that and a body is not carried
+// into one where the two would, so one past it is this file's mistake, and is
+// said as one rather than written as a read of another value.
+static bool named_in_two_bytes(Lower *lower, uint32_t first, uint32_t count,
+                               KestSpan origin) {
+    if (first + count <= KEST_MOST_CONSTANTS) {
+        return true;
+    }
+    fault(lower, origin, "this reads a value past what an instruction names");
+    return false;
+}
+
 // A run of values the chunk holds, and the instruction that reads it. A local
 // and then a constant is the commonest pair this machine runs -- every `x + 1`,
 // every `i < n` against a written number -- and it is one instruction with two
@@ -449,6 +462,9 @@ static void emit_constant(Lower *lower, uint16_t first, uint16_t count,
                                              values, classes, count);
     if (lower->module->out_of_room) {
         lower->out_of_memory = true;
+        return;
+    }
+    if (!named_in_two_bytes(lower, index, count, origin)) {
         return;
     }
     uint16_t slot = 0;
@@ -1013,6 +1029,12 @@ static bool may_carry(const Lower *lower, uint16_t index) {
         callee->source != lower->chunk->source || callee->origin_count == 0) {
         return false;
     }
+    // Nor one whose values would take this body's past what an instruction
+    // names: it is called instead, which is the same answer.
+    if (lower->chunk->constant_count + callee->constant_count >
+        KEST_MOST_CONSTANTS) {
+        return false;
+    }
     for (uint32_t at = 0; at < callee->code_count;) {
         const Operand *operands = carried_operands(lower, callee->code[at]);
         if (operands == NULL) {
@@ -1227,7 +1249,7 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
     if (callee->constant_count > 0) {
         first = kest_chunk_constant_run(
             lower->module, lower->chunk, callee->constants,
-            callee->constant_classes, (uint16_t)callee->constant_count);
+            callee->constant_classes, callee->constant_count);
         if (lower->module->out_of_room) {
             lower->out_of_memory = true;
             return;
@@ -1571,6 +1593,9 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
                                                  values, classes, many);
         if (lower->module->out_of_room) {
             lower->out_of_memory = true;
+            return;
+        }
+        if (!named_in_two_bytes(lower, first, many, span)) {
             return;
         }
         emit(lower, KEST_OP_CONST_AT, span);

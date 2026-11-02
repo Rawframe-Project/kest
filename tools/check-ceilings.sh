@@ -289,6 +289,21 @@ def worked_slots():
     return ("fn f(c: %s) -> i32 {\n    let both = [c, c]\n"
             "    return len(both)\n}\n\nfn main() -> i32 {\n    return 0\n}\n"
             % CUBE)
+# Two tables of 32768 values each, read in one function, and a number after
+# them: every element of a table read where it is written is a value the body
+# holds, and an instruction names one in two bytes.
+def constants():
+    tables = ""
+    for name, value in (("X", "true"), ("Y", "false")):
+        tables += ("const %sA: [bool; 32] = [%s]\n"
+                   "const %sB: [[bool; 32]; 32] = [%s]\n"
+                   "const %sC: [[[bool; 32]; 32]; 32] = [%s]\n"
+                   % (name, ", ".join([value] * 32),
+                      name, ", ".join([name + "A"] * 32),
+                      name, ", ".join([name + "B"] * 32)))
+    return (tables + "\nfn pick(i: i32) -> i32 {\n"
+            "    if XC[i][0][0] && YC[i][1][2] {\n        return 11\n    }\n"
+            "    return 7\n}\n\nfn main() -> i32 {\n    return pick(1) - 7\n}\n")
 
 
 # One a row of the table, found by a phrase out of the row itself, so a row
@@ -322,6 +337,7 @@ PROBES = [
     ("elements a `[T; N]` holds", elements, "K0326", "emit"),
     ("slots a function's names hold", named_slots, "K0502", "emit"),
     ("slots of values it works on", worked_slots, "K0502", "emit"),
+    ("constant values in one function", constants, "K0502", "emit"),
 ]
 
 # The rows that are not met here: what `len` counts to is a refusal the machine
@@ -350,6 +366,8 @@ rows = [
     ("65535", "elements a `[T; N]` holds, and at least one"),
     ("65535", "slots a function's names hold at once, and slots of values it "
               "works on at once"),
+    ("65536", "constant values in one function, counting every element of a "
+              "table it reads"),
     ("65536", "names a program asks the host for"),
     ("2147483647", "elements an array or a store holds, and bytes in text"),
     ("16777215", "places in one store"),
@@ -380,6 +398,8 @@ DEFINED = [
     ("names a program asks the host for", "src/compile.c", "MAX_EXTERNS", {}),
     ("slots a function's names hold", "src/compile.c", "MOST_SLOTS",
      {"UINT16_MAX": "65535"}),
+    ("constant values in one function", "src/value.h", "KEST_MOST_CONSTANTS",
+     {}),
 ]
 for phrase, path, define, written_as in DEFINED:
     number = [held for held, what in rows if phrase in what]

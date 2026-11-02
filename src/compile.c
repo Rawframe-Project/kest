@@ -150,6 +150,9 @@ typedef struct {
     // Whether this body has been told it holds more than `MOST_SLOTS`, which
     // is said once, where it first did.
     bool slots_said;
+    // Whether this body has been told it holds more than
+    // `KEST_MOST_CONSTANTS`, which is said once, where it first did.
+    bool constants_said;
 
     // A reported problem does not stop the walk, so one run reports the
     // whole file. Only running out of memory stops it, because after that
@@ -994,8 +997,28 @@ static void value_classes(const KestType *type, const KestValue *values,
 
 // The run put in the chunk beside the code, with what each of its slots means
 // beside it, and where it starts.
+// A body's values past `KEST_MOST_CONSTANTS`, said at the one that took it
+// past. An instruction names a value in two bytes, and one past them named
+// another from the start of the body's: a function reading two tables of
+// 32768 answered with a number out of the first where it wrote `7`. Added all
+// the same, so what is counted after it is what was written.
+static void hold_constants(Compiler *compiler, uint32_t count, KestSpan span) {
+    uint32_t holds = compiler->body->constant_count + count;
+    if (holds <= KEST_MOST_CONSTANTS || compiler->constants_said) {
+        return;
+    }
+    compiler->constants_said = true;
+    refuse(compiler, span, "K0502",
+           "a function holds at most %u constant values, counting every "
+           "element of a table it reads, and here it holds %u",
+           KEST_MOST_CONSTANTS, holds);
+    kest_diags_suggest(compiler->program->diags,
+                       "read the tables from more than one function, or hold "
+                       "one in a `[T]`");
+}
+
 static bool constant_run(Compiler *compiler, const KestType *type,
-                         const KestValue *values, uint16_t slots,
+                         const KestValue *values, uint16_t slots, KestSpan span,
                          uint32_t *first) {
     // Worked out into this rather than into a block of the arena:
     // `kest_chunk_constant_run` copies what it is handed into the
@@ -1019,6 +1042,7 @@ static bool constant_run(Compiler *compiler, const KestType *type,
     }
     uint32_t at = 0;
     value_classes(type, values, classes, &at);
+    hold_constants(compiler, slots, span);
     *first = kest_ir_constants_add(compiler->ir, compiler->body, values,
                                    classes, slots);
     if (compiler->ir->out_of_memory) {
@@ -1048,7 +1072,7 @@ static void emit_value_slots(Compiler *compiler, const KestType *type,
     // because a table of sixty-four numbers should not cost sixty-four
     // instructions every time it is read.
     uint32_t first = 0;
-    if (!constant_run(compiler, type, values, slots, &first)) {
+    if (!constant_run(compiler, type, values, slots, span, &first)) {
         return;
     }
     stack_push(compiler, slots);
@@ -1074,6 +1098,7 @@ static void emit_constant(Compiler *compiler, KestValue value,
                           KestConstClass class, const KestType *type,
                           KestSpan span) {
     uint8_t held = (uint8_t)class;
+    hold_constants(compiler, 1, span);
     uint32_t first =
         kest_ir_constants_add(compiler->ir, compiler->body, &value, &held, 1);
     if (compiler->ir->out_of_memory) {
@@ -3429,7 +3454,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 }
                 uint32_t first = 0;
                 if (!constant_run(compiler, object, by_name->folded,
-                                  by_name->size, &first)) {
+                                  by_name->size, expr->span, &first)) {
                     break;
                 }
                 compile_expr(compiler, expr->index.index);
@@ -3503,7 +3528,8 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 kest_fold_const(compiler->program, expr->index.object, held,
                                 wide, &why, NULL) == wide) {
                 uint32_t first = 0;
-                if (!constant_run(compiler, object, held, wide, &first)) {
+                if (!constant_run(compiler, object, held, wide, expr->span,
+                                  &first)) {
                     break;
                 }
                 counted_fold(compiler, wide);
@@ -4486,6 +4512,7 @@ typedef struct {
     uint32_t stack_depth;
     uint32_t depth;
     uint32_t loop_count;
+    bool constants_said;
 } Written;
 
 static Written written_so_far(const Compiler *compiler) {
@@ -4505,7 +4532,8 @@ static Written written_so_far(const Compiler *compiler) {
                      compiler->next_slot,
                      compiler->stack_depth,
                      compiler->depth,
-                     compiler->loop_count};
+                     compiler->loop_count,
+                     compiler->constants_said};
 }
 
 static void take_back(Compiler *compiler, const Written *to) {
@@ -4524,6 +4552,9 @@ static void take_back(Compiler *compiler, const Written *to) {
     compiler->stack_depth = to->stack_depth;
     compiler->depth = to->depth;
     compiler->loop_count = to->loop_count;
+    // Taken back with what it said, so a loop whose unrolled form would hold
+    // too many values is told nothing and is not unrolled.
+    compiler->constants_said = to->constants_said;
 }
 
 // What a promise about a body reads of a run of its operations: every effect
@@ -5670,6 +5701,7 @@ static bool open_body(Compiler *compiler, KestChunk *chunk,
     compiler->stack_depth = 0;
     compiler->stack_high_water = 0;
     compiler->slots_said = false;
+    compiler->constants_said = false;
     compiler->depth = 0;
     compiler->loop_count = 0;
     compiler->region_count = 0;
@@ -5781,10 +5813,18 @@ static bool close_body(Compiler *compiler, const KestBlock *block,
                        KestSpan declared) {
     // Cut to two bytes only in a body `hold_slots` refuses, below or before.
     compiler->body->param_slots = (uint16_t)compiler->next_slot;
+    Written opened = written_so_far(compiler);
     if (compiler->resuming != NULL) {
         resume_where_waiting(compiler, block);
     }
     compile_block(compiler, block);
+    // A body refused for holding too many values names some of them past
+    // what an instruction holds, and the backend would say so as its own
+    // mistake. It is put back to nothing but its end, which is a body.
+    if (compiler->constants_said) {
+        take_back(compiler, &opened);
+        compiler->stack_high_water = 0;
+    }
     // Every body ends by giving something back, so that nothing runs off the
     // end of one.
     uint32_t at = ir_emit(compiler, KEST_IR_GIVE, NULL, 0, NULL, 0, declared);
