@@ -2340,6 +2340,27 @@ static bool held_across_a_reload(void) {
             fprintf(stderr, "an edit that does not build was refused as `%s`\n",
                     why);
         }
+        // And one whose first error names something 700 bytes long, with
+        // room for all of it. That line was read into 512 bytes, so the host
+        // was told the name cut short and nothing after it.
+        file = fopen(path, "wb");
+        if (file != NULL) {
+            fputs("module changed\n\nfn main() -> i32 {\n    return ", file);
+            for (int i = 0; i < 100; i++) {
+                fputs("nowhere", file);
+            }
+            fputs("\n}\n", file);
+            fclose(file);
+        }
+        char whole[2048] = "";
+        bool told = other != NULL &&
+                    !kest_held_reload(other, NULL, whole, sizeof(whole)) &&
+                    strstr(whole, "nowherenowhere` at ") != NULL &&
+                    strstr(whole, "held-changed.kest:") != NULL;
+        if (noticed && !told) {
+            fprintf(stderr, "a long first error was refused as `%s`\n", whole);
+        }
+        noticed = noticed && told;
         kest_held_free(other);
         remove(path);
     }

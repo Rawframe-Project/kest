@@ -374,6 +374,43 @@ static bool refused(char *said, size_t room, const char *why,
     return false;
 }
 
+// The line of `heard` that starts at `at`, without its break, put into
+// `said` after the `used` bytes there, and where the text now ends. A line
+// that does not fit is cut where a whole character ends and answered as
+// full, the way `kest_put` cuts.
+static size_t heard_line(FILE *heard, long at, char *said, size_t room,
+                         size_t used) {
+    if (used + 1 >= room || fseek(heard, at, SEEK_SET) != 0) {
+        return used;
+    }
+    size_t from = used;
+    int c = 0;
+    while ((c = fgetc(heard)) != EOF && c != '\n') {
+        if (used + 1 == room) {
+            size_t lead = used;
+            while (lead > from &&
+                   ((unsigned char)said[lead - 1] & 0xc0) == 0x80) {
+                lead--;
+            }
+            if (lead > from) {
+                unsigned char top = (unsigned char)said[lead - 1];
+                size_t width = top >= 0xf0   ? 4
+                               : top >= 0xe0 ? 3
+                               : top >= 0xc0 ? 2
+                                             : 1;
+                if (used - (lead - 1) < width) {
+                    used = lead - 1;
+                }
+            }
+            memset(said + used, 0, room - used);
+            return room - 1;
+        }
+        said[used++] = (char)c;
+    }
+    said[used] = '\0';
+    return used;
+}
+
 bool kest_held_reload(KestHeld *held, const char *path, char *said,
                       size_t room) {
     if (held == NULL) {
@@ -389,33 +426,47 @@ bool kest_held_reload(KestHeld *held, const char *path, char *said,
         kest_build(from, held->library, heard != NULL ? heard : held->errors,
                    KEST_FORM_TEXT, 0);
     if (heard != NULL) {
-        char first[512] = "";
-        char where[512] = "";
+        // Where the first error's line starts and where the place after it
+        // does, read back whole once everything heard has been passed on.
+        // Each was kept in 512 bytes of its own, so a long name in the
+        // message cut what the host was told there whatever room it gave.
+        long first = -1;
+        long where = -1;
+        bool starts = true;
         char line[512];
         rewind(heard);
+        long at = ftell(heard);
         while (fgets(line, sizeof(line), heard) != NULL) {
             if (held->errors != NULL) {
                 fputs(line, held->errors);
             }
-            if (first[0] == '\0' && strncmp(line, "error", 5) == 0) {
-                snprintf(first, sizeof(first), "%s", line);
-            } else if (first[0] != '\0' && where[0] == '\0') {
+            if (starts && first < 0 && strncmp(line, "error", 5) == 0) {
+                first = at;
+            } else if (starts && first >= 0 && where < 0) {
                 const char *arrow = strstr(line, "--> ");
                 if (arrow != NULL) {
-                    snprintf(where, sizeof(where), "%s", arrow + 4);
+                    where = at + (long)(arrow - line) + 4;
                 }
             }
+            size_t got = strlen(line);
+            starts = got > 0 && line[got - 1] == '\n';
+            at = ftell(heard);
         }
-        fclose(heard);
-        first[strcspn(first, "\n")] = '\0';
-        where[strcspn(where, "\n")] = '\0';
-        if (candidate == NULL && first[0] != '\0') {
+        if (candidate == NULL && first >= 0) {
             if (said != NULL && room > 0) {
-                snprintf(said, room, "refused at building: %s at %s", first,
-                         where[0] != '\0' ? where : from);
+                size_t used = kest_put(said, room, 0, "refused at building: ");
+                used = heard_line(heard, first, said, room, used);
+                used = kest_put(said, room, used, " at ");
+                if (where >= 0) {
+                    heard_line(heard, where, said, room, used);
+                } else {
+                    kest_put(said, room, used, "%s", from);
+                }
             }
+            fclose(heard);
             return false;
         }
+        fclose(heard);
     }
     if (candidate == NULL) {
         return refused(said, room, "refused at building `%s`", from);
