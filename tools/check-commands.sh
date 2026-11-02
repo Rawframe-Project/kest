@@ -6739,19 +6739,23 @@ fi
 
 # And text that is not UTF-8 in what is written as JSON. A file name is any
 # bytes, and one with 0xFF in it was written raw into `check --json` and into
-# what the server said about a file under it, which no reader can decode. It
-# is U+FFFD there, and a name in UTF-8 is written as it is.
+# what the server said about a file under it, which no reader can decode. What
+# is not a character is one U+FFFD for each maximal subpart, as the Unicode
+# Standard and WHATWG's decoder replace it: the start of an emoji cut short by
+# an `A` is one U+FFFD and the `A`, and a lone continuation byte is one. A name
+# in UTF-8 is written as it is.
 mkdir -p "$scratch"/unread
-unread_name=$(printf 'bad\377.kest')
-printf 'fn main() -> i32 {\n    return x\n}\n' >"$scratch/unread/$unread_name"
-printf 'fn main() -> i32 {\n    return x\n}\n' >"$scratch/unread/caf$(printf '\303\251').kest"
 unread=$(cd "$scratch"/unread && python3 - "$kest" "$scratch"/unread <<'PY'
 import json, os, subprocess, sys
 
 kest, where = sys.argv[1], sys.argv[2]
 wrong = []
-for name, wanted in ((b"bad\xff.kest", "bad�.kest"),
-                     ("café.kest".encode(), "café.kest")):
+for name, wanted in ((b"bad\xff.kest", "bad\ufffd.kest"),
+                     (b"x\xf0\x9f\x98A.kest", "x\ufffdA.kest"),
+                     (b"y\x80.kest", "y\ufffd.kest"),
+                     ("caf\u00e9.kest".encode(), "caf\u00e9.kest")):
+    with open(name, "wb") as made:
+        made.write(b"fn main() -> i32 {\n    return x\n}\n")
     out = subprocess.run([kest, "check", "--json", name],
                          capture_output=True).stdout
     try:

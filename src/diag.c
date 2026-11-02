@@ -848,44 +848,48 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
     }
 }
 
-size_t kest_utf8_width(const char *bytes, size_t length) {
+size_t kest_utf8_width(const char *bytes, size_t length, bool *whole) {
+    *whole = false;
     if (length == 0) {
         return 0;
     }
     unsigned char lead = (unsigned char)bytes[0];
     if (lead < 0x80) {
+        *whole = true;
         return 1;
     }
-    size_t width = 0;
-    uint32_t value = 0;
-    if ((lead & 0xe0) == 0xc0) {
-        width = 2;
-        value = lead & 0x1fu;
-    } else if ((lead & 0xf0) == 0xe0) {
-        width = 3;
-        value = lead & 0x0fu;
-    } else if ((lead & 0xf8) == 0xf0) {
-        width = 4;
-        value = lead & 0x07u;
+    // How many follow the lead, and the range the first of them may be in:
+    // the narrower ones are what keep out a character written longer than it
+    // needs, a surrogate and anything past U+10FFFF.
+    size_t follow = 0;
+    unsigned char low = 0x80;
+    unsigned char high = 0xbf;
+    if (lead >= 0xc2 && lead <= 0xdf) {
+        follow = 1;
+    } else if (lead >= 0xe0 && lead <= 0xef) {
+        follow = 2;
+        low = lead == 0xe0 ? 0xa0 : 0x80;
+        high = lead == 0xed ? 0x9f : 0xbf;
+    } else if (lead >= 0xf0 && lead <= 0xf4) {
+        follow = 3;
+        low = lead == 0xf0 ? 0x90 : 0x80;
+        high = lead == 0xf4 ? 0x8f : 0xbf;
     } else {
-        return 0;
+        return 1;
     }
-    if (width > length) {
-        return 0;
-    }
-    for (size_t i = 1; i < width; i++) {
-        unsigned char next = (unsigned char)bytes[i];
-        if ((next & 0xc0) != 0x80) {
-            return 0;
+    for (size_t at = 1; at <= follow; at++) {
+        if (at == length) {
+            return at;
         }
-        value = (value << 6) | (next & 0x3fu);
+        unsigned char next = (unsigned char)bytes[at];
+        if (next < low || next > high) {
+            return at;
+        }
+        low = 0x80;
+        high = 0xbf;
     }
-    static const uint32_t LEAST[] = {0, 0, 0x80, 0x800, 0x10000};
-    if (value < LEAST[width] || value > 0x10ffff ||
-        (value >= 0xd800 && value <= 0xdfff)) {
-        return 0;
-    }
-    return width;
+    *whole = true;
+    return follow + 1;
 }
 
 void kest_json_text(const char *text, FILE *out) {
@@ -915,14 +919,15 @@ void kest_json_bytes(const char *text, size_t length, FILE *out) {
             } else if (*p < 0x80) {
                 fputc(*p, out);
             } else {
+                bool whole = false;
                 size_t width =
-                    kest_utf8_width((const char *)p, (size_t)(end - p));
-                if (width == 0) {
-                    fputs("\\ufffd", out);
-                } else {
+                    kest_utf8_width((const char *)p, (size_t)(end - p), &whole);
+                if (whole) {
                     fwrite(p, 1, width, out);
-                    p += width - 1;
+                } else {
+                    fputs("\\ufffd", out);
                 }
+                p += width - 1;
             }
         }
     }
