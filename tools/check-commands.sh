@@ -6394,6 +6394,24 @@ if [ -z "$debug_wrong" ]; then
 frame before it left" ;;
     esac
 fi
+# And a breakpoint named by a full path longer than the 512 bytes a command
+# was read in: the start of the path was taken for a line in this file and
+# refused, and the rest of it was run as a word of its own.
+if [ -z "$debug_wrong" ]; then
+    far="$scratch"/stopping
+    for piece in 1 2 3; do
+        far="$far/$(printf '%190s' '' | tr ' ' d)"
+    done
+    mkdir -p "$far"
+    cp "$scratch"/stopping/stopping.kest "$far"/stopping.kest
+    printf 'break %s/stopping.kest:4\nrun\nquit\n' "$far" |
+        "$kest" debug "$far"/stopping.kest >"$scratch"/stopping/far-said 2>&1
+    case "$(cat "$scratch"/stopping/far-said)" in
+    *"not a word here"*) debug_wrong="a long command was run as two" ;;
+    *"stopped at"*) ;;
+    *) debug_wrong="a breakpoint named by a long path did not stop" ;;
+    esac
+fi
 if [ -n "$debug_wrong" ]; then
     complain "debug: a machine stopped and asked about: $debug_wrong"
     sed 's/^/    /' "$scratch"/stopping/said | head -8

@@ -634,6 +634,56 @@ void kest_debugger_close(KestDebugger *held) {
     }
 }
 
+// What reading one command came to: a whole line, the end of the stream, or a
+// line there was no memory to hold, which is read past.
+typedef enum {
+    COMMAND_READ,
+    COMMAND_ENDED,
+    COMMAND_NO_ROOM,
+} CommandRead;
+
+// One command, read whole into `line`, which grows to hold it and is the
+// caller's to free. It used to be read 512 bytes at a time, and the rest of a
+// longer line was run as a command of its own: a breakpoint named by a full
+// path was refused, and the end of the path was run as a word.
+static CommandRead read_command(FILE *in, char **line, size_t *room) {
+    size_t used = 0;
+    bool held = true;
+    int c;
+    while ((c = getc(in)) != EOF && c != '\n') {
+        if (!held) {
+            continue;
+        }
+        if (used + 1 >= *room) {
+            size_t bigger = *room == 0 ? 128 : *room * 2;
+            char *grown = realloc(*line, bigger);
+            if (grown == NULL) {
+                held = false;
+                continue;
+            }
+            *line = grown;
+            *room = bigger;
+        }
+        (*line)[used++] = (char)c;
+    }
+    if (c == EOF && used == 0) {
+        return COMMAND_ENDED;
+    }
+    if (!held) {
+        return COMMAND_NO_ROOM;
+    }
+    if (*line == NULL) {
+        char *empty = malloc(1);
+        if (empty == NULL) {
+            return COMMAND_NO_ROOM;
+        }
+        *line = empty;
+        *room = 1;
+    }
+    (*line)[used] = '\0';
+    return COMMAND_READ;
+}
+
 static void help(FILE *out) {
     fputs("  break <line>   stop where that line is run\n"
           "  run            start the program\n"
@@ -659,8 +709,17 @@ int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
     }
     fprintf(out, "kest debug. `help` says what there is.\n");
 
-    char line[512];
-    while (!held.over && fgets(line, sizeof(line), in) != NULL) {
+    char *line = NULL;
+    size_t room = 0;
+    while (!held.over) {
+        CommandRead got = read_command(in, &line, &room);
+        if (got == COMMAND_ENDED) {
+            break;
+        }
+        if (got == COMMAND_NO_ROOM) {
+            fprintf(out, "there was no memory to hold that command\n");
+            continue;
+        }
         char *at = line;
         while (*at == ' ' || *at == '\t') {
             at++;
@@ -732,6 +791,7 @@ int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
             fprintf(out, "`%s` is not a word here. `help` says what is.\n", at);
         }
     }
+    free(line);
     kest_debugger_close(&held);
     return 0;
 }
