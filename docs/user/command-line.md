@@ -51,7 +51,7 @@ These read each file on its own and follow no imports, since what a file is does
 
 | Command | What it does |
 | --- | --- |
-| `new <name>` | makes a directory with a manifest, a program and a test |
+| `new <name>` | makes a directory with a manifest, a program and a test. The name is the manifest's `project` line, so a name that is not UTF-8, has a control character in it (a line break among them) or has a directory longer than 255 bytes is refused with `K0667` before anything is made |
 | `build [file]` | compiles and says nothing when it compiles. Without a file, the project's entry. `--release` makes a binary, see [Release builds](release-builds.md) |
 | `test [file]...` | runs each program and reports which answered 0; without files, the project's tests |
 | `doctor [dir]` | prints the version, where the standard library is looked for and whether it was found, and what the project says about itself |
