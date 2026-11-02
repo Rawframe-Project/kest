@@ -22,6 +22,7 @@ These work in the checking build only:
 | `KEST_WALK_EVERY=1` | collects at every allocation, which finds a handle held where the walk does not look |
 | `KEST_REFUSE_AT=n` | refuses the n-th allocation and every one after it, to walk an out-of-memory path |
 | `KEST_REFUSE_ARENA=n` | refuses the n-th arena, so a stage that takes an arena of its own is seen being told no |
+| `KEST_REFUSE_MALLOC=n` | refuses the n-th allocation of the standard library lookup, which happens before any arena is taken, and only that one |
 
 These work in every build:
 
