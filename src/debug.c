@@ -413,7 +413,11 @@ static void value_of(char *into, size_t room, KestValue value, uint8_t kind) {
 // a text was written ended the debugger on a fault. The proof is of the body
 // as it was compiled, so it is asked with the breakpoints out.
 static void local_said(Debugger *held, uint32_t deep, uint16_t slot,
-                       uint8_t kind, KestValue value, char *into, size_t room) {
+                       uint8_t kind, KestValue value, char *into, size_t room,
+                       const char **whole, uint32_t *whole_length) {
+    *whole = NULL;
+    *whole_length = 0;
+    into[0] = '\0';
     as_it_was(held);
     bool written = kest_frame_written(held->runtime, deep, slot);
     uint32_t length = 0;
@@ -433,7 +437,8 @@ static void local_said(Debugger *held, uint32_t deep, uint16_t slot,
         if (text == NULL) {
             snprintf(into, room, "text, not one piece here");
         } else {
-            snprintf(into, room, "\"%.*s\"", (int)length, text);
+            *whole = text;
+            *whole_length = length;
         }
     } else {
         value_of(into, room, value, kind);
@@ -464,9 +469,16 @@ static void say_locals(Debugger *held, const char *only) {
             continue;
         }
         char said_value[256];
+        const char *text = NULL;
+        uint32_t length = 0;
         local_said(held, deep - 1, slot, kind, value, said_value,
-                   sizeof said_value);
+                   sizeof said_value, &text, &length);
         fprintf(held->out, "  %-20s slot %u  %s", name, slot, said_value);
+        if (text != NULL) {
+            fputc('"', held->out);
+            fwrite(text, 1, length, held->out);
+            fputc('"', held->out);
+        }
         if (slots > 1) {
             fprintf(held->out, "  (and %u slot(s) more)", slots - 1);
         }
@@ -612,7 +624,8 @@ uint16_t kest_debugger_wide(KestDebugger *held, uint32_t deep) {
 
 const char *kest_debugger_local(KestDebugger *held, uint32_t deep,
                                 uint16_t slot, char *value, size_t room,
-                                uint16_t *slots) {
+                                uint16_t *slots, const char **text,
+                                uint32_t *length) {
     uint8_t kind = KEST_L_WORD;
     *slots = 1;
     const char *name = kest_frame_name(held->runtime, deep, slot, slots, &kind);
@@ -623,7 +636,7 @@ const char *kest_debugger_local(KestDebugger *held, uint32_t deep,
     if (!kest_frame_slot(held->runtime, deep, slot, &held_there)) {
         return NULL;
     }
-    local_said(held, deep, slot, kind, held_there, value, room);
+    local_said(held, deep, slot, kind, held_there, value, room, text, length);
     return name;
 }
 

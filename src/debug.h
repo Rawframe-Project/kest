@@ -86,11 +86,15 @@ bool kest_debugger_frame(KestDebugger *held, uint32_t deep, const char **body,
                          const char **path, uint32_t *line, uint32_t *column);
 
 // A frame's slots, and what the body called one and holds in it, written the
-// way the language writes a value. NULL for a slot the body gave no name.
+// way the language writes a value. A piece of text is answered in `text` and
+// `length` as long as it is, with nothing in `value`, for the caller to say
+// between quotes: written into `value`, it was cut where `room` ended. NULL
+// for a slot the body gave no name.
 uint16_t kest_debugger_wide(KestDebugger *held, uint32_t deep);
 const char *kest_debugger_local(KestDebugger *held, uint32_t deep,
                                 uint16_t slot, char *value, size_t room,
-                                uint16_t *slots);
+                                uint16_t *slots, const char **text,
+                                uint32_t *length);
 
 // Every byte written over put back, so the program is the program again.
 void kest_debugger_close(KestDebugger *held);
