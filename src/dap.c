@@ -57,8 +57,18 @@ static const char *plain_name(const KestJson *command, int *length) {
 // The reply to a request when there was no memory to write the one it was
 // owed: refused, so the editor is not left waiting, and written where no
 // memory is needed.
+// The `seq` a reply names as the request it answers. One that is not a whole
+// number in range is answered as 0, the way a request with none is: a cast of
+// it was undefined.
+static unsigned request_seq(const KestJson *request) {
+    uint32_t seq = 0;
+    if (!kest_wire_count(kest_wire_member(request, "seq"), &seq)) {
+        return 0;
+    }
+    return (unsigned)seq;
+}
+
 static void answer_without_room(Adapter *adapter, const KestJson *request) {
-    const KestJson *seq = kest_wire_member(request, "seq");
     int length = 0;
     const char *name =
         plain_name(kest_wire_member(request, "command"), &length);
@@ -68,8 +78,7 @@ static void answer_without_room(Adapter *adapter, const KestJson *request) {
                  "{\"seq\":%u,\"type\":\"response\",\"request_seq\":%u,"
                  "\"success\":false,\"command\":\"%.*s\",\"message\":"
                  "\"" KEST_STARVED_CODE ": " KEST_STARVED_SAYS "\"}",
-                 ++adapter->sent, seq == NULL ? 0u : (unsigned)seq->number,
-                 length, name);
+                 ++adapter->sent, request_seq(request), length, name);
     if (written > 0 && (size_t)written < sizeof said) {
         kest_wire_send(adapter->out, said, (size_t)written);
     }
@@ -95,13 +104,12 @@ static void unread(Adapter *adapter, const char *why) {
 // or NULL for none.
 static void answer(Adapter *adapter, const KestJson *request, bool success,
                    const char *message, const char *body) {
-    const KestJson *seq = kest_wire_member(request, "seq");
     const KestJson *command = kest_wire_member(request, "command");
     KestSaid said = {0};
     kest_wire_sayf(&said,
                    "{\"seq\":%u,\"type\":\"response\",\"request_seq\":%u,"
                    "\"success\":%s,\"command\":",
-                   ++adapter->sent, seq == NULL ? 0u : (unsigned)seq->number,
+                   ++adapter->sent, request_seq(request),
                    success ? "true" : "false");
     kest_wire_escaped(&said, command == NULL ? "" : command->text,
                       command == NULL ? 0 : command->length);
@@ -276,7 +284,11 @@ static void breakpoints(Adapter *adapter, const KestJson *request) {
          wanted != NULL && wanted->kind == KEST_JSON_LIST && i < wanted->count;
          i++) {
         const KestJson *line = kest_wire_member(wanted->items[i], "line");
-        uint32_t at = line == NULL ? 0 : (uint32_t)line->number;
+        // Line 0 is no line, which is what one out of range is refused as.
+        uint32_t at = 0;
+        if (!kest_wire_count(line, &at)) {
+            at = 0;
+        }
         bool put = adapter->debugging && file != NULL &&
                    kest_debugger_break(&adapter->debugger, file, at) > 0;
         kest_wire_sayf(&said, "%s{\"verified\":%s,\"line\":%u}",
@@ -331,13 +343,23 @@ static void stack(Adapter *adapter, const KestJson *request) {
     kest_wire_let_go(&said);
 }
 
+// A frame a request names, counted from 1, and 0 for none: a number that is
+// not one is no frame.
+static unsigned frame_named(const KestJson *json) {
+    uint32_t frame = 0;
+    if (!kest_wire_count(json, &frame)) {
+        return 0;
+    }
+    return (unsigned)frame;
+}
+
 static void scopes(Adapter *adapter, const KestJson *request) {
     const KestJson *frame = kest_wire_down(request, "arguments", "frameId");
     char body[160];
     snprintf(body, sizeof body,
              "{\"scopes\":[{\"name\":\"Locals\",\"variablesReference\":%u,"
              "\"expensive\":false}]}",
-             frame == NULL ? 0u : (unsigned)frame->number);
+             frame_named(frame));
     answer(adapter, request, true, NULL, body);
 }
 
@@ -346,7 +368,7 @@ static void scopes(Adapter *adapter, const KestJson *request) {
 static void variables(Adapter *adapter, const KestJson *request) {
     const KestJson *which =
         kest_wire_down(request, "arguments", "variablesReference");
-    uint32_t frame = which == NULL ? 0 : (uint32_t)which->number;
+    uint32_t frame = frame_named(which);
     KestSaid said = {0};
     kest_wire_say(&said, "{\"variables\":[");
     if (adapter->debugging && frame > 0 &&

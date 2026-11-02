@@ -1,5 +1,6 @@
 #include "wire.h"
 
+#include <math.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -204,6 +205,59 @@ static KestJson *read_value(Reading *reading) {
     return value;
 }
 
+// Whether `word` is spelt at the front of what is left, and past it if so.
+static bool spelt(Reading *reading, const char *word) {
+    size_t length = strlen(word);
+    if ((size_t)(reading->end - reading->at) < length ||
+        memcmp(reading->at, word, length) != 0) {
+        return false;
+    }
+    reading->at += length;
+    return true;
+}
+
+static const char *digits_from(const char *at, const char *end) {
+    while (at < end && *at >= '0' && *at <= '9') {
+        at++;
+    }
+    return at;
+}
+
+// Where a number JSON writes ends, or NULL where none starts: a minus, a
+// nought or digits not starting with one, then a point and digits, then an
+// `e` with a sign and digits, the last two each if there at all.
+static const char *number_end(const char *at, const char *end) {
+    if (at < end && *at == '-') {
+        at++;
+    }
+    if (at < end && *at == '0') {
+        at++;
+    } else if (at < end && *at >= '1' && *at <= '9') {
+        at = digits_from(at, end);
+    } else {
+        return NULL;
+    }
+    if (at < end && *at == '.') {
+        const char *fraction = digits_from(at + 1, end);
+        if (fraction == at + 1) {
+            return NULL;
+        }
+        at = fraction;
+    }
+    if (at < end && (*at == 'e' || *at == 'E')) {
+        at++;
+        if (at < end && (*at == '+' || *at == '-')) {
+            at++;
+        }
+        const char *exponent = digits_from(at, end);
+        if (exponent == at) {
+            return NULL;
+        }
+        at = exponent;
+    }
+    return at;
+}
+
 static KestJson *read_any(Reading *reading) {
     skip_space(reading);
     if (reading->at >= reading->end || reading->broke) {
@@ -271,25 +325,31 @@ static KestJson *read_any(Reading *reading) {
         reading->broke = true;
         return NULL;
     }
-    if (c == 't' && reading->end - reading->at >= 4) {
-        reading->at += 4;
+    // The words spelt out, where the first letter and a length used to be
+    // enough: `txyz` was read as `true`.
+    if (spelt(reading, "true")) {
         return made(reading, KEST_JSON_TRUE);
     }
-    if (c == 'f' && reading->end - reading->at >= 5) {
-        reading->at += 5;
+    if (spelt(reading, "false")) {
         return made(reading, KEST_JSON_FALSE);
     }
-    if (c == 'n' && reading->end - reading->at >= 4) {
-        reading->at += 4;
+    if (spelt(reading, "null")) {
         return made(reading, KEST_JSON_NOTHING);
     }
-    char *after = NULL;
-    double value = kest_real_read(reading->at, &after);
-    if (after == reading->at) {
+    // A number as JSON writes one and nothing else `strtod` reads: `inf`,
+    // `NaN`, `0x10` and `+1` were numbers, and so was `1e400`, as infinity.
+    // A reply writes an id back as the number it was, and infinity written
+    // back is not JSON, so the client never had its answer.
+    const char *stop = number_end(reading->at, reading->end);
+    double value =
+        stop == NULL
+            ? 0.0
+            : kest_real_read_within(reading->at, (size_t)(stop - reading->at));
+    if (stop == NULL || !isfinite(value)) {
         reading->broke = true;
         return NULL;
     }
-    reading->at = after;
+    reading->at = stop;
     KestJson *one = made(reading, KEST_JSON_NUMBER);
     if (one == NULL) {
         return NULL;
@@ -329,6 +389,21 @@ KestWireRead kest_wire_read(KestArena *arena, const char *bytes, size_t length,
         return KEST_WIRE_TOO_DEEP;
     }
     return reading.broke ? KEST_WIRE_NOT_JSON : KEST_WIRE_JSON;
+}
+
+bool kest_wire_count(const KestJson *json, uint32_t *into) {
+    *into = 0;
+    // Written so that NaN fails it too, though a reader never makes one.
+    if (json == NULL || json->kind != KEST_JSON_NUMBER ||
+        !(json->number >= 0.0 && json->number <= (double)UINT32_MAX)) {
+        return false;
+    }
+    uint32_t whole = (uint32_t)json->number;
+    if ((double)whole != json->number) {
+        return false;
+    }
+    *into = whole;
+    return true;
 }
 
 // What one header line was: the blank one that ends the header, any other, or

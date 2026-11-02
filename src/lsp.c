@@ -709,7 +709,14 @@ static void put_id(KestSaid *out, const KestJson *id) {
     } else if (id->kind == KEST_JSON_TEXT) {
         kest_wire_escaped(out, id->text, id->length);
     } else {
-        kest_wire_sayf(out, "%lld", (long long)id->number);
+        // As the number it was, which seventeen digits write back exactly and
+        // a cast to an integer did not: one past what an integer holds was
+        // undefined, and a fraction came back as another request's id.
+        // Written the language's way rather than the host locale's, which
+        // may write `1,5`, and that is not JSON.
+        char number[40];
+        kest_real_write(number, sizeof number, 'g', 17, id->number);
+        kest_wire_say(out, number);
     }
 }
 
@@ -741,9 +748,11 @@ static void answer_without_room(Server *server, const KestJson *id) {
     char said[256];
     int written = -1;
     if (id != NULL && id->kind == KEST_JSON_NUMBER) {
-        written = snprintf(said, sizeof said,
-                           "{\"jsonrpc\":\"2.0\",\"id\":%lld," NO_ROOM_ERROR,
-                           (long long)id->number);
+        char number[40];
+        kest_real_write(number, sizeof number, 'g', 17, id->number);
+        written =
+            snprintf(said, sizeof said,
+                     "{\"jsonrpc\":\"2.0\",\"id\":%s," NO_ROOM_ERROR, number);
     } else if (id != NULL && id->kind == KEST_JSON_TEXT && id->length <= 64) {
         bool plain = true;
         for (size_t i = 0; i < id->length; i++) {
@@ -799,12 +808,14 @@ static size_t position_in(Server *server, const KestJson *params) {
     const KestJson *position = kest_wire_member(params, "position");
     const KestJson *line = kest_wire_member(position, "line");
     const KestJson *column = kest_wire_member(position, "character");
-    if (line == NULL || column == NULL) {
+    uint32_t line_at = 0;
+    uint32_t column_at = 0;
+    if (!kest_wire_count(line, &line_at) ||
+        !kest_wire_count(column, &column_at)) {
         return (size_t)-1;
     }
     Open *file = here(server);
-    return offset_of(file->text, file->length, (uint32_t)line->number,
-                     (uint32_t)column->number);
+    return offset_of(file->text, file->length, line_at, column_at);
 }
 
 static void hover(Server *server, const KestJson *id, const KestJson *params) {

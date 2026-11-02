@@ -7028,6 +7028,99 @@ if [ "$unread" != "yes" ]; then
     complain "json: text that is not UTF-8: $unread"
 fi
 
+# And numbers a client chose, read by the checking build: a request id, a
+# position, a `seq`, a breakpoint's line and a frame, each out of what an
+# integer holds. Each was cast to one, which is undefined, and the checking
+# build stopped on it. Each is answered, and an id comes back as it was sent.
+far_numbers=$(python3 - "$build_dir"/kest-debug <<'PY'
+import json, subprocess, sys
+
+command = sys.argv[1]
+
+
+def framed(text):
+    body = text.encode()
+    return b"Content-Length: %d\r\n\r\n" % len(body) + body
+
+
+def heard(out):
+    said, at = [], 0
+    while True:
+        head = out.find(b"Content-Length: ", at)
+        blank = out.find(b"\r\n\r\n", head)
+        if head < 0 or blank < 0:
+            return said
+        many = int(out[head + 16:blank])
+        said.append(json.loads(out[blank + 4:blank + 4 + many]))
+        at = blank + 4 + many
+
+
+uri = "file:///numbers.kest"
+lsp = [
+    '{"jsonrpc":"2.0","id":1e300,"method":"initialize","params":{}}',
+    json.dumps({"jsonrpc": "2.0", "method": "textDocument/didOpen",
+                "params": {"textDocument": {
+                    "uri": uri, "languageId": "kest", "version": 1,
+                    "text": "fn main() -> i32 {\n    return 0\n}\n"}}}),
+    '{"jsonrpc":"2.0","id":2,"method":"textDocument/hover","params":'
+    '{"textDocument":{"uri":"%s"},"position":{"line":-1e300,'
+    '"character":1e300}}}' % uri,
+    '{"jsonrpc":"2.0","id":3,"method":"textDocument/hover","params":'
+    '{"textDocument":{"uri":"%s"},"position":{"line":-1,'
+    '"character":0.5}}}' % uri,
+]
+dap = [
+    '{"seq":1e300,"type":"request","command":"initialize","arguments":{}}',
+    '{"seq":2,"type":"request","command":"setBreakpoints","arguments":'
+    '{"source":{"path":"numbers.kest"},"breakpoints":[{"line":-1e300},'
+    '{"line":1e300}]}}',
+    '{"seq":3,"type":"request","command":"scopes","arguments":'
+    '{"frameId":-1e300}}',
+    '{"seq":4,"type":"request","command":"variables","arguments":'
+    '{"variablesReference":1e300}}',
+]
+wrong = []
+ran = subprocess.run([command, "lsp"], capture_output=True, timeout=120,
+                     input=b"".join(framed(m) for m in lsp))
+answered = {one.get("id") for one in heard(ran.stdout) if "id" in one}
+if b"runtime error" in ran.stderr or b"Sanitizer" in ran.stderr:
+    wrong.append("lsp: " + ran.stderr.decode(errors="replace")
+                 .split("runtime error")[-1][:80].strip())
+if 1e300 not in answered or 2 not in answered or 3 not in answered:
+    wrong.append("lsp answered %s" % sorted(map(str, answered)))
+ran = subprocess.run([command, "dap"], capture_output=True, timeout=120,
+                     input=b"".join(framed(m) for m in dap))
+replies = [one for one in heard(ran.stdout) if one.get("type") == "response"]
+if b"runtime error" in ran.stderr or b"Sanitizer" in ran.stderr:
+    wrong.append("dap: " + ran.stderr.decode(errors="replace")
+                 .split("runtime error")[-1][:80].strip())
+if [one.get("request_seq") for one in replies] != [0, 2, 3, 4]:
+    wrong.append("dap answered %s" % [one.get("request_seq")
+                                       for one in replies])
+# And numbers JSON does not write, which the reader took the way `strtod`
+# does: `1e400` and `inf` as infinity and `NaN` as itself, written back in
+# the reply as `"id":inf`, which is not JSON either. Each is a message that is
+# not JSON, answered with a parse error and no id, and so is a word that only
+# starts like one.
+for written in ("1e400", "-1e400", "inf", "Infinity", "NaN", "0x10", "+1",
+                "01", "1.", "tru"):
+    ran = subprocess.run(
+        [command, "lsp"], capture_output=True, timeout=120,
+        input=framed('{"jsonrpc":"2.0","id":%s,"method":"initialize",'
+                     '"params":{}}' % written))
+    said = heard(ran.stdout)
+    first = said[0] if said else {}
+    if (len(said) != 1 or "id" not in first or first["id"] is not None or
+            first.get("error", {}).get("code") != -32700):
+        wrong.append("an id of %s was answered %s" %
+                     (written, ran.stdout[-60:]))
+print("; ".join(wrong) if wrong else "yes")
+PY
+)
+if [ "$far_numbers" != "yes" ]; then
+    complain "lsp and dap: numbers out of range: $far_numbers"
+fi
+
 # And the same asked from where each name is declared rather than where it is
 # used: a rename or a reference list asked from the `n` of `fn doubled(n:` or
 # the `twice` of `let twice` was answered with nothing, because the index
