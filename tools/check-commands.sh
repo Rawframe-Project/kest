@@ -6782,6 +6782,35 @@ case " $adapted " in
 said nothing about why"
     ;;
 esac
+# A list in a message cut where a whole character ends. A name is any UTF-8,
+# and the shapes a call's candidates take were cut at the last byte of 256
+# that fit, in the middle of an `e` with an accent, and the message was not
+# UTF-8.
+mkdir -p "$scratch"/cut
+python3 - "$scratch"/cut/cut.kest <<'PY'
+import sys
+named = "T" + "é" * 60
+open(sys.argv[1], "w", encoding="utf-8").write(
+    "struct %s {\n    x: i32\n}\n\n"
+    "fn f(a: %s, b: %s, c: %s) -> i32 {\n    return a.x\n}\n\n"
+    "fn f(a: i32) -> i32 {\n    return a\n}\n\n"
+    "fn main() -> i32 {\n    return f(true)\n}\n" % ((named,) * 4))
+PY
+"$kest" check "$scratch"/cut/cut.kest >"$scratch"/cut/said 2>&1 </dev/null
+cut_read=$(python3 -c '
+import sys
+said = open(sys.argv[1], "rb").read()
+try:
+    text = said.decode("utf-8")
+except UnicodeDecodeError:
+    print("not UTF-8")
+    sys.exit()
+print("yes" if "K0329" in text else "no K0329")
+' "$scratch"/cut/said)
+if [ "$cut_read" != "yes" ]; then
+    complain "check: a message listing long names: $cut_read"
+fi
+
 # The language server, driven the way an editor drives it: opened, asked what a
 # name is, asked where it was declared, asked what else names it, asked what the
 # file declares, asked for the one form, and then handed a buffer with a mistake
