@@ -6051,6 +6051,30 @@ if [ -z "$wrong" ]; then
     esac
 fi
 if [ -z "$wrong" ]; then
+    # And names a project can have that a fixed buffer could not: a quote and
+    # a backslash, which the JSON answer printed as typed, and 240 bytes,
+    # whose manifest did not fit in 1024 and was made as nothing, said by
+    # nothing.
+    mkdir -p "$scratch"/named
+    long=$(printf '%240s' '' | tr ' ' q)
+    if ! (cd "$scratch"/named && "$kest" new --json 'a"b\c') \
+            >"$scratch"/named/said 2>&1 ||
+       ! python3 -c '
+import json
+import sys
+
+if json.load(open(sys.argv[1])).get("made") != "a\"b\\c":
+    sys.exit(1)' "$scratch"/named/said 2>/dev/null; then
+        wrong="\`kest new --json\` wrote a name with a quote in it as broken JSON"
+    elif ! (cd "$scratch"/named && "$kest" new "$long") \
+            >"$scratch"/named/said 2>&1 ||
+       [ ! -f "$scratch/named/$long/kest.project" ] ||
+       [ ! -f "$scratch/named/$long/src/main.kest" ] ||
+       [ ! -f "$scratch/named/$long/tests/adding.kest" ]; then
+        wrong="a project with a 240-byte name was not made whole"
+    fi
+fi
+if [ -z "$wrong" ]; then
     # And a manifest with a line nothing knows, which is refused rather than
     # read past: a misspelt line reads exactly like one that is not there.
     printf 'project one\nentyr src/main.kest\n' \

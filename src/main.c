@@ -2423,6 +2423,22 @@ static int write_doc(const char *executable, const char *path, bool json,
     return 0;
 }
 
+// A file or directory of the project being made, as long as the name is: a
+// path cut short at a buffer's end names somewhere outside the project.
+static const char *in_project(KestArena *arena, const char *name,
+                              const char *rest) {
+    size_t length = strlen(name);
+    size_t more = strlen(rest);
+    char *path = kest_arena_alloc(arena, length + 1 + more + 1, 1);
+    if (path == NULL) {
+        return NULL;
+    }
+    memcpy(path, name, length);
+    path[length] = '/';
+    memcpy(path + length + 1, rest, more + 1);
+    return path;
+}
+
 static int make_project(const char *name, bool json) {
     if (name == NULL || name[0] == '\0') {
         refused_at_the_words(json, "K0649", "`new` needs a name");
@@ -2434,7 +2450,21 @@ static int make_project(const char *name, bool json) {
                            KEST_STARVED_SAYS);
         return 1;
     }
-    char path[1024];
+    // Everything worked out before anything is made, so a run with no room
+    // for it leaves no half-made project behind.
+    const char *sources = in_project(arena, name, "src");
+    const char *tests = in_project(arena, name, "tests");
+    const char *manifest_path = in_project(arena, name, KEST_PROJECT_FILE);
+    const char *program = in_project(arena, name, "src/main.kest");
+    const char *test = in_project(arena, name, "tests/adding.kest");
+    const char *manifest = kest_project_written(arena, name);
+    if (sources == NULL || tests == NULL || manifest_path == NULL ||
+        program == NULL || test == NULL || manifest == NULL) {
+        kest_arena_free(arena);
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
+        return 1;
+    }
     // The directory, and the two inside it. A directory that is already there
     // is said about rather than written into: making a project over one that
     // exists is how somebody loses a project.
@@ -2444,17 +2474,12 @@ static int make_project(const char *name, bool json) {
             json, "K0701", "`%s` is already there, or could not be made", name);
         return 1;
     }
-    snprintf(path, sizeof(path), "%s/src", name);
-    KEST_MAKE_DIRECTORY(path);
-    snprintf(path, sizeof(path), "%s/tests", name);
-    KEST_MAKE_DIRECTORY(path);
+    KEST_MAKE_DIRECTORY(sources);
+    KEST_MAKE_DIRECTORY(tests);
 
-    const char *manifest = kest_project_written(arena, name);
-    snprintf(path, sizeof(path), "%s/%s", name, KEST_PROJECT_FILE);
-    bool wrote = manifest != NULL && write_file(path, manifest, json);
+    bool wrote = write_file(manifest_path, manifest, json);
 
-    snprintf(path, sizeof(path), "%s/src/main.kest", name);
-    wrote = wrote && write_file(path,
+    wrote = wrote && write_file(program,
                                 "module src.main\n"
                                 "\n"
                                 "import std.io\n"
@@ -2468,8 +2493,7 @@ static int make_project(const char *name, bool json) {
     // A test is a program that checks itself and answers with which check
     // failed, which is what every example in this language is. There is no
     // framework: a number is a place in a file.
-    snprintf(path, sizeof(path), "%s/tests/adding.kest", name);
-    wrote = wrote && write_file(path,
+    wrote = wrote && write_file(test,
                                 "module tests.adding\n"
                                 "\n"
                                 "fn main() -> i32 {\n"
@@ -2484,8 +2508,9 @@ static int make_project(const char *name, bool json) {
         return 1;
     }
     if (json) {
-        printf("{\"schema\":%u,\"made\":\"%s\"}\n", (unsigned)KEST_JSON_SCHEMA,
-               name);
+        printf("{\"schema\":%u,\"made\":", (unsigned)KEST_JSON_SCHEMA);
+        kest_json_text(name, stdout);
+        printf("}\n");
     } else {
         printf("made %s: a project, a program and a test\n", name);
         printf("  cd %s && kest run src/main.kest\n", name);
