@@ -2223,6 +2223,14 @@ static bool values_equal(const KestType *type, const KestValue *a,
         }                                                                      \
     } while (0)
 
+// What reading a tag with no case behind it says, in both engines: the
+// machine says it below, and a body written in C hands the name and the tag to
+// `kest_native_no_case`, which says it in these words too.
+#define NO_SUCH_CASE "`%s` here holds tag %lld and has no such case"
+#define NO_SUCH_CASE_HELP                                                      \
+    "a tag in memory this machine did not write is the host's to get right, "  \
+    "and `kest_case_of` names the cases"
+
 // Reading a value out of memory, and what that turned up. A tag is the one
 // piece of a value whose number has to mean something -- the pieces beside it
 // are whatever it says they are -- so a number with no case behind it is read
@@ -2251,16 +2259,12 @@ static bool values_equal(const KestType *type, const KestValue *a,
         }                                                                      \
         unpack((where), (layout), (from), &told);                              \
         if (told.wrong) {                                                      \
-            fail(vmp, frame, instruction, "K0651",                             \
-                 "`%s` here holds tag %lld and has no such case",              \
+            fail(vmp, frame, instruction, "K0651", NO_SUCH_CASE,               \
                  kest_type_written(told.type) != NULL                          \
                      ? kest_type_written(told.type)                            \
                      : "a value with a tag in it",                             \
                  (long long)told.tag);                                         \
-            kest_diags_suggest(                                                \
-                vmp->diags, "a tag in memory this machine did not write is "   \
-                            "the host's to get right, and `kest_case_of` "     \
-                            "names the cases");                                \
+            kest_diags_suggest(vmp->diags, NO_SUCH_CASE_HELP);                 \
             return false;                                                      \
         }                                                                      \
     } while (0)
@@ -10451,14 +10455,21 @@ bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,
     if (runtime == NULL) {
         return false;
     }
-    KestSpan span = where_asked(runtime, offset);
-    const KestSource *source =
-        runtime->frame_count > 0
-            ? runtime->frames[runtime->frame_count - 1].chunk->source
-            : NULL;
     // The words are the body's, already put together: what a refusal says is
     // the machine's sentence and a compiled body says the same one.
-    said_here(runtime, source, span, code, "%s", message);
+    said_here(runtime, where_from(runtime), where_asked(runtime, offset), code,
+              "%s", message);
+    return false;
+}
+
+bool kest_native_no_case(KestRuntime *runtime, uint32_t offset,
+                         const char *type, long long tag) {
+    if (runtime == NULL) {
+        return false;
+    }
+    said_here(runtime, where_from(runtime), where_asked(runtime, offset),
+              "K0651", NO_SUCH_CASE, type, tag);
+    kest_diags_suggest(runtime->diags, NO_SUCH_CASE_HELP);
     return false;
 }
 

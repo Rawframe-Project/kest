@@ -120,13 +120,13 @@ for path in built:
     wanted[path] = asked
 
 # And the third thing that calls this library, which is this project's other
-# backend: a file it writes calls two doors of the machine and nothing else
+# backend: a file it writes calls three doors of the machine and nothing else
 # in the tree does. So one is written and compiled here, and what it asks for
 # is read the way a host's object is -- the day the backend stops writing a
 # call to one of those doors, that door is dead and this is what says so. The
 # program is written here rather than taken from the tree because it has to
-# hold what provokes both of them: a body written whole, and something in it
-# that can stop.
+# hold what provokes all three: a body written whole, something in it that
+# can stop, and an enum read out of memory, whose tag may name no case.
 WRITTEN = """module dividing
 
 import std.io
@@ -280,6 +280,22 @@ fn scratched(rounds: i32) -> i32 no.host deterministic {
 
 fn far(i: i32) -> f64 no.alloc no.host deterministic {
     return FAR[i]
+}
+
+enum Weather {
+    Calm
+    Storm(i32)
+}
+
+fn stormy(days: [Weather]) -> i32 no.alloc no.host deterministic {
+    let wind = 0
+    for day in days {
+        wind += match day {
+            Calm -> 0
+            Storm(much) -> much
+        }
+    }
+    return wind
 }
 
 fn main() -> i32 {
