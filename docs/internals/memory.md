@@ -10,7 +10,7 @@ Two allocators with different jobs: arenas for what compiling makes, which is fr
 - **Stages give back what is dead.** Tokens are dead once the tree is made (a node holds a span, never a token), and the trees are dead once the last generic copy is compiled and the promises are proved over the emitted code. Each lives in an arena of its own given back where its last reader ends, which is about half of what compiling asks for.
 - **Three numbers.** `cost` is the most the arena and everything under it held at once (what a ceiling must allow for the same work to fit again), `held` is what remains at the end, and `working` is what stages held in memory of their own and gave back. A ceiling refuses against `cost`.
 - **Growing lists** grow by a quarter in place where they can, never past what the remaining bytes could produce (a token is at least one byte), so an arena does not keep every size a list passed through.
-- **Refusals for testing.** `KEST_REFUSE_ARENA` and `KEST_REFUSE_AT` make an arena refuse at a chosen request, which is how the checks walk every out-of-memory path and require each to end in a diagnostic (`K0639`, "not enough memory to finish, or to say more about it", is the one bit recorded when there is no room to record anything else).
+- **Refusals for testing.** `KEST_REFUSE_ARENA` and `KEST_REFUSE_AT` make an arena refuse at a chosen request, and `KEST_REFUSE_MALLOC` refuses one allocation of the standard library lookup, which runs before any arena exists, which is how the checks walk every out-of-memory path and require each to end in a diagnostic (`K0639`, "not enough memory to finish, or to say more about it", is the one bit recorded when there is no room to record anything else).
 
 ## The heap
 

@@ -33,6 +33,13 @@
 typedef struct KestArena KestArena;
 
 KestArena *kest_arena_new(void);
+
+// `malloc`, for the few things that cannot live in an arena because they are
+// worked out before any arena is taken: where the standard library is. The
+// build that checks itself refuses the n-th of these in the process when
+// `KEST_REFUSE_MALLOC=n` says so, and only that one, which is what lets a
+// check ask whether running out there is said as running out.
+void *kest_malloc(size_t size);
 void kest_arena_free(KestArena *arena);
 
 // An arena taken under another: what it holds is counted beside what the

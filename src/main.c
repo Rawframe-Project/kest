@@ -2427,13 +2427,26 @@ static int write_hostile(const char *path, uint64_t seed, bool json) {
 // Where the library is, for this command line: one answer for the process,
 // kept in memory of the command line's own rather than in an arena, so that a
 // run refusing its first arena is refused by the stage that took it. NULL when
-// there was no memory for it, and a build handed NULL looks for itself.
+// there was no memory for it.
 static const char *library_of(const char *executable) {
     static char *found;
     if (found == NULL) {
         found = kest_library_found(executable);
     }
     return found;
+}
+
+// The same for a command about to hand it on, which says there was no memory
+// when there was none and answers NULL: a build or a server handed NULL looks
+// for the library itself, from where it stands, and a lookup that ran out of
+// memory went on as a run of a library somewhere else.
+static const char *library_or_said(const char *executable, bool json) {
+    const char *library = library_of(executable);
+    if (library == NULL) {
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
+    }
+    return library;
 }
 
 // What a file declares and what it says about each, for somebody who is going
@@ -2444,9 +2457,12 @@ static int write_doc(const char *executable, const char *path, bool json,
     if (path == NULL) {
         return refused_at_the_words(json, "K0649", "`%s` needs a file", "doc");
     }
-    KestBuild *build =
-        kest_build(path, library_of(executable), json ? stdout : stderr,
-                   json ? KEST_FORM_JSON : KEST_FORM_TEXT, room);
+    const char *library = library_or_said(executable, json);
+    if (library == NULL) {
+        return 1;
+    }
+    KestBuild *build = kest_build(path, library, json ? stdout : stderr,
+                                  json ? KEST_FORM_JSON : KEST_FORM_TEXT, room);
     if (build == NULL) {
         return 1;
     }
@@ -2625,6 +2641,19 @@ static int look_over(const char *executable, const char *where, bool json) {
         return 1;
     }
     const char *library = kest_library_path(arena, executable);
+    // Whether the library is where it says it is, asked by reading one of its
+    // files rather than by looking at the directory: what matters is whether
+    // an import resolves, and this is the question an import asks. Asked
+    // before anything is said, because no room to say where the library is,
+    // or to look in it, is all this can say: `NOT found` would send somebody
+    // to install what is there.
+    bool found = library != NULL && kest_library_has(arena, library, "io", 2);
+    if (library == NULL || (!found && kest_arena_refused_anywhere(arena))) {
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
+        kest_arena_free(arena);
+        return 1;
+    }
     const char *why = NULL;
     KestProject *project =
         kest_project_read(arena, where == NULL ? "" : where, &why);
@@ -2647,10 +2676,6 @@ static int look_over(const char *executable, const char *where, bool json) {
         printf("library    %s\n", library);
     }
 
-    // Whether the library is where it says it is, asked by reading one of its
-    // files rather than by looking at the directory: what matters is whether
-    // an import resolves, and this is the question an import asks.
-    bool found = kest_library_has(library, "io", 2);
     if (!found) {
         wrong = true;
     }
@@ -3155,9 +3180,13 @@ static int run(const char *command, const char *executable, char **paths,
     int64_t opened = weighing ? host_nanoseconds() : 0;
     // The binary a release made, once one has.
     char *released = NULL;
+    const char *library = library_or_said(executable, json);
+    if (library == NULL) {
+        return 1;
+    }
     KestBuild *build = kest_build_open_within(
-        library_of(executable), paths,
-        strcmp(command, "call") == 0 ? 1 : path_count, room, work);
+        library, paths, strcmp(command, "call") == 0 ? 1 : path_count, room,
+        work);
     if (build != NULL && weighing) {
         kest_build_clock(build, compiling_now, NULL,
                          (uint64_t)(host_nanoseconds() - opened));
@@ -4445,10 +4474,14 @@ int main(int argc, char **argv) {
     // Each fails only when it has no memory to start in, and an editor shows
     // what its server wrote to the error stream, so that is where it is said.
     if (strcmp(argv[1], "lsp") == 0) {
+        const char *library = library_or_said(argv[0], false);
+        if (library == NULL) {
+            return 1;
+        }
         char rooted[2048];
-        int served = kest_lsp_serve(
-            library_from_root(library_of(argv[0]), rooted, sizeof(rooted)),
-            stdin, stdout, project_files, resolved_path);
+        int served =
+            kest_lsp_serve(library_from_root(library, rooted, sizeof(rooted)),
+                           stdin, stdout, project_files, resolved_path);
         if (served != 0) {
             kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
                                KEST_STARVED_SAYS);
@@ -4459,8 +4492,11 @@ int main(int argc, char **argv) {
     // editor's console and what it reads is nothing, because both standard
     // streams are the protocol.
     if (strcmp(argv[1], "dap") == 0) {
-        int served =
-            kest_dap_serve(library_of(argv[0]), make_host, stdin, stdout);
+        const char *library = library_or_said(argv[0], false);
+        if (library == NULL) {
+            return 1;
+        }
+        int served = kest_dap_serve(library, make_host, stdin, stdout);
         if (served != 0) {
             kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
                                KEST_STARVED_SAYS);

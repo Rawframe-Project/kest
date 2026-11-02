@@ -2437,7 +2437,8 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     const char *dot = memchr(name, '.', length);
     if (dot != NULL && program->files != NULL &&
         !kest_file_reaches(program, name, (size_t)(dot - name)) &&
-        kest_library_has(program->files->library, name, (size_t)(dot - name))) {
+        kest_library_has(program->arena, program->files->library, name,
+                         (size_t)(dot - name))) {
         kest_diags_suggest(program->diags,
                            "`std.%.*s` is in the library, and this file does "
                            "not import it",
