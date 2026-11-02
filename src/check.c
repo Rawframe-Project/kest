@@ -4162,7 +4162,8 @@ static KestType *check_array(Checker *checker, KestExpr *expr,
         return error_type(checker);
     }
     if (fixed) {
-        return kest_fixed_of(checker->program, element, expr->array.count);
+        return kest_fixed_of(checker->program, element, expr->array.count,
+                             checker->program->source, expr->span);
     }
     return kest_array_of(checker->program, element);
 }

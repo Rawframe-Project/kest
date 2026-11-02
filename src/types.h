@@ -614,9 +614,10 @@ KestType *kest_array_of(KestProgram *program, KestType *element);
 KestType *kest_optional_of(KestProgram *program, KestType *element);
 KestType *kest_ref_of(KestProgram *program, KestType *element);
 // That many of something, laid out where it stands rather than behind a
-// handle. Copying one copies all of it.
-KestType *kest_fixed_of(KestProgram *program, KestType *element,
-                        uint32_t count);
+// handle. Copying one copies all of it. One bigger than a value may be is
+// refused with K0327 at `where`, and is a type that is wrong.
+KestType *kest_fixed_of(KestProgram *program, KestType *element, uint32_t count,
+                        const KestSource *where, KestSpan span);
 
 KestType *kest_find_type(KestProgram *program, const char *name, size_t length);
 KestSymbol *kest_find_global(KestProgram *program, const char *name,

@@ -4498,6 +4498,25 @@ K0310|fn main() -> i32 {\n    let a: i32 = 1\n    let b: i32?? = a\n    if let i
 K0310|fn main() -> i32 {\n    let n = 1\n    room(n, 8)\n    return 0\n}|`room` makes room in an array or a store
 REFUSED
 
+# A `[T; N]` a literal makes too big, which is said at the literal, and what is
+# said after it is said about the same file. The element is the literal's when
+# the one written is not known, so two of 32768 bytes are 65536; it was sized
+# with no place, so the K0327 had no file or line, and the file the checker
+# reported into was left unset, so the K0310 on the next line had none either.
+printf 'fn pair(d: [i64; 4096]) -> i32 {\n    let p: [Nope; 2] = [d, d]\n    let m: i32 = true\n    return len(p) + m\n}\n\nfn main() -> i32 {\n    return 0\n}\n' \
+    > "$scratch"/refused/sized.kest
+refused=$("$kest" check "$scratch"/refused/sized.kest 2>&1 </dev/null)
+if ! printf '%s\n' "$refused" | grep -A1 '^error\[K0327\]' |
+    grep -q -- '--> .*/sized.kest:2:'; then
+    complain "check: a literal too big was not said at its line"
+    printf '%s\n' "$refused" | sed 's/^/    /' | head -12
+fi
+if ! printf '%s\n' "$refused" | grep -A1 '^error\[K0310\]' |
+    grep -q -- '--> .*/sized.kest:3:'; then
+    complain "check: what was said after a literal too big had no file"
+    printf '%s\n' "$refused" | sed 's/^/    /' | head -12
+fi
+
 # A `match` over two enums whose case names are long, which answers one of the
 # four combinations. Each combination it leaves was written into 128 bytes and
 # the list into 240, so the first was named with its second case cut to
