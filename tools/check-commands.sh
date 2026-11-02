@@ -6502,6 +6502,24 @@ if [ -z "$debug_wrong" ]; then
     *) debug_wrong="a command past the most a command may be was not refused" ;;
     esac
 fi
+# And a line that is not one: `4x` was line 4, and so was 2^32 + 4, because the
+# number was read as far as it was digits and wrapped where a line number
+# does. Line 4 is the one the breakpoint above stops at, so either would have
+# stopped there.
+if [ -z "$debug_wrong" ]; then
+    for wrongly in 4x 4294967300 +4; do
+        printf 'break %s\nrun\nquit\n' "$wrongly" |
+            "$kest" debug "$scratch"/stopping/stopping.kest \
+                >"$scratch"/stopping/wrongly-said 2>&1
+        case "$(cat "$scratch"/stopping/wrongly-said)" in
+        *"breakpoint at"*|*"stopped at"*)
+            debug_wrong="\`break $wrongly\` set a breakpoint"
+            ;;
+        *"\`$wrongly\` is not a line"*) ;;
+        *) debug_wrong="\`break $wrongly\` was not refused as a line" ;;
+        esac
+    done
+fi
 if [ -n "$debug_wrong" ]; then
     complain "debug: a machine stopped and asked about: $debug_wrong"
     sed 's/^/    /' "$scratch"/stopping/said | head -8
