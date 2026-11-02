@@ -176,6 +176,9 @@ function(kest_tool name directory)
 endfunction()
 kest_tool(inward tools tools/inward.c)
 kest_tool(fuzz tools tools/fuzz.c)
+# The fuzzer reads examples, seeds and the library from this tree, wherever it
+# is run from.
+target_compile_definitions(fuzz PRIVATE KEST_TREE="${PROJECT_SOURCE_DIR}/")
 kest_tool(measure bench bench/measure.c)
 kest_tool(numbers tools tools/numbers.c)
 
@@ -236,6 +239,8 @@ if(KEST_CHECKED)
   kest_checked_executable(engine-debug examples "${kest_host_warn}" examples/engine.c)
   kest_checked_executable(fuzz-debug tools "${kest_host_warn}" tools/fuzz.c)
   target_include_directories(fuzz-debug PRIVATE ${PROJECT_SOURCE_DIR}/src)
+  target_compile_definitions(fuzz-debug PRIVATE
+                             KEST_TREE="${PROJECT_SOURCE_DIR}/")
 endif()
 
 # Every object of the release build and of the checking build, by the name of

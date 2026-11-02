@@ -149,10 +149,39 @@ static const char *const PIECES[] = {
     "\xe2",
 };
 
-// A file of this tree, read whole, to be broken. NULL when it is not there,
-// which is what running this from somewhere else looks like.
+// Where this tree is, written in when the build made this tool, so the files
+// it reads from the tree are the same whoever runs it and from wherever. Read
+// as written, from where it was run, they were not: a run from another
+// directory found no examples, and `chunks` stopped and the others started
+// from nothing. Nothing for a build that did not say, which is where it was
+// run from.
+//
+// And the library beside them, which every build here reads its imports from
+// rather than from wherever it was run. A build that did not say where the
+// tree is looks for the library the way any host does.
+#ifdef KEST_TREE
+#define TREE_LIBRARY KEST_TREE "lib/"
+#else
+#define KEST_TREE ""
+#define TREE_LIBRARY NULL
+#endif
+
+// A file of this tree by its path in the tree, in memory the caller frees, or
+// NULL when there was none.
+static char *in_tree(const char *path) {
+    size_t wide = strlen(KEST_TREE) + strlen(path) + 1;
+    char *whole = malloc(wide);
+    if (whole != NULL) {
+        snprintf(whole, wide, "%s%s", KEST_TREE, path);
+    }
+    return whole;
+}
+
+// A file of this tree, read whole, to be broken. NULL when it is not there.
 static char *seed_program(const char *path, size_t *length) {
-    FILE *file = fopen(path, "rb");
+    char *whole = in_tree(path);
+    FILE *file = whole == NULL ? NULL : fopen(whole, "rb");
+    free(whole);
     if (file == NULL) {
         return NULL;
     }
@@ -180,6 +209,25 @@ static const char *const SEEDS[] = {
     "examples/frame.kest", "lib/std/text.kest",
     "lib/std/table.kest",  "examples/registry.kest",
 };
+
+// Whether every seed can be read: one that cannot is a run that starts from
+// less than it says, which is a run that passes for having asked less. Said,
+// and refused.
+static bool seeds_there(void) {
+    for (size_t i = 0; i < sizeof(SEEDS) / sizeof(SEEDS[0]); i++) {
+        size_t length = 0;
+        char *text = seed_program(SEEDS[i], &length);
+        if (text == NULL) {
+            fprintf(stderr,
+                    "fuzz: `%s%s` cannot be read, so there is nothing to "
+                    "start from\n",
+                    KEST_TREE, SEEDS[i]);
+            return false;
+        }
+        free(text);
+    }
+    return true;
+}
 
 // A program to put through it: half of the time one of the seeds with between
 // one and eight things done to it, and otherwise pieces of the language one
@@ -297,6 +345,9 @@ static size_t made(uint64_t *state, char *program, size_t room) {
 // as and the one that reaches the most code: reading, checking, compiling and
 // running, all of it over something nobody wrote.
 static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
+    if (!seeds_there()) {
+        return 1;
+    }
     unsigned long refused = 0;
     unsigned long compiled = 0;
     // What every one of them answered, folded into one number. What it is for
@@ -325,7 +376,8 @@ static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
         // Everything the build says goes nowhere: what is being asked is
         // whether it says something rather than what. A refusal is the good
         // answer and there are a great many of them.
-        KestBuild *build = kest_build(where, NULL, NULL, KEST_FORM_TEXT, 0);
+        KestBuild *build =
+            kest_build(where, TREE_LIBRARY, NULL, KEST_FORM_TEXT, 0);
         if (build == NULL) {
             refused++;
             folded = (folded ^ 1u) * 1099511628211ull;
@@ -436,7 +488,7 @@ static bool a_machine_for(const char *source, const char *where,
     }
     fwrite(source, 1, strlen(source), file);
     fclose(file);
-    *build = kest_build(where, NULL, NULL, KEST_FORM_TEXT, 0);
+    *build = kest_build(where, TREE_LIBRARY, NULL, KEST_FORM_TEXT, 0);
     if (*build == NULL) {
         return false;
     }
@@ -1039,12 +1091,20 @@ static int fuzz_chunks(uint64_t seed, unsigned long many, const char *where) {
     enum { PROGRAMS = sizeof(PROVEN) / sizeof(PROVEN[0]) };
     KestBuild *built[PROGRAMS];
     for (size_t i = 0; i < PROGRAMS; i++) {
-        built[i] = kest_build(PROVEN[i], NULL, NULL, KEST_FORM_TEXT, 0);
+        char *whole = in_tree(PROVEN[i]);
+        built[i] = whole == NULL ? NULL
+                                 : kest_build(whole, TREE_LIBRARY, NULL,
+                                              KEST_FORM_TEXT, 0);
+        free(whole);
         if (built[i] == NULL) {
             fprintf(stderr,
-                    "fuzz: `%s` does not build, so there is nothing "
+                    "fuzz: `%s%s` does not build, so there is nothing "
                     "to break\n",
-                    PROVEN[i]);
+                    KEST_TREE, PROVEN[i]);
+            for (size_t j = 0; j < i; j++) {
+                kest_build_free(built[j]);
+            }
+            kest_host_free(host);
             return 1;
         }
     }
@@ -1209,6 +1269,9 @@ static const char *formatted_wrong(KestArena *arena, const char *where,
 // the pieces that happened to make a file, which is the formatter met with
 // shapes nobody chose. A finding is the program, written where it was told.
 static int fuzz_fmt(uint64_t seed, unsigned long many, const char *where) {
+    if (!seeds_there()) {
+        return 1;
+    }
     unsigned long formatted = 0;
     for (unsigned long round = 0; round < many; round++) {
         uint64_t state = seed + round;
