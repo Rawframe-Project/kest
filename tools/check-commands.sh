@@ -6617,14 +6617,14 @@ esac
 # A local holding 400 bytes of text. What a slot holds was written into 256
 # bytes, so `locals` showed the text cut short, with no closing quote and
 # nothing to say there was more. It is shown whole.
-words=$(printf 'word%.0s' $(seq 100))
+long_text=$(printf 'word%.0s' $(seq 100))
 printf 'fn show(s: text) -> i32 {\n    let n = len(s)\n    return n - 400\n}\n\nfn main() -> i32 {\n    return show("%s")\n}\n' \
-    "$words" >"$scratch"/stopping/long.kest
+    "$long_text" >"$scratch"/stopping/long.kest
 printf 'break 2\nrun\nlocals\ncontinue\nquit\n' >"$scratch"/stopping/long-asking
 "$kest" debug "$scratch"/stopping/long.kest \
     <"$scratch"/stopping/long-asking >"$scratch"/stopping/long-said 2>&1
 case "$(cat "$scratch"/stopping/long-said)" in
-*"slot 0  \"$words\""*) ;;
+*"slot 0  \"$long_text\""*) ;;
 *)
     complain "debug: a long piece of text was not shown whole"
     ;;
