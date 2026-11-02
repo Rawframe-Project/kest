@@ -5261,8 +5261,6 @@ static size_t module_of_in(const KestUnits *files, const char *name) {
     return dot == NULL ? strlen(name) : (size_t)(dot - name);
 }
 
-static const KestUnits *dumping_files;
-
 // The modules a program is made of, in a table, so that splitting a name where
 // its module ends is a lookup rather than a walk of every file. A listing of a
 // thousand modules spent a fifth of a `check` inside that walk, and the walk
@@ -5280,7 +5278,13 @@ typedef struct {
     uint32_t count;
 } Modules;
 
-static const Modules *dumping_modules;
+// What one listing splits names with: the files, and the table of their
+// modules where there was room to build it. Handed down the walk rather than
+// kept in a static, so two programs listed at once each split by their own.
+typedef struct {
+    const KestUnits *files;
+    const Modules *modules;
+} Dumping;
 
 static uint32_t module_slot(const Modules *modules, const char *name,
                             size_t length) {
@@ -5366,25 +5370,27 @@ static size_t module_of_prepared(const Modules *modules, const char *name) {
     return 0;
 }
 
-static size_t module_of(const char *name) {
-    if (dumping_modules != NULL && dumping_modules->slot_count > 0) {
-        size_t length = module_of_prepared(dumping_modules, name);
+static size_t module_of(const Dumping *dumping, const char *name) {
+    if (dumping->modules != NULL && dumping->modules->slot_count > 0) {
+        size_t length = module_of_prepared(dumping->modules, name);
         if (length > 0) {
             return length;
         }
         const char *dot = strrchr(name, '.');
         return dot == NULL ? strlen(name) : (size_t)(dot - name);
     }
-    return module_of_in(dumping_files, name);
+    return module_of_in(dumping->files, name);
 }
 
-static bool same_module(const char *name, const char *module, size_t length) {
+static bool same_module(const Dumping *dumping, const char *name,
+                        const char *module, size_t length) {
     // A file that names no module puts its names under nothing, so the ones
     // with no dot in them are its own. Everything else is under something.
     if (length == 0) {
         return strchr(name, '.') == NULL;
     }
-    return module_of(name) == length && memcmp(name, module, length) == 0;
+    return module_of(dumping, name) == length &&
+           memcmp(name, module, length) == 0;
 }
 
 // What a module holds, for the ones a file imported rather than wrote. A
@@ -5398,21 +5404,22 @@ typedef struct {
     uint32_t foreign;
 } Held;
 
-static Held *held_of(Held *held, uint32_t *count, const char *name) {
-    size_t length = module_of(name);
+static Held *held_of(const Dumping *dumping, Held *held, uint32_t *count,
+                     const char *name) {
+    size_t length = module_of(dumping, name);
     // Which line of the listing this module already has, asked of the table
     // the modules are in rather than by walking the lines written so far.
     // That walk was the listing's own length for every name in it.
-    if (dumping_modules != NULL && dumping_modules->slot_count > 0 &&
-        length > 0) {
-        uint32_t slot = module_slot(dumping_modules, name, length);
-        if (dumping_modules->slots[slot] != 0) {
-            uint32_t which = dumping_modules->slots[slot] - 1u;
-            int32_t at = dumping_modules->held_at[which];
+    const Modules *modules = dumping->modules;
+    if (modules != NULL && modules->slot_count > 0 && length > 0) {
+        uint32_t slot = module_slot(modules, name, length);
+        if (modules->slots[slot] != 0) {
+            uint32_t which = modules->slots[slot] - 1u;
+            int32_t at = modules->held_at[which];
             if (at >= 0) {
                 return &held[at];
             }
-            dumping_modules->held_at[which] = (int32_t)*count;
+            modules->held_at[which] = (int32_t)*count;
         }
     } else {
         for (uint32_t i = 0; i < *count; i++) {
@@ -5446,14 +5453,10 @@ static const char *listed_name(bool *whole, KestArena *arena,
 bool kest_program_dump(const KestProgram *program, KestArena *arena,
                        const char *root, FILE *out) {
     // Which modules this program holds, so a name can be split where its
-    // module ends rather than at a dot. Set for the length of the walk below
-    // and put back, because what `module_of` answers is about one program.
-    const KestUnits *was_dumping = dumping_files;
-    const Modules *were_modules = dumping_modules;
-    dumping_files = program->files;
+    // module ends rather than at a dot.
     Modules modules;
     bool whole = modules_prepare(arena, program->files, &modules);
-    dumping_modules = whole ? &modules : NULL;
+    const Dumping dumping = {program->files, whole ? &modules : NULL};
     size_t root_length = root == NULL ? 0 : strlen(root);
     uint32_t elsewhere = 0;
     uint32_t said = 0;
@@ -5478,10 +5481,11 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
             type->vector) {
             continue;
         }
-        if (type->name != NULL && !same_module(type->name, root, root_length)) {
+        if (type->name != NULL &&
+            !same_module(&dumping, type->name, root, root_length)) {
             if (type->tag == KEST_T_STRUCT || type->tag == KEST_T_ENUM ||
                 type->tag == KEST_T_FLAGS) {
-                held_of(held, &elsewhere, type->name)->types++;
+                held_of(&dumping, held, &elsewhere, type->name)->types++;
             }
             continue;
         }
@@ -5531,8 +5535,8 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
     for (uint32_t i = 0; i < program->global_count; i++) {
         const KestSymbol *symbol = &program->globals[i];
         const KestType *type = symbol->type;
-        if (!same_module(symbol->name, root, root_length)) {
-            Held *one = held_of(held, &elsewhere, symbol->name);
+        if (!same_module(&dumping, symbol->name, root, root_length)) {
+            Held *one = held_of(&dumping, held, &elsewhere, symbol->name);
             if (type->tag == KEST_T_FN) {
                 one->functions++;
                 if (type->is_foreign) {
@@ -5621,8 +5625,6 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
     if (said == 0 && elsewhere == 0) {
         fputs("this file declares nothing\n", out);
     }
-    dumping_files = was_dumping;
-    dumping_modules = were_modules;
     return whole;
 }
 
@@ -5759,19 +5761,18 @@ void kest_program_costs(const KestProgram *program, FILE *out) {
 // under the whole of its module and what comes after may hold dots of its own,
 // so a tool splitting the name at a dot would invent modules -- `std.io.Io` is
 // a capability inside `std.io`. It is written rather than derivable.
-static void write_module(const KestProgram *program, const char *name,
-                         FILE *out) {
+static void write_module(const Dumping *dumping, const char *name, FILE *out) {
     // The same table the printed listing uses where there is one, and the walk
     // of every file where there is not.
     size_t length = 0;
-    if (dumping_modules != NULL && dumping_modules->slot_count > 0) {
-        length = module_of_prepared(dumping_modules, name);
+    if (dumping->modules != NULL && dumping->modules->slot_count > 0) {
+        length = module_of_prepared(dumping->modules, name);
         if (length == 0) {
             const char *dot = strrchr(name, '.');
             length = dot == NULL ? strlen(name) : (size_t)(dot - name);
         }
     } else {
-        length = module_of_in(program->files, name);
+        length = module_of_in(dumping->files, name);
     }
     fputs(",\"module\":", out);
     if (length == 0 || length == strlen(name)) {
@@ -5786,10 +5787,9 @@ static void write_module(const KestProgram *program, const char *name,
 
 bool kest_program_dump_json(const KestProgram *program, KestArena *arena,
                             FILE *out) {
-    const Modules *were_modules = dumping_modules;
     Modules modules;
     bool whole = modules_prepare(arena, program->files, &modules);
-    dumping_modules = whole ? &modules : NULL;
+    const Dumping dumping = {program->files, whole ? &modules : NULL};
     fputs("\"types\":[", out);
     bool first = true;
     for (uint32_t i = 0; i < program->type_count; i++) {
@@ -5810,7 +5810,7 @@ bool kest_program_dump_json(const KestProgram *program, KestArena *arena,
         first = false;
         fputs("{\"name\":", out);
         kest_json_text(type->name, out);
-        write_module(program, type->name, out);
+        write_module(&dumping, type->name, out);
         fprintf(out, ",\"kind\":\"%s\"",
                 type->tag == KEST_T_ENUM
                     ? "enum"
@@ -5886,7 +5886,7 @@ bool kest_program_dump_json(const KestProgram *program, KestArena *arena,
         first = false;
         fputs("{\"name\":", out);
         kest_json_text(symbol->name, out);
-        write_module(program, symbol->name, out);
+        write_module(&dumping, symbol->name, out);
         // The type names it takes, each with what it has to be able to do.
         // A generic's requirements are part of what it is, so a tool reading
         // this is handed them rather than left to find out at a call. Empty
@@ -6013,7 +6013,7 @@ bool kest_program_dump_json(const KestProgram *program, KestArena *arena,
         first = false;
         fputs("{\"name\":", out);
         kest_json_text(symbol->name, out);
-        write_module(program, symbol->name, out);
+        write_module(&dumping, symbol->name, out);
         fputs(",\"type\":", out);
         kest_json_text(listed_name(&whole, arena, symbol->type), out);
         fprintf(out, ",\"named\":%s", symbol->named ? "true" : "false");
@@ -6030,6 +6030,5 @@ bool kest_program_dump_json(const KestProgram *program, KestArena *arena,
     // it is made of wants both numbers from the same run.
     fprintf(out, ",\"typesMade\":%u,\"typeBytes\":%zu", program->types_made,
             sizeof(KestType));
-    dumping_modules = were_modules;
     return whole;
 }
