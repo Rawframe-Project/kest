@@ -143,7 +143,8 @@ esac
 # line is: nothing after it, and something that is not a count.
 for asking in "--work@\`--work\` says how many units, and there is nothing after it" \
         "--work 4X@\`4X\` is not a number of units of work" \
-        "--work 0@\`0\` is not a number of units of work"; do
+        "--work 0@\`0\` is not a number of units of work" \
+        "--work -1@\`-1\` is not a number of units of work"; do
     words=${asking%%@*}
     refused_with=${asking#*@}
     # shellcheck disable=SC2086

@@ -1806,6 +1806,9 @@ static bool takes_a_count(const char *command) {
 // for every way of writing it wrong, because what a reader does about any of
 // them is write it again.
 static bool read_room(const char *text, size_t *room, bool json) {
+    // A digit first, because `strtoull` reads past spaces and a sign and
+    // negates in unsigned arithmetic: `-1` was the most room a size can say.
+    bool counted = text[0] >= '0' && text[0] <= '9';
     char *end = NULL;
     errno = 0;
     unsigned long long value = strtoull(text, &end, 10);
@@ -1831,8 +1834,8 @@ static bool read_room(const char *text, size_t *room, bool json) {
             break;
         }
     }
-    if (end == text || *end != '\0' || errno == ERANGE || value == 0 ||
-        value > (unsigned long long)SIZE_MAX / scale) {
+    if (!counted || end == text || *end != '\0' || errno == ERANGE ||
+        value == 0 || value > (unsigned long long)SIZE_MAX / scale) {
         refused_at_the_words(json, "K0649",
                              "`%s` is not an amount of room; write a number of "
                              "bytes, or one with `K`, `M` or `G` after it",
@@ -1852,6 +1855,8 @@ static bool read_room(const char *text, size_t *room, bool json) {
 // the compiler, so it is read by the same words with its own name in them.
 static bool read_fuel(const char *text, uint64_t *fuel, const char *of,
                       bool json) {
+    // A digit first, as for room: `--fuel -100` was a run with no limit.
+    bool counted = text[0] >= '0' && text[0] <= '9';
     char *end = NULL;
     errno = 0;
     unsigned long long value = strtoull(text, &end, 10);
@@ -1877,8 +1882,8 @@ static bool read_fuel(const char *text, uint64_t *fuel, const char *of,
             break;
         }
     }
-    if (end == text || *end != '\0' || errno == ERANGE || value == 0 ||
-        value > UINT64_MAX / scale) {
+    if (!counted || end == text || *end != '\0' || errno == ERANGE ||
+        value == 0 || value > UINT64_MAX / scale) {
         refused_at_the_words(json, "K0649",
                              "`%s` is not a number of %s; write one, "
                              "or one with `K`, `M` or `G` after it",
