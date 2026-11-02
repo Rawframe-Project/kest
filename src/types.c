@@ -5778,14 +5778,10 @@ static void write_module(const KestProgram *program, const char *name,
         fputs("null", out);
         return;
     }
-    char held[256];
-    if (length + 1 > sizeof(held)) {
-        fputs("null", out);
-        return;
-    }
-    memcpy(held, name, length);
-    held[length] = '\0';
-    kest_json_text(held, out);
+    // Written from the name by its length: a copy into 256 bytes wrote
+    // `null` for a module whose name did not fit, which is a declaration
+    // listed as belonging to none.
+    kest_json_bytes(name, length, out);
 }
 
 bool kest_program_dump_json(const KestProgram *program, KestArena *arena,
