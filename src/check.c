@@ -2172,6 +2172,39 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
     return NULL;
 }
 
+// `count` names with a comma between each two, written whole into the
+// program's arena. A list written into a buffer of its own cut a long type's
+// name where the buffer ended and left out every name after it. NULL when
+// `names` or the list has no room, which the arena's refusal says.
+static const char *comma_list(Checker *checker, const char **names,
+                              uint32_t count) {
+    if (names == NULL) {
+        checker->out_of_memory = true;
+        return NULL;
+    }
+    size_t needed = 1;
+    for (uint32_t i = 0; i < count; i++) {
+        needed += strlen(names[i]) + 2;
+    }
+    char *out = kest_arena_alloc(checker->program->arena, needed, 1);
+    if (out == NULL) {
+        checker->out_of_memory = true;
+        return NULL;
+    }
+    size_t at = 0;
+    for (uint32_t i = 0; i < count; i++) {
+        if (i > 0) {
+            memcpy(out + at, ", ", 2);
+            at += 2;
+        }
+        size_t length = strlen(names[i]);
+        memcpy(out + at, names[i], length);
+        at += length;
+    }
+    out[at] = '\0';
+    return out;
+}
+
 // `place.name`, or `name` alone for no place, in `stack` when it fits and in
 // the program's arena when it does not, with its length in `written`. NULL
 // only when the arena has no room, which the arena's refusal says. A module's
@@ -2377,11 +2410,10 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
         // A literal is said as what it is rather than as the type it would
         // have taken alone: `pick(1)` is a whole number, and calling it `i32`
         // would be this compiler answering a question nobody asked.
-        char passed[256];
-        size_t wrote = 0;
-        passed[0] = '\0';
-        for (uint32_t i = 0; i < argument_count && wrote + 1 < sizeof(passed);
-             i++) {
+        const char **passing =
+            KEST_ARENA_ARRAY(checker->program->arena, const char *,
+                             argument_count == 0 ? 1 : argument_count);
+        for (uint32_t i = 0; passing != NULL && i < argument_count; i++) {
             const KestExpr *literal = literal_of(expr->call.args[i]);
             // `none` is written as `none` and has no type of its own until
             // something says what it is the absence of, so it is said as
@@ -2394,9 +2426,9 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
                                                       : "a number with a "
                                                         "fraction")
                     : kest_type_name(checker->program->arena, given[i]);
-            wrote = kest_put(passed, sizeof(passed), wrote, "%s%s",
-                             i == 0 ? "" : ", ", what);
+            passing[i] = what;
         }
+        const char *passed = comma_list(checker, passing, argument_count);
         // And which of the two happened. A pass over the families can find
         // several where a pass over the exact types finds none -- two `pick`s
         // taking `u8` and `u16`, called with `1` -- and what a reader was told
@@ -2411,7 +2443,9 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
         // Beside the caret rather than in the sentence, because the sentence
         // is what the log quotes and what a reader greps: `these` is what
         // happened and this is what `these` are.
-        kest_diags_suggest(diags, "these are (%s)", passed);
+        if (passed != NULL) {
+            kest_diags_suggest(diags, "these are (%s)", passed);
+        }
         // Which eight. A diagnostic holds eight places and counts the rest,
         // and the first eight declared are eight in an order that has nothing
         // to do with what was called: a reader is looking for the one they
@@ -2459,18 +2493,18 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
                 continue;
             }
             const KestSymbol *one = candidates[order[c]];
-            char shape[256];
-            size_t used = 0;
-            shape[0] = '\0';
-            for (uint32_t p = 0;
-                 p < one->type->param_count && used + 1 < sizeof(shape); p++) {
-                used = kest_put(shape, sizeof(shape), used, "%s%s",
-                                p == 0 ? "" : ", ",
-                                kest_type_name(checker->program->arena,
-                                               one->type->params[p]));
+            uint32_t takes = one->type->param_count;
+            const char **taking = KEST_ARENA_ARRAY(
+                checker->program->arena, const char *, takes == 0 ? 1 : takes);
+            for (uint32_t p = 0; taking != NULL && p < takes; p++) {
+                taking[p] = kest_type_name(checker->program->arena,
+                                           one->type->params[p]);
             }
-            kest_diags_note(diags, one->source, one->span,
-                            "this one takes (%s)", shape);
+            const char *shape = comma_list(checker, taking, takes);
+            if (shape != NULL) {
+                kest_diags_note(diags, one->source, one->span,
+                                "this one takes (%s)", shape);
+            }
         }
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {
             check_expr(checker, expr->call.args[i], NULL);
