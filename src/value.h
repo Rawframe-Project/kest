@@ -1027,6 +1027,11 @@ int kest_write_real(char *buffer, size_t size, double value, bool narrow);
 #define KEST_WHOLE_ROOM 24
 int kest_write_whole(char *buffer, uint64_t bits, bool is_signed);
 
+// How many values one body holds: an instruction names one by where it is
+// among them, in two bytes. The compiler refuses a body that holds more, and
+// a body is not written into another where the two would.
+#define KEST_MOST_CONSTANTS 65536u
+
 // A run of values the chunk holds, kept together and in order because what
 // reads them back is one copy, and shared with a run already there that is the
 // same. One value is a run of one: there used to be a door for that as well,

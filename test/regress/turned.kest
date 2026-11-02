@@ -1,0 +1,117 @@
+// Guards against a loop unrolled past 65536 constant values: each turn held its own copy of the table it reads, an instruction names one in two bytes, and the count came out 3 where it is 2. The loop is not unrolled.
+
+module test.regress.turned
+
+const TA: [bool; 32] = [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+]
+const TB: [[bool; 32]; 32] = [
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA,
+    TA
+]
+const TC: [[[bool; 32]; 32]; 32] = [
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB,
+    TB
+]
+
+fn main() -> i32 {
+    let n = 0
+    for i in 0..2 {
+        let a = TC
+        if a[i][0][0] {
+            n += 1
+        }
+    }
+    return n - 2
+}
