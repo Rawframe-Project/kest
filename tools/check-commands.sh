@@ -6706,6 +6706,37 @@ if [ "$served" != "yes" ]; then
     complain "lsp: the editor was not answered by this compiler: $served"
 fi
 
+# A header line is read whole, however long. It was read 512 bytes at a time
+# and the rest of a longer line read as a line of its own: a line of 512 bytes
+# left `\n` behind, which ended the header before its length, and the server
+# stopped without a word; a rest that began `Content-Length: ` was taken for
+# the length, after the real one, and the body was read out of step.
+headed=$(python3 - "$kest" <<'PY'
+import json, subprocess, sys
+
+kest = sys.argv[1]
+asked = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                    "params": {}}).encode()
+wrong = []
+for pad in (502, 503, 4000):
+    line = b"X-Note: " + b"a" * pad + b"\r\n"
+    body = line + b"Content-Length: %d\r\n\r\n" % len(asked) + asked
+    ran = subprocess.run([kest, "lsp"], input=body, capture_output=True)
+    if b'"id":1' not in ran.stdout:
+        wrong.append("a header line of %d bytes" % len(line))
+# The rest of a long line, cut where 512 bytes were, that reads as a length.
+cut = b"X-Note: " + b"a" * (511 - 8) + b"Content-Length: 1\r\n"
+body = b"Content-Length: %d\r\n" % len(asked) + cut + b"\r\n" + asked
+ran = subprocess.run([kest, "lsp"], input=body, capture_output=True)
+if b'"id":1' not in ran.stdout:
+    wrong.append("a long line with a length at its end")
+print("; ".join(wrong) if wrong else "yes")
+PY
+)
+if [ "$headed" != "yes" ]; then
+    complain "lsp: a message with a long header line was not answered: $headed"
+fi
+
 # And the same asked from where each name is declared rather than where it is
 # used: a rename or a reference list asked from the `n` of `fn doubled(n:` or
 # the `twice` of `let twice` was answered with nothing, because the index
