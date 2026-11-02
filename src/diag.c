@@ -594,13 +594,20 @@ static Shown shown_part(const KestSource *source, uint32_t line,
     shown.end = from + SHOWN_COLUMNS;
     // And where whole characters start and end, never in the middle of one:
     // a line of names that are not ASCII was shown cut inside a character,
-    // and the line it was shown on was not UTF-8.
-    while (shown.start < shown.end &&
-           ((unsigned char)source->text[shown.start] & 0xc0) == 0x80) {
+    // and the line it was shown on was not UTF-8. Three bytes at most each
+    // way, which is the most of a character that can follow its first byte:
+    // a line that is not UTF-8 at all is shown as it was, rather than walked
+    // back past the span it is shown for.
+    for (int moved = 0;
+         moved < 3 && shown.start < shown.end &&
+         ((unsigned char)source->text[shown.start] & 0xc0) == 0x80;
+         moved++) {
         shown.start++;
     }
-    while (shown.end > shown.start && shown.end < end &&
-           ((unsigned char)source->text[shown.end] & 0xc0) == 0x80) {
+    for (int moved = 0;
+         moved < 3 && shown.end > shown.start && shown.end < end &&
+         ((unsigned char)source->text[shown.end] & 0xc0) == 0x80;
+         moved++) {
         shown.end--;
     }
     shown.cut_before = shown.start > start;
@@ -671,6 +678,9 @@ static void render_frame(const KestSource *source, KestSpan span,
     }
 
     uint32_t at = span.offset < shown.start ? shown.start : span.offset;
+    if (at > shown.end) {
+        at = shown.end;
+    }
     indent = put_expanded(source, shown.start, at, indent, NULL);
     fprintf(out, "\n%*s| %*s", gutter + 1, "", (int)indent, "");
 
