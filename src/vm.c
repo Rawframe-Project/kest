@@ -2915,9 +2915,14 @@ static void crossing_failed(KestRuntime *runtime, const Saying *saying,
     if (saying->instruction != NULL) {
         failv(runtime, saying->frame, saying->instruction, code, format, args);
     } else {
-        char said[200];
-        vsnprintf(said, sizeof said, format, args);
-        kest_native_stopped(runtime, saying->where, code, said);
+        // Said straight into the report, as an instruction's refusal is: in
+        // 200 bytes of its own first, a long name or type cut the sentence.
+        const KestSource *source =
+            runtime->frame_count > 0
+                ? runtime->frames[runtime->frame_count - 1].chunk->source
+                : NULL;
+        said_at(runtime, source, where_asked(runtime, saying->where), code,
+                format, args);
     }
     va_end(args);
 }
@@ -3508,40 +3513,37 @@ static uint16_t read_u16(const uint8_t **ip) {
 // The three questions asked before a call through a function value enters
 // anything: whether the value names a function at all, whether that function
 // is of the shape the call was written against, and whether it keeps what the
-// body making the call promised. Answers the chunk to enter, or nothing with
-// the code, the sentence and the note that goes under it -- so that the
-// machine and a body the host's compiler compiled refuse the same call with
-// the same words rather than with two copies of them.
+// body making the call promised. Answers the chunk to enter, or nothing once
+// it has said why, the way `saying` says it -- so that the machine and a body
+// the host's compiler compiled refuse the same call with the same words rather
+// than with two copies of them. The words go straight into the report: written
+// into 160 bytes first, a function's long name cut the sentence short.
 //
 // A program cannot get here with the wrong shape: the shape is the type and
 // the type is checked. What can is a host, which writes a number into the
 // slot and a number is only in range or not. The promise is asked here
 // because which chunk this enters is not known until it runs, which is the
 // one call the proof over the emitted code cannot see through.
-static const KestChunk *the_function(const KestModule *module,
+static const KestChunk *the_function(KestRuntime *runtime, const Saying *saying,
+                                     const KestModule *module,
                                      const KestChunk *mine, int64_t which,
-                                     uint16_t handed, uint16_t coming_back,
-                                     const char **code, char *said, size_t room,
-                                     const char **suggest, const char **fault) {
-    *code = NULL;
-    *suggest = NULL;
-    *fault = NULL;
+                                     uint16_t handed, uint16_t coming_back) {
     if (module == NULL || mine == NULL || which < 0 ||
         (uint64_t)which >= module->count) {
-        *code = "K0609";
-        snprintf(said, room, "this is not a function");
+        crossing_failed(runtime, saying, "K0609", "this is not a function");
         return NULL;
     }
     const KestChunk *callee = module->functions[which];
     if (callee->param_slots != handed || callee->result_slots != coming_back) {
-        *code = "K0657";
-        snprintf(said, room,
-                 "this calls something taking %u slot(s) and giving %u, and "
-                 "`%s` takes %u and gives %u",
-                 handed, coming_back, callee->wrote, callee->param_slots,
-                 callee->result_slots);
-        *suggest = "a function value is one slot holding which function it "
-                   "is, and `kest_entry` is what a host reads one from";
+        crossing_failed(runtime, saying, "K0657",
+                        "this calls something taking %u slot(s) and giving "
+                        "%u, and `%s` takes %u and gives %u",
+                        handed, coming_back, callee->wrote, callee->param_slots,
+                        callee->result_slots);
+        kest_diags_suggest(runtime->diags,
+                           "a function value is one slot holding which "
+                           "function it is, and `kest_entry` is what a host "
+                           "reads one from");
         return NULL;
     }
     // Either promise, and the one that is broken is the one said: a body
@@ -3552,11 +3554,12 @@ static const KestChunk *the_function(const KestModule *module,
                          : mine->no_host && !callee->no_host ? "no.host"
                                                              : NULL;
     if (broken != NULL) {
-        *code = "K0623";
-        snprintf(said, room,
-                 "`%s` promises `%s` and this enters `%s`, which does not",
-                 mine->wrote, broken, callee->wrote);
-        *fault = "the shape it was held in promises and the body does not";
+        crossing_failed(runtime, saying, "K0623",
+                        "`%s` promises `%s` and this enters `%s`, which does "
+                        "not",
+                        mine->wrote, broken, callee->wrote);
+        kest_diags_fault(runtime->diags, "the shape it was held in promises "
+                                         "and the body does not");
         return NULL;
     }
     return callee;
@@ -6699,21 +6702,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 int64_t which = (--top)->integer;
                 // The three questions in front of this call, asked in the one
                 // place a body the host's compiler compiled asks them too.
-                const char *code = NULL;
-                char said[160];
-                const char *suggest = NULL;
-                const char *fault = NULL;
-                const KestChunk *callee = the_function(
-                    module, frame->chunk, which, argument_slots, coming_back,
-                    &code, said, sizeof said, &suggest, &fault);
+                Saying calling = {false, frame, instruction, 0};
+                const KestChunk *callee =
+                    the_function(vmp, &calling, module, frame->chunk, which,
+                                 argument_slots, coming_back);
                 if (callee == NULL) {
-                    fail(vmp, frame, instruction, code, "%s", said);
-                    if (suggest != NULL) {
-                        kest_diags_suggest(vmp->diags, "%s", suggest);
-                    }
-                    if (fault != NULL) {
-                        kest_diags_fault(vmp->diags, fault);
-                    }
                     return false;
                 }
 
@@ -9441,22 +9434,12 @@ bool kest_call_value(KestRuntime *rt, KestValue what, KestValue *base,
         gave == NULL) {
         return false;
     }
-    const char *code = NULL;
-    char said[160];
-    const char *suggest = NULL;
-    const char *fault = NULL;
     int64_t which = what.integer;
+    Saying asking = {false, NULL, NULL, where};
     const KestChunk *callee = the_function(
-        rt->module, rt->frames[rt->frame_count - 1].chunk, which, handed,
-        coming_back, &code, said, sizeof said, &suggest, &fault);
+        rt, &asking, rt->module, rt->frames[rt->frame_count - 1].chunk, which,
+        handed, coming_back);
     if (callee == NULL) {
-        kest_native_stopped(rt, where, code, said);
-        if (suggest != NULL) {
-            kest_diags_suggest(rt->diags, "%s", suggest);
-        }
-        if (fault != NULL) {
-            kest_diags_fault(rt->diags, fault);
-        }
         return false;
     }
     // Room, the ledger frame, and how deep this has got: the same door a call

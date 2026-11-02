@@ -1998,6 +1998,104 @@ bytes: $(printf '%s' "$far_out" | tail -1)" >>"$said"
     esac
 fi
 
+# A host handing a function value of another shape, naming a function whose
+# name is 180 bytes long, to a body this backend wrote and then to the machine.
+# Both said why in 160 bytes of their own, so the name was cut and what it
+# takes and gives was left out; the words are said whole, and alike.
+summed=$(printf 'summed%.0s' $(seq 30))
+printf 'module valued\n\nfn apply(f: fn(i32) -> i32, n: i32) -> i32 {\n    return f(n)\n}\n\nfn once(n: i32) -> i32 {\n    return n\n}\n\nfn %s(a: i32, b: i32) -> i32 {\n    return a + b\n}\n\nfn main() -> i32 {\n    return %s(0, 0) + apply(once, 0)\n}\n' \
+    "$summed" "$summed" >"$work"/valued.kest
+cat >"$work"/valued.c <<'HOST'
+/* Calls `apply` with the function value of a function that takes two, once
+   on the compiled bodies and once on the machine, and writes the line of each
+   report that says K0657. */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "kest.h"
+
+bool kest_natives_here(KestRuntime *runtime);
+
+static void refused(const char *path, const char *summed, bool compiled) {
+    KestBuild *build = kest_build(path, getenv("KEST_LIB"), stderr,
+                                  KEST_FORM_TEXT, 0);
+    KestHost *host = kest_host_new();
+    KestRuntime *rt = build == NULL || host == NULL
+                          ? NULL
+                          : kest_start(build, host, NULL);
+    kest_host_free(host);
+    if (rt == NULL || (compiled && !kest_natives_here(rt))) {
+        printf("no machine\n");
+        return;
+    }
+    KestValue slots[4];
+    memset(slots, 0, sizeof slots);
+    slots[0].integer = kest_entry(rt, summed);
+    slots[1].integer = 5;
+    int32_t apply = kest_entry(rt, "apply");
+    FILE *report = tmpfile();
+    if (apply >= 0 && slots[0].integer >= 0 && report != NULL &&
+        !kest_call(rt, apply, slots, 4)) {
+        kest_report(rt, report, KEST_FORM_TEXT);
+        rewind(report);
+        char line[2048];
+        while (fgets(line, sizeof line, report) != NULL) {
+            if (strstr(line, "K0657") != NULL) {
+                printf("%s %s", compiled ? "compiled" : "machine", line);
+            }
+        }
+    } else {
+        printf("%s ran\n", compiled ? "compiled" : "machine");
+    }
+    if (report != NULL) {
+        fclose(report);
+    }
+    kest_runtime_free(rt);
+    kest_build_free(build);
+}
+
+int main(int argc, char **argv) {
+    if (argc < 3) {
+        return 2;
+    }
+    refused(argv[1], argv[2], true);
+    refused(argv[1], argv[2], false);
+    return 0;
+}
+HOST
+if ! $build_dir/kest emit --c "$work"/valued.kest >"$work"/valued-body.c 2>"$work"/why ||
+        ! $cc -O1 -Iinclude -DKEST_NO_MAIN -c -o "$work"/valued-body.o \
+            "$work"/valued-body.c 2>>"$work"/why ||
+        ! $cc -O1 -Iinclude -o "$work"/valued "$work"/valued.c \
+            "$work"/valued-body.o $build_dir/libkest.a -lm 2>>"$work"/why; then
+    {
+        echo "    a host handing a function value will not build against the \
+C this wrote:"
+        sed 's/^/        /' "$work"/why | head -5
+    } >>"$said"
+    wrong=$((wrong + 1))
+else
+    valued=$(KEST_LIB=lib/ "$work"/valued "$work"/valued.kest "$summed" 2>&1 \
+                 </dev/null)
+    compiled_line=$(printf '%s\n' "$valued" | sed -n 's/^compiled //p')
+    machine_line=$(printf '%s\n' "$valued" | sed -n 's/^machine //p')
+    case "$compiled_line" in
+    *"$summed\` takes 2 and gives 1"*)
+        if [ "$compiled_line" != "$machine_line" ]; then
+            echo "    a function value of another shape was refused two ways: \
+$(printf '%s' "$valued" | tr '\n' ' ')" >>"$said"
+            wrong=$((wrong + 1))
+        fi
+        ;;
+    *)
+        echo "    a function value of another shape with a long name said \
+\`$(printf '%s' "$valued" | head -2 | tr '\n' ' ')\`" >>"$said"
+        wrong=$((wrong + 1))
+        ;;
+    esac
+fi
+
 # And every program in this tree that runs, run both ways. The ones above are
 # written for this check and are what it can write; these are what somebody
 # wrote for another reason, which is where a fixture's blind spot shows. A
