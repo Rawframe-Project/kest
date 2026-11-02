@@ -6806,6 +6806,23 @@ if b"runtime error" in ran.stderr or b"Sanitizer" in ran.stderr:
 if [one.get("request_seq") for one in replies] != [0, 2, 3, 4]:
     wrong.append("dap answered %s" % [one.get("request_seq")
                                        for one in replies])
+# And numbers JSON does not write, which the reader took the way `strtod`
+# does: `1e400` and `inf` as infinity and `NaN` as itself, written back in
+# the reply as `"id":inf`, which is not JSON either. Each is a message that is
+# not JSON, answered with a parse error and no id, and so is a word that only
+# starts like one.
+for written in ("1e400", "-1e400", "inf", "Infinity", "NaN", "0x10", "+1",
+                "01", "1.", "tru"):
+    ran = subprocess.run(
+        [command, "lsp"], capture_output=True, timeout=120,
+        input=framed('{"jsonrpc":"2.0","id":%s,"method":"initialize",'
+                     '"params":{}}' % written))
+    said = heard(ran.stdout)
+    first = said[0] if said else {}
+    if (len(said) != 1 or "id" not in first or first["id"] is not None or
+            first.get("error", {}).get("code") != -32700):
+        wrong.append("an id of %s was answered %s" %
+                     (written, ran.stdout[-60:]))
 print("; ".join(wrong) if wrong else "yes")
 PY
 )
