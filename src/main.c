@@ -4092,6 +4092,21 @@ typedef struct {
 #define KEST_REPARSE_POINT 0x400u
 #endif
 
+#if defined(_WIN32)
+// What `_findfirst` is asked for under `directory`, in memory of its own that
+// the caller frees, or NULL when there was none. Sized to the directory: in a
+// fixed buffer a long one was cut short, and the walk looked for some other
+// name and found nothing.
+static char *search_pattern(const char *directory, const char *tail) {
+    size_t wide = strlen(directory) + strlen(tail) + 1;
+    char *pattern = malloc(wide);
+    if (pattern != NULL) {
+        snprintf(pattern, wide, "%s%s", directory, tail);
+    }
+    return pattern;
+}
+#endif
+
 // Every `.kest` under a directory and the directories under it, handed to
 // `each` one at a time, for the language server: a rename of a name more than
 // one file writes has to find every file of the project, and the server is
@@ -4112,10 +4127,13 @@ static bool files_beneath(Walk *walk, const char *directory, int depth) {
         wide > 0 && (directory[wide - 1] == '/' || directory[wide - 1] == '\\');
     bool whole = true;
 #if defined(_WIN32)
-    char pattern[4096];
-    snprintf(pattern, sizeof(pattern), "%s%s*", directory, slashed ? "" : "\\");
+    char *pattern = search_pattern(directory, slashed ? "*" : "\\*");
+    if (pattern == NULL) {
+        return false;
+    }
     struct _finddata_t entry;
     intptr_t walking = _findfirst(pattern, &entry);
+    free(pattern);
     if (walking == -1) {
         return errno == ENOENT;
     }
@@ -4275,10 +4293,15 @@ static bool tests_under(const char *where, char ***into, uint32_t *many) {
     uint32_t room = 0;
     bool whole = true;
 #if defined(_WIN32)
-    char pattern[1024];
-    snprintf(pattern, sizeof(pattern), "%s\\*.kest", where);
+    // No memory for the pattern is the false this answers for no memory for
+    // the list.
+    char *pattern = search_pattern(where, "\\*.kest");
+    if (pattern == NULL) {
+        return false;
+    }
     struct _finddata_t entry;
     intptr_t walking = _findfirst(pattern, &entry);
+    free(pattern);
     if (walking == -1) {
         return true;
     }
