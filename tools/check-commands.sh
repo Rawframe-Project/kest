@@ -5657,6 +5657,48 @@ refused without saying which functions there were"
     ;;
 esac
 
+# And a whole number read the way the language writes one. `strtoll` read
+# `010` as eight where the language reads ten, took a `+` and spaces nothing
+# writes, and nothing past 2^63, so a `u64` could not be handed most of what
+# it holds.
+cat >"$scratch"/library/words.kest <<'KEST'
+module words
+
+fn same(x: u64) -> u64 {
+    return x
+}
+
+fn small(x: i8) -> i8 {
+    return x
+}
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+for asked_for in "same 18446744073709551615:18446744073709551615" \
+                 "same 010:10" \
+                 "same 0XfF:255" \
+                 "small -128:-128" \
+                 "small -0x80:-128" \
+                 "same 18446744073709551616:K0624" \
+                 "same -1:K0624" \
+                 "same +5:K0624" \
+                 "small 128:K0624"; do
+    asking=${asked_for%:*}
+    wanted=${asked_for##*:}
+    # shellcheck disable=SC2086
+    answered=$("$kest" call "$scratch"/library/words.kest $asking 2>&1 \
+                   </dev/null)
+    case "$wanted" in
+    K*) case "$answered" in *"$wanted"*) answered=$wanted ;; esac ;;
+    esac
+    if [ "$answered" != "$wanted" ]; then
+        complain "call $asking: answered \`$(printf '%s' "$answered" | head -1)\` \
+and not \`$wanted\`"
+    fi
+done
+
 # A program of two files that works, which is the one thing this check had
 # never written: everything here is a program written to be refused, and what a
 # module boundary does when nothing is wrong was left to the examples. A struct
