@@ -6144,6 +6144,41 @@ if [ -z "$wrong" ]; then
     fi
 fi
 if [ -z "$wrong" ]; then
+    # And a standard library under that directory, named by `KEST_LIB`: the
+    # paths that asked for it were cut to 1024 bytes, so `doctor` said it was
+    # not found, a file that used `io` without importing it was given no hint,
+    # and a release said `kest.h` and the archive were not there. A compiler
+    # that writes down what it was handed stands in for one, because what is
+    # asked here is where the release looked.
+    deep_lib="$deep/library/lib/"
+    mkdir -p "$deep_lib" "$deep"/library/include
+    cp -r "$here"/lib/std "$deep_lib"std
+    : >"$deep"/library/include/kest.h
+    : >"$deep"/library/libkest.a
+    printf 'module plain\n\nfn main() -> i32 {\n    io.print("x")\n    return 0\n}\n' \
+        >"$deep"/plain.kest
+    printf 'module handed\n\nfn main() -> i32 {\n    return 0\n}\n' \
+        >"$deep"/handed.kest
+    printf '#!/bin/sh\nprintf "%%s\\n" "$@" >"$LONG_HANDED"\nexit 1\n' \
+        >"$scratch"/long-handed-cc
+    chmod +x "$scratch"/long-handed-cc
+    case "$(cd "$deep" && KEST_LIB="$deep_lib" "$kest" doctor 2>&1)" in
+    *"found, and \`import std.io\` will resolve"*) ;;
+    *) wrong="\`kest doctor\` did not find a library under a path longer than 1024 bytes" ;;
+    esac
+    case "$(KEST_LIB="$deep_lib" "$kest" check "$deep"/plain.kest 2>&1)" in
+    *"\`std.io\` is in the library, and this file does not import it"*) ;;
+    *) wrong="a library under a path longer than 1024 bytes did not say \`std.io\` was in it" ;;
+    esac
+    (cd "$deep" && LONG_HANDED="$scratch"/long-handed CC="$scratch"/long-handed-cc \
+        KEST_LIB="$deep_lib" "$kest" build --release handed.kest \
+        >/dev/null 2>&1 </dev/null)
+    if ! grep -qxF -- "-I$deep_lib../include/" "$scratch"/long-handed 2>/dev/null ||
+       ! grep -qxF -- "$deep_lib../libkest.a" "$scratch"/long-handed; then
+        wrong="a release did not find \`kest.h\` and the archive beside a library under a path longer than 1024 bytes"
+    fi
+fi
+if [ -z "$wrong" ]; then
     # An edition this compiler has not got is refused rather than read as
     # the nearest one, and a manifest that names none was written against
     # the first: what it meant the day it was written is what it means. And

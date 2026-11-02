@@ -2649,14 +2649,8 @@ static int look_over(const char *executable, const char *where, bool json) {
 
     // Whether the library is where it says it is, asked by reading one of its
     // files rather than by looking at the directory: what matters is whether
-    // an import resolves.
-    char probe[1024];
-    snprintf(probe, sizeof(probe), "%sstd/io.kest", library);
-    FILE *file = fopen(probe, "rb");
-    bool found = file != NULL;
-    if (file != NULL) {
-        fclose(file);
-    }
+    // an import resolves, and this is the question an import asks.
+    bool found = kest_library_has(library, "io", 2);
     if (!found) {
         wrong = true;
     }
@@ -2743,31 +2737,58 @@ static int look_over(const char *executable, const char *where, bool json) {
 // Where a release is made from: the header and the library this command line
 // was built with, found beside it the way its standard library is -- in a
 // source tree `include/` and the archive sit beside `lib/`, and once installed
-// `include/` is one further up. Nought for one that is not there.
-static bool release_parts(const char *executable, char *header, char *archive,
-                          size_t room) {
+// `include/` is one further up. What it finds in `header` and `archive` is the
+// caller's to free, whatever it answers. Sized to the library's path rather
+// than to a buffer: a release beside a library a thousand bytes deep was said
+// to have no header and no archive.
+typedef enum {
+    PARTS_FOUND,
+    PARTS_MISSING,
+    PARTS_NO_ROOM,
+} ReleaseParts;
+
+static ReleaseParts release_parts(const char *executable, char **header,
+                                  char **archive) {
     const char *library = library_of(executable);
-    const char *headers[] = {"%s../include/kest.h", "%s../../include/kest.h"};
-    header[0] = '\0';
+    *header = NULL;
+    *archive = NULL;
     if (library == NULL) {
-        return false;
+        return PARTS_NO_ROOM;
     }
-    for (size_t i = 0; i < 2 && header[0] == '\0'; i++) {
-        char probe[1024];
-        snprintf(probe, sizeof(probe), headers[i], library);
+    const char *headers[] = {"../include/", "../../include/"};
+    size_t length = strlen(library);
+    for (size_t i = 0; i < 2 && *header == NULL; i++) {
+        size_t directory = length + strlen(headers[i]);
+        char *probe = malloc(directory + sizeof("kest.h"));
+        if (probe == NULL) {
+            return PARTS_NO_ROOM;
+        }
+        snprintf(probe, directory + sizeof("kest.h"), "%s%skest.h", library,
+                 headers[i]);
         FILE *there = fopen(probe, "rb");
         if (there != NULL) {
             fclose(there);
-            snprintf(header, room, "%.*s", (int)(strlen(probe) - 6), probe);
+            probe[directory] = '\0';
+            *header = probe;
+        } else {
+            free(probe);
         }
     }
-    snprintf(archive, room, "%s../" KEST_ARCHIVE, library);
-    FILE *there = fopen(archive, "rb");
+    if (*header == NULL) {
+        return PARTS_MISSING;
+    }
+    size_t room = length + sizeof("../" KEST_ARCHIVE);
+    *archive = malloc(room);
+    if (*archive == NULL) {
+        return PARTS_NO_ROOM;
+    }
+    snprintf(*archive, room, "%s../" KEST_ARCHIVE, library);
+    FILE *there = fopen(*archive, "rb");
     if (there == NULL) {
-        return false;
+        return PARTS_MISSING;
     }
     fclose(there);
-    return header[0] != '\0';
+    return PARTS_FOUND;
 }
 
 // Whether a release may be called this: letters, digits, `.`, `_` and `-`,
@@ -2977,27 +2998,11 @@ static bool msvc_compiler(const char *word) {
     return false;
 }
 
-// A release of the program at `program`: the C that carries it, written beside
-// where the binary goes, compiled by the compiler this machine names -- `CC`,
-// or `cc` -- against the header and the library above, and taken away again.
-// Answers the binary's name, which is the program's without `.kest`, or NULL
-// with what stopped it said as `K0663`.
-static char *made_release(const char *executable, const char *program,
-                          const char *written, KestDiags *diags) {
+// The release itself, once the header's directory and the archive are found.
+static char *released(const char *program, const char *written,
+                      const char *header, const char *archive,
+                      KestDiags *diags) {
     KestSpan nowhere = {0, 0};
-    char header[1024];
-    char archive[1024];
-    if (written == NULL ||
-        !release_parts(executable, header, archive, sizeof(header))) {
-        kest_diags_in(diags, NULL);
-        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0663", nowhere,
-                       "a release needs `kest.h` and `" KEST_ARCHIVE
-                       "` where this command line is, and they are not "
-                       "there");
-        kest_diags_suggest(diags, "`cmake --install` puts all three in one "
-                                  "place");
-        return NULL;
-    }
     const char *base = after_directory(program);
     size_t length = strlen(base);
     if (length > 5 && strcmp(base + length - 5, ".kest") == 0) {
@@ -3050,7 +3055,16 @@ static char *made_release(const char *executable, const char *program,
         return NULL;
     }
     compiler_words(compiler, split, words);
-    char include[1030];
+    size_t include_room = strlen(header) + sizeof("-I");
+    char *include = malloc(include_room);
+    if (include == NULL) {
+        free(words);
+        free(split);
+        remove(source);
+        free(out);
+        kest_diags_starve(diags);
+        return NULL;
+    }
     char named[1030];
     size_t fixed = 0;
     bool msvc = msvc_compiler(words[0]);
@@ -3058,14 +3072,14 @@ static char *made_release(const char *executable, const char *program,
         // MSVC's flags, which `clang-cl` reads too. The archive is built
         // with the static C runtime, which is what `cl` links when it is
         // told nothing, and the mathematics is in that runtime.
-        snprintf(include, sizeof(include), "/I%s", header);
+        snprintf(include, include_room, "/I%s", header);
         snprintf(named, sizeof(named), "/Fe%s", out);
         const char *to_cl[] = {"/nologo", "/std:c11", "/O2",  include,
                                named,     source,     archive};
         fixed = sizeof(to_cl) / sizeof(to_cl[0]);
         memcpy(words + extra, to_cl, sizeof(to_cl));
     } else {
-        snprintf(include, sizeof(include), "-I%s", header);
+        snprintf(include, include_room, "-I%s", header);
         const char *to_cc[] = {"-std=c11", "-O2",  include, "-o",
                                out,        source, archive, "-lm"};
         fixed = sizeof(to_cc) / sizeof(to_cc[0]);
@@ -3073,6 +3087,7 @@ static char *made_release(const char *executable, const char *program,
     }
     words[extra + fixed] = NULL;
     int status = wrote ? ran_program(words) : -1;
+    free(include);
     free(words);
     free(split);
     remove(source);
@@ -3092,6 +3107,38 @@ static char *made_release(const char *executable, const char *program,
         free(out);
         return NULL;
     }
+    return out;
+}
+
+// A release of the program at `program`: the C that carries it, written beside
+// where the binary goes, compiled by the compiler this machine names -- `CC`,
+// or `cc` -- against the header and the library above, and taken away again.
+// Answers the binary's name, which is the program's without `.kest`, or NULL
+// with what stopped it said as `K0663`.
+static char *made_release(const char *executable, const char *program,
+                          const char *written, KestDiags *diags) {
+    char *header = NULL;
+    char *archive = NULL;
+    ReleaseParts parts = written == NULL
+                             ? PARTS_MISSING
+                             : release_parts(executable, &header, &archive);
+    char *out = NULL;
+    if (parts == PARTS_NO_ROOM) {
+        kest_diags_starve(diags);
+    } else if (parts == PARTS_MISSING) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(diags, NULL);
+        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0663", nowhere,
+                       "a release needs `kest.h` and `" KEST_ARCHIVE
+                       "` where this command line is, and they are not "
+                       "there");
+        kest_diags_suggest(diags, "`cmake --install` puts all three in one "
+                                  "place");
+    } else {
+        out = released(program, written, header, archive, diags);
+    }
+    free(header);
+    free(archive);
     return out;
 }
 

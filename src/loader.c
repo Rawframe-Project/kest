@@ -1005,14 +1005,17 @@ bool kest_library_has(const char *library, const char *name, size_t length) {
         }
     }
     // The same path an import of it would resolve to: the library root holds
-    // `std`, which holds the modules.
-    char probe[1024];
-    int written = snprintf(probe, sizeof(probe), "%sstd/%.*s.kest", library,
-                           (int)length, name);
-    if (written <= 0 || (size_t)written >= sizeof(probe)) {
+    // `std`, which holds the modules. Sized to the library's path, because a
+    // path the file system opens is one an import reads, and a fixed buffer
+    // said a library over a thousand bytes deep had no modules in it.
+    size_t room = strlen(library) + sizeof("std/.kest") + length;
+    char *probe = malloc(room);
+    if (probe == NULL) {
         return false;
     }
+    snprintf(probe, room, "%sstd/%.*s.kest", library, (int)length, name);
     FILE *file = fopen(probe, "rb");
+    free(probe);
     if (file == NULL) {
         return false;
     }

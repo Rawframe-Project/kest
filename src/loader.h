@@ -108,7 +108,8 @@ void kest_units_hold(const KestUnits *units, uint32_t *files, uint32_t *lines,
 // it would be read from. What this answers is about the installation and not
 // about the program: a module nothing imports is in no program, so the only
 // way to know it could have been imported is to ask where it would come from.
-// False for a library that is nowhere, and for a name that could not be one.
+// False for a library that is nowhere, for a name that could not be one, and
+// when there is no memory for the path to ask about.
 bool kest_library_has(const char *library, const char *name, size_t length);
 
 // The project a file is in: the nearest `kest.project` at or above it, with
