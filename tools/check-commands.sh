@@ -4186,6 +4186,22 @@ wanted: \`$became\`"
     ;;
 esac
 
+# A call no overload takes, of a type whose name is 300 bytes long. What was
+# passed and what each one takes were written into 256 bytes, so the first
+# name was cut where they ended and the second was left out. Both are said
+# whole.
+mkdir "$scratch"/overloads
+thing=$(printf 'Thing%.0s' $(seq 60))
+printf 'struct %s {\n    x: i32\n}\n\nfn f(a: %s, b: %s) -> i32 {\n    return a.x + b.x\n}\n\nfn f(a: i32) -> i32 {\n    return a\n}\n\nfn main() -> i32 {\n    let t = %s(1)\n    return f(t, t, 1)\n}\n' \
+    "$thing" "$thing" "$thing" "$thing" > "$scratch"/overloads/long.kest
+refused=$("$kest" check "$scratch"/overloads/long.kest 2>&1 </dev/null)
+case "$refused" in
+*"K0329"*"these are ($thing, $thing, a whole number)"*"this one takes ($thing, $thing)"*) ;;
+*)
+    complain "check: a call of long type names said \`$(printf '%s' "$refused" | head -1)\`"
+    ;;
+esac
+
 # Every refusal a file can meet before it means anything, and every one the
 # checker has for a program that parses and does not mean anything: the
 # lexer's, the parser's and the checker's. A hundred and thirty-nine codes this
