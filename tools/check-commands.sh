@@ -1783,6 +1783,28 @@ if ! rooted=$("$kest" run "$deep/c.kest" 2>&1 </dev/null); then
     printf '%s\n' "$rooted" | sed 's/^/    /' | head -4
 fi
 
+# And a module whose name is 256 bytes or more. The checker joined it to a
+# function's name in 256 bytes and, where the two did not fit, did not look
+# at all: a method in the file was refused as not being there, and a local
+# that hid one of its functions was not told how to write the function.
+long_module=$(printf 'abcd.%.0s' $(seq 51))z
+printf 'module %s\n\nstruct P {\n    x: i32\n}\n\nfn two() -> i32 {\n    return 2\n}\n\nfn get(p: P) -> i32 {\n    return p.x\n}\n\nfn main() -> i32 {\n    let p = P(5)\n    return two() + p.get()\n}\n' \
+    "$long_module" >"$scratch"/long-module.kest
+"$kest" run "$scratch"/long-module.kest >/dev/null 2>"$scratch"/long-module.said \
+    </dev/null
+if [ $? -ne 7 ]; then
+    complain "run: a method in a module named in 256 bytes was not found: \
+$(head -1 "$scratch"/long-module.said | cut -c1-80)"
+fi
+printf 'module %s\n\nfn two() -> i32 {\n    return 2\n}\n\nfn main() -> i32 {\n    let two = 3\n    return two()\n}\n' \
+    "$long_module" >"$scratch"/long-module.kest
+case "$("$kest" check "$scratch"/long-module.kest 2>&1 </dev/null)" in
+*"write \`$long_module.two\` for that one"*) ;;
+*) complain "check: a local hiding a function in a module named in 256 bytes \
+was not told how to write the function" ;;
+esac
+rm -f "$scratch"/long-module.kest "$scratch"/long-module.said
+
 # Where the library is, which is not where the program is. `std` resolves from
 # a path built out of the name the command line was run under -- beside the
 # binary in a tree, beside its directory once installed -- and every check here

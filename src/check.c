@@ -2172,6 +2172,36 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
     return NULL;
 }
 
+// `place.name`, or `name` alone for no place, in `stack` when it fits and in
+// the program's arena when it does not, with its length in `written`. NULL
+// only when the arena has no room, which the arena's refusal says. A module's
+// name has no limit, and these lookups were skipped past 256 bytes: a method
+// in a file under a long module name was refused as not being there.
+static const char *qualified(Checker *checker, const char *place,
+                             size_t place_length, const char *name,
+                             size_t length, char *stack, size_t room,
+                             size_t *written) {
+    size_t needed = place_length + (place_length > 0 ? 1 : 0) + length + 1;
+    char *out = stack;
+    if (needed > room) {
+        out = kest_arena_alloc(checker->program->arena, needed, 1);
+        if (out == NULL) {
+            checker->out_of_memory = true;
+            return NULL;
+        }
+    }
+    size_t at = 0;
+    if (place_length > 0) {
+        memcpy(out, place, place_length);
+        out[place_length] = '.';
+        at = place_length + 1;
+    }
+    memcpy(out + at, name, length);
+    out[at + length] = '\0';
+    *written = at + length;
+    return out;
+}
+
 // Every function the callee could name. A dotted callee is one name with a dot
 // in it, so both shapes are looked up the same way. In `held` when they fit and
 // in the arena when not, as `kest_overloads` answers them.
@@ -2190,12 +2220,13 @@ static KestSymbol **find_callable(Checker *checker, const KestExpr *expr,
     size_t length = callee->span.length;
     const char *alias = checker->program->module;
     if (alias[0] != '\0') {
-        char joined[256];
-        int written = snprintf(joined, sizeof(joined), "%s.%.*s", alias,
-                               (int)length, text);
-        if (written > 0 && (size_t)written < sizeof(joined)) {
-            KestSymbol **found = kest_overloads(
-                checker->program, joined, (size_t)written, held, room, count);
+        char stack[256];
+        size_t written = 0;
+        const char *joined = qualified(checker, alias, strlen(alias), text,
+                                       length, stack, sizeof stack, &written);
+        if (joined != NULL) {
+            KestSymbol **found = kest_overloads(checker->program, joined,
+                                                written, held, room, count);
             if (found == NULL || *count > 0) {
                 return found;
             }
@@ -3086,19 +3117,17 @@ static KestType *check_method(Checker *checker, KestExpr *expr,
              strncmp(places[1], places[0], lengths[0]) == 0)) {
             continue;
         }
-        char joined[256];
-        int written =
-            lengths[at] == 0
-                ? snprintf(joined, sizeof joined, "%.*s", (int)name.length,
-                           text)
-                : snprintf(joined, sizeof joined, "%.*s.%.*s", (int)lengths[at],
-                           places[at], (int)name.length, text);
-        if (written <= 0 || (size_t)written >= sizeof joined) {
+        char stack[256];
+        size_t written = 0;
+        const char *joined =
+            qualified(checker, places[at], lengths[at], text, name.length,
+                      stack, sizeof stack, &written);
+        if (joined == NULL) {
             continue;
         }
         uint32_t there = 0;
-        KestSymbol **found = kest_overloads(checker->program, joined,
-                                            (size_t)written, held, 16, &there);
+        KestSymbol **found =
+            kest_overloads(checker->program, joined, written, held, 16, &there);
         if (found == NULL) {
             checker->out_of_memory = true;
             return error_type(checker);
@@ -3184,16 +3213,18 @@ static KestType *check_method(Checker *checker, KestExpr *expr,
 // one name and the message named the one the reader was not asking about.
 static void note_the_other(Checker *checker, KestSpan where) {
     const char *name = span_text(checker, where);
-    char joined[256];
-    int written =
-        checker->program->module[0] == '\0'
-            ? 0
-            : snprintf(joined, sizeof(joined), "%s.%.*s",
-                       checker->program->module, (int)where.length, name);
+    const char *module = checker->program->module;
     const KestSymbol *other =
         kest_lookup_global(checker->program, name, where.length);
-    if (other == NULL && written > 0 && (size_t)written < sizeof(joined)) {
-        other = kest_lookup_global(checker->program, joined, (size_t)written);
+    if (other == NULL && module[0] != '\0') {
+        char stack[256];
+        size_t written = 0;
+        const char *joined =
+            qualified(checker, module, strlen(module), name, where.length,
+                      stack, sizeof stack, &written);
+        if (joined != NULL) {
+            other = kest_lookup_global(checker->program, joined, written);
+        }
     }
     if (other == NULL || other->type == NULL || other->type->tag != KEST_T_FN) {
         return;
@@ -3462,18 +3493,19 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             const char *name = span_text(checker, where);
             // Under the module the file names, where its own declarations
             // live, and under nothing for a file that names none.
-            char joined[256];
-            int written = checker->program->module[0] == '\0'
-                              ? 0
-                              : snprintf(joined, sizeof(joined), "%s.%.*s",
-                                         checker->program->module,
-                                         (int)where.length, name);
+            const char *module = checker->program->module;
+            char stack[256];
+            size_t written = 0;
+            const char *joined =
+                module[0] == '\0'
+                    ? NULL
+                    : qualified(checker, module, strlen(module), name,
+                                where.length, stack, sizeof stack, &written);
             const KestSymbol *shadowed =
                 kest_lookup_global(checker->program, name, where.length);
-            if (shadowed == NULL && written > 0 &&
-                (size_t)written < sizeof(joined)) {
-                shadowed = kest_lookup_global(checker->program, joined,
-                                              (size_t)written);
+            if (shadowed == NULL && joined != NULL) {
+                shadowed =
+                    kest_lookup_global(checker->program, joined, written);
             }
             if (shadowed != NULL && shadowed->type != NULL &&
                 shadowed->type->tag == KEST_T_FN) {
@@ -3483,7 +3515,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
                 // The way to write it here, which a file that names a module
                 // has and one that does not has not: there is nothing to put
                 // in front of a name that lives under nothing.
-                if (written > 0 && (size_t)written < sizeof(joined)) {
+                if (joined != NULL) {
                     suggest(checker, "write `%s` for that one", joined);
                 } else {
                     suggest(checker, "give one of them a name of its own");
