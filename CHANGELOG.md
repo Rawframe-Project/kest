@@ -2,6 +2,31 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.1.2](https://github.com/Rawframe-Project/kest/compare/v0.1.1...v0.1.2) (2026-11-02)
+
+
+### Fixed
+
+* **api:** find a host's name under a module of any length ([#156](https://github.com/Rawframe-Project/kest/issues/156)) ([651e276](https://github.com/Rawframe-Project/kest/commit/651e276cc6b63dc4e74e759365bcadb6a603233d)), closes [#154](https://github.com/Rawframe-Project/kest/issues/154)
+* **api:** keep what one build does from every other build ([#130](https://github.com/Rawframe-Project/kest/issues/130)) ([356809d](https://github.com/Rawframe-Project/kest/commit/356809dd581d0c235ee6f4f61cf48c7a628ee865)), closes [#127](https://github.com/Rawframe-Project/kest/issues/127)
+* **checker:** list a declaration's module whole however long its name ([#155](https://github.com/Rawframe-Project/kest/issues/155)) ([5044a02](https://github.com/Rawframe-Project/kest/commit/5044a02d1f7b7abdf672bbe6acca2f0b7f8a20af)), closes [#153](https://github.com/Rawframe-Project/kest/issues/153)
+* **checker:** look up a name under a module of any length ([#148](https://github.com/Rawframe-Project/kest/issues/148)) ([880b3ba](https://github.com/Rawframe-Project/kest/commit/880b3bad7c988dfd8601a3d8a7fd07442182cf0f)), closes [#147](https://github.com/Rawframe-Project/kest/issues/147)
+* **cli:** check a project's name before kest new makes anything ([#129](https://github.com/Rawframe-Project/kest/issues/129)) ([8708a40](https://github.com/Rawframe-Project/kest/commit/8708a40514f9f2aff4204d71363965547680bdcb)), closes [#125](https://github.com/Rawframe-Project/kest/issues/125) [#126](https://github.com/Rawframe-Project/kest/issues/126) [#132](https://github.com/Rawframe-Project/kest/issues/132)
+* **cli:** cut a long message or source line where a character ends ([#158](https://github.com/Rawframe-Project/kest/issues/158)) ([60c5f38](https://github.com/Rawframe-Project/kest/commit/60c5f3815dbf0ca3320543aced9780aa7d3ac987)), closes [#157](https://github.com/Rawframe-Project/kest/issues/157)
+* **cli:** find a project under a path longer than 1024 bytes ([#131](https://github.com/Rawframe-Project/kest/issues/131)) ([ea666a6](https://github.com/Rawframe-Project/kest/commit/ea666a6757935177291de8782176912bededd126)), closes [#128](https://github.com/Rawframe-Project/kest/issues/128)
+* **cli:** find the standard library under a path over 1024 bytes ([#137](https://github.com/Rawframe-Project/kest/issues/137)) ([0750ce9](https://github.com/Rawframe-Project/kest/commit/0750ce93abbeecedc0b2a712d058415b33efb752)), closes [#134](https://github.com/Rawframe-Project/kest/issues/134)
+* **cli:** keep why a Windows directory walk failed before freeing ([#169](https://github.com/Rawframe-Project/kest/issues/169)) ([97f74b8](https://github.com/Rawframe-Project/kest/commit/97f74b86850598565dced665c4a6e429208148aa)), closes [#168](https://github.com/Rawframe-Project/kest/issues/168)
+* **cli:** read a whole number word the way the language writes one ([#160](https://github.com/Rawframe-Project/kest/issues/160)) ([aaa48f6](https://github.com/Rawframe-Project/kest/commit/aaa48f68b1a17cdd52c2e14880fac8f14a3bbefb)), closes [#151](https://github.com/Rawframe-Project/kest/issues/151)
+* **cli:** refuse a file path with a zero byte in it ([#150](https://github.com/Rawframe-Project/kest/issues/150)) ([3567b0b](https://github.com/Rawframe-Project/kest/commit/3567b0b9c9dcf13ed3cac74eecbc1c4a3ff9ff92)), closes [#149](https://github.com/Rawframe-Project/kest/issues/149)
+* **cli:** refuse a negative --room, --fuel or --work ([#141](https://github.com/Rawframe-Project/kest/issues/141)) ([6a14db7](https://github.com/Rawframe-Project/kest/commit/6a14db7c5069ba4edc675ab6cf3ff1540bc2a161)), closes [#140](https://github.com/Rawframe-Project/kest/issues/140)
+* **cli:** size a Windows directory walk's pattern to the directory ([#162](https://github.com/Rawframe-Project/kest/issues/162)) ([5887ab3](https://github.com/Rawframe-Project/kest/commit/5887ab3429e44918001136883a8f8a2ed3418b56)), closes [#161](https://github.com/Rawframe-Project/kest/issues/161)
+* **cli:** write bytes that are not UTF-8 as U+FFFD in JSON ([#146](https://github.com/Rawframe-Project/kest/issues/146)) ([33268cd](https://github.com/Rawframe-Project/kest/commit/33268cd52d7635d0dce7018fdd24ed4463f4404e)), closes [#145](https://github.com/Rawframe-Project/kest/issues/145)
+* **debugger:** read a command whole however long it is ([#139](https://github.com/Rawframe-Project/kest/issues/139)) ([b453eb6](https://github.com/Rawframe-Project/kest/commit/b453eb6cfa5c40d554a765dfb10a055bda3a423d)), closes [#138](https://github.com/Rawframe-Project/kest/issues/138)
+* **debugger:** refuse a break line that is not a line number ([#152](https://github.com/Rawframe-Project/kest/issues/152)) ([971bd86](https://github.com/Rawframe-Project/kest/commit/971bd86785bbd1173266ba85d38e5b35e9f43411)), closes [#144](https://github.com/Rawframe-Project/kest/issues/144)
+* **fuzz:** read the tree's files from the tree, wherever the fuzzer runs ([#167](https://github.com/Rawframe-Project/kest/issues/167)) ([ff6e6d9](https://github.com/Rawframe-Project/kest/commit/ff6e6d930cdbadfdb4d7ebe7ebbad15043d04740)), closes [#166](https://github.com/Rawframe-Project/kest/issues/166)
+* **lsp:** read a client's numbers without casting one out of range ([#143](https://github.com/Rawframe-Project/kest/issues/143)) ([93ba5d5](https://github.com/Rawframe-Project/kest/commit/93ba5d5440301c78d63dbc4e950c95e5e1cef682)), closes [#142](https://github.com/Rawframe-Project/kest/issues/142)
+* **lsp:** read a message's header line whole however long it is ([#136](https://github.com/Rawframe-Project/kest/issues/136)) ([61d5016](https://github.com/Rawframe-Project/kest/commit/61d5016a8b7ad6eb71130a22e6f7bef78df85488)), closes [#135](https://github.com/Rawframe-Project/kest/issues/135)
+
 ## 0.1.1 (2026-11-01)
 
 ### Fixed
