@@ -1,0 +1,121 @@
+// Refused with K0502. Guards against a body holding more than 65535 slots at once, in its names or in the values it works on, wrapping the compiler's two-byte count and being refused as the compiler's own mistake.
+
+module test.refused.heaped
+
+const A: [bool; 32] = [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+]
+const B: [[bool; 32]; 32] = [
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A,
+    A
+]
+const C: [[[bool; 32]; 32]; 32] = [
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B,
+    B
+]
+
+fn named() -> bool {
+    let a = C
+    let b = C
+    return a[31][31][31] && b[0][0][0]
+}
+
+fn worked() -> i32 {
+    let both = [C, C]
+    return len(both)
+}
+
+fn main() -> i32 {
+    return if named() -> worked() - 2 else -> 1
+}
