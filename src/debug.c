@@ -634,11 +634,19 @@ void kest_debugger_close(KestDebugger *held) {
     }
 }
 
-// What reading one command came to: a whole line, the end of the stream, or a
-// line there was no memory to hold, which is read past.
+// The longest command read, which is room for any path a file system names
+// and a line number after it many times over. A line is read past this and
+// refused rather than held: what reading a stream nobody ends costs is
+// otherwise every byte of it, on a machine other programs share.
+#define KEST_MOST_COMMAND_BYTES 65536
+
+// What reading one command came to: a whole line, the end of the stream, a
+// line longer than a command may be, or one there was no memory to hold. The
+// last two are read past, so their rest is not taken for another command.
 typedef enum {
     COMMAND_READ,
     COMMAND_ENDED,
+    COMMAND_TOO_LONG,
     COMMAND_NO_ROOM,
 } CommandRead;
 
@@ -648,17 +656,24 @@ typedef enum {
 // path was refused, and the end of the path was run as a word.
 static CommandRead read_command(FILE *in, char **line, size_t *room) {
     size_t used = 0;
-    bool held = true;
+    CommandRead got = COMMAND_READ;
     int c;
     while ((c = getc(in)) != EOF && c != '\n') {
-        if (!held) {
+        if (got != COMMAND_READ) {
+            continue;
+        }
+        if (used == KEST_MOST_COMMAND_BYTES) {
+            got = COMMAND_TOO_LONG;
             continue;
         }
         if (used + 1 >= *room) {
             size_t bigger = *room == 0 ? 128 : *room * 2;
+            if (bigger > KEST_MOST_COMMAND_BYTES + 1) {
+                bigger = KEST_MOST_COMMAND_BYTES + 1;
+            }
             char *grown = realloc(*line, bigger);
             if (grown == NULL) {
-                held = false;
+                got = COMMAND_NO_ROOM;
                 continue;
             }
             *line = grown;
@@ -666,11 +681,11 @@ static CommandRead read_command(FILE *in, char **line, size_t *room) {
         }
         (*line)[used++] = (char)c;
     }
-    if (c == EOF && used == 0) {
+    if (c == EOF && used == 0 && got == COMMAND_READ) {
         return COMMAND_ENDED;
     }
-    if (!held) {
-        return COMMAND_NO_ROOM;
+    if (got != COMMAND_READ) {
+        return got;
     }
     if (*line == NULL) {
         char *empty = malloc(1);
@@ -715,6 +730,12 @@ int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
         CommandRead got = read_command(in, &line, &room);
         if (got == COMMAND_ENDED) {
             break;
+        }
+        if (got == COMMAND_TOO_LONG) {
+            fprintf(out,
+                    "a command is at most %d bytes, and this one is longer\n",
+                    KEST_MOST_COMMAND_BYTES);
+            continue;
         }
         if (got == COMMAND_NO_ROOM) {
             fprintf(out, "there was no memory to hold that command\n");

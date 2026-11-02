@@ -6412,6 +6412,23 @@ if [ -z "$debug_wrong" ]; then
     *) debug_wrong="a breakpoint named by a long path did not stop" ;;
     esac
 fi
+# And a line past the most a command may be, which is read through and
+# refused rather than held, however long it goes on: the commands after it
+# are still read, and the program still runs.
+if [ -z "$debug_wrong" ]; then
+    most_command=$(sed -n 's/^#define KEST_MOST_COMMAND_BYTES \([0-9]*\)$/\1/p' \
+                       src/debug.c)
+    {
+        printf 'break '
+        head -c $((${most_command:-0} + 10)) /dev/zero | tr '\0' 4
+        printf '\nrun\nquit\n'
+    } | "$kest" debug "$scratch"/stopping/stopping.kest \
+        >"$scratch"/stopping/long-said 2>&1
+    case "$(cat "$scratch"/stopping/long-said)" in
+    *"a command is at most ${most_command:-?} bytes"*"the program finished"*) ;;
+    *) debug_wrong="a command past the most a command may be was not refused" ;;
+    esac
+fi
 if [ -n "$debug_wrong" ]; then
     complain "debug: a machine stopped and asked about: $debug_wrong"
     sed 's/^/    /' "$scratch"/stopping/said | head -8
