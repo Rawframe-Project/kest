@@ -311,6 +311,23 @@ static bool refuse_this_arena(void) {
 }
 #endif
 
+void *kest_malloc(size_t size) {
+#if KEST_CHECKED
+    // The n-th and no other, unlike `KEST_REFUSE_AT`: a lookup that fell
+    // through to the next place to look after a refusal answers somewhere
+    // else, and only a run that goes on afterwards can show it.
+    static atomic_ullong asked;
+    static atomic_ullong so_far;
+    unsigned long long at = asked_once("KEST_REFUSE_MALLOC", &asked);
+    unsigned long long counted =
+        atomic_fetch_add_explicit(&so_far, 1, memory_order_relaxed) + 1;
+    if (at != 0 && counted == at) {
+        return NULL;
+    }
+#endif
+    return malloc(size);
+}
+
 KestArena *kest_arena_new(void) {
 #if KEST_CHECKED
     if (refuse_this_arena()) {

@@ -2327,16 +2327,49 @@ static bool write_file(const char *path, const char *bytes, bool json) {
     return wrote;
 }
 
+// Where the library is, for this command line: one answer for the process,
+// kept in memory of the command line's own rather than in an arena, so that a
+// run refusing its first arena is refused by the stage that took it. NULL when
+// there was no memory for it.
+static const char *library_of(const char *executable) {
+    static char *found;
+    if (found == NULL) {
+        found = kest_library_found(executable);
+    }
+    return found;
+}
+
+// The same for a command about to hand it on, which says there was no memory
+// when there was none and answers NULL: a build or a server handed NULL looks
+// for the library itself, from where it stands, and a lookup that ran out of
+// memory went on as a run of a library somewhere else.
+static const char *library_or_said(const char *executable, bool json) {
+    const char *library = library_of(executable);
+    if (library == NULL) {
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
+    }
+    return library;
+}
+
 // The file named, with a function after it that calls every door it declares
 // with what a program nobody trusts could hand it, for the host that binds
 // those doors to build and run. What is written is a program: it is compiled
 // here before it is said, so what a host is handed is one that builds. The
 // seed is the count after the file.
-static int write_hostile(const char *path, uint64_t seed, bool json) {
+static int write_hostile(const char *executable, const char *path,
+                         uint64_t seed, bool json) {
     if (path == NULL) {
         return refused_at_the_words(json, "K0649", "`hostile` needs a file");
     }
-    KestBuild *build = kest_build(path, NULL, json ? stdout : stderr,
+    // The library beside this command line, as every other command finds it:
+    // handed none, the build looked from where it was run, so `hostile` could
+    // refuse a `std` import that `check` read.
+    const char *library = library_or_said(executable, json);
+    if (library == NULL) {
+        return 1;
+    }
+    KestBuild *build = kest_build(path, library, json ? stdout : stderr,
                                   json ? KEST_FORM_JSON : KEST_FORM_TEXT, 0);
     if (build == NULL) {
         return 1;
@@ -2424,18 +2457,6 @@ static int write_hostile(const char *path, uint64_t seed, bool json) {
     return 0;
 }
 
-// Where the library is, for this command line: one answer for the process,
-// kept in memory of the command line's own rather than in an arena, so that a
-// run refusing its first arena is refused by the stage that took it. NULL when
-// there was no memory for it, and a build handed NULL looks for itself.
-static const char *library_of(const char *executable) {
-    static char *found;
-    if (found == NULL) {
-        found = kest_library_found(executable);
-    }
-    return found;
-}
-
 // What a file declares and what it says about each, for somebody who is going
 // to call it rather than read it. It is built first, so what is described is a
 // program that checks, and a file that does not is refused in its own words.
@@ -2444,9 +2465,12 @@ static int write_doc(const char *executable, const char *path, bool json,
     if (path == NULL) {
         return refused_at_the_words(json, "K0649", "`%s` needs a file", "doc");
     }
-    KestBuild *build =
-        kest_build(path, library_of(executable), json ? stdout : stderr,
-                   json ? KEST_FORM_JSON : KEST_FORM_TEXT, room);
+    const char *library = library_or_said(executable, json);
+    if (library == NULL) {
+        return 1;
+    }
+    KestBuild *build = kest_build(path, library, json ? stdout : stderr,
+                                  json ? KEST_FORM_JSON : KEST_FORM_TEXT, room);
     if (build == NULL) {
         return 1;
     }
@@ -2625,6 +2649,19 @@ static int look_over(const char *executable, const char *where, bool json) {
         return 1;
     }
     const char *library = kest_library_path(arena, executable);
+    // Whether the library is where it says it is, asked by reading one of its
+    // files rather than by looking at the directory: what matters is whether
+    // an import resolves, and this is the question an import asks. Asked
+    // before anything is said, because no room to say where the library is,
+    // or to look in it, is all this can say: `NOT found` would send somebody
+    // to install what is there.
+    bool found = library != NULL && kest_library_has(arena, library, "io", 2);
+    if (library == NULL || (!found && kest_arena_refused_anywhere(arena))) {
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
+        kest_arena_free(arena);
+        return 1;
+    }
     const char *why = NULL;
     KestProject *project =
         kest_project_read(arena, where == NULL ? "" : where, &why);
@@ -2647,16 +2684,6 @@ static int look_over(const char *executable, const char *where, bool json) {
         printf("library    %s\n", library);
     }
 
-    // Whether the library is where it says it is, asked by reading one of its
-    // files rather than by looking at the directory: what matters is whether
-    // an import resolves.
-    char probe[1024];
-    snprintf(probe, sizeof(probe), "%sstd/io.kest", library);
-    FILE *file = fopen(probe, "rb");
-    bool found = file != NULL;
-    if (file != NULL) {
-        fclose(file);
-    }
     if (!found) {
         wrong = true;
     }
@@ -2743,31 +2770,58 @@ static int look_over(const char *executable, const char *where, bool json) {
 // Where a release is made from: the header and the library this command line
 // was built with, found beside it the way its standard library is -- in a
 // source tree `include/` and the archive sit beside `lib/`, and once installed
-// `include/` is one further up. Nought for one that is not there.
-static bool release_parts(const char *executable, char *header, char *archive,
-                          size_t room) {
+// `include/` is one further up. What it finds in `header` and `archive` is the
+// caller's to free, whatever it answers. Sized to the library's path rather
+// than to a buffer: a release beside a library a thousand bytes deep was said
+// to have no header and no archive.
+typedef enum {
+    PARTS_FOUND,
+    PARTS_MISSING,
+    PARTS_NO_ROOM,
+} ReleaseParts;
+
+static ReleaseParts release_parts(const char *executable, char **header,
+                                  char **archive) {
     const char *library = library_of(executable);
-    const char *headers[] = {"%s../include/kest.h", "%s../../include/kest.h"};
-    header[0] = '\0';
+    *header = NULL;
+    *archive = NULL;
     if (library == NULL) {
-        return false;
+        return PARTS_NO_ROOM;
     }
-    for (size_t i = 0; i < 2 && header[0] == '\0'; i++) {
-        char probe[1024];
-        snprintf(probe, sizeof(probe), headers[i], library);
+    const char *headers[] = {"../include/", "../../include/"};
+    size_t length = strlen(library);
+    for (size_t i = 0; i < 2 && *header == NULL; i++) {
+        size_t directory = length + strlen(headers[i]);
+        char *probe = malloc(directory + sizeof("kest.h"));
+        if (probe == NULL) {
+            return PARTS_NO_ROOM;
+        }
+        snprintf(probe, directory + sizeof("kest.h"), "%s%skest.h", library,
+                 headers[i]);
         FILE *there = fopen(probe, "rb");
         if (there != NULL) {
             fclose(there);
-            snprintf(header, room, "%.*s", (int)(strlen(probe) - 6), probe);
+            probe[directory] = '\0';
+            *header = probe;
+        } else {
+            free(probe);
         }
     }
-    snprintf(archive, room, "%s../" KEST_ARCHIVE, library);
-    FILE *there = fopen(archive, "rb");
+    if (*header == NULL) {
+        return PARTS_MISSING;
+    }
+    size_t room = length + sizeof("../" KEST_ARCHIVE);
+    *archive = malloc(room);
+    if (*archive == NULL) {
+        return PARTS_NO_ROOM;
+    }
+    snprintf(*archive, room, "%s../" KEST_ARCHIVE, library);
+    FILE *there = fopen(*archive, "rb");
     if (there == NULL) {
-        return false;
+        return PARTS_MISSING;
     }
     fclose(there);
-    return header[0] != '\0';
+    return PARTS_FOUND;
 }
 
 // Whether a release may be called this: letters, digits, `.`, `_` and `-`,
@@ -2977,27 +3031,11 @@ static bool msvc_compiler(const char *word) {
     return false;
 }
 
-// A release of the program at `program`: the C that carries it, written beside
-// where the binary goes, compiled by the compiler this machine names -- `CC`,
-// or `cc` -- against the header and the library above, and taken away again.
-// Answers the binary's name, which is the program's without `.kest`, or NULL
-// with what stopped it said as `K0663`.
-static char *made_release(const char *executable, const char *program,
-                          const char *written, KestDiags *diags) {
+// The release itself, once the header's directory and the archive are found.
+static char *released(const char *program, const char *written,
+                      const char *header, const char *archive,
+                      KestDiags *diags) {
     KestSpan nowhere = {0, 0};
-    char header[1024];
-    char archive[1024];
-    if (written == NULL ||
-        !release_parts(executable, header, archive, sizeof(header))) {
-        kest_diags_in(diags, NULL);
-        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0663", nowhere,
-                       "a release needs `kest.h` and `" KEST_ARCHIVE
-                       "` where this command line is, and they are not "
-                       "there");
-        kest_diags_suggest(diags, "`cmake --install` puts all three in one "
-                                  "place");
-        return NULL;
-    }
     const char *base = after_directory(program);
     size_t length = strlen(base);
     if (length > 5 && strcmp(base + length - 5, ".kest") == 0) {
@@ -3050,7 +3088,16 @@ static char *made_release(const char *executable, const char *program,
         return NULL;
     }
     compiler_words(compiler, split, words);
-    char include[1030];
+    size_t include_room = strlen(header) + sizeof("-I");
+    char *include = malloc(include_room);
+    if (include == NULL) {
+        free(words);
+        free(split);
+        remove(source);
+        free(out);
+        kest_diags_starve(diags);
+        return NULL;
+    }
     char named[1030];
     size_t fixed = 0;
     bool msvc = msvc_compiler(words[0]);
@@ -3058,14 +3105,14 @@ static char *made_release(const char *executable, const char *program,
         // MSVC's flags, which `clang-cl` reads too. The archive is built
         // with the static C runtime, which is what `cl` links when it is
         // told nothing, and the mathematics is in that runtime.
-        snprintf(include, sizeof(include), "/I%s", header);
+        snprintf(include, include_room, "/I%s", header);
         snprintf(named, sizeof(named), "/Fe%s", out);
         const char *to_cl[] = {"/nologo", "/std:c11", "/O2",  include,
                                named,     source,     archive};
         fixed = sizeof(to_cl) / sizeof(to_cl[0]);
         memcpy(words + extra, to_cl, sizeof(to_cl));
     } else {
-        snprintf(include, sizeof(include), "-I%s", header);
+        snprintf(include, include_room, "-I%s", header);
         const char *to_cc[] = {"-std=c11", "-O2",  include, "-o",
                                out,        source, archive, "-lm"};
         fixed = sizeof(to_cc) / sizeof(to_cc[0]);
@@ -3073,6 +3120,7 @@ static char *made_release(const char *executable, const char *program,
     }
     words[extra + fixed] = NULL;
     int status = wrote ? ran_program(words) : -1;
+    free(include);
     free(words);
     free(split);
     remove(source);
@@ -3095,6 +3143,38 @@ static char *made_release(const char *executable, const char *program,
     return out;
 }
 
+// A release of the program at `program`: the C that carries it, written beside
+// where the binary goes, compiled by the compiler this machine names -- `CC`,
+// or `cc` -- against the header and the library above, and taken away again.
+// Answers the binary's name, which is the program's without `.kest`, or NULL
+// with what stopped it said as `K0663`.
+static char *made_release(const char *executable, const char *program,
+                          const char *written, KestDiags *diags) {
+    char *header = NULL;
+    char *archive = NULL;
+    ReleaseParts parts = written == NULL
+                             ? PARTS_MISSING
+                             : release_parts(executable, &header, &archive);
+    char *out = NULL;
+    if (parts == PARTS_NO_ROOM) {
+        kest_diags_starve(diags);
+    } else if (parts == PARTS_MISSING) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(diags, NULL);
+        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0663", nowhere,
+                       "a release needs `kest.h` and `" KEST_ARCHIVE
+                       "` where this command line is, and they are not "
+                       "there");
+        kest_diags_suggest(diags, "`cmake --install` puts all three in one "
+                                  "place");
+    } else {
+        out = released(program, written, header, archive, diags);
+    }
+    free(header);
+    free(archive);
+    return out;
+}
+
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, const int32_t *given,
                bool reset, size_t room, uint64_t work, uint64_t fuel,
@@ -3108,9 +3188,13 @@ static int run(const char *command, const char *executable, char **paths,
     int64_t opened = weighing ? host_nanoseconds() : 0;
     // The binary a release made, once one has.
     char *released = NULL;
+    const char *library = library_or_said(executable, json);
+    if (library == NULL) {
+        return 1;
+    }
     KestBuild *build = kest_build_open_within(
-        library_of(executable), paths,
-        strcmp(command, "call") == 0 ? 1 : path_count, room, work);
+        library, paths, strcmp(command, "call") == 0 ? 1 : path_count, room,
+        work);
     if (build != NULL && weighing) {
         kest_build_clock(build, compiling_now, NULL,
                          (uint64_t)(host_nanoseconds() - opened));
@@ -4318,34 +4402,54 @@ static int run_tests(const char *executable, char **paths, int path_count,
     return failed == 0 ? 0 : 1;
 }
 
-// The library's directory written from the root. An editor is told where a
-// file is by a URI, and `file://lib/std/math.kest` names a machine called
-// `lib`: a library found from a relative `KEST_LIB`, or beside a program
-// started by a relative path, was named that way in every answer about one of
-// its files. The directory as it was is the answer when the working directory
-// cannot be read or the two do not fit, since a name that does not resolve is
-// still better than no library.
-static const char *library_from_root(const char *library, char *into,
-                                     size_t room) {
-    if (library == NULL) {
-        return NULL;
-    }
+// The library's directory written from the root, in memory the caller frees,
+// or NULL when there was no memory for it. An editor is told where a file is
+// by a URI, and `file://lib/std/math.kest` names a machine called `lib`: a
+// library found from a relative `KEST_LIB`, or beside a program started by a
+// relative path, was named that way in every answer about one of its files.
+// The working directory is read into as much room as it takes, because a
+// fixed 2048 bytes kept a library under a deeper one relative. The directory
+// as it was is the answer only when the working directory cannot be read at
+// all, since a name that does not resolve is still better than no library.
+static char *library_from_root(const char *library) {
+    size_t length = strlen(library);
     bool rooted = library[0] == '/' || library[0] == '\\' ||
                   (library[0] != '\0' && library[1] == ':');
-    if (rooted || KEST_WORKING_DIRECTORY(into, room) == NULL) {
-        return library;
+    char *here = NULL;
+    size_t room = rooted ? 0 : 256;
+    while (room > 0) {
+        char *grown = realloc(here, room);
+        if (grown == NULL) {
+            free(here);
+            return NULL;
+        }
+        here = grown;
+        if (KEST_WORKING_DIRECTORY(here, room) != NULL) {
+            break;
+        }
+        room = errno == ERANGE && room <= SIZE_MAX / 2 ? room * 2 : 0;
     }
-    size_t used = strlen(into);
+    if (room == 0) {
+        free(here);
+        char *as_given = malloc(length + 1);
+        if (as_given != NULL) {
+            memcpy(as_given, library, length + 1);
+        }
+        return as_given;
+    }
+    size_t used = strlen(here);
     for (size_t i = 0; i < used; i++) {
-        if (into[i] == '\\') {
-            into[i] = '/';
+        if (here[i] == '\\') {
+            here[i] = '/';
         }
     }
-    const char *between = used > 0 && into[used - 1] == '/' ? "" : "/";
-    int wrote = snprintf(into + used, room - used, "%s%s", between, library);
-    if (wrote < 0 || (size_t)wrote >= room - used) {
-        return library;
+    const char *between = used > 0 && here[used - 1] == '/' ? "" : "/";
+    size_t wide = used + strlen(between) + length + 1;
+    char *into = malloc(wide);
+    if (into != NULL) {
+        snprintf(into, wide, "%s%s%s", here, between, library);
     }
+    free(here);
     return into;
 }
 
@@ -4398,10 +4502,19 @@ int main(int argc, char **argv) {
     // Each fails only when it has no memory to start in, and an editor shows
     // what its server wrote to the error stream, so that is where it is said.
     if (strcmp(argv[1], "lsp") == 0) {
-        char rooted[2048];
-        int served = kest_lsp_serve(
-            library_from_root(library_of(argv[0]), rooted, sizeof(rooted)),
-            stdin, stdout, project_files, resolved_path);
+        const char *library = library_or_said(argv[0], false);
+        if (library == NULL) {
+            return 1;
+        }
+        char *rooted = library_from_root(library);
+        if (rooted == NULL) {
+            kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
+                               KEST_STARVED_SAYS);
+            return 1;
+        }
+        int served =
+            kest_lsp_serve(rooted, stdin, stdout, project_files, resolved_path);
+        free(rooted);
         if (served != 0) {
             kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
                                KEST_STARVED_SAYS);
@@ -4412,8 +4525,11 @@ int main(int argc, char **argv) {
     // editor's console and what it reads is nothing, because both standard
     // streams are the protocol.
     if (strcmp(argv[1], "dap") == 0) {
-        int served =
-            kest_dap_serve(library_of(argv[0]), make_host, stdin, stdout);
+        const char *library = library_or_said(argv[0], false);
+        if (library == NULL) {
+            return 1;
+        }
+        int served = kest_dap_serve(library, make_host, stdin, stdout);
         if (served != 0) {
             kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
                                KEST_STARVED_SAYS);
@@ -4669,7 +4785,7 @@ int main(int argc, char **argv) {
     }
 
     if (strcmp(argv[1], "hostile") == 0) {
-        int status = write_hostile(path_count > 0 ? paths[0] : NULL,
+        int status = write_hostile(argv[0], path_count > 0 ? paths[0] : NULL,
                                    told_it ? (uint64_t)count : 1, json);
         free(paths);
         free(given);

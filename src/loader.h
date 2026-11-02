@@ -108,8 +108,11 @@ void kest_units_hold(const KestUnits *units, uint32_t *files, uint32_t *lines,
 // it would be read from. What this answers is about the installation and not
 // about the program: a module nothing imports is in no program, so the only
 // way to know it could have been imported is to ask where it would come from.
-// False for a library that is nowhere, and for a name that could not be one.
-bool kest_library_has(const char *library, const char *name, size_t length);
+// False for a library that is nowhere, for a name that could not be one, and
+// when `arena` has no room for the path to ask about, which the arena's
+// refusal makes the report say.
+bool kest_library_has(KestArena *arena, const char *library, const char *name,
+                      size_t length);
 
 // The project a file is in: the nearest `kest.project` at or above it, with
 // the directory it is in in `where` and every directory it says its modules
@@ -126,7 +129,9 @@ bool kest_project_above(KestArena *arena, const char *path, const char **where,
 const char *kest_library_path(KestArena *arena, const char *program);
 
 // The same in memory of the machine's that the caller frees, for a caller with
-// no arena of its own to keep it in. NULL when there was no memory for it.
+// no arena of its own to keep it in. NULL when there was no memory for it, or
+// for looking: a lookup that ran out on the way names no library rather than
+// the next place it would have looked.
 char *kest_library_found(const char *program);
 
 // The two ways to read one file, named for how far each goes. A file that

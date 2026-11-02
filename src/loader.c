@@ -966,7 +966,7 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
 // gone before anything is answered, so what a build cost is what it kept.
 static char *joined(const char *head, size_t length, const char *tail) {
     size_t more = strlen(tail);
-    char *path = malloc(length + more + 1);
+    char *path = kest_malloc(length + more + 1);
     if (path != NULL) {
         memcpy(path, head, length);
         memcpy(path + length, tail, more + 1);
@@ -975,22 +975,32 @@ static char *joined(const char *head, size_t length, const char *tail) {
 }
 
 // Whether the standard library is here, asked by looking for a file that is
-// always in it. A path that is merely plausible is worse than no path.
-static bool library_is_at(const char *directory) {
+// always in it. A path that is merely plausible is worse than no path. No room
+// to ask is its own answer: read as "not here", it sent the lookup on to the
+// next place, and a lookup that ran out of memory named a library somewhere
+// else.
+typedef enum {
+    LIBRARY_HERE,
+    LIBRARY_NOT_HERE,
+    LIBRARY_NO_ROOM,
+} LibraryAt;
+
+static LibraryAt library_is_at(const char *directory) {
     char *probe = joined(directory, strlen(directory), "std/io.kest");
     if (probe == NULL) {
-        return false;
+        return LIBRARY_NO_ROOM;
     }
     FILE *file = fopen(probe, "rb");
     free(probe);
     if (file == NULL) {
-        return false;
+        return LIBRARY_NOT_HERE;
     }
     fclose(file);
-    return true;
+    return LIBRARY_HERE;
 }
 
-bool kest_library_has(const char *library, const char *name, size_t length) {
+bool kest_library_has(KestArena *arena, const char *library, const char *name,
+                      size_t length) {
     // A module is one file, so a name with a separator in it is not one: the
     // library is flat and `..` is the only way a name could reach out of it.
     if (library == NULL || length == 0 || length > 64) {
@@ -1005,13 +1015,16 @@ bool kest_library_has(const char *library, const char *name, size_t length) {
         }
     }
     // The same path an import of it would resolve to: the library root holds
-    // `std`, which holds the modules.
-    char probe[1024];
-    int written = snprintf(probe, sizeof(probe), "%sstd/%.*s.kest", library,
-                           (int)length, name);
-    if (written <= 0 || (size_t)written >= sizeof(probe)) {
+    // `std`, which holds the modules. Sized to the library's path, because a
+    // path the file system opens is one an import reads, and a fixed buffer
+    // said a library over a thousand bytes deep had no modules in it. Out of
+    // the arena, so a refusal is one the report says.
+    size_t room = strlen(library) + sizeof("std/.kest") + length;
+    char *probe = kest_arena_alloc(arena, room, 1);
+    if (probe == NULL) {
         return false;
     }
+    snprintf(probe, room, "%sstd/%.*s.kest", library, (int)length, name);
     FILE *file = fopen(probe, "rb");
     if (file == NULL) {
         return false;
@@ -1032,7 +1045,7 @@ bool kest_library_has(const char *library, const char *name, size_t length) {
 #else
 #define KEST_PATH_LIST_SEPARATOR ':'
 #endif
-static char *found_on_path(const char *program) {
+static char *found_on_path(const char *program, bool *starved) {
     // A host that hands over no program at all -- `kest_build` with no
     // library named does, through `build.c` -- is asking about the directory
     // it is standing in and not about any binary. Walking `PATH` for the
@@ -1061,14 +1074,18 @@ static char *found_on_path(const char *program) {
                              ? NULL
                              : joined(directory, strlen(directory), program);
             free(directory);
-            if (into != NULL) {
-                FILE *file = fopen(into, "rb");
-                if (file != NULL) {
-                    fclose(file);
-                    return into;
-                }
-                free(into);
+            // No room to ask about one directory is no answer about any of
+            // them, rather than a reason to try the next.
+            if (into == NULL) {
+                *starved = true;
+                return NULL;
             }
+            FILE *file = fopen(into, "rb");
+            if (file != NULL) {
+                fclose(file);
+                return into;
+            }
+            free(into);
         }
         at = *end == '\0' ? end : end + 1;
     }
@@ -1081,8 +1098,13 @@ char *kest_library_found(const char *program) {
         size_t length = strlen(given);
         return joined(given, length, given[length - 1] == '/' ? "" : "/");
     }
-    char *found =
-        last_separator(program) == NULL ? found_on_path(program) : NULL;
+    bool starved = false;
+    char *found = last_separator(program) == NULL
+                      ? found_on_path(program, &starved)
+                      : NULL;
+    if (starved) {
+        return NULL;
+    }
     if (found != NULL) {
         program = found;
     }
@@ -1096,11 +1118,16 @@ char *kest_library_found(const char *program) {
     const char *const beside[] = {"lib/", "../lib/kest/"};
     for (size_t i = 0; i < 2; i++) {
         char *probe = joined(program, length, beside[i]);
-        if (probe == NULL || library_is_at(probe)) {
+        LibraryAt at = probe == NULL ? LIBRARY_NO_ROOM : library_is_at(probe);
+        if (at == LIBRARY_HERE) {
             free(found);
             return probe;
         }
         free(probe);
+        if (at == LIBRARY_NO_ROOM) {
+            free(found);
+            return NULL;
+        }
     }
     free(found);
     return joined(KEST_LIB_DIR, strlen(KEST_LIB_DIR), "");

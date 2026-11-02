@@ -61,6 +61,7 @@ Every check script runs on its own from the root of the tree after a build, read
 | `KEST_DEEP=1` | with `kest-debug`, report instruction counts and the machine's own questions |
 | `KEST_WALK_EVERY=1` | collect at every allocation, to shake out a missing root |
 | `KEST_REFUSE_ARENA`, `KEST_REFUSE_AT` | make an arena refuse at a chosen request, to walk out-of-memory paths |
+| `KEST_REFUSE_MALLOC` | refuses one allocation of the standard library lookup, which runs before any arena exists |
 | `KEST_IRSAY=1`, `KEST_CSAY=1` | print what the IR builder and the C backend decided per body |
 
 ## Source conventions
