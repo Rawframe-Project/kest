@@ -4480,6 +4480,23 @@ K0310|fn main() -> i32 {\n    let a: i32 = 1\n    let b: i32?? = a\n    if let i
 K0310|fn main() -> i32 {\n    let n = 1\n    room(n, 8)\n    return 0\n}|`room` makes room in an array or a store
 REFUSED
 
+# A `match` over two enums whose case names are long, which answers one of the
+# four combinations. Each combination it leaves was written into 128 bytes and
+# the list into 240, so the first was named with its second case cut to
+# `BravoBravoBravoBravoBravo`, a case `Two` does not have, and the other two
+# were counted as "2 more". Every one is named whole.
+alpha=$(printf 'Alpha%.0s' $(seq 20))
+bravo=$(printf 'Bravo%.0s' $(seq 20))
+printf 'enum One {\n    %s\n    Short\n}\n\nenum Two {\n    %s\n    Small\n}\n\nfn main() -> i32 {\n    let a = One.Short\n    let b = Two.Small\n    return match a, b {\n        Short, Small -> 0\n    }\n}\n' \
+    "$alpha" "$bravo" > "$scratch"/refused/long.kest
+refused=$("$kest" check "$scratch"/refused/long.kest 2>&1 </dev/null)
+case "$refused" in
+*"K0333"*"does not answer \`$alpha, $bravo\`, \`$alpha, Small\`, \`Short, $bravo\`"*) ;;
+*)
+    complain "check: a match over long case names said \`$(printf '%s' "$refused" | head -1)\`"
+    ;;
+esac
+
 # A backslash with nothing after it on its line or in its file, in a string or a
 # byte, which is no escape. It was read as one: at the end of a file the token
 # ran a byte past it, and `lex --json` wrote that byte into the token's text as

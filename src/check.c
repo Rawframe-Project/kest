@@ -4571,6 +4571,39 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
 // How many unanswered combinations a refusal names before it counts the rest.
 #define NAMED_AT_MOST 8
 
+// Which case of each subject combination `c` of `combinations` is, named the
+// way it is written, into `out` when it is not NULL. Answers how long the name
+// is, so the same walk measures the list and then writes it.
+static size_t name_combination(KestType *const *subjects, uint32_t count,
+                               uint32_t combinations, uint32_t c, char *out) {
+    size_t length = 0;
+    uint32_t rest = c;
+    uint32_t stride = combinations;
+    for (uint32_t i = 0; i < count; i++) {
+        uint32_t cases =
+            subjects[i]->case_count == 0 ? 1 : subjects[i]->case_count;
+        stride /= cases;
+        uint32_t which = stride == 0 ? 0 : rest / stride;
+        rest = stride == 0 ? 0 : rest % stride;
+        if (which >= subjects[i]->case_count) {
+            continue;
+        }
+        const char *name = subjects[i]->cases[which].name;
+        size_t size = strlen(name);
+        if (length > 0) {
+            if (out != NULL) {
+                memcpy(out + length, ", ", 2);
+            }
+            length += 2;
+        }
+        if (out != NULL) {
+            memcpy(out + length, name, size);
+        }
+        length += size;
+    }
+    return length;
+}
+
 // How many things one `match` chooses between at once. Written once: the run
 // it fills and the message that says the number were two literals in two
 // lines, and a check reading the message read the second of them.
@@ -4800,52 +4833,57 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
             // Every combination nothing answered, not the first of them: the
             // checker knows all of them before it says anything, and a reader
             // told one at a time compiles once per mistake.
-            char missing[240];
-            size_t used = 0;
+            // Each one is named whole however long its cases' names are, so
+            // the list is measured first and written into the arena: written
+            // into a buffer of its own, a long name was cut and the message
+            // named a case its enum does not have.
             uint32_t unanswered = 0;
-            uint32_t named = 0;
+            size_t needed = 1;
             for (uint32_t c = 0; c < combinations; c++) {
                 if (seen[c]) {
                     continue;
                 }
+                if (unanswered < NAMED_AT_MOST) {
+                    needed += 4 + name_combination(subjects, count,
+                                                   combinations, c, NULL);
+                }
                 unanswered++;
-                // Which combination it was, named the way it is written.
-                char one[128];
-                size_t at = 0;
-                uint32_t rest = c;
-                uint32_t stride = combinations;
-                for (uint32_t i = 0; i < count; i++) {
-                    uint32_t cases = subjects[i]->case_count == 0
-                                         ? 1
-                                         : subjects[i]->case_count;
-                    stride /= cases;
-                    uint32_t which = stride == 0 ? 0 : rest / stride;
-                    rest = stride == 0 ? 0 : rest % stride;
-                    if (which >= subjects[i]->case_count) {
+            }
+            char *missing =
+                unanswered == 0
+                    ? NULL
+                    : kest_arena_alloc(checker->program->arena, needed, 1);
+            if (unanswered > 0 && missing == NULL) {
+                checker->out_of_memory = true;
+            } else if (unanswered > 0) {
+                size_t used = 0;
+                uint32_t named = 0;
+                for (uint32_t c = 0; c < combinations && named < NAMED_AT_MOST;
+                     c++) {
+                    if (seen[c]) {
                         continue;
                     }
-                    at = kest_put(one, sizeof(one), at, "%s%s",
-                                  at > 0 ? ", " : "",
-                                  subjects[i]->cases[which].name);
-                    if (at + 1 >= sizeof(one)) {
-                        break;
+                    if (used > 0) {
+                        memcpy(missing + used, ", ", 2);
+                        used += 2;
                     }
-                }
-                // A list long enough to stop reading is a list that has
-                // stopped helping, so what is left over is counted instead.
-                if (named < NAMED_AT_MOST && used + at + 8 < sizeof(missing)) {
-                    used = kest_put(missing, sizeof(missing), used, "%s`%s`",
-                                    used > 0 ? ", " : "", one);
+                    missing[used++] = '`';
+                    used += name_combination(subjects, count, combinations, c,
+                                             missing + used);
+                    missing[used++] = '`';
                     named++;
                 }
-            }
-            if (unanswered > 0 && named == unanswered) {
-                report(checker, head, "K0333",
-                       "this `match` does not answer %s", missing);
-            } else if (unanswered > 0) {
-                report(checker, head, "K0333",
-                       "this `match` does not answer %s and %u more", missing,
-                       unanswered - named);
+                missing[used] = '\0';
+                // A list long enough to stop reading is a list that has
+                // stopped helping, so what is left over is counted instead.
+                if (named == unanswered) {
+                    report(checker, head, "K0333",
+                           "this `match` does not answer %s", missing);
+                } else {
+                    report(checker, head, "K0333",
+                           "this `match` does not answer %s and %u more",
+                           missing, unanswered - named);
+                }
             }
             choose->total = unanswered == 0;
         }
