@@ -709,10 +709,14 @@ static void put_id(KestSaid *out, const KestJson *id) {
     } else if (id->kind == KEST_JSON_TEXT) {
         kest_wire_escaped(out, id->text, id->length);
     } else {
-        // As the number it was, which `%.17g` writes back exactly and a cast
-        // to an integer did not: one past what an integer holds was undefined,
-        // and a fraction came back as another request's id.
-        kest_wire_sayf(out, "%.17g", id->number);
+        // As the number it was, which seventeen digits write back exactly and
+        // a cast to an integer did not: one past what an integer holds was
+        // undefined, and a fraction came back as another request's id.
+        // Written the language's way rather than the host locale's, which
+        // may write `1,5`, and that is not JSON.
+        char number[40];
+        kest_real_write(number, sizeof number, 'g', 17, id->number);
+        kest_wire_say(out, number);
     }
 }
 
@@ -744,9 +748,11 @@ static void answer_without_room(Server *server, const KestJson *id) {
     char said[256];
     int written = -1;
     if (id != NULL && id->kind == KEST_JSON_NUMBER) {
-        written = snprintf(said, sizeof said,
-                           "{\"jsonrpc\":\"2.0\",\"id\":%.17g," NO_ROOM_ERROR,
-                           id->number);
+        char number[40];
+        kest_real_write(number, sizeof number, 'g', 17, id->number);
+        written =
+            snprintf(said, sizeof said,
+                     "{\"jsonrpc\":\"2.0\",\"id\":%s," NO_ROOM_ERROR, number);
     } else if (id != NULL && id->kind == KEST_JSON_TEXT && id->length <= 64) {
         bool plain = true;
         for (size_t i = 0; i < id->length; i++) {
