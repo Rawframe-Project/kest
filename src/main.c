@@ -386,16 +386,6 @@ static int usage(bool json) {
     return 1;
 }
 
-// What the command line itself refuses, before there is a build to write a
-// diagnostic into: a mistake in the words, and a file the one form could not
-// be written to. These were bare sentences on the standard error -- no code, no
-// JSON -- so a run asked for JSON answered a tool with a status of 1 and an
-// empty stream, which is the one answer nothing can act on.
-//
-// The code is the caller's rather than this function's so that it stands
-// beside the words it is for, which is where everything that reads this tree
-// looks for the pair. Always 1, so a refusal is a `return` of what a command
-// answers with.
 // How much of `length` bytes of UTF-8 is whole characters: the length cut back
 // to where the last whole character ends.
 static size_t whole_characters(const char *text, size_t length) {
@@ -411,6 +401,16 @@ static size_t whole_characters(const char *text, size_t length) {
     return length - (lead - 1) >= wide ? length : lead - 1;
 }
 
+// What the command line itself refuses, before there is a build to write a
+// diagnostic into: a mistake in the words, and a file the one form could not
+// be written to. These were bare sentences on the standard error -- no code, no
+// JSON -- so a run asked for JSON answered a tool with a status of 1 and an
+// empty stream, which is the one answer nothing can act on.
+//
+// The code is the caller's rather than this function's so that it stands
+// beside the words it is for, which is where everything that reads this tree
+// looks for the pair. Always 1, so a refusal is a `return` of what a command
+// answers with.
 static int refused_at_the_words(bool json, const char *code, const char *format,
                                 ...) {
     // As long as the words are: a reason cut at a buffer's end can be cut
