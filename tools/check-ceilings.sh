@@ -2900,6 +2900,60 @@ if [ $arenas -eq 0 ]; then
     failed=1
 fi
 
+# And where the standard library is, which is worked out with `malloc` before
+# any arena is taken. Each of those is refused in turn: no room to look in one
+# place was read as the library not being there, and the lookup went on to the
+# next place and named a library that was not the one beside the program, so a
+# run that had run out blamed an import. Asked by a path, by a bare name found
+# on `PATH`, which walks every directory on it, and by `doctor`, which said
+# `NOT found` for a library it had no room to look in.
+mallocs=0
+for aimed_at in "path run examples/vectors.kest" \
+                "bare run examples/vectors.kest" "path doctor ."; do
+    called=${aimed_at%% *}
+    what=${aimed_at#"$called" }
+    command=$build_dir/kest-debug
+    [ "$called" = bare ] && command=kest-debug
+    # shellcheck disable=SC2086
+    whole=$(PATH="$build_dir:$PATH" "$command" $what 2>&1 </dev/null)
+    at_one=1
+    past=0
+    while [ $past -lt 3 ] && [ $at_one -le 64 ]; do
+        # shellcheck disable=SC2086
+        said=$(KEST_REFUSE_MALLOC=$at_one PATH="$build_dir:$PATH" \
+               "$command" $what 2>&1 </dev/null)
+        answered=$?
+        if [ "$said" = "$whole" ]; then
+            past=$((past + 1))
+            at_one=$((at_one + 1))
+            continue
+        fi
+        if [ $past -gt 0 ]; then
+            echo "ceilings: refusing the library lookup's allocation" \
+                 "$((at_one - past)) in \`kest $what\` ($called) changed" \
+                 "nothing it said, and one after it did"
+            failed=1
+            break
+        fi
+        mallocs=$((mallocs + 1))
+        blamed=$(printf '%s' "$said" | grep -o 'K[0-9][0-9][0-9][0-9]' |
+                 grep -v -e K0639 | sort -u | tr '\n' ' ')
+        if [ $answered -eq 0 ] || [ $answered -ge 128 ] || [ -n "$blamed" ] ||
+           ! printf '%s' "$said" | grep -q K0639; then
+            echo "ceilings: refusing the library lookup's allocation $at_one" \
+                 "in \`kest $what\` ($called) came back $answered saying" \
+                 "${blamed:-nothing about room}"
+            printf '%s\n' "$said" | head -3 | sed 's/^/    /'
+            failed=1
+        fi
+        at_one=$((at_one + 1))
+    done
+done
+if [ $mallocs -eq 0 ]; then
+    echo "ceilings: no allocation of the library lookup could be refused"
+    failed=1
+fi
+
 # And the deepest a message to an editor's server may nest. Reading one level
 # is one frame of the stack, so a message nested without end ran the stack out
 # and the server with it, whatever memory there was. Both servers are asked at
@@ -3032,6 +3086,7 @@ if [ $failed -eq 0 ]; then
          "it had run out, said nothing else, and neither died nor answered as" \
          "though nothing had happened, and $arenas arena(s) refused in turn" \
          "over four ways of reading four programs, each said as having run" \
-         "out"
+         "out, and $mallocs allocation(s) of the library lookup refused in" \
+         "turn, each said the same way"
 fi
 exit $failed

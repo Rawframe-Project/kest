@@ -1934,6 +1934,70 @@ both ways: $(printf '%s' "$walked_out" | tail -1)" >>"$said"
     esac
 fi
 
+# A host asking for a function by the name the file writes, in a program whose
+# module is named in 256 bytes. The name is looked for under the module too,
+# and that was built in 256 bytes and given up on when it did not fit: the
+# host was told the program had no such function.
+printf 'module %s\n\nfn seven() -> i32 {\n    return 7\n}\n\nfn main() -> i32 {\n    return 0\n}\n' \
+    "$(printf 'abcd.%.0s' $(seq 51))z" >"$work"/farnamed.kest
+cat >"$work"/farnamed.c <<'HOST'
+/* Asks for `seven` by the name its file writes, through both doors that find
+   a function by name, and calls what they find. */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "kest.h"
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        return 2;
+    }
+    KestBuild *build = kest_build(argv[1], getenv("KEST_LIB"), stderr,
+                                  KEST_FORM_TEXT, 0);
+    KestHost *host = kest_host_new();
+    KestRuntime *rt = build == NULL || host == NULL
+                          ? NULL
+                          : kest_start(build, host, NULL);
+    kest_host_free(host);
+    if (rt == NULL) {
+        return 2;
+    }
+    int32_t named = kest_entry(rt, "seven");
+    int32_t first = kest_entry_of(rt, "seven", 0);
+    KestValue answer[4];
+    memset(answer, 0, sizeof answer);
+    bool went = named >= 0 &&
+                kest_call(rt, named, answer, sizeof answer / sizeof answer[0]);
+    printf("entry %s, entry_of %s, answered %lld\n",
+           named >= 0 ? "found" : "missing",
+           first == named ? "the same" : "another",
+           went ? (long long)answer[0].integer : -1LL);
+    kest_runtime_free(rt);
+    kest_build_free(build);
+    return 0;
+}
+HOST
+if ! $cc -O1 -Iinclude -o "$work"/farnamed "$work"/farnamed.c \
+        $build_dir/libkest.a -lm 2>"$work"/why; then
+    {
+        echo "    a host asking for a function by name will not build:"
+        sed 's/^/        /' "$work"/why | head -5
+    } >>"$said"
+    wrong=$((wrong + 1))
+else
+    far_out=$(KEST_LIB=lib/ "$work"/farnamed "$work"/farnamed.kest 2>&1 \
+                  </dev/null)
+    case "$far_out" in
+    "entry found, entry_of the same, answered 7") ;;
+    *)
+        echo "    a host could not find a function in a module named in 256 \
+bytes: $(printf '%s' "$far_out" | tail -1)" >>"$said"
+        wrong=$((wrong + 1))
+        ;;
+    esac
+fi
+
 # And every program in this tree that runs, run both ways. The ones above are
 # written for this check and are what it can write; these are what somebody
 # wrote for another reason, which is where a fixture's blind spot shows. A

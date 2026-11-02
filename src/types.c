@@ -2437,7 +2437,8 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     const char *dot = memchr(name, '.', length);
     if (dot != NULL && program->files != NULL &&
         !kest_file_reaches(program, name, (size_t)(dot - name)) &&
-        kest_library_has(program->files->library, name, (size_t)(dot - name))) {
+        kest_library_has(program->arena, program->files->library, name,
+                         (size_t)(dot - name))) {
         kest_diags_suggest(program->diags,
                            "`std.%.*s` is in the library, and this file does "
                            "not import it",
@@ -5777,14 +5778,10 @@ static void write_module(const KestProgram *program, const char *name,
         fputs("null", out);
         return;
     }
-    char held[256];
-    if (length + 1 > sizeof(held)) {
-        fputs("null", out);
-        return;
-    }
-    memcpy(held, name, length);
-    held[length] = '\0';
-    kest_json_text(held, out);
+    // Written from the name by its length: a copy into 256 bytes wrote
+    // `null` for a module whose name did not fit, which is a declaration
+    // listed as belonging to none.
+    kest_json_bytes(name, length, out);
 }
 
 bool kest_program_dump_json(const KestProgram *program, KestArena *arena,

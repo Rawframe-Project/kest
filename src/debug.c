@@ -634,6 +634,71 @@ void kest_debugger_close(KestDebugger *held) {
     }
 }
 
+// The longest command read, which is room for any path a file system names
+// and a line number after it many times over. A line is read past this and
+// refused rather than held: what reading a stream nobody ends costs is
+// otherwise every byte of it, on a machine other programs share.
+#define KEST_MOST_COMMAND_BYTES 65536
+
+// What reading one command came to: a whole line, the end of the stream, a
+// line longer than a command may be, or one there was no memory to hold. The
+// last two are read past, so their rest is not taken for another command.
+typedef enum {
+    COMMAND_READ,
+    COMMAND_ENDED,
+    COMMAND_TOO_LONG,
+    COMMAND_NO_ROOM,
+} CommandRead;
+
+// One command, read whole into `line`, which grows to hold it and is the
+// caller's to free. It used to be read 512 bytes at a time, and the rest of a
+// longer line was run as a command of its own: a breakpoint named by a full
+// path was refused, and the end of the path was run as a word.
+static CommandRead read_command(FILE *in, char **line, size_t *room) {
+    size_t used = 0;
+    CommandRead got = COMMAND_READ;
+    int c;
+    while ((c = getc(in)) != EOF && c != '\n') {
+        if (got != COMMAND_READ) {
+            continue;
+        }
+        if (used == KEST_MOST_COMMAND_BYTES) {
+            got = COMMAND_TOO_LONG;
+            continue;
+        }
+        if (used + 1 >= *room) {
+            size_t bigger = *room == 0 ? 128 : *room * 2;
+            if (bigger > KEST_MOST_COMMAND_BYTES + 1) {
+                bigger = KEST_MOST_COMMAND_BYTES + 1;
+            }
+            char *grown = realloc(*line, bigger);
+            if (grown == NULL) {
+                got = COMMAND_NO_ROOM;
+                continue;
+            }
+            *line = grown;
+            *room = bigger;
+        }
+        (*line)[used++] = (char)c;
+    }
+    if (c == EOF && used == 0 && got == COMMAND_READ) {
+        return COMMAND_ENDED;
+    }
+    if (got != COMMAND_READ) {
+        return got;
+    }
+    if (*line == NULL) {
+        char *empty = malloc(1);
+        if (empty == NULL) {
+            return COMMAND_NO_ROOM;
+        }
+        *line = empty;
+        *room = 1;
+    }
+    (*line)[used] = '\0';
+    return COMMAND_READ;
+}
+
 static void help(FILE *out) {
     fputs("  break <line>   stop where that line is run\n"
           "  run            start the program\n"
@@ -645,6 +710,28 @@ static void help(FILE *out) {
           "                 them\n"
           "  quit           stop and leave\n",
           out);
+}
+
+// The line a `break` names: digits and nothing else, and no more than a line
+// number holds. `strtoul` read past spaces and a sign, stopped at whatever was
+// not a digit and wrapped at 2^32, so `break 3x` and `break 4294967299` were
+// both a breakpoint at line 3.
+static bool line_number(const char *text, uint32_t *line) {
+    uint64_t number = 0;
+    if (*text == '\0') {
+        return false;
+    }
+    for (const char *at = text; *at != '\0'; at++) {
+        if (*at < '0' || *at > '9') {
+            return false;
+        }
+        number = number * 10 + (uint64_t)(*at - '0');
+        if (number > UINT32_MAX) {
+            return false;
+        }
+    }
+    *line = (uint32_t)number;
+    return true;
 }
 
 int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
@@ -659,8 +746,23 @@ int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
     }
     fprintf(out, "kest debug. `help` says what there is.\n");
 
-    char line[512];
-    while (!held.over && fgets(line, sizeof(line), in) != NULL) {
+    char *line = NULL;
+    size_t room = 0;
+    while (!held.over) {
+        CommandRead got = read_command(in, &line, &room);
+        if (got == COMMAND_ENDED) {
+            break;
+        }
+        if (got == COMMAND_TOO_LONG) {
+            fprintf(out,
+                    "a command is at most %d bytes, and this one is longer\n",
+                    KEST_MOST_COMMAND_BYTES);
+            continue;
+        }
+        if (got == COMMAND_NO_ROOM) {
+            fprintf(out, "there was no memory to hold that command\n");
+            continue;
+        }
         char *at = line;
         while (*at == ' ' || *at == '\t') {
             at++;
@@ -695,8 +797,12 @@ int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
                     named_file = rest;
                     rest = colon + 1;
                 }
-                if (!break_at(&held, named_file,
-                              (uint32_t)strtoul(rest, NULL, 10))) {
+                uint32_t line_at = 0;
+                if (!line_number(rest, &line_at)) {
+                    fprintf(out,
+                            "`%s` is not a line: `break` wants its number\n",
+                            rest);
+                } else if (!break_at(&held, named_file, line_at)) {
                     fprintf(out, "no instruction came from line %s%s%s\n",
                             named_file == NULL ? "" : named_file,
                             named_file == NULL ? "" : ":", rest);
@@ -732,6 +838,7 @@ int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
             fprintf(out, "`%s` is not a word here. `help` says what is.\n", at);
         }
     }
+    free(line);
     kest_debugger_close(&held);
     return 0;
 }

@@ -304,6 +304,20 @@ print("; ".join(wrong))
         complain "hostile: --json says something else: $wrongly"
     fi
 fi
+# And from a directory with no library in it, where `check` finds the library
+# beside the command line: `hostile` handed its build no library, and the
+# build looked for one from where it was run, so a `std` import that `check`
+# read was refused.
+printf 'module doors\n\nimport std.io\n\nextern fn told(n: i32) -> i32\n\nfn main() -> i32 {\n    io.print("x")\n    return 0\n}\n' \
+    >"$scratch"/hostile/doors.kest
+if ! (cd "$scratch"/hostile && KEST_LIB= "$kest" check doors.kest \
+          >/dev/null 2>&1 </dev/null); then
+    complain "hostile: \`check\` refused the file \`hostile\` is asked about"
+elif ! (cd "$scratch"/hostile && KEST_LIB= "$kest" hostile doors.kest 3 \
+            >/dev/null 2>"$scratch"/hostile/elsewhere </dev/null); then
+    complain "hostile: a file \`check\` reads was refused from another \
+directory: $(head -1 "$scratch"/hostile/elsewhere)"
+fi
 if $kest debug --json examples/embed.kest >"$scratch"/hostile/debug \
         2>&1 </dev/null ||
    ! python3 -c '
@@ -1768,6 +1782,28 @@ if ! rooted=$("$kest" run "$deep/c.kest" 2>&1 </dev/null); then
     complain "run: a package rooted where its file says it is did not run"
     printf '%s\n' "$rooted" | sed 's/^/    /' | head -4
 fi
+
+# And a module whose name is 256 bytes or more. The checker joined it to a
+# function's name in 256 bytes and, where the two did not fit, did not look
+# at all: a method in the file was refused as not being there, and a local
+# that hid one of its functions was not told how to write the function.
+long_module=$(printf 'abcd.%.0s' $(seq 51))z
+printf 'module %s\n\nstruct P {\n    x: i32\n}\n\nfn two() -> i32 {\n    return 2\n}\n\nfn get(p: P) -> i32 {\n    return p.x\n}\n\nfn main() -> i32 {\n    let p = P(5)\n    return two() + p.get()\n}\n' \
+    "$long_module" >"$scratch"/long-module.kest
+"$kest" run "$scratch"/long-module.kest >/dev/null 2>"$scratch"/long-module.said \
+    </dev/null
+if [ $? -ne 7 ]; then
+    complain "run: a method in a module named in 256 bytes was not found: \
+$(head -1 "$scratch"/long-module.said | cut -c1-80)"
+fi
+printf 'module %s\n\nfn two() -> i32 {\n    return 2\n}\n\nfn main() -> i32 {\n    let two = 3\n    return two()\n}\n' \
+    "$long_module" >"$scratch"/long-module.kest
+case "$("$kest" check "$scratch"/long-module.kest 2>&1 </dev/null)" in
+*"write \`$long_module.two\` for that one"*) ;;
+*) complain "check: a local hiding a function in a module named in 256 bytes \
+was not told how to write the function" ;;
+esac
+rm -f "$scratch"/long-module.kest "$scratch"/long-module.said
 
 # Where the library is, which is not where the program is. `std` resolves from
 # a path built out of the name the command line was run under -- beside the
@@ -4583,7 +4619,9 @@ for asking in "nonsense@unknown command \`nonsense\`" \
         "tick $scratch/refused/calling.kest 1,2 3@takes one count, and was given \`3\` as well" \
         "tick $scratch/refused/calling.kest 1,x@\`1,x\` is not a list of events" \
         "check --room@\`--room\` says how much, and there is nothing after it" \
-        "check --room 4X $scratch/refused/calling.kest@\`4X\` is not an amount of room"; do
+        "check --room 4X $scratch/refused/calling.kest@\`4X\` is not an amount of room" \
+        "check --room -1 $scratch/refused/calling.kest@\`-1\` is not an amount of room" \
+        "check --fuel -100 $scratch/refused/calling.kest@\`-100\` is not a number of instructions"; do
     words=${asking%%@*}
     refused_with=${asking#*@}
     answered=$("$kest" $words 2>&1 </dev/null)
@@ -6144,6 +6182,41 @@ if [ -z "$wrong" ]; then
     fi
 fi
 if [ -z "$wrong" ]; then
+    # And a standard library under that directory, named by `KEST_LIB`: the
+    # paths that asked for it were cut to 1024 bytes, so `doctor` said it was
+    # not found, a file that used `io` without importing it was given no hint,
+    # and a release said `kest.h` and the archive were not there. A compiler
+    # that writes down what it was handed stands in for one, because what is
+    # asked here is where the release looked.
+    deep_lib="$deep/library/lib/"
+    mkdir -p "$deep_lib" "$deep"/library/include
+    cp -r "$here"/lib/std "$deep_lib"std
+    : >"$deep"/library/include/kest.h
+    : >"$deep"/library/libkest.a
+    printf 'module plain\n\nfn main() -> i32 {\n    io.print("x")\n    return 0\n}\n' \
+        >"$deep"/plain.kest
+    printf 'module handed\n\nfn main() -> i32 {\n    return 0\n}\n' \
+        >"$deep"/handed.kest
+    printf '#!/bin/sh\nprintf "%%s\\n" "$@" >"$LONG_HANDED"\nexit 1\n' \
+        >"$scratch"/long-handed-cc
+    chmod +x "$scratch"/long-handed-cc
+    case "$(cd "$deep" && KEST_LIB="$deep_lib" "$kest" doctor 2>&1)" in
+    *"found, and \`import std.io\` will resolve"*) ;;
+    *) wrong="\`kest doctor\` did not find a library under a path longer than 1024 bytes" ;;
+    esac
+    case "$(KEST_LIB="$deep_lib" "$kest" check "$deep"/plain.kest 2>&1)" in
+    *"\`std.io\` is in the library, and this file does not import it"*) ;;
+    *) wrong="a library under a path longer than 1024 bytes did not say \`std.io\` was in it" ;;
+    esac
+    (cd "$deep" && LONG_HANDED="$scratch"/long-handed CC="$scratch"/long-handed-cc \
+        KEST_LIB="$deep_lib" "$kest" build --release handed.kest \
+        >/dev/null 2>&1 </dev/null)
+    if ! grep -qxF -- "-I$deep_lib../include/" "$scratch"/long-handed 2>/dev/null ||
+       ! grep -qxF -- "$deep_lib../libkest.a" "$scratch"/long-handed; then
+        wrong="a release did not find \`kest.h\` and the archive beside a library under a path longer than 1024 bytes"
+    fi
+fi
+if [ -z "$wrong" ]; then
     # An edition this compiler has not got is refused rather than read as
     # the nearest one, and a manifest that names none was written against
     # the first: what it meant the day it was written is what it means. And
@@ -6393,6 +6466,59 @@ if [ -z "$debug_wrong" ]; then
     *) debug_wrong="a local the body had not written yet was read as what the \
 frame before it left" ;;
     esac
+fi
+# And a breakpoint named by a full path longer than the 512 bytes a command
+# was read in: the start of the path was taken for a line in this file and
+# refused, and the rest of it was run as a word of its own.
+if [ -z "$debug_wrong" ]; then
+    far="$scratch"/stopping
+    for piece in 1 2 3; do
+        far="$far/$(printf '%190s' '' | tr ' ' d)"
+    done
+    mkdir -p "$far"
+    cp "$scratch"/stopping/stopping.kest "$far"/stopping.kest
+    printf 'break %s/stopping.kest:4\nrun\nquit\n' "$far" |
+        "$kest" debug "$far"/stopping.kest >"$scratch"/stopping/far-said 2>&1
+    case "$(cat "$scratch"/stopping/far-said)" in
+    *"not a word here"*) debug_wrong="a long command was run as two" ;;
+    *"stopped at"*) ;;
+    *) debug_wrong="a breakpoint named by a long path did not stop" ;;
+    esac
+fi
+# And a line past the most a command may be, which is read through and
+# refused rather than held, however long it goes on: the commands after it
+# are still read, and the program still runs.
+if [ -z "$debug_wrong" ]; then
+    most_command=$(sed -n 's/^#define KEST_MOST_COMMAND_BYTES \([0-9]*\)$/\1/p' \
+                       src/debug.c)
+    {
+        printf 'break '
+        head -c $((${most_command:-0} + 10)) /dev/zero | tr '\0' 4
+        printf '\nrun\nquit\n'
+    } | "$kest" debug "$scratch"/stopping/stopping.kest \
+        >"$scratch"/stopping/long-said 2>&1
+    case "$(cat "$scratch"/stopping/long-said)" in
+    *"a command is at most ${most_command:-?} bytes"*"the program finished"*) ;;
+    *) debug_wrong="a command past the most a command may be was not refused" ;;
+    esac
+fi
+# And a line that is not one: `4x` was line 4, and so was 2^32 + 4, because the
+# number was read as far as it was digits and wrapped where a line number
+# does. Line 4 is the one the breakpoint above stops at, so either would have
+# stopped there.
+if [ -z "$debug_wrong" ]; then
+    for wrongly in 4x 4294967300 +4; do
+        printf 'break %s\nrun\nquit\n' "$wrongly" |
+            "$kest" debug "$scratch"/stopping/stopping.kest \
+                >"$scratch"/stopping/wrongly-said 2>&1
+        case "$(cat "$scratch"/stopping/wrongly-said)" in
+        *"breakpoint at"*|*"stopped at"*)
+            debug_wrong="\`break $wrongly\` set a breakpoint"
+            ;;
+        *"\`$wrongly\` is not a line"*) ;;
+        *) debug_wrong="\`break $wrongly\` was not refused as a line" ;;
+        esac
+    done
 fi
 if [ -n "$debug_wrong" ]; then
     complain "debug: a machine stopped and asked about: $debug_wrong"
@@ -6706,6 +6832,29 @@ if [ "$served" != "yes" ]; then
     complain "lsp: the editor was not answered by this compiler: $served"
 fi
 
+# And the module a declaration is under, written whole however long its name:
+# a copy into 256 bytes wrote `null` for a module named in more, which is a
+# declaration listed as under no module.
+mkdir -p "$scratch"/listed
+long_listed=$(printf 'abcd.%.0s' $(seq 51))z
+printf 'module %s\n\nstruct P {\n    x: i32\n}\n\nfn two() -> i32 {\n    return 2\n}\n\nfn main() -> i32 {\n    return two() - 2\n}\n' \
+    "$long_listed" >"$scratch"/listed/long.kest
+listed_under=$("$kest" check --json "$scratch"/listed/long.kest 2>/dev/null |
+               python3 -c '
+import json, sys
+said = json.load(sys.stdin)
+under = set()
+for what in ("types", "functions"):
+    for one in said.get(what, []):
+        if one.get("name", "").endswith((".P", ".two")):
+            under.add(one.get("module"))
+print(" ".join(sorted(str(one) for one in under)))
+')
+if [ "$listed_under" != "$long_listed" ]; then
+    complain "check --json: what a module named in 256 bytes declares was \
+listed under \`$(printf '%s' "$listed_under" | cut -c1-40)\`"
+fi
+
 # A header line is read whole, however long. It was read 512 bytes at a time
 # and the rest of a longer line read as a line of its own: a line of 512 bytes
 # left `\n` behind, which ended the header before its length, and the server
@@ -6735,6 +6884,77 @@ PY
 )
 if [ "$headed" != "yes" ]; then
     complain "lsp: a message with a long header line was not answered: $headed"
+fi
+
+# And text that is not UTF-8 in what is written as JSON. A file name is any
+# bytes, and one with 0xFF in it was written raw into `check --json` and into
+# what the server said about a file under it, which no reader can decode. What
+# is not a character is one U+FFFD for each maximal subpart, as the Unicode
+# Standard and WHATWG's decoder replace it: the start of an emoji cut short by
+# an `A` is one U+FFFD and the `A`, and a lone continuation byte is one. A name
+# in UTF-8 is written as it is.
+mkdir -p "$scratch"/unread
+unread=$(cd "$scratch"/unread && python3 - "$kest" "$scratch"/unread <<'PY'
+import json, os, subprocess, sys
+
+kest, where = sys.argv[1], sys.argv[2]
+wrong = []
+for name, wanted in ((b"bad\xff.kest", "bad\ufffd.kest"),
+                     (b"x\xf0\x9f\x98A.kest", "x\ufffdA.kest"),
+                     (b"y\x80.kest", "y\ufffd.kest"),
+                     ("caf\u00e9.kest".encode(), "caf\u00e9.kest")):
+    with open(name, "wb") as made:
+        made.write(b"fn main() -> i32 {\n    return x\n}\n")
+    out = subprocess.run([kest, "check", "--json", name],
+                         capture_output=True).stdout
+    try:
+        said = json.loads(out.decode("utf-8"))
+    except ValueError:
+        wrong.append("`check --json` on %r was not JSON" % name)
+        continue
+    files = [one.get("file") for one in said.get("diagnostics", [])]
+    if wanted not in files:
+        wrong.append("`check --json` named %r as %r" % (name, files[:1]))
+
+
+def framed(text):
+    body = text.encode()
+    return b"Content-Length: %d\r\n\r\n" % len(body) + body
+
+
+uri = "file://" + os.path.abspath(where) + "/d%FF/m.kest"
+messages = [
+    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {
+         "uri": uri, "languageId": "kest", "version": 1,
+         "text": "module m\n\nimport nothing.here\n\nfn main() -> i32 {\n"
+                 "    return 0\n}\n"}}},
+]
+out = subprocess.run([kest, "lsp"], capture_output=True,
+                     input=b"".join(framed(json.dumps(m))
+                                    for m in messages)).stdout
+at, read, unreadable = 0, 0, 0
+while True:
+    head = out.find(b"Content-Length: ", at)
+    blank = out.find(b"\r\n\r\n", head)
+    if head < 0 or blank < 0:
+        break
+    many = int(out[head + 16:blank])
+    try:
+        json.loads(out[blank + 4:blank + 4 + many].decode("utf-8"))
+        read += 1
+    except ValueError:
+        unreadable += 1
+    at = blank + 4 + many
+if unreadable or read < 2:
+    wrong.append("the server sent %d message(s) no reader can decode" %
+                 unreadable)
+print("; ".join(wrong) if wrong else "yes")
+PY
+)
+if [ "$unread" != "yes" ]; then
+    complain "json: text that is not UTF-8: $unread"
 fi
 
 # And numbers a client chose, read by the checking build: a request id, a
@@ -7787,6 +8007,57 @@ PY
 )
 if [ "$between" != "yes" ]; then
     complain "lsp: two open files over a module that does not build: $between"
+fi
+
+# And the same from a working directory deeper than the 2048 bytes it was read
+# into: one that did not fit left the library relative, and its files were
+# named `file://lib/...` again.
+deeper="$scratch"/serving/deeper
+for piece in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    deeper="$deeper/$(printf '%190s' '' | tr ' ' d)"
+done
+mkdir -p "$deeper"/lib
+cp -r "$here"/lib/std "$deeper"/lib/std
+cp "$scratch"/serving/between/clean.kest "$deeper"/clean.kest
+deeply=$(cd "$deeper" && KEST_LIB=lib python3 - "$kest" <<'PY'
+import json, os, subprocess, sys
+
+kest = sys.argv[1]
+clean = os.path.abspath("clean.kest")
+messages = [
+    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": "file://" + clean,
+                                 "languageId": "kest", "version": 1,
+                                 "text": open(clean).read()}}},
+    {"jsonrpc": "2.0", "id": 2, "method": "workspace/symbol",
+     "params": {"query": "start"}},
+]
+body = b""
+for one in messages:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+out = subprocess.run([kest, "lsp"], input=body, capture_output=True).stdout
+uri = ""
+at = 0
+while True:
+    head = out.find(b"Content-Length: ", at)
+    blank = out.find(b"\r\n\r\n", head) if head >= 0 else -1
+    if blank < 0:
+        break
+    many = int(out[head + 16:blank])
+    said = json.loads(out[blank + 4:blank + 4 + many])
+    at = blank + 4 + many
+    if said.get("id") == 2 and said.get("result"):
+        uri = said["result"][0].get("location", {}).get("uri", "")
+if uri.startswith("file:///") and os.path.isfile(uri[7:]):
+    print("yes")
+else:
+    print("the library's file was named as " + repr(uri[:40]))
+PY
+)
+if [ "$deeply" != "yes" ]; then
+    complain "lsp: a library under a working directory past 2048 bytes: $deeply"
 fi
 
 # And every request answered, whatever happened to it. A client that sends a

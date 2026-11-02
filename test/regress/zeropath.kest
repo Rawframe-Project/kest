@@ -1,0 +1,22 @@
+// Guards against a file door acting on the part of a path before a zero byte:
+// `keep.txt\0.other` wrote `keep.txt`, because C ends a path at the zero. A
+// path with one in it names no file, in the machine's host and in the one the
+// C backend writes alike.
+
+module test.regress.zeropath
+
+import std.os
+
+fn main() -> i32 {
+    // `.` is there wherever this runs, and so it was found.
+    if os.exists(".\0.nothing") {
+        return 1
+    }
+    if os.write("kest-zero-path.txt\0.other", "written") {
+        return 2
+    }
+    if os.read(".\0.nothing") != none {
+        return 3
+    }
+    return 0
+}
