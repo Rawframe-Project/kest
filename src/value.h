@@ -830,8 +830,19 @@ uint32_t kest_module_copies(const KestModule *module, const char *name,
 
 // Which function a host means by a name: the name as written, and then the
 // same name under the module of the file that was named. -1 for one the
-// program does not have.
+// program does not have, and for one there was no memory to look for under a
+// long module's name.
 int32_t kest_module_entry(const KestModule *module, const char *name);
+
+// `name` under the module of the file that was named, the way a host's name is
+// looked for a second time: in `stack` when it fits in `room`, and otherwise in
+// memory of its own, which `kest_module_unqualify` gives back. NULL when the
+// module has no name to put it under, and when there was no memory for it,
+// which `starved` says. A module's name has no limit, and a lookup that gave
+// up past 256 bytes answered that a declared function was not there.
+char *kest_module_qualify(const KestModule *module, const char *name,
+                          char *stack, size_t room, bool *starved);
+void kest_module_unqualify(char *qualified, const char *stack);
 
 // Where the instruction holding this byte was written, which is a walk over the
 // body: one origin is kept per instruction rather than one per byte. Nought for

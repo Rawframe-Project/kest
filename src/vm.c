@@ -8182,16 +8182,16 @@ int32_t kest_entry_of(KestRuntime *runtime, const char *name, uint32_t at) {
     if (found >= 0) {
         return found;
     }
-    const char *alias = runtime->module->alias;
-    size_t prefix = strlen(alias);
-    char qualified[256];
-    if (prefix == 0 || prefix + strlen(name) + 2 > sizeof(qualified)) {
+    char stack[256];
+    bool starved = false;
+    char *qualified = kest_module_qualify(runtime->module, name, stack,
+                                          sizeof stack, &starved);
+    if (qualified == NULL) {
         return -1;
     }
-    memcpy(qualified, alias, prefix);
-    qualified[prefix] = '.';
-    memcpy(qualified + prefix + 1, name, strlen(name) + 1);
-    return nth_named(runtime->module, qualified, at);
+    found = nth_named(runtime->module, qualified, at);
+    kest_module_unqualify(qualified, stack);
+    return found;
 }
 
 int32_t kest_entry(KestRuntime *runtime, const char *name) {
@@ -8205,19 +8205,20 @@ int32_t kest_entry(KestRuntime *runtime, const char *name) {
     if (found >= 0) {
         return found;
     }
-    const char *alias = runtime->module->alias;
-    size_t prefix = alias == NULL ? 0 : strlen(alias);
-    char qualified[256];
-    bool composed =
-        prefix != 0 && prefix + strlen(name) + 2 <= sizeof(qualified);
-    if (composed) {
-        memcpy(qualified, alias, prefix);
-        qualified[prefix] = '.';
-        memcpy(qualified + prefix + 1, name, strlen(name) + 1);
+    char stack[256];
+    bool starved = false;
+    char *qualified = kest_module_qualify(runtime->module, name, stack,
+                                          sizeof stack, &starved);
+    if (starved) {
+        // No memory to look for it under the module, which is not a name the
+        // program does not have.
+        kest_diags_starve(runtime->diags);
+        return -1;
     }
-    if (!explain_entry(runtime, name) && composed) {
+    if (!explain_entry(runtime, name) && qualified != NULL) {
         explain_entry(runtime, qualified);
     }
+    kest_module_unqualify(qualified, stack);
     return -1;
 }
 

@@ -262,16 +262,45 @@ int32_t kest_module_entry(const KestModule *module, const char *name) {
     if (found >= 0) {
         return found;
     }
-    const char *alias = module->alias;
-    size_t prefix = alias == NULL ? 0 : strlen(alias);
-    char qualified[256];
-    if (prefix == 0 || prefix + strlen(name) + 2 > sizeof(qualified)) {
+    char stack[256];
+    bool starved = false;
+    char *qualified =
+        kest_module_qualify(module, name, stack, sizeof stack, &starved);
+    if (qualified == NULL) {
         return -1;
     }
-    memcpy(qualified, alias, prefix);
-    qualified[prefix] = '.';
-    memcpy(qualified + prefix + 1, name, strlen(name) + 1);
-    return kest_module_find(module, qualified);
+    found = kest_module_find(module, qualified);
+    kest_module_unqualify(qualified, stack);
+    return found;
+}
+
+char *kest_module_qualify(const KestModule *module, const char *name,
+                          char *stack, size_t room, bool *starved) {
+    *starved = false;
+    const char *alias = module->alias;
+    size_t prefix = alias == NULL ? 0 : strlen(alias);
+    if (prefix == 0) {
+        return NULL;
+    }
+    size_t length = strlen(name);
+    size_t needed = prefix + 1 + length + 1;
+    // Not the module's arena: machines on two threads ask a build's module
+    // at once, and a bump pointer is one thing two of them write.
+    char *into = needed <= room ? stack : malloc(needed);
+    if (into == NULL) {
+        *starved = true;
+        return NULL;
+    }
+    memcpy(into, alias, prefix);
+    into[prefix] = '.';
+    memcpy(into + prefix + 1, name, length + 1);
+    return into;
+}
+
+void kest_module_unqualify(char *qualified, const char *stack) {
+    if (qualified != stack) {
+        free(qualified);
+    }
 }
 
 // What making a copy per set of types costs a module, by the rule that a chunk
