@@ -6614,6 +6614,22 @@ it held the value"
     ;;
 esac
 
+# A local holding 400 bytes of text. What a slot holds was written into 256
+# bytes, so `locals` showed the text cut short, with no closing quote and
+# nothing to say there was more. It is shown whole.
+words=$(printf 'word%.0s' $(seq 100))
+printf 'fn show(s: text) -> i32 {\n    let n = len(s)\n    return n - 400\n}\n\nfn main() -> i32 {\n    return show("%s")\n}\n' \
+    "$words" >"$scratch"/stopping/long.kest
+printf 'break 2\nrun\nlocals\ncontinue\nquit\n' >"$scratch"/stopping/long-asking
+"$kest" debug "$scratch"/stopping/long.kest \
+    <"$scratch"/stopping/long-asking >"$scratch"/stopping/long-said 2>&1
+case "$(cat "$scratch"/stopping/long-said)" in
+*"slot 0  \"$words\""*) ;;
+*)
+    complain "debug: a long piece of text was not shown whole"
+    ;;
+esac
+
 # And the same debugger driven the way an editor drives it, over the Debug
 # Adapter Protocol: launched on a file, a breakpoint set on a line inside a
 # loop, the frames and a frame's variables asked for, stepped, carried on to the
@@ -6639,6 +6655,8 @@ fn main() -> i32 {
     return a + b - 5
 }
 KEST
+printf 'fn show(s: text) -> i32 {\n    let n = len(s)\n    return n - 400\n}\n\nfn main() -> i32 {\n    return show("%s")\n}\n' \
+    "$(printf 'word%.0s' $(seq 100))" >"$scratch"/adapting/long.kest
 cat > "$scratch"/adapting/broken.kest <<'KEST'
 fn main() -> i32 {
     return missing(1)
@@ -6747,6 +6765,13 @@ ended = [one["body"]["exitCode"] for one in heard
          if one.get("event") == "exited"]
 if ended != [4]:
     wrong.append("answer")
+# A local holding 400 bytes of text, which was cut at 253 of them with no
+# closing quote.
+heard, frames, held = session(room + "/long.kest", [2])
+named = dict((one["name"], one["value"])
+             for one in (held["body"]["variables"] if held else []))
+if named.get("s") != '"' + "word" * 100 + '"':
+    wrong.append("text")
 heard, frames, held = session(room + "/broken.kest", [2])
 launch = [one for one in heard if one.get("command") == "launch"]
 console = "".join(one["body"]["output"] for one in heard
@@ -6774,6 +6799,11 @@ esac
 case " $adapted " in
 *" answer "*)
     complain "dap: a finished program did not say what \`main\` answered"
+    ;;
+esac
+case " $adapted " in
+*" text "*)
+    complain "dap: a long piece of text in a variable was not shown whole"
     ;;
 esac
 case " $adapted " in

@@ -365,6 +365,22 @@ static void scopes(Adapter *adapter, const KestJson *request) {
 
 // What a body called its slots and what is in them. A value wider than a slot
 // is said at its first slot, the way `kest debug` says it.
+// A piece of text as the value of a local, between the quotes the language
+// writes it in, as long as it is. No room for it is a reply that breaks, which
+// the editor is answered for the way any other is.
+static void quoted_text(KestSaid *said, const char *text, uint32_t length) {
+    char *quoted = malloc((size_t)length + 2);
+    if (quoted == NULL) {
+        said->broke = true;
+        return;
+    }
+    quoted[0] = '"';
+    memcpy(quoted + 1, text, length);
+    quoted[(size_t)length + 1] = '"';
+    kest_wire_escaped(said, quoted, (size_t)length + 2);
+    free(quoted);
+}
+
 static void variables(Adapter *adapter, const KestJson *request) {
     const KestJson *which =
         kest_wire_down(request, "arguments", "variablesReference");
@@ -379,13 +395,20 @@ static void variables(Adapter *adapter, const KestJson *request) {
         for (uint16_t slot = 0; slot < wide;) {
             char value[256];
             uint16_t slots = 1;
-            const char *name = kest_debugger_local(
-                &adapter->debugger, deep, slot, value, sizeof value, &slots);
+            const char *text = NULL;
+            uint32_t length = 0;
+            const char *name =
+                kest_debugger_local(&adapter->debugger, deep, slot, value,
+                                    sizeof value, &slots, &text, &length);
             if (name != NULL) {
                 kest_wire_say(&said, first ? "{\"name\":" : ",{\"name\":");
                 kest_wire_text(&said, name);
                 kest_wire_say(&said, ",\"value\":");
-                kest_wire_text(&said, value);
+                if (text == NULL) {
+                    kest_wire_text(&said, value);
+                } else {
+                    quoted_text(&said, text, length);
+                }
                 kest_wire_say(&said, ",\"variablesReference\":0}");
                 first = false;
             }
