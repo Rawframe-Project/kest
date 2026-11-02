@@ -4133,9 +4133,12 @@ static bool files_beneath(Walk *walk, const char *directory, int depth) {
     }
     struct _finddata_t entry;
     intptr_t walking = _findfirst(pattern, &entry);
+    // Kept before the pattern is given back: `free` may set `errno`, and what
+    // is asked here is why the walk did not start.
+    int why = errno;
     free(pattern);
     if (walking == -1) {
-        return errno == ENOENT;
+        return why == ENOENT;
     }
     do {
         const char *name = entry.name;
