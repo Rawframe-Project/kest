@@ -1816,6 +1816,140 @@ $stopping_was" >>"$said"
     esac
 fi
 
+# And a tag a host wrote into a lend that names no case, read by a body this
+# backend wrote and then by the machine, for an enum whose name is longer than
+# the 96 bytes the C used to say it in. The sentence was cut short in the C and
+# whole on the machine; the two engines say one sentence.
+tag_said="no tag without a case was read from a lend"
+cat >"$work"/tagsaid.kest <<'PROGRAM'
+module tagsaid
+
+enum WhatTheWorldSaidHappenedToTheSettlementOnTheDayTheRaidersCameDown {
+    Quiet
+    Raided(i32)
+}
+
+fn lost(days: [WhatTheWorldSaidHappenedToTheSettlementOnTheDayTheRaidersCameDown]) -> i32 {
+    let lost = 0
+    for day in days {
+        lost += match day {
+            Quiet -> 0
+            Raided(many) -> many
+        }
+    }
+    return lost
+}
+PROGRAM
+cat >"$work"/tagsaid.c <<'HOST'
+#include "kest.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+bool kest_natives_here(KestRuntime *runtime);
+
+// The program's enum as this host lays it out: a four byte tag, and the one
+// case that carries something carries it four bytes in.
+typedef struct {
+    int32_t tag;
+    int32_t many;
+} Day;
+
+// The line of the report with the code in it, or NULL when the run was not
+// refused with it.
+static char *refused(const char *path, bool compiled) {
+    KestBuild *build = kest_build(path, getenv("KEST_LIB"), stderr,
+                                  KEST_FORM_TEXT, 0);
+    KestHost *host = kest_host_new();
+    KestRuntime *rt =
+        build == NULL || host == NULL ? NULL : kest_start(build, host, NULL);
+    kest_host_free(host);
+    if (rt == NULL || (compiled && !kest_natives_here(rt))) {
+        fprintf(stderr, "no machine\n");
+        return NULL;
+    }
+    Day days[2] = {{1, 3}, {1234567, 0}};
+    KestValue slots[4];
+    memset(slots, 0, sizeof slots);
+    slots[0] = kest_borrow(
+        rt, days, 2,
+        "WhatTheWorldSaidHappenedToTheSettlementOnTheDayTheRaidersCameDown",
+        sizeof(Day));
+    int32_t which = kest_entry(rt, "tagsaid.lost");
+    char *line = NULL;
+    FILE *report = tmpfile();
+    if (slots[0].object != NULL && which >= 0 && report != NULL &&
+        !kest_call(rt, which, slots, 4)) {
+        kest_report(rt, report, KEST_FORM_TEXT);
+        rewind(report);
+        char read[1024];
+        while (line == NULL && fgets(read, sizeof read, report) != NULL) {
+            if (strstr(read, "K0651") != NULL) {
+                line = malloc(strlen(read) + 1);
+                if (line != NULL) {
+                    memcpy(line, read, strlen(read) + 1);
+                }
+            }
+        }
+    }
+    if (report != NULL) {
+        fclose(report);
+    }
+    kest_runtime_free(rt);
+    kest_build_free(build);
+    return line;
+}
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        fprintf(stderr, "usage: tagsaid <program>\n");
+        return 2;
+    }
+    char *compiled = refused(argv[1], true);
+    char *machine = refused(argv[1], false);
+    printf("compiled %s", compiled == NULL ? "ran\n" : compiled);
+    printf("machine %s", machine == NULL ? "ran\n" : machine);
+    int same = compiled != NULL && machine != NULL &&
+               strcmp(compiled, machine) == 0;
+    free(compiled);
+    free(machine);
+    return same ? 0 : 1;
+}
+HOST
+if ! $build_dir/kest emit --c "$work"/tagsaid.kest >"$work"/tagsaid-body.c 2>"$work"/why ||
+        ! $cc -O1 -Iinclude -DKEST_NO_MAIN -c -o "$work"/tagsaid-body.o \
+            "$work"/tagsaid-body.c 2>>"$work"/why ||
+        ! $cc -O1 -Iinclude -o "$work"/tagsaid "$work"/tagsaid.c \
+            "$work"/tagsaid-body.o $build_dir/libkest.a -lm 2>>"$work"/why; then
+    {
+        echo "    a host lending a tag with no case will not build against the \
+C this wrote:"
+        sed 's/^/        /' "$work"/why | head -5
+    } >>"$said"
+    wrong=$((wrong + 1))
+else
+    tagging=$(KEST_LIB=lib/ "$work"/tagsaid "$work"/tagsaid.kest 2>&1 </dev/null)
+    tagging_was=$?
+    case "$tagging" in
+    *"compiled "*"Down\` here holds tag 1234567 and has no such case"*"machine "*)
+        tag_said="a tag with no case lent under a long enum name, said in one \
+sentence by both engines"
+        if [ "$tagging_was" -ne 0 ]; then
+            echo "    a tag with no case under a long enum name was said two \
+ways: $(printf '%s' "$tagging" | tr '\n' ' ')" >>"$said"
+            wrong=$((wrong + 1))
+        fi
+        ;;
+    *)
+        echo "    a tag with no case under a long enum name said \
+\`$(printf '%s' "$tagging" | head -3 | tr '\n' ' ')\` and came back \
+$tagging_was" >>"$said"
+        wrong=$((wrong + 1))
+        ;;
+    esac
+fi
+
 # And a walk that hands its array to the host, whose door calls back into the
 # program and shortens it. The walk proofs refuse a walk that calls the host,
 # because a host handed an array can do exactly this, and only a host can
@@ -2345,6 +2479,6 @@ host compiler takes, $both program(s) written here and $alike of this tree's \
 own run both ways for the same answer and the same words, $walked of those \
 again walking the heap before every allocation with $not_walked left out for \
 growing worlds, $sanitised again under the sanitisers, $fused_said, \
-$inside_said, $stopped_said, \
+$inside_said, $stopped_said, $tag_said, \
 $wants_a_host that ask the host for what a file this wrote does not provide, \
 and $refused_walked allocation(s) of a host without its door refused in turn"

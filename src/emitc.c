@@ -700,16 +700,11 @@ static uint16_t move_value(Walk *walk, const KestType *type, uint32_t slot,
                 "            memcpy(&tag, at + %u, 4);\n"
                 "            %s.integer = tag;\n"
                 "            if ((uint32_t)tag >= %uu) {\n"
-                "                char said[96];\n"
-                "                snprintf(said, sizeof said,\n"
-                "                         \"`%s` here holds tag %%lld and has "
-                "no such case\",\n"
-                "                         (long long)tag);\n"
-                "                return kest_native_stopped(rt, %u, "
-                "\"K0651\", said);\n"
+                "                return kest_native_no_case(rt, %u, \"%s\",\n"
+                "                                           (long long)tag);\n"
                 "            }\n",
-                byte, tag, (unsigned)type->case_count,
-                written == NULL ? "a value with a tag in it" : written, where);
+                byte, tag, (unsigned)type->case_count, where,
+                written == NULL ? "a value with a tag in it" : written);
         } else {
             say(c, out,
                 "        memset(at + %u, 0, %u);\n"
@@ -799,15 +794,11 @@ static uint16_t move_value(Walk *walk, const KestType *type, uint32_t slot,
     }
     const char *written = kest_type_written(type);
     say(c, out,
-        "            default: {\n                char said[96];\n"
-        "                snprintf(said, sizeof said,\n"
-        "                         \"`%s` here holds tag %%lld and has no such "
-        "case\",\n"
-        "                         (long long)tag);\n"
-        "                return kest_native_stopped(rt, %u, \"K0651\", "
-        "said);\n"
-        "            }\n            }\n        }\n",
-        written == NULL ? "a value with a tag in it" : written, where);
+        "            default:\n"
+        "                return kest_native_no_case(rt, %u, \"%s\",\n"
+        "                                           (long long)tag);\n"
+        "            }\n        }\n",
+        where, written == NULL ? "a value with a tag in it" : written);
     return type->slots;
 }
 
@@ -3447,6 +3438,8 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry, const char *from,
         "                                 uint16_t *));\n"
         "bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,\n"
         "                         const char *code, const char *message);\n"
+        "bool kest_native_no_case(KestRuntime *runtime, uint32_t offset,\n"
+        "                         const char *type, long long tag);\n"
         "const volatile int *kest_native_asking(KestRuntime *runtime);\n"
         "bool kest_call_body(KestRuntime *runtime, uint32_t which,\n"
         "                    KestValue *base, uint16_t handed,\n"

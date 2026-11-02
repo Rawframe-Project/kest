@@ -308,6 +308,14 @@ bool kest_call_host(KestRuntime *runtime, uint16_t index, KestValue *base,
 bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,
                          const char *code, const char *message);
 
+// What a body written in C says when it reads a tag `type` has no case for:
+// the machine's own `K0651`, in its words and with its suggestion. The words
+// are put together here rather than in the C, where a buffer of 96 bytes cut
+// the sentence short for a long enum name and one sized to the name would be
+// as long as a name may be. Answers false, as `kest_native_stopped` does.
+bool kest_native_no_case(KestRuntime *runtime, uint32_t offset,
+                         const char *type, long long tag);
+
 // The word that says whether the host has asked the machine to stop, read by a
 // body written in C every `KEST_TURNS_ASKED` times it goes round a `while`,
 // with a count of its own in between that nothing outside the body can see, so
