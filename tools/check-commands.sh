@@ -6792,6 +6792,29 @@ if [ "$served" != "yes" ]; then
     complain "lsp: the editor was not answered by this compiler: $served"
 fi
 
+# And the module a declaration is under, written whole however long its name:
+# a copy into 256 bytes wrote `null` for a module named in more, which is a
+# declaration listed as under no module.
+mkdir -p "$scratch"/listed
+long_listed=$(printf 'abcd.%.0s' $(seq 51))z
+printf 'module %s\n\nstruct P {\n    x: i32\n}\n\nfn two() -> i32 {\n    return 2\n}\n\nfn main() -> i32 {\n    return two() - 2\n}\n' \
+    "$long_listed" >"$scratch"/listed/long.kest
+listed_under=$("$kest" check --json "$scratch"/listed/long.kest 2>/dev/null |
+               python3 -c '
+import json, sys
+said = json.load(sys.stdin)
+under = set()
+for what in ("types", "functions"):
+    for one in said.get(what, []):
+        if one.get("name", "").endswith((".P", ".two")):
+            under.add(one.get("module"))
+print(" ".join(sorted(str(one) for one in under)))
+')
+if [ "$listed_under" != "$long_listed" ]; then
+    complain "check --json: what a module named in 256 bytes declares was \
+listed under \`$(printf '%s' "$listed_under" | cut -c1-40)\`"
+fi
+
 # A header line is read whole, however long. It was read 512 bytes at a time
 # and the rest of a longer line read as a line of its own: a line of 512 bytes
 # left `\n` behind, which ended the header before its length, and the server
