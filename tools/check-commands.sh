@@ -6051,6 +6051,61 @@ if [ -z "$wrong" ]; then
     esac
 fi
 if [ -z "$wrong" ]; then
+    # And names a project can have that a fixed buffer could not: a quote and
+    # a backslash, which the JSON answer printed as typed, and 240 bytes,
+    # whose manifest did not fit in 1024 and was made as nothing, said by
+    # nothing.
+    mkdir -p "$scratch"/named
+    long=$(printf '%240s' '' | tr ' ' q)
+    if ! (cd "$scratch"/named && "$kest" new --json 'a"b\c') \
+            >"$scratch"/named/said 2>&1 ||
+       ! python3 -c '
+import json
+import sys
+
+if json.load(open(sys.argv[1])).get("made") != "a\"b\\c":
+    sys.exit(1)' "$scratch"/named/said 2>/dev/null; then
+        wrong="\`kest new --json\` wrote a name with a quote in it as broken JSON"
+    elif ! (cd "$scratch"/named && "$kest" new "$long") \
+            >"$scratch"/named/said 2>&1 ||
+       [ ! -f "$scratch/named/$long/kest.project" ] ||
+       [ ! -f "$scratch/named/$long/src/main.kest" ] ||
+       [ ! -f "$scratch/named/$long/tests/adding.kest" ]; then
+        wrong="a project with a 240-byte name was not made whole"
+    fi
+    # And names a manifest line or a file system cannot hold, each refused
+    # with its own code before anything is made: a byte that is not UTF-8,
+    # which the JSON answer printed raw; a line break, which wrote the rest of
+    # the name into the manifest as lines of its own; and a directory of 256
+    # bytes, one more than a file system names, whose reason was cut inside a
+    # character once it ran past 512 bytes. 255 bytes is a name.
+    rm -rf "$scratch"/named/*
+    for refused in "$(printf 'a\377b')" "$(printf 'a\nedition 9')" \
+            "$(printf '%256s' '' | tr ' ' q)" \
+            "q/$(i=0; while [ $i -lt 128 ]; do printf '\303\251'; i=$((i + 1)); done)"; do
+        [ -n "$wrong" ] && break
+        if (cd "$scratch"/named && "$kest" new --json "$refused") \
+                >"$scratch"/named/said 2>&1; then
+            wrong="\`kest new\` made a project of a name it cannot hold"
+        elif ! python3 -c '
+import json
+import sys
+
+said = json.load(open(sys.argv[1]))
+if said["diagnostics"][0]["code"] != "K0667":
+    sys.exit(1)' "$scratch"/named/said 2>/dev/null; then
+            wrong="\`kest new\` refused a name it cannot hold without K0667 in JSON"
+        elif [ -n "$(ls -A "$scratch"/named | grep -vx said)" ]; then
+            wrong="\`kest new\` refused a name and left something made"
+        fi
+    done
+    at_most=$(printf '%255s' '' | tr ' ' q)
+    if [ -z "$wrong" ] &&
+       ! (cd "$scratch"/named && "$kest" new "$at_most") >/dev/null 2>&1; then
+        wrong="\`kest new\` refused a 255-byte name"
+    fi
+fi
+if [ -z "$wrong" ]; then
     # And a manifest with a line nothing knows, which is refused rather than
     # read past: a misspelt line reads exactly like one that is not there.
     printf 'project one\nentyr src/main.kest\n' \

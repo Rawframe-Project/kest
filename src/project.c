@@ -205,10 +205,12 @@ KestProject *kest_project_from(KestArena *arena, const char *where,
     return project;
 }
 
-const char *kest_project_written(KestArena *arena, const char *name) {
-    char room[1024];
-    int written = snprintf(
-        room, sizeof(room),
+// Written twice: once into nothing, to learn how long it is, and once into
+// room that long. A name is as long as the file system lets it be, and a
+// manifest cut short at a buffer's end is a project that was never made.
+static int project_text(char *into, size_t room, const char *name) {
+    return snprintf(
+        into, room,
         "# What this project is, in `name value` lines. `kest doctor` reads\n"
         "# it back and says what it found.\n"
         "project %s\n"
@@ -235,8 +237,17 @@ const char *kest_project_written(KestArena *arena, const char *name) {
         "edition %s\n",
         name, KEST_VERSION_STRING, KEST_PROFILE_NAME,
         (unsigned)KEST_PROFILE_VERSION, KEST_EDITION_STRING);
-    if (written < 0 || (size_t)written >= sizeof(room)) {
+}
+
+const char *kest_project_written(KestArena *arena, const char *name) {
+    int length = project_text(NULL, 0, name);
+    if (length < 0) {
         return NULL;
     }
-    return kest_arena_strndup(arena, room, (size_t)written);
+    char *text = kest_arena_alloc(arena, (size_t)length + 1, 1);
+    if (text == NULL ||
+        project_text(text, (size_t)length + 1, name) != length) {
+        return NULL;
+    }
+    return text;
 }

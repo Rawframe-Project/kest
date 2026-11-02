@@ -65,7 +65,8 @@ KestProject *kest_project_from(KestArena *arena, const char *where,
 const char *kest_project_path(KestArena *arena, const char *where);
 
 // The one a project would be written as, for `kest new`. Answers the bytes,
-// which the caller writes wherever it likes.
+// which the caller writes wherever it likes, or NULL when the arena has no
+// room for them.
 const char *kest_project_written(KestArena *arena, const char *name);
 
 #endif
