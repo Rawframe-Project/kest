@@ -274,6 +274,23 @@ def elements():
             "    let b: Big = Big(array(4, 0))\n    return 0\n}\n")
 
 
+# Each value is held to 65535 slots on its own, so what goes past it in a body
+# is two values at once: a parameter of 32768 slots and a name holding another
+# copy, or the two of them side by side in an array being made.
+CUBE = "[[[bool; 32]; 32]; 32]"
+
+
+def named_slots():
+    return ("fn f(c: %s) -> bool {\n    let a = c\n    return a[0][0][0]\n}\n\n"
+            "fn main() -> i32 {\n    return 0\n}\n" % CUBE)
+
+
+def worked_slots():
+    return ("fn f(c: %s) -> i32 {\n    let both = [c, c]\n"
+            "    return len(both)\n}\n\nfn main() -> i32 {\n    return 0\n}\n"
+            % CUBE)
+
+
 # One a row of the table, found by a phrase out of the row itself, so a row
 # nobody has written a program for is a row this names.
 # The number is not written here. It is the table's, read out of the row the
@@ -303,6 +320,8 @@ PROBES = [
     ("things one `match` chooses between", subjects, "K0339", "emit"),
     ("combinations one `match` answers", combinations, "K0333", "emit"),
     ("elements a `[T; N]` holds", elements, "K0326", "emit"),
+    ("slots a function's names hold", named_slots, "K0502", "emit"),
+    ("slots of values it works on", worked_slots, "K0502", "emit"),
 ]
 
 # The rows that are not met here: what `len` counts to is a refusal the machine
@@ -329,6 +348,8 @@ rows = [
     ("8", "things one `match` chooses between at once"),
     ("256", "combinations one `match` answers, before it needs an `else`"),
     ("65535", "elements a `[T; N]` holds, and at least one"),
+    ("65535", "slots a function's names hold at once, and slots of values it "
+              "works on at once"),
     ("65536", "names a program asks the host for"),
     ("2147483647", "elements an array or a store holds, and bytes in text"),
     ("16777215", "places in one store"),
@@ -357,6 +378,8 @@ DEFINED = [
      "src/vm.c", "MOST_STAMPS", {}),
     ("places in one store", "src/vm.c", "MOST_PLACES", {}),
     ("names a program asks the host for", "src/compile.c", "MAX_EXTERNS", {}),
+    ("slots a function's names hold", "src/compile.c", "MOST_SLOTS",
+     {"UINT16_MAX": "65535"}),
 ]
 for phrase, path, define, written_as in DEFINED:
     number = [held for held, what in rows if phrase in what]

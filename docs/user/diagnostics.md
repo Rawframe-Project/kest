@@ -106,6 +106,7 @@ A few numbers are limits because an instruction holds them in two bytes or a fra
 | 256 | combinations one `match` answers before it needs an `else` |
 | 65535 | elements in a `[T; N]`, and at least one |
 | 65535 | bytes, and slots, in one value: a struct, an enum, a `[T; N]`, or an optional, which is what it holds and one byte more (`K0327`) |
+| 65535 | slots a function's names hold at once, and slots of values it works on at once, such as two values of 32768 slots side by side in an array being made |
 | 65536 | doors a program asks the host for |
 | 2147483647 | elements in an array or a store, and bytes in text |
 | 16777215 | places in one store |

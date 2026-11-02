@@ -30,6 +30,13 @@ _Static_assert(MAX_EXTERNS <= (uint32_t)UINT16_MAX + 1,
 // lexical, so this is a number a program can be refused for where it is
 // written rather than one it can meet while running.
 #define MAX_REGIONS 8
+// How many slots a body's names hold at once, and how many slots of values it
+// works on at once: an instruction names a slot, and a body says how big its
+// frame and its stack are, in two bytes. Each value is held to that on its
+// own, but a body holds several. Both are counted wider than this, so a body
+// past it is told so with the number rather than counted round to a small one
+// and refused as the compiler's mistake.
+#define MOST_SLOTS UINT16_MAX
 // A jump and a loop carry how far as two bytes, so this is how much code there
 // can be between one and where it lands.
 #define MAX_REACH UINT16_MAX
@@ -107,8 +114,8 @@ typedef struct {
 
     Local locals[MAX_LOCALS];
     uint16_t local_count;
-    uint16_t next_slot;
-    uint16_t slot_high_water;
+    uint32_t next_slot;
+    uint32_t slot_high_water;
     uint32_t depth;
 
     Loop loops[MAX_LOOPS];
@@ -132,14 +139,17 @@ typedef struct {
     // statement leaves none, so following the emit sites gives the exact
     // depth rather than a bound. That is held rather than said:
     // `hold_width` at every expression, and `hold_empty` at every statement.
-    uint16_t stack_depth;
-    uint16_t stack_high_water;
+    uint32_t stack_depth;
+    uint32_t stack_high_water;
     // Whether the count was taken below nothing since the last statement.
     // Taking more off than was put on used to stop at nought and carry on,
     // which is a count that is wrong and looks right again by the end of the
     // statement -- the one way either of the two above could be kept by a
     // compiler that had lost track.
     bool lost_count;
+    // Whether this body has been told it holds more than `MOST_SLOTS`, which
+    // is said once, where it first did.
+    bool slots_said;
 
     // A reported problem does not stop the walk, so one run reports the
     // whole file. Only running out of memory stops it, because after that
@@ -197,14 +207,14 @@ static void fault(Compiler *compiler, KestSpan span, const char *what) {
     kest_diags_disagree(compiler->program->diags, span, "%s", what);
 }
 
-static void stack_push(Compiler *compiler, uint16_t count) {
+static void stack_push(Compiler *compiler, uint32_t count) {
     compiler->stack_depth += count;
     if (compiler->stack_depth > compiler->stack_high_water) {
         compiler->stack_high_water = compiler->stack_depth;
     }
 }
 
-static void stack_pop(Compiler *compiler, uint16_t count) {
+static void stack_pop(Compiler *compiler, uint32_t count) {
     // Stopping at nought rather than going under it, and remembering that it
     // had to: what is under nothing is not a depth, and a count that clamps
     // is one that comes back to the right answer by the end of the statement
@@ -417,12 +427,41 @@ static uint16_t type_slots(const KestType *type) {
 
 // A slot with no name, for what `for` needs to keep between iterations.
 static uint16_t reserve_slot(Compiler *compiler, uint16_t size) {
-    uint16_t slot = compiler->next_slot;
+    uint32_t slot = compiler->next_slot;
     compiler->next_slot += size;
     if (compiler->next_slot > compiler->slot_high_water) {
         compiler->slot_high_water = compiler->next_slot;
     }
-    return slot;
+    // Cut to what an instruction holds only in a body `hold_slots` refuses,
+    // which never runs.
+    return (uint16_t)slot;
+}
+
+// A body past `MOST_SLOTS`, said where it first went past: at the name that
+// took its names past it, or at the value that took what it works on past
+// it. One that went past where nothing is named, a slot `for` keeps, is said
+// where the function is declared.
+static void hold_slots(Compiler *compiler, KestSpan span) {
+    if (compiler->slots_said) {
+        return;
+    }
+    if (compiler->slot_high_water > MOST_SLOTS) {
+        compiler->slots_said = true;
+        refuse(compiler, span, "K0502",
+               "a function's names hold at most %u slots at once, and here "
+               "they hold %u",
+               MOST_SLOTS, compiler->slot_high_water);
+    } else if (compiler->stack_high_water > MOST_SLOTS) {
+        compiler->slots_said = true;
+        refuse(compiler, span, "K0502",
+               "a function works on at most %u slots of values at once, and "
+               "here it works on %u",
+               MOST_SLOTS, compiler->stack_high_water);
+    } else {
+        return;
+    }
+    kest_diags_suggest(compiler->program->diags,
+                       "`[T]` holds that many on the heap and is a handle");
 }
 
 // A name for slots that are already somewhere, which is what a match arm
@@ -515,7 +554,8 @@ static uint16_t declare_local(Compiler *compiler, KestSpan span,
         return 0;
     }
     compiler->local_count++;
-    local->slot = compiler->next_slot;
+    // Cut only in a body `hold_slots` refuses below.
+    local->slot = (uint16_t)compiler->next_slot;
     local->type = type;
     local->size = type_slots(type);
     local->depth = compiler->depth;
@@ -524,6 +564,7 @@ static uint16_t declare_local(Compiler *compiler, KestSpan span,
     if (compiler->next_slot > compiler->slot_high_water) {
         compiler->slot_high_water = compiler->next_slot;
     }
+    hold_slots(compiler, span);
     local->span = span;
     local->name_at = remember_name(compiler, local);
     return local->slot;
@@ -2009,7 +2050,7 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
                 uint32_t kept = ir_emit(compiler, KEST_IR_PART, expr->type, 1,
                                         expr->type, 1, span);
                 ir_carries(compiler, kept, 0, 1, wide);
-                stack_pop(compiler, (uint16_t)(wide - 1));
+                stack_pop(compiler, (uint32_t)(wide - 1));
             }
             // The flag says it holds something, which is what `!= none` asks.
             if (op == KEST_TOK_EQEQ) {
@@ -2097,7 +2138,7 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
         // many as its widest case.
         uint16_t wide = value_slots(operand);
         if (wide > 1) {
-            stack_pop(compiler, (uint16_t)((wide - 1) * 2));
+            stack_pop(compiler, (uint32_t)((wide - 1) * 2));
         }
         bool whole = operand != NULL && (operand->tag == KEST_T_ENUM ||
                                          operand->tag == KEST_T_STRUCT ||
@@ -2218,7 +2259,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
                               whole_type(compiler), expr->span);
             }
         }
-        stack_pop(compiler, (uint16_t)(1 + value_slots(element)));
+        stack_pop(compiler, (uint32_t)(1 + value_slots(element)));
         stack_push(compiler, 1);
         // The fill was written as a value a slot at a time when it was not
         // written at all, so it is made one value here before it is read.
@@ -2312,7 +2353,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
             ir_carries(compiler, whole, layout_of(compiler, element), 0, 0);
             return true;
         }
-        stack_pop(compiler, (uint16_t)(1 + value_slots(element)));
+        stack_pop(compiler, (uint32_t)(1 + value_slots(element)));
         uint32_t at =
             ir_emit(compiler, KEST_IR_APPEND, array, 2, NULL, 0, expr->span);
         ir_carries(compiler, at, layout_of(compiler, element), 0, 0);
@@ -2331,7 +2372,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
             ir_carries(compiler, whole, layout_of(compiler, element), 0, 0);
             return true;
         }
-        stack_pop(compiler, (uint16_t)(1 + value_slots(element)));
+        stack_pop(compiler, (uint32_t)(1 + value_slots(element)));
         stack_push(compiler, 1);
         uint32_t at =
             ir_emit(compiler, KEST_IR_FIT, array, 2, expr->type, 1, expr->span);
@@ -2390,19 +2431,19 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
                           : value_slots(store->element);
 
     if (adding) {
-        stack_pop(compiler, (uint16_t)(1 + stride));
+        stack_pop(compiler, (uint32_t)(1 + stride));
         stack_push(compiler, 1);
         uint32_t at = ir_emit(compiler, KEST_IR_STORE_ADD, store, 2, expr->type,
                               1, expr->span);
         ir_carries(compiler, at, stride, 0, 0);
     } else if (getting) {
         stack_pop(compiler, 2);
-        stack_push(compiler, (uint16_t)(stride + 1));
+        stack_push(compiler, (uint32_t)(stride + 1));
         uint32_t at = ir_emit(compiler, KEST_IR_STORE_GET, store, 2, expr->type,
                               (uint16_t)(stride + 1), expr->span);
         ir_carries(compiler, at, stride, 0, 0);
     } else if (setting) {
-        stack_pop(compiler, (uint16_t)(2 + stride));
+        stack_pop(compiler, (uint32_t)(2 + stride));
         stack_push(compiler, 1);
         uint32_t at = ir_emit(compiler, KEST_IR_STORE_SET, store, 3, expr->type,
                               1, expr->span);
@@ -2495,7 +2536,7 @@ static void compile_case_tail(Compiler *compiler, const KestExpr *expr,
     // The tag was made last and belongs first, so the whole value is turned
     // over: what was made is payload then tag, and what a slot run is is tag
     // then payload.
-    stack_pop(compiler, (uint16_t)(carried + slack + 1));
+    stack_pop(compiler, (uint32_t)(carried + slack + 1));
     stack_push(compiler, choice->slots);
     uint16_t parts = (uint16_t)(variant->payload_count + slack + 1);
     ir_emit(compiler, KEST_IR_MAKE, choice, parts, choice, choice->slots,
@@ -2515,7 +2556,7 @@ static void compile_value_call(Compiler *compiler, const KestExpr *expr) {
     }
     const KestType *shape = expr->call.callee->type;
     compile_expr(compiler, expr->call.callee);
-    stack_pop(compiler, (uint16_t)(through + 1));
+    stack_pop(compiler, (uint32_t)(through + 1));
     // What it gives rather than what the expression is, for the reason above.
     uint16_t coming_back = shape != NULL && shape->tag == KEST_T_FN
                                ? value_slots(shape->result)
@@ -3044,7 +3085,10 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     }
 
     const char *name = span_text(compiler, callee->span);
-    uint16_t argument_slots = 0;
+    // Counted wide, since the arguments are several values: a call handed
+    // more than `MOST_SLOTS` is in a body `hold_slots` refuses, and the two
+    // bytes the call carries are cut only there.
+    uint32_t argument_slots = 0;
     for (uint32_t i = 0; i < expr->call.arg_count; i++) {
         argument_slots += value_slots(expr->call.args[i]->type);
     }
@@ -3079,7 +3123,7 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
                               result_slots, expr->span);
         // And whether it promises to reach no heap, which is what says a
         // call inside a working-memory block cannot grow what it was handed.
-        ir_carries(compiler, at, (uint16_t)index, argument_slots,
+        ir_carries(compiler, at, (uint16_t)index, (uint16_t)argument_slots,
                    callee->type != NULL && callee->type->no_alloc ? 1 : 0);
         return;
     }
@@ -3140,7 +3184,8 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     uint32_t at = ir_emit(compiler, KEST_IR_CALL_HOST, foreign,
                           (uint16_t)expr->call.arg_count, expr->type,
                           result_slots, expr->span);
-    ir_carries(compiler, at, (uint16_t)slot, argument_slots, result_slots);
+    ir_carries(compiler, at, (uint16_t)slot, (uint16_t)argument_slots,
+               result_slots);
 }
 
 static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
@@ -3349,7 +3394,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         uint16_t total = value_slots(expr->field.object->type);
         uint16_t kept = value_slots(member->type);
         compile_expr(compiler, expr->field.object);
-        stack_pop(compiler, (uint16_t)(total - kept));
+        stack_pop(compiler, (uint32_t)(total - kept));
         uint32_t part = ir_emit(compiler, KEST_IR_PART, expr->type, 1,
                                 expr->type, kept, expr->span);
         ir_carries(compiler, part, member->offset, kept, total);
@@ -3507,7 +3552,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         const KestType *one = object == NULL || object->element == NULL
                                   ? expr->type
                                   : object->element;
-        stack_pop(compiler, (uint16_t)(value_slots(object) + 1));
+        stack_pop(compiler, (uint32_t)(value_slots(object) + 1));
         if (object != NULL && object->tag == KEST_T_TEXT) {
             stack_push(compiler, 1);
             ir_emit(compiler, KEST_IR_TEXT_AT, object, 2, expr->type, 1,
@@ -3585,7 +3630,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             expr->text.parts[0].value->type->tag != KEST_T_TEXT) {
             break;
         }
-        stack_pop(compiler, (uint16_t)(expr->text.count * 2 - numbered));
+        stack_pop(compiler, (uint32_t)(expr->text.count * 2 - numbered));
         stack_push(compiler, 2);
         uint32_t joined =
             ir_emit(compiler, KEST_IR_TEXT_JOIN, expr->type,
@@ -3626,7 +3671,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         // consumed. The taken arm binds it; the other arm drops it.
         uint16_t held = 0;
         uint16_t names = compiler->local_count;
-        uint16_t slots = compiler->next_slot;
+        uint32_t slots = compiler->next_slot;
         // What the condition left, which the arm that runs binds and the one
         // that does not drops. It is one value read on either way out.
         KestIrRef bound = KEST_IR_NONE;
@@ -3714,7 +3759,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         uint16_t gives = value_slots(expr->type);
 
         uint16_t names = compiler->local_count;
-        uint16_t slots = compiler->next_slot;
+        uint32_t slots = compiler->next_slot;
         compiler->depth++;
 
         // Each subject goes into slots of its own, so an arm can name what a
@@ -3855,7 +3900,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         for (uint32_t i = 0; i < expr->array.count; i++) {
             compile_expr(compiler, expr->array.items[i]);
         }
-        stack_pop(compiler, (uint16_t)(expr->array.count * slots));
+        stack_pop(compiler, (uint32_t)(expr->array.count * slots));
         stack_push(compiler, 1);
         uint32_t made =
             ir_emit(compiler, KEST_IR_ARRAY, expr->type,
@@ -3877,8 +3922,14 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
 // expression rather than measured afterwards, because the expression is what
 // names it.
 static void hold_width(Compiler *compiler, const KestExpr *expr,
-                       uint16_t before) {
+                       uint32_t before) {
     if (compiler->out_of_memory) {
+        return;
+    }
+    hold_slots(compiler, expr->span);
+    // A body past `MOST_SLOTS` has been told so, and a count past it is no
+    // count of anything the compiler could have got wrong.
+    if (compiler->slots_said) {
         return;
     }
     int32_t grew = (int32_t)compiler->stack_depth - (int32_t)before;
@@ -3897,7 +3948,7 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr) {
     if (expr == NULL || compiler->out_of_memory) {
         return;
     }
-    uint16_t before = compiler->stack_depth;
+    uint32_t before = compiler->stack_depth;
     // A truth settled where it is written, which is a question about the
     // count of a walk written out once a turn, is that truth.
     bool settled;
@@ -4303,8 +4354,12 @@ static void close_walk(Compiler *compiler, Loop *loop, uint32_t exit, Walk walk,
 // the way is the same fault seen earlier: what clamped at nought is a depth
 // that is wrong and right again by the end.
 static void hold_empty(Compiler *compiler, const KestStmt *stmt,
-                       uint16_t before) {
+                       uint32_t before) {
     if (compiler->out_of_memory) {
+        return;
+    }
+    if (compiler->slots_said) {
+        compiler->lost_count = false;
         return;
     }
     if (compiler->lost_count) {
@@ -4331,7 +4386,7 @@ static void hold_empty(Compiler *compiler, const KestStmt *stmt,
 // `for i in from..to`, counted in a slot nobody can name, turn by turn.
 static void compile_count(Compiler *compiler, const KestStmt *stmt) {
     uint16_t names = compiler->local_count;
-    uint16_t slots = compiler->next_slot;
+    uint32_t slots = compiler->next_slot;
     compiler->depth++;
 
     uint16_t end_slot = reserve_slot(compiler, 1);
@@ -4427,8 +4482,8 @@ typedef struct {
     uint32_t diags;
     uint32_t errors;
     uint16_t local_count;
-    uint16_t next_slot;
-    uint16_t stack_depth;
+    uint32_t next_slot;
+    uint32_t stack_depth;
     uint32_t depth;
     uint32_t loop_count;
 } Written;
@@ -4576,7 +4631,7 @@ static bool counted_turns(Compiler *compiler, const KestStmt *stmt,
 static void compile_unrolled(Compiler *compiler, const KestStmt *stmt,
                              int64_t first, uint32_t turns) {
     uint16_t names = compiler->local_count;
-    uint16_t slots = compiler->next_slot;
+    uint32_t slots = compiler->next_slot;
     compiler->depth++;
     bool (*was)(void *, const char *, uint32_t, const KestValue **,
                 uint32_t *) = compiler->program->held_name;
@@ -4643,7 +4698,7 @@ static void compile_counting(Compiler *compiler, const KestStmt *stmt) {
     }
     Reaches walked;
     reaches_of(compiler->body, before.ops, walked_to, &walked);
-    uint16_t high_water = compiler->slot_high_water;
+    uint32_t high_water = compiler->slot_high_water;
 
     take_back(compiler, &before);
     compile_unrolled(compiler, stmt, first, turns);
@@ -4675,7 +4730,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
     if (compiler->out_of_memory) {
         return;
     }
-    uint16_t before = compiler->stack_depth;
+    uint32_t before = compiler->stack_depth;
     compile_stmt_kind(compiler, stmt);
     hold_empty(compiler, stmt, before);
 }
@@ -4729,7 +4784,7 @@ static void compile_fields_walk(Compiler *compiler, const KestStmt *stmt) {
     for (uint32_t m = 0; m < held->member_count; m++) {
         const KestMember *member = &held->members[m];
         uint16_t names = compiler->local_count;
-        uint16_t slots = compiler->next_slot;
+        uint32_t slots = compiler->next_slot;
         uint32_t depth = compiler->depth++;
         if (each->index.length > 0) {
             const KestType *text = kest_find_type(compiler->program, "text", 4);
@@ -4825,7 +4880,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
                     run_place(compiler, base, size, (uint16_t)run->count,
                               target->type, stmt->span);
                 compile_expr(compiler, stmt->assign.value);
-                stack_pop(compiler, (uint16_t)(size + 1));
+                stack_pop(compiler, (uint32_t)(size + 1));
                 uint32_t at = ir_emit(compiler, KEST_IR_PUT, target->type, 2,
                                       NULL, 0, stmt->span);
                 ir_place_of(compiler, at, where);
@@ -4920,7 +4975,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             stack_pop(compiler, size);
             store_slots(compiler, slot, size, target->type, stmt->span);
         } else {
-            stack_pop(compiler, (uint16_t)(size + 2));
+            stack_pop(compiler, (uint32_t)(size + 2));
             uint32_t where =
                 elem_place(compiler, ir_top(compiler, 2), ir_top(compiler, 1),
                            offset, target->type, stmt->span);
@@ -4948,7 +5003,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
 
     case KEST_STMT_WHILE: {
         uint16_t names = compiler->local_count;
-        uint16_t slots = compiler->next_slot;
+        uint32_t slots = compiler->next_slot;
         bool opening = stmt->loop.binding.length > 0;
         if (opening) {
             compiler->depth++;
@@ -5047,7 +5102,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         if (over_run) {
             uint16_t stride = value_slots(sequence->element);
             uint16_t names = compiler->local_count;
-            uint16_t slots = compiler->next_slot;
+            uint32_t slots = compiler->next_slot;
             compiler->depth++;
 
             uint16_t run_slot = reserve_slot(compiler, sequence->slots);
@@ -5129,7 +5184,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
                               : value_slots(sequence->element);
 
         uint16_t names = compiler->local_count;
-        uint16_t slots = compiler->next_slot;
+        uint32_t slots = compiler->next_slot;
         compiler->depth++;
 
         // How wide the thing being walked is: a piece of text is two slots
@@ -5472,14 +5527,14 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             break;
         }
         uint16_t names = compiler->local_count;
-        uint16_t slots = compiler->next_slot;
+        uint32_t slots = compiler->next_slot;
         uint16_t which = reserve_slot(compiler, 1);
         uint32_t opened = ir_emit(compiler, KEST_IR_REGION_OPEN, NULL, 0, NULL,
                                   0, stmt->span);
         // Which slot holds it, and where the names declared inside it start:
         // a value written into a name below that is a value kept past the
         // block, and the walk over the body reads both.
-        ir_carries(compiler, opened, which, compiler->next_slot, 0);
+        ir_carries(compiler, opened, which, (uint16_t)compiler->next_slot, 0);
         compiler->regions[compiler->region_count++] = which;
         compile_block(compiler, &stmt->block);
         close_regions(compiler, (uint16_t)(compiler->region_count - 1), false,
@@ -5544,7 +5599,7 @@ static void run_deferred(Compiler *compiler, uint16_t from, KestSpan span) {
 
 static void compile_block(Compiler *compiler, const KestBlock *block) {
     uint16_t names = compiler->local_count;
-    uint16_t slots = compiler->next_slot;
+    uint32_t slots = compiler->next_slot;
     uint16_t defers = compiler->defer_count;
     compiler->depth++;
     for (uint32_t i = 0; i < block->count; i++) {
@@ -5614,6 +5669,7 @@ static bool open_body(Compiler *compiler, KestChunk *chunk,
     compiler->slot_high_water = 0;
     compiler->stack_depth = 0;
     compiler->stack_high_water = 0;
+    compiler->slots_said = false;
     compiler->depth = 0;
     compiler->loop_count = 0;
     compiler->region_count = 0;
@@ -5723,7 +5779,8 @@ static void resume_where_waiting(Compiler *compiler, const KestBlock *block) {
 
 static bool close_body(Compiler *compiler, const KestBlock *block,
                        KestSpan declared) {
-    compiler->body->param_slots = compiler->next_slot;
+    // Cut to two bytes only in a body `hold_slots` refuses, below or before.
+    compiler->body->param_slots = (uint16_t)compiler->next_slot;
     if (compiler->resuming != NULL) {
         resume_where_waiting(compiler, block);
     }
@@ -5732,8 +5789,9 @@ static bool close_body(Compiler *compiler, const KestBlock *block,
     // end of one.
     uint32_t at = ir_emit(compiler, KEST_IR_GIVE, NULL, 0, NULL, 0, declared);
     ir_carries(compiler, at, 0, 0, 0);
-    compiler->body->slot_count = compiler->slot_high_water;
-    compiler->body->stack_needed = compiler->stack_high_water;
+    hold_slots(compiler, declared);
+    compiler->body->slot_count = (uint16_t)compiler->slot_high_water;
+    compiler->body->stack_needed = (uint16_t)compiler->stack_high_water;
     // What a working-memory block keeps, followed over the whole body rather
     // than watched while it was written: the block is what says a value is
     // shorter-lived, and what it reaches is a question about the body.
