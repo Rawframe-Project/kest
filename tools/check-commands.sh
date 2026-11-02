@@ -6068,6 +6068,27 @@ if [ -z "$wrong" ]; then
     rm -f "$scratch"/projects/kest.project
 fi
 if [ -z "$wrong" ]; then
+    # And a project under a directory whose path is longer than the 1024
+    # bytes its manifest's path was cut to, named by that whole path: the cut
+    # path named no manifest, so its sources were never looked under and the
+    # import was refused.
+    deep="$scratch"/deep
+    for piece in 1 2 3 4 5 6; do
+        deep="$deep/$(printf '%190s' '' | tr ' ' d)"
+    done
+    mkdir -p "$deep"/src "$deep"/lib/dep
+    printf 'project deep\nentry src/main.kest\nsource lib\n' \
+        >"$deep"/kest.project
+    printf 'module dep.thing\n\nfn seven() -> i32 {\n    return 7\n}\n' \
+        >"$deep"/lib/dep/thing.kest
+    printf 'module src.main\n\nimport dep.thing\n\nfn main() -> i32 {\n    return thing.seven()\n}\n' \
+        >"$deep"/src/main.kest
+    "$kest" run "$deep"/src/main.kest >/dev/null 2>&1
+    if [ $? -ne 7 ]; then
+        wrong="a project under a path longer than 1024 bytes was not found"
+    fi
+fi
+if [ -z "$wrong" ]; then
     # An edition this compiler has not got is refused rather than read as
     # the nearest one, and a manifest that names none was written against
     # the first: what it meant the day it was written is what it means. And

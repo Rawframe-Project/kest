@@ -498,10 +498,11 @@ static void roots_above(KestArena *arena, KestUnits *units, const char *path,
         if (units != NULL && units->handed != NULL) {
             // Only the manifests the read was handed, and never one that
             // happens to be on a disk where the program is run.
-            char manifest[1024];
-            kest_project_path(at, manifest, sizeof(manifest));
+            const char *manifest = kest_project_path(arena, at);
             const KestFile *file =
-                handed_file(arena, units, tidied(arena, manifest));
+                manifest == NULL
+                    ? NULL
+                    : handed_file(arena, units, tidied(arena, manifest));
             project = file == NULL || file->text == NULL
                           ? NULL
                           : kest_project_from(arena, at, file->text, &why);
@@ -524,10 +525,8 @@ static void roots_above(KestArena *arena, KestUnits *units, const char *path,
             return;
         }
         if (why != NULL) {
-            char manifest[1024];
-            kest_project_path(at, manifest, sizeof(manifest));
-            roots->broken =
-                kest_arena_strndup(arena, manifest, strlen(manifest));
+            const char *manifest = kest_project_path(arena, at);
+            roots->broken = manifest == NULL ? at : manifest;
             roots->why = why;
             return;
         }
