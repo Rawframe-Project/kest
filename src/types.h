@@ -574,10 +574,13 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
 // Whether a type mentions a name that is standing for itself.
 bool kest_mentions_name(const KestType *type);
 
-// The same type with every type name replaced by what it stands for.
+// The same type with every type name replaced by what it stands for. A
+// `[T; N]` that comes out bigger than a value may be is refused with K0327 at
+// `where`, the call that asked for it, and is a type that is wrong.
 KestType *kest_substitute(KestProgram *program, KestType *type,
                           const char **names, KestType **bindings,
-                          uint32_t count);
+                          uint32_t count, const KestSource *where,
+                          KestSpan span);
 
 // Works out what each type name has to stand for by putting a declared type
 // beside the one that was passed. False when two uses disagree.

@@ -1,0 +1,23 @@
+// Refused with K0327. Guards against `[T; 2]` in a generic's signature with `T` a value of 32768 bytes, 65536 bytes, wrapping to nought: pushing two of them into an array wrote past its element.
+
+module test.refused.doubled
+
+const A: [i64; 8] = [0, 0, 0, 0, 0, 0, 0, 0]
+const B: [[i64; 8]; 8] = [A, A, A, A, A, A, A, A]
+const C: [[[i64; 8]; 8]; 8] = [B, B, B, B, B, B, B, B]
+const D: [[[[i64; 8]; 8]; 8]; 8] = [C, C, C, C, C, C, C, C]
+
+fn two<T>(a: T, b: T) -> [T; 2] {
+    return [a, b]
+}
+
+fn room<T>(a: T) -> [[T; 2]] {
+    return array()
+}
+
+fn main() -> i32 {
+    let out = room(D)
+    push(out, two(D, D))
+    push(out, two(D, D))
+    return len(out) - 2
+}
