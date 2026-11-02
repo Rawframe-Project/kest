@@ -2,21 +2,19 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
-## [0.1.3](https://github.com/Rawframe-Project/kest/compare/v0.1.2...v0.1.3) (2026-11-02)
-
+## 0.1.3 (2026-11-02)
 
 ### Fixed
 
-* **backend:** say a tag with no case in the machine's words, whole ([#181](https://github.com/Rawframe-Project/kest/issues/181)) ([fee1bab](https://github.com/Rawframe-Project/kest/commit/fee1babd95d51184563bde0167ab11a43e8f0c77)), closes [#164](https://github.com/Rawframe-Project/kest/issues/164)
-* **checker:** hand a listing its modules rather than keep them static ([#163](https://github.com/Rawframe-Project/kest/issues/163)) ([cf044a0](https://github.com/Rawframe-Project/kest/commit/cf044a0e86d7f3eb63fd2ffa917cde58266ab833)), closes [#159](https://github.com/Rawframe-Project/kest/issues/159)
-* **checker:** hold an optional to the size a value may be ([#183](https://github.com/Rawframe-Project/kest/issues/183)) ([5ce0ea7](https://github.com/Rawframe-Project/kest/commit/5ce0ea7b71920d353c7820e29a29b619a10d633e)), closes [#182](https://github.com/Rawframe-Project/kest/issues/182)
-* **checker:** name every combination a match leaves whole ([#175](https://github.com/Rawframe-Project/kest/issues/175)) ([b0ffa7b](https://github.com/Rawframe-Project/kest/commit/b0ffa7bf00b1afbcf4f3b05a4a8e7f75afcac2ff)), closes [#170](https://github.com/Rawframe-Project/kest/issues/170)
-* **checker:** say what a call passed and each overload takes whole ([#177](https://github.com/Rawframe-Project/kest/issues/177)) ([bcc826f](https://github.com/Rawframe-Project/kest/commit/bcc826fad8b841386edb0f26d99f3d51f63e6d00))
-* **compiler:** list a project's sources whole when an import is missing ([#178](https://github.com/Rawframe-Project/kest/issues/178)) ([7dd5785](https://github.com/Rawframe-Project/kest/commit/7dd5785adf33948c24d847685536415695b86101))
-* **debugger:** show a local holding text whole, however long ([#179](https://github.com/Rawframe-Project/kest/issues/179)) ([001884c](https://github.com/Rawframe-Project/kest/commit/001884c5acbcd9fe30a6bc1c432df3628910f7b8))
-* **reload:** tell a host the first error whole, however long ([#176](https://github.com/Rawframe-Project/kest/issues/176)) ([3973e0b](https://github.com/Rawframe-Project/kest/commit/3973e0bd377f089bc051a1409cb04bac2b8e28ab)), closes [#171](https://github.com/Rawframe-Project/kest/issues/171)
-* **vm:** say a refusal at a host crossing whole ([#173](https://github.com/Rawframe-Project/kest/issues/173)) ([2f49bb4](https://github.com/Rawframe-Project/kest/commit/2f49bb4c84ab73c3e49cb4f99a8c3e276a453d4d)), closes [#165](https://github.com/Rawframe-Project/kest/issues/165)
-* **vm:** say why a function value is refused whole, however long ([#180](https://github.com/Rawframe-Project/kest/issues/180)) ([b6db06a](https://github.com/Rawframe-Project/kest/commit/b6db06a02e8fc2ddb47eb132442bbc2f4f62e65c))
+- A program holding an optional whose size comes to more than 65535 bytes or slots, such as `Big?` for a struct `Big { xs: [i64; 8191] }` of 65528 bytes, is refused with `K0327`. Its size wrapped to nought: a struct holding one was laid out with its fields over each other, and pushing `none` twice into a `[Big?]` wrote past the array's element, so a release `kest` could abort with `double free or corruption`. A program whose optionals fit is laid out exactly as before. ([#183](https://github.com/Rawframe-Project/kest/pull/183))
+- A host that reloads a held program which does not build is told the first error line and its place whole in `kest_held_reload`'s `said`, where it was told at most 511 bytes of the line, cut inside a name and with no place after it, however much room it gave. A `said` too short for the line is cut where a whole character ends. ([#176](https://github.com/Rawframe-Project/kest/pull/176))
+- A refusal at a host crossing is said whole in both engines. A host's own words in `K0662`, from `kest_native_failed`, and a door's name in `K0654` and `K0631` were cut at 160 bytes, possibly inside a character. ([#173](https://github.com/Rawframe-Project/kest/pull/173))
+- A function value a host hands in that is of another shape (`K0657`) or does not keep the caller's promise (`K0623`) is refused with the function's whole name and what it takes and gives, in both engines, where a long name was cut at 160 bytes and the rest of the sentence lost. A frame a body compiled to C finds wrong at a crossing is said whole too, where it was cut at 200 bytes. ([#180](https://github.com/Rawframe-Project/kest/pull/180))
+- A body `kest emit --c` writes that reads an enum out of memory a host wrote or lent, and finds a tag with no case, says `K0651` in the machine's words, whole and with the machine's suggestion after it. An enum name longer than 56 bytes cut the sentence short, possibly inside a character, while the machine said it whole. ([#181](https://github.com/Rawframe-Project/kest/pull/181))
+- `K0333` names each of the first eight combinations a `match` leaves unanswered whole, however long its cases' names are. A long name was cut to fit 128 bytes, so the message named a case the enum does not have, and the combinations after it were counted as "more". ([#175](https://github.com/Rawframe-Project/kest/pull/175))
+- `K0329` says what a call passed and what each candidate takes whole. A long type name was cut at 256 bytes and the names after it left out. ([#177](https://github.com/Rawframe-Project/kest/pull/177))
+- When an import is missing in a project, the suggestion under `K0701` lists every `source` directory of the project whole. A list longer than 512 bytes stopped inside a path, with no closing backtick and the directories after it left out. ([#178](https://github.com/Rawframe-Project/kest/pull/178))
+- `kest debug`'s `locals` and the debug adapter's `variables` show a local holding text whole. Text of more than 253 bytes was cut short, with no closing quote, nothing to say there was more, and possibly half a character at the end. ([#179](https://github.com/Rawframe-Project/kest/pull/179))
 
 ## 0.1.2 (2026-11-02)
 
