@@ -158,6 +158,9 @@ typedef struct {
     // many in a `match` arm was told so and then four times that the compiler
     // had lost track of it.
     bool past_a_limit;
+    // Whether this body has been told it holds more than
+    // `KEST_MOST_CONSTANTS`, which is said once, where it first did.
+    bool constants_said;
 
     // A reported problem does not stop the walk, so one run reports the
     // whole file. Only running out of memory stops it, because after that
@@ -1020,8 +1023,28 @@ static void value_classes(const KestType *type, const KestValue *values,
 
 // The run put in the chunk beside the code, with what each of its slots means
 // beside it, and where it starts.
+// A body's values past `KEST_MOST_CONSTANTS`, said at the one that took it
+// past. An instruction names a value in two bytes, and one past them named
+// another from the start of the body's: a function reading two tables of
+// 32768 answered with a number out of the first where it wrote `7`. Added all
+// the same, so what is counted after it is what was written.
+static void hold_constants(Compiler *compiler, uint32_t count, KestSpan span) {
+    uint32_t holds = compiler->body->constant_count + count;
+    if (holds <= KEST_MOST_CONSTANTS || compiler->constants_said) {
+        return;
+    }
+    compiler->constants_said = true;
+    refuse_limit(compiler, span,
+                 "a function holds at most %u constant values, counting every "
+                 "element of a table it reads, and here it holds %u",
+                 KEST_MOST_CONSTANTS, holds);
+    kest_diags_suggest(compiler->program->diags,
+                       "read the tables from more than one function, or hold "
+                       "one in a `[T]`");
+}
+
 static bool constant_run(Compiler *compiler, const KestType *type,
-                         const KestValue *values, uint16_t slots,
+                         const KestValue *values, uint16_t slots, KestSpan span,
                          uint32_t *first) {
     // Worked out into this rather than into a block of the arena:
     // `kest_chunk_constant_run` copies what it is handed into the
@@ -1045,6 +1068,7 @@ static bool constant_run(Compiler *compiler, const KestType *type,
     }
     uint32_t at = 0;
     value_classes(type, values, classes, &at);
+    hold_constants(compiler, slots, span);
     *first = kest_ir_constants_add(compiler->ir, compiler->body, values,
                                    classes, slots);
     if (compiler->ir->out_of_memory) {
@@ -1074,7 +1098,7 @@ static void emit_value_slots(Compiler *compiler, const KestType *type,
     // because a table of sixty-four numbers should not cost sixty-four
     // instructions every time it is read.
     uint32_t first = 0;
-    if (!constant_run(compiler, type, values, slots, &first)) {
+    if (!constant_run(compiler, type, values, slots, span, &first)) {
         return;
     }
     stack_push(compiler, slots);
@@ -1100,6 +1124,7 @@ static void emit_constant(Compiler *compiler, KestValue value,
                           KestConstClass class, const KestType *type,
                           KestSpan span) {
     uint8_t held = (uint8_t)class;
+    hold_constants(compiler, 1, span);
     uint32_t first =
         kest_ir_constants_add(compiler->ir, compiler->body, &value, &held, 1);
     if (compiler->ir->out_of_memory) {
@@ -3456,7 +3481,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 }
                 uint32_t first = 0;
                 if (!constant_run(compiler, object, by_name->folded,
-                                  by_name->size, &first)) {
+                                  by_name->size, expr->span, &first)) {
                     break;
                 }
                 compile_expr(compiler, expr->index.index);
@@ -3530,7 +3555,8 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 kest_fold_const(compiler->program, expr->index.object, held,
                                 wide, &why, NULL) == wide) {
                 uint32_t first = 0;
-                if (!constant_run(compiler, object, held, wide, &first)) {
+                if (!constant_run(compiler, object, held, wide, expr->span,
+                                  &first)) {
                     break;
                 }
                 counted_fold(compiler, wide);
@@ -4512,6 +4538,7 @@ typedef struct {
     uint32_t loop_count;
     bool slots_said;
     bool past_a_limit;
+    bool constants_said;
 } Written;
 
 static Written written_so_far(const Compiler *compiler) {
@@ -4533,7 +4560,8 @@ static Written written_so_far(const Compiler *compiler) {
                      compiler->depth,
                      compiler->loop_count,
                      compiler->slots_said,
-                     compiler->past_a_limit};
+                     compiler->past_a_limit,
+                     compiler->constants_said};
 }
 
 static void take_back(Compiler *compiler, const Written *to) {
@@ -4557,6 +4585,9 @@ static void take_back(Compiler *compiler, const Written *to) {
     // nothing said, and is handed on as nothing but its end.
     compiler->slots_said = to->slots_said;
     compiler->past_a_limit = to->past_a_limit;
+    // Taken back with what it said, so a loop whose unrolled form would hold
+    // too many values is told nothing and is not unrolled.
+    compiler->constants_said = to->constants_said;
 }
 
 // What a promise about a body reads of a run of its operations: every effect
@@ -5706,6 +5737,7 @@ static bool open_body(Compiler *compiler, KestChunk *chunk,
     compiler->stack_high_water = 0;
     compiler->slots_said = false;
     compiler->past_a_limit = false;
+    compiler->constants_said = false;
     compiler->depth = 0;
     compiler->loop_count = 0;
     compiler->region_count = 0;
@@ -5824,11 +5856,11 @@ static bool close_body(Compiler *compiler, const KestBlock *block,
     compile_block(compiler, block);
     hold_slots(compiler, declared);
     // A body past a limit has been refused, and what was written for it
-    // names slots an instruction cannot hold, reads more values than one can,
-    // or reads a name that could not be taken. Handed on as it is, the backend
-    // refused it as the compiler's own mistake and the build stopped there, as
-    // though it had run out of memory, so nothing after it was said. It is put
-    // back to nothing but its end, which is a body.
+    // names slots or constant values an instruction cannot hold, reads more
+    // values than one can, or reads a name that could not be taken. Handed on
+    // as it is, the backend refused it as the compiler's own mistake and the
+    // build stopped there, as though it had run out of memory, so nothing after
+    // it was said. It is put back to nothing but its end, which is a body.
     if (compiler->past_a_limit) {
         take_back(compiler, &opened);
         compiler->slot_high_water = compiler->next_slot;
