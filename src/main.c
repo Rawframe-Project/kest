@@ -2327,16 +2327,49 @@ static bool write_file(const char *path, const char *bytes, bool json) {
     return wrote;
 }
 
+// Where the library is, for this command line: one answer for the process,
+// kept in memory of the command line's own rather than in an arena, so that a
+// run refusing its first arena is refused by the stage that took it. NULL when
+// there was no memory for it.
+static const char *library_of(const char *executable) {
+    static char *found;
+    if (found == NULL) {
+        found = kest_library_found(executable);
+    }
+    return found;
+}
+
+// The same for a command about to hand it on, which says there was no memory
+// when there was none and answers NULL: a build or a server handed NULL looks
+// for the library itself, from where it stands, and a lookup that ran out of
+// memory went on as a run of a library somewhere else.
+static const char *library_or_said(const char *executable, bool json) {
+    const char *library = library_of(executable);
+    if (library == NULL) {
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
+    }
+    return library;
+}
+
 // The file named, with a function after it that calls every door it declares
 // with what a program nobody trusts could hand it, for the host that binds
 // those doors to build and run. What is written is a program: it is compiled
 // here before it is said, so what a host is handed is one that builds. The
 // seed is the count after the file.
-static int write_hostile(const char *path, uint64_t seed, bool json) {
+static int write_hostile(const char *executable, const char *path,
+                         uint64_t seed, bool json) {
     if (path == NULL) {
         return refused_at_the_words(json, "K0649", "`hostile` needs a file");
     }
-    KestBuild *build = kest_build(path, NULL, json ? stdout : stderr,
+    // The library beside this command line, as every other command finds it:
+    // handed none, the build looked from where it was run, so `hostile` could
+    // refuse a `std` import that `check` read.
+    const char *library = library_or_said(executable, json);
+    if (library == NULL) {
+        return 1;
+    }
+    KestBuild *build = kest_build(path, library, json ? stdout : stderr,
                                   json ? KEST_FORM_JSON : KEST_FORM_TEXT, 0);
     if (build == NULL) {
         return 1;
@@ -2422,31 +2455,6 @@ static int write_hostile(const char *path, uint64_t seed, bool json) {
     fputs("}\n", stdout);
     kest_arena_free(arena);
     return 0;
-}
-
-// Where the library is, for this command line: one answer for the process,
-// kept in memory of the command line's own rather than in an arena, so that a
-// run refusing its first arena is refused by the stage that took it. NULL when
-// there was no memory for it.
-static const char *library_of(const char *executable) {
-    static char *found;
-    if (found == NULL) {
-        found = kest_library_found(executable);
-    }
-    return found;
-}
-
-// The same for a command about to hand it on, which says there was no memory
-// when there was none and answers NULL: a build or a server handed NULL looks
-// for the library itself, from where it stands, and a lookup that ran out of
-// memory went on as a run of a library somewhere else.
-static const char *library_or_said(const char *executable, bool json) {
-    const char *library = library_of(executable);
-    if (library == NULL) {
-        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
-                           KEST_STARVED_SAYS);
-    }
-    return library;
 }
 
 // What a file declares and what it says about each, for somebody who is going
@@ -4394,34 +4402,54 @@ static int run_tests(const char *executable, char **paths, int path_count,
     return failed == 0 ? 0 : 1;
 }
 
-// The library's directory written from the root. An editor is told where a
-// file is by a URI, and `file://lib/std/math.kest` names a machine called
-// `lib`: a library found from a relative `KEST_LIB`, or beside a program
-// started by a relative path, was named that way in every answer about one of
-// its files. The directory as it was is the answer when the working directory
-// cannot be read or the two do not fit, since a name that does not resolve is
-// still better than no library.
-static const char *library_from_root(const char *library, char *into,
-                                     size_t room) {
-    if (library == NULL) {
-        return NULL;
-    }
+// The library's directory written from the root, in memory the caller frees,
+// or NULL when there was no memory for it. An editor is told where a file is
+// by a URI, and `file://lib/std/math.kest` names a machine called `lib`: a
+// library found from a relative `KEST_LIB`, or beside a program started by a
+// relative path, was named that way in every answer about one of its files.
+// The working directory is read into as much room as it takes, because a
+// fixed 2048 bytes kept a library under a deeper one relative. The directory
+// as it was is the answer only when the working directory cannot be read at
+// all, since a name that does not resolve is still better than no library.
+static char *library_from_root(const char *library) {
+    size_t length = strlen(library);
     bool rooted = library[0] == '/' || library[0] == '\\' ||
                   (library[0] != '\0' && library[1] == ':');
-    if (rooted || KEST_WORKING_DIRECTORY(into, room) == NULL) {
-        return library;
+    char *here = NULL;
+    size_t room = rooted ? 0 : 256;
+    while (room > 0) {
+        char *grown = realloc(here, room);
+        if (grown == NULL) {
+            free(here);
+            return NULL;
+        }
+        here = grown;
+        if (KEST_WORKING_DIRECTORY(here, room) != NULL) {
+            break;
+        }
+        room = errno == ERANGE && room <= SIZE_MAX / 2 ? room * 2 : 0;
     }
-    size_t used = strlen(into);
+    if (room == 0) {
+        free(here);
+        char *as_given = malloc(length + 1);
+        if (as_given != NULL) {
+            memcpy(as_given, library, length + 1);
+        }
+        return as_given;
+    }
+    size_t used = strlen(here);
     for (size_t i = 0; i < used; i++) {
-        if (into[i] == '\\') {
-            into[i] = '/';
+        if (here[i] == '\\') {
+            here[i] = '/';
         }
     }
-    const char *between = used > 0 && into[used - 1] == '/' ? "" : "/";
-    int wrote = snprintf(into + used, room - used, "%s%s", between, library);
-    if (wrote < 0 || (size_t)wrote >= room - used) {
-        return library;
+    const char *between = used > 0 && here[used - 1] == '/' ? "" : "/";
+    size_t wide = used + strlen(between) + length + 1;
+    char *into = malloc(wide);
+    if (into != NULL) {
+        snprintf(into, wide, "%s%s%s", here, between, library);
     }
+    free(here);
     return into;
 }
 
@@ -4478,10 +4506,15 @@ int main(int argc, char **argv) {
         if (library == NULL) {
             return 1;
         }
-        char rooted[2048];
+        char *rooted = library_from_root(library);
+        if (rooted == NULL) {
+            kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
+                               KEST_STARVED_SAYS);
+            return 1;
+        }
         int served =
-            kest_lsp_serve(library_from_root(library, rooted, sizeof(rooted)),
-                           stdin, stdout, project_files, resolved_path);
+            kest_lsp_serve(rooted, stdin, stdout, project_files, resolved_path);
+        free(rooted);
         if (served != 0) {
             kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
                                KEST_STARVED_SAYS);
@@ -4752,7 +4785,7 @@ int main(int argc, char **argv) {
     }
 
     if (strcmp(argv[1], "hostile") == 0) {
-        int status = write_hostile(path_count > 0 ? paths[0] : NULL,
+        int status = write_hostile(argv[0], path_count > 0 ? paths[0] : NULL,
                                    told_it ? (uint64_t)count : 1, json);
         free(paths);
         free(given);

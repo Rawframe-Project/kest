@@ -304,6 +304,20 @@ print("; ".join(wrong))
         complain "hostile: --json says something else: $wrongly"
     fi
 fi
+# And from a directory with no library in it, where `check` finds the library
+# beside the command line: `hostile` handed its build no library, and the
+# build looked for one from where it was run, so a `std` import that `check`
+# read was refused.
+printf 'module doors\n\nimport std.io\n\nextern fn told(n: i32) -> i32\n\nfn main() -> i32 {\n    io.print("x")\n    return 0\n}\n' \
+    >"$scratch"/hostile/doors.kest
+if ! (cd "$scratch"/hostile && KEST_LIB= "$kest" check doors.kest \
+          >/dev/null 2>&1 </dev/null); then
+    complain "hostile: \`check\` refused the file \`hostile\` is asked about"
+elif ! (cd "$scratch"/hostile && KEST_LIB= "$kest" hostile doors.kest 3 \
+            >/dev/null 2>"$scratch"/hostile/elsewhere </dev/null); then
+    complain "hostile: a file \`check\` reads was refused from another \
+directory: $(head -1 "$scratch"/hostile/elsewhere)"
+fi
 if $kest debug --json examples/embed.kest >"$scratch"/hostile/debug \
         2>&1 </dev/null ||
    ! python3 -c '
@@ -7698,6 +7712,57 @@ PY
 )
 if [ "$between" != "yes" ]; then
     complain "lsp: two open files over a module that does not build: $between"
+fi
+
+# And the same from a working directory deeper than the 2048 bytes it was read
+# into: one that did not fit left the library relative, and its files were
+# named `file://lib/...` again.
+deeper="$scratch"/serving/deeper
+for piece in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    deeper="$deeper/$(printf '%190s' '' | tr ' ' d)"
+done
+mkdir -p "$deeper"/lib
+cp -r "$here"/lib/std "$deeper"/lib/std
+cp "$scratch"/serving/between/clean.kest "$deeper"/clean.kest
+deeply=$(cd "$deeper" && KEST_LIB=lib python3 - "$kest" <<'PY'
+import json, os, subprocess, sys
+
+kest = sys.argv[1]
+clean = os.path.abspath("clean.kest")
+messages = [
+    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": "file://" + clean,
+                                 "languageId": "kest", "version": 1,
+                                 "text": open(clean).read()}}},
+    {"jsonrpc": "2.0", "id": 2, "method": "workspace/symbol",
+     "params": {"query": "start"}},
+]
+body = b""
+for one in messages:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+out = subprocess.run([kest, "lsp"], input=body, capture_output=True).stdout
+uri = ""
+at = 0
+while True:
+    head = out.find(b"Content-Length: ", at)
+    blank = out.find(b"\r\n\r\n", head) if head >= 0 else -1
+    if blank < 0:
+        break
+    many = int(out[head + 16:blank])
+    said = json.loads(out[blank + 4:blank + 4 + many])
+    at = blank + 4 + many
+    if said.get("id") == 2 and said.get("result"):
+        uri = said["result"][0].get("location", {}).get("uri", "")
+if uri.startswith("file:///") and os.path.isfile(uri[7:]):
+    print("yes")
+else:
+    print("the library's file was named as " + repr(uri[:40]))
+PY
+)
+if [ "$deeply" != "yes" ]; then
+    complain "lsp: a library under a working directory past 2048 bytes: $deeply"
 fi
 
 # And every request answered, whatever happened to it. A client that sends a
