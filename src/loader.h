@@ -125,6 +125,10 @@ bool kest_project_above(KestArena *arena, const char *path, const char **where,
 // so two builds asking at once on two threads each have their own.
 const char *kest_library_path(KestArena *arena, const char *program);
 
+// The same in memory of the machine's that the caller frees, for a caller with
+// no arena of its own to keep it in. NULL when there was no memory for it.
+char *kest_library_found(const char *program);
+
 // The two ways to read one file, named for how far each goes. A file that
 // cannot be read is refused the same way by both.
 //

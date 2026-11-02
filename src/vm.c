@@ -7086,6 +7086,9 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
     rt->said_copy = KEST_ARENA_ARRAY(own, uint8_t, module->count + 1);
     rt->said_layout = KEST_ARENA_ARRAY(own, uint8_t, module->layout_count + 1);
     rt->heap = kest_arena_new();
+    // The machine's heap runs out for the machine: what it says afterwards is
+    // said knowing the room had gone, as everything its own arena holds is.
+    kest_arena_watched_by(rt->heap, own);
     rt->ground = kest_ground_new();
     rt->walk_at = WALK_FLOOR;
     rt->walk_after = 1;

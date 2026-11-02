@@ -2388,17 +2388,13 @@ static int write_hostile(const char *path, uint64_t seed, bool json) {
 }
 
 // Where the library is, for this command line: one answer for the process,
-// kept in an arena of the command line's own, which a host is free to keep
-// however it likes. NULL when there was no room, and a build handed NULL looks
-// for itself.
+// kept in memory of the command line's own rather than in an arena, so that a
+// run refusing its first arena is refused by the stage that took it. NULL when
+// there was no memory for it, and a build handed NULL looks for itself.
 static const char *library_of(const char *executable) {
-    static KestArena *kept;
-    static const char *found;
+    static char *found;
     if (found == NULL) {
-        if (kept == NULL) {
-            kept = kest_arena_new();
-        }
-        found = kest_library_path(kept, executable);
+        found = kest_library_found(executable);
     }
     return found;
 }
@@ -3191,10 +3187,19 @@ static int run(const char *command, const char *executable, char **paths,
                     // Which of them it is has been settled already, so a word
                     // that does not fit here cannot happen: it would have been
                     // `K0624` before anything started.
-                    if (entry >= 0 &&
-                        !kest_takes_text(runtime, entry, frame, width + 1,
-                                         (const char *const *)&paths[2],
-                                         chosen->type->param_count)) {
+                    //
+                    // The frame comes out of the build's arena and the
+                    // machine says what it refused out of its own, so a frame
+                    // there was no room for is said here: handed over as no
+                    // frame, the machine would blame the width of it.
+                    if (frame == NULL) {
+                        kest_diags_starve(&build->diags);
+                        failed_to_choose = true;
+                    } else if (entry >= 0 &&
+                               !kest_takes_text(runtime, entry, frame,
+                                                width + 1,
+                                                (const char *const *)&paths[2],
+                                                chosen->type->param_count)) {
                         kest_report(runtime, stderr, KEST_FORM_TEXT);
                         failed_to_choose = true;
                     }

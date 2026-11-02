@@ -1076,22 +1076,11 @@ static char *found_on_path(const char *program) {
     return NULL;
 }
 
-const char *kest_library_path(KestArena *arena, const char *program) {
-    if (arena == NULL) {
-        return NULL;
-    }
+char *kest_library_found(const char *program) {
     const char *given = getenv("KEST_LIB");
     if (given != NULL && given[0] != '\0') {
         size_t length = strlen(given);
-        size_t closing = given[length - 1] == '/' ? 0 : 1;
-        char *kept = kest_arena_alloc(arena, length + closing + 1, 1);
-        if (kept == NULL) {
-            return NULL;
-        }
-        memcpy(kept, given, length);
-        memcpy(kept + length, "/", closing);
-        kept[length + closing] = '\0';
-        return kept;
+        return joined(given, length, given[length - 1] == '/' ? "" : "/");
     }
     char *found =
         last_separator(program) == NULL ? found_on_path(program) : NULL;
@@ -1108,20 +1097,27 @@ const char *kest_library_path(KestArena *arena, const char *program) {
     const char *const beside[] = {"lib/", "../lib/kest/"};
     for (size_t i = 0; i < 2; i++) {
         char *probe = joined(program, length, beside[i]);
-        if (probe == NULL) {
+        if (probe == NULL || library_is_at(probe)) {
             free(found);
-            return NULL;
-        }
-        if (library_is_at(probe)) {
-            const char *kept = kest_arena_strndup(arena, probe, strlen(probe));
-            free(probe);
-            free(found);
-            return kept;
+            return probe;
         }
         free(probe);
     }
     free(found);
-    return kest_arena_strndup(arena, KEST_LIB_DIR, strlen(KEST_LIB_DIR));
+    return joined(KEST_LIB_DIR, strlen(KEST_LIB_DIR), "");
+}
+
+const char *kest_library_path(KestArena *arena, const char *program) {
+    if (arena == NULL) {
+        return NULL;
+    }
+    char *found = kest_library_found(program);
+    if (found == NULL) {
+        return NULL;
+    }
+    const char *kept = kest_arena_strndup(arena, found, strlen(found));
+    free(found);
+    return kept;
 }
 
 bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,
