@@ -72,6 +72,13 @@ const KestJson *kest_wire_member(const KestJson *object, const char *name);
 const KestJson *kest_wire_down(const KestJson *object, const char *first,
                                const char *second);
 
+// A value that is a whole number from 0 to UINT32_MAX, into `into`. False, with
+// 0 in `into`, for anything else: none at all, text, a fraction, a negative or
+// one too large. Converting a double that does not fit is undefined in C, and
+// these are numbers a client chose, so nothing reads one as an integer but
+// this.
+bool kest_wire_count(const KestJson *json, uint32_t *into);
+
 // What waiting for the next message came to. A message there was no memory to
 // hold has been read past, so the stream is still in step, and it is said
 // apart from the end because a client that sent a request is waiting for an

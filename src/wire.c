@@ -331,6 +331,21 @@ KestWireRead kest_wire_read(KestArena *arena, const char *bytes, size_t length,
     return reading.broke ? KEST_WIRE_NOT_JSON : KEST_WIRE_JSON;
 }
 
+bool kest_wire_count(const KestJson *json, uint32_t *into) {
+    *into = 0;
+    // Written so that NaN fails it too, though a reader never makes one.
+    if (json == NULL || json->kind != KEST_JSON_NUMBER ||
+        !(json->number >= 0.0 && json->number <= (double)UINT32_MAX)) {
+        return false;
+    }
+    uint32_t whole = (uint32_t)json->number;
+    if ((double)whole != json->number) {
+        return false;
+    }
+    *into = whole;
+    return true;
+}
+
 // What one header line was: the blank one that ends the header, any other, or
 // the stream ending first.
 typedef enum {
