@@ -5340,6 +5340,22 @@ case "$nowhere_under" in
 \`$(printf '%s' "$nowhere_under" | tail -1)\`"
     ;;
 esac
+# And the list whole, however long its sources are. It was written into 512
+# bytes, so two more of 300 bytes each stopped it inside the first of them,
+# with no closing backtick and the last one missing.
+far_root=$(printf 'far%.0s' $(seq 100))
+near_root=$(printf 'near%.0s' $(seq 75))
+printf 'project roots\nentry one/main.kest\nsource one\nsource two\nsource %s\nsource %s\n' \
+    "$far_root" "$near_root" > "$scratch"/refused/roots/kest.project
+nowhere_far=$("$kest" check "$scratch"/refused/roots/one/main.kest 2>&1 \
+    </dev/null)
+case "$nowhere_far" in
+*"K0701"*"\`one\`, \`two\`, \`$far_root\`, \`$near_root\`"*) ;;
+*)
+    complain "check: a project with long sources said \
+\`$(printf '%s' "$nowhere_far" | tail -1)\`"
+    ;;
+esac
 
 # A manifest that is there and cannot be read as a project is said as that,
 # by every command that reads one. It was taken for no manifest: its sources

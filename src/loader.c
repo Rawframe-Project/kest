@@ -619,18 +619,31 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
                 // A project says where its modules are, so what a reader
                 // needs is the list that was looked under rather than the one
                 // path that happened to be tried first.
-                char under[512];
-                size_t written = 0;
-                for (uint32_t r = 0;
-                     r < roots->count && written + 1 < sizeof under; r++) {
-                    int said = snprintf(under + written, sizeof under - written,
-                                        "%s`%s`", r == 0 ? "" : ", ",
-                                        roots->sources[r]);
-                    if (said < 0) {
-                        break;
-                    }
-                    written += (size_t)said;
+                // Written whole, into the arena: in 512 bytes of its own, a
+                // project with long source paths was told a list that
+                // stopped inside one of them.
+                size_t needed = 1;
+                for (uint32_t r = 0; r < roots->count; r++) {
+                    needed += strlen(roots->sources[r]) + 4;
                 }
+                char *under = kest_arena_alloc(arena, needed, 1);
+                if (under == NULL) {
+                    kest_diags_starve(diags);
+                    return false;
+                }
+                size_t written = 0;
+                for (uint32_t r = 0; r < roots->count; r++) {
+                    if (r > 0) {
+                        memcpy(under + written, ", ", 2);
+                        written += 2;
+                    }
+                    size_t one = strlen(roots->sources[r]);
+                    under[written++] = '`';
+                    memcpy(under + written, roots->sources[r], one);
+                    written += one;
+                    under[written++] = '`';
+                }
+                under[written] = '\0';
                 kest_diags_suggest(diags,
                                    "an import resolves from where the file "
                                    "that wrote it is, which is `%.*s`, and "
