@@ -9028,18 +9028,26 @@ bool kest_native_at(KestRuntime *runtime, uint32_t index, const char *symbol,
 // What a body written in C says when it stops, with the numbers in it. The
 // code and the words are one call for the reason every other refusal here is
 // written that way: what reads a refusal reads the words beside the code they
-// belong to, and a check holds the two together.
+// belong to, and a check holds the two together. Said straight into the
+// report, as `kest_native_stopped` says what it is handed: a buffer of 160
+// bytes in between cut a host's own words short in `K0662`, and could cut a
+// door's name inside a character.
 static bool stopped_saying(KestRuntime *rt, uint32_t where, const char *code,
                            const char *format, ...) KEST_SAYS(4, 5);
 
 static bool stopped_saying(KestRuntime *rt, uint32_t where, const char *code,
                            const char *format, ...) {
-    char said[160];
+    if (rt == NULL) {
+        return false;
+    }
+    const KestSource *source =
+        rt->frame_count > 0 ? rt->frames[rt->frame_count - 1].chunk->source
+                            : NULL;
     va_list args;
     va_start(args, format);
-    vsnprintf(said, sizeof said, format, args);
+    said_at(rt, source, where_asked(rt, where), code, format, args);
     va_end(args);
-    return kest_native_stopped(rt, where, code, said);
+    return false;
 }
 
 // What says a handle is the thing it is used as, written once for both of the

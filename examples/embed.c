@@ -316,7 +316,14 @@ static bool engine_hurt_refuses = false;
 static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
     if (engine_hurt_refuses) {
         frame[0].integer = 4242;
-        kest_native_failed(runtime, "nothing here can be hurt");
+        // Longer than the 160 bytes a refusal at a crossing was once cut to:
+        // its last words in the report are what says the host's words reach
+        // it whole.
+        kest_native_failed(
+            runtime,
+            "nothing here can be hurt: this host keeps no health for anything "
+            "it lends, so a hit, a move and a name all cost nothing it could "
+            "count, and it says so in a sentence that runs on to its end");
         return;
     }
     (void)context;
@@ -7395,7 +7402,7 @@ int main(int argc, char **argv) {
                             "answer\n");
             return 1;
         }
-        if (!said_that(refusing, "K0662", "could not do what it was asked")) {
+        if (!said_that(refusing, "K0662", "runs on to its end")) {
             return 1;
         }
         if (!kest_runtime_free(refusing)) {
