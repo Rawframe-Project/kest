@@ -3533,7 +3533,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         //
         // A number on its own is `text.i` and nothing after it: joining one
         // piece is a copy of a text nobody else holds.
-        static int plain = -1;
+        static atomic_int plain = -1;
         bool optimizing = !kest_ir_asked_off("KEST_NOOPT", &plain);
         bool numbers_in = optimizing && expr->text.count > 1 &&
                           expr->text.count <= KEST_NUMBERED_MOST;
@@ -4625,7 +4625,7 @@ static void compile_unrolled(Compiler *compiler, const KestStmt *stmt,
 // promise. `KEST_NOOPT` keeps every walk a walk, which is what the gate and
 // the fuzzer hold the written-out one to.
 static void compile_counting(Compiler *compiler, const KestStmt *stmt) {
-    static int off = -1;
+    static atomic_int off = -1;
     int64_t first = 0;
     uint32_t turns = 0;
     if (kest_ir_asked_off("KEST_NOOPT", &off) ||

@@ -2939,11 +2939,8 @@ static void write_head(KestEmitC *c, Text *into, const Body *body,
 // asked the environment per body could change its mind half way through a
 // program. It is the same door `KEST_IRSAY` is, one level down.
 static bool saying(void) {
-    static int asked = -1;
-    if (asked < 0) {
-        asked = getenv("KEST_CSAY") == NULL ? 0 : 1;
-    }
-    return asked != 0;
+    static atomic_int asked = -1;
+    return kest_ir_asked_off("KEST_CSAY", &asked);
 }
 
 static void say_body(const KestIrBody *body) {
@@ -2974,6 +2971,7 @@ KestEmitC *kest_emitc_new(KestArena *arena, const KestModule *module) {
     if (c->scratch == NULL) {
         return NULL;
     }
+    kest_arena_watched_by(c->scratch, arena);
     return c;
 }
 

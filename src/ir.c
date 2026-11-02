@@ -687,11 +687,13 @@ uint64_t kest_ir_ticked(uint64_t (*now)(void *), void *context) {
     return now == NULL ? 0 : now(context);
 }
 
-bool kest_ir_asked_off(const char *name, int *decided) {
-    if (*decided < 0) {
-        *decided = getenv(name) == NULL ? 0 : 1;
+bool kest_ir_asked_off(const char *name, atomic_int *decided) {
+    int known = atomic_load_explicit(decided, memory_order_relaxed);
+    if (known < 0) {
+        known = getenv(name) == NULL ? 0 : 1;
+        atomic_store_explicit(decided, known, memory_order_relaxed);
     }
-    return *decided != 0;
+    return known != 0;
 }
 
 const char *kest_ir_verify(const KestIrBody *body) {
@@ -1289,7 +1291,7 @@ static bool optimize(KestIrProgram *program, KestIrBody *body,
     // program twice and requiring the same answer of both is how a
     // transformation is held to being one that keeps a program's meaning.
     // Every optimization is held that way.
-    static int off = -1;
+    static atomic_int off = -1;
     if (kest_ir_asked_off("KEST_NOOPT", &off)) {
         return true;
     }

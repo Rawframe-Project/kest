@@ -71,6 +71,15 @@ typedef struct {
     // one. NULL for a read of files where they are.
     const KestFile *handed;
     uint32_t handed_count;
+    // The files read in front of the disk, when a read is of files where they
+    // are: what an editor has in buffers that are not saved yet. A language
+    // server that answered about the saved copy would answer about a file the
+    // person in front of it is not looking at, and there is more than one
+    // because a program is more than one file and an editor holds more than
+    // one open. The read's own, so a build beside it on another thread reads
+    // the disk. The texts are the caller's and outlive the read.
+    const KestFile *over;
+    uint32_t over_count;
     // The manifest that said where imports resolve from, where one did, and
     // what it said: part of what a program was read from, which a release
     // binary carries with the files.
@@ -111,9 +120,9 @@ bool kest_project_above(KestArena *arena, const char *path, const char **where,
                         const char **roots, uint32_t *count);
 
 // Where the standard library is: what `KEST_LIB` says, or `lib/` beside the
-// program, which is where it is when nothing has been installed.
-// `arena` may be NULL, in which case the answer is not owned by one and is
-// good until the next call.
+// program, which is where it is when nothing has been installed. The answer is
+// in `arena`, and NULL when there is no arena or no room: it is the caller's,
+// so two builds asking at once on two threads each have their own.
 const char *kest_library_path(KestArena *arena, const char *program);
 
 // The two ways to read one file, named for how far each goes. A file that
@@ -122,15 +131,6 @@ const char *kest_library_path(KestArena *arena, const char *program);
 // The source and nothing else. `lex` is the whole of what this is for: the
 // token stream is what that command answers, and parsing to reach it is work
 // nobody asked for and a second reading of the same file.
-// Puts a buffer in front of the disk for one path, takes that one away again
-// with a NULL text, and takes every one away with a NULL path. What it is for
-// is a language server: the files open in an editor have not been saved, and
-// answering about the saved copies is answering about different files. There
-// is a set rather than one because a program is more than one file and an
-// editor holds more than one open. The text is the caller's and has to outlive
-// every read.
-void kest_loader_overlay(const char *path, const char *text, size_t length);
-
 bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,
                       KestSource *into);
 

@@ -1005,7 +1005,7 @@ static KestToken lexer_next(KestLexer *lexer) {
 }
 
 static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
-                           uint32_t *count);
+                           uint32_t *count, uint32_t *room);
 
 typedef struct {
     uint32_t from;
@@ -1191,7 +1191,7 @@ KestToken *kest_lex_range(KestArena *arena, const KestSource *source,
     lexer.offset = start;
     // The only range anything asks for is the inside of a hole.
     lexer.in_hole = true;
-    return lex_from(arena, &lexer, end, count);
+    return lex_from(arena, &lexer, end, count, NULL);
 }
 
 KestToken *kest_lex_again(KestArena *arena, const KestSource *source,
@@ -1200,7 +1200,7 @@ KestToken *kest_lex_again(KestArena *arena, const KestSource *source,
     KestLexer lexer;
     lexer_init(&lexer, source, diags);
     lexer.offset = start;
-    return lex_from(arena, &lexer, end, count);
+    return lex_from(arena, &lexer, end, count, NULL);
 }
 
 KestToken kest_lex_one(const KestSource *source, uint32_t *offset) {
@@ -1219,22 +1219,19 @@ KestToken kest_lex_one(const KestSource *source, uint32_t *offset) {
 }
 
 KestToken *kest_lex_all(KestArena *arena, const KestSource *source,
-                        KestDiags *diags, uint32_t *count) {
+                        KestDiags *diags, uint32_t *count, uint32_t *room) {
     check_text(source, diags);
 
     KestLexer lexer;
     lexer_init(&lexer, source, diags);
-    return lex_from(arena, &lexer, (uint32_t)source->length, count);
-}
-
-static uint32_t LAST_ROOM;
-
-uint32_t kest_lex_room(void) {
-    return LAST_ROOM;
+    return lex_from(arena, &lexer, (uint32_t)source->length, count, room);
 }
 
 static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
-                           uint32_t *count) {
+                           uint32_t *count, uint32_t *room) {
+    if (room != NULL) {
+        *room = 0;
+    }
 
     KestToken *tokens = NULL;
     uint32_t used = 0;
@@ -1342,7 +1339,9 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
     }
 
     *count = used;
-    LAST_ROOM = capacity;
+    if (room != NULL) {
+        *room = capacity;
+    }
     return tokens;
 }
 

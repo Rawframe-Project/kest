@@ -455,14 +455,16 @@ uint64_t kest_ir_ticked(uint64_t (*now)(void *), void *context);
 // Whether a switch that turns a transformation off is set. `decided` is where
 // the answer is kept and starts below nought: the environment is read once
 // and not again, because a compiler that asked it per body would be one whose
-// answer could change half way through a program.
+// answer could change half way through a program. Atomic, because it is kept
+// for the process and two builds on two threads ask at once; what either of
+// them writes is what the environment says, so they agree.
 //
 // There is one of these rather than one per transformation because two would
 // be one walk written twice. It is here because this is the module that says
 // what a transformation is; `KEST_PLAIN` holds the lowering's fusions and
 // `KEST_NOOPT` holds this module's own pass, so a program compiled with
 // either off can be held to the same answer.
-bool kest_ir_asked_off(const char *name, int *decided);
+bool kest_ir_asked_off(const char *name, atomic_int *decided);
 
 // Making one, and the one body at a time that goes through it. Every part of a
 // body is arena memory and none of it is freed on its own; what frees all of it

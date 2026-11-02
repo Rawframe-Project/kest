@@ -68,68 +68,6 @@ static char *read_stream(KestArena *arena, FILE *file, size_t *length,
     return text;
 }
 
-// What an editor has in buffers that are not on the disk yet, read before the
-// disk is: a language server that answered about the saved copy would answer
-// about a file the person in front of it is not looking at. There is more than
-// one, because an editor holds more than one open and a program is more than
-// one file -- checking the file being typed in reads everything it imports, and
-// an import that is itself open and unsaved has to be read as the person can
-// see it rather than as it was last saved. Set and cleared by whoever is
-// driving; nothing else in this tree ever sets one.
-typedef struct {
-    const char *path;
-    const char *text;
-    size_t length;
-} Overlaid;
-
-static Overlaid *overlaid;
-static size_t overlaid_count;
-static size_t overlaid_room;
-
-// A NULL path takes every one away, which is what a driver does when it has
-// finished with the set. A NULL text takes away the one path names, which is
-// what a client closing a document means. Giving room can fail, and a path
-// that could not be held is read from the disk: the answer is then about the
-// saved copy, which is where this began, rather than about nothing.
-void kest_loader_overlay(const char *path, const char *text, size_t length) {
-    if (path == NULL) {
-        free(overlaid);
-        overlaid = NULL;
-        overlaid_count = 0;
-        overlaid_room = 0;
-        return;
-    }
-    for (size_t i = 0; i < overlaid_count; i++) {
-        if (strcmp(overlaid[i].path, path) != 0) {
-            continue;
-        }
-        if (text == NULL) {
-            overlaid[i] = overlaid[overlaid_count - 1];
-            overlaid_count--;
-            return;
-        }
-        overlaid[i].text = text;
-        overlaid[i].length = length;
-        return;
-    }
-    if (text == NULL) {
-        return;
-    }
-    if (overlaid_count == overlaid_room) {
-        size_t grown = overlaid_room == 0 ? 4 : overlaid_room * 2;
-        Overlaid *moved = realloc(overlaid, grown * sizeof(*moved));
-        if (moved == NULL) {
-            return;
-        }
-        overlaid = moved;
-        overlaid_room = grown;
-    }
-    overlaid[overlaid_count].path = path;
-    overlaid[overlaid_count].text = text;
-    overlaid[overlaid_count].length = length;
-    overlaid_count++;
-}
-
 static const char *tidied(KestArena *arena, const char *path);
 
 // One of the files a read was handed, or NULL. A path is a path whichever way
@@ -167,18 +105,19 @@ static char *read_file(KestArena *arena, const KestUnits *units,
         *length = file->length;
         return held;
     }
-    for (size_t i = 0; i < overlaid_count; i++) {
-        if (strcmp(overlaid[i].path, path) != 0) {
+    for (uint32_t i = 0; units != NULL && i < units->over_count; i++) {
+        const KestFile *over = &units->over[i];
+        if (strcmp(over->path, path) != 0) {
             continue;
         }
-        char *held = kest_arena_alloc(arena, overlaid[i].length + 1, 1);
+        char *held = kest_arena_alloc(arena, over->length + 1, 1);
         if (held == NULL) {
             *starved = true;
             return NULL;
         }
-        memcpy(held, overlaid[i].text, overlaid[i].length);
-        held[overlaid[i].length] = '\0';
-        *length = overlaid[i].length;
+        memcpy(held, over->text, over->length);
+        held[over->length] = '\0';
+        *length = over->length;
         return held;
     }
 
@@ -984,17 +923,18 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
         kest_diags_starve(diags);
         return false;
     }
+    kest_arena_watched_by(units->trees, arena);
     // Where the program stands and what project it is in, each of which copes
     // with no room by answering as though there were nothing there: a
     // directory with no room for its name is the one the command ran in, and a
     // manifest with no room to read it is no manifest. A project's sources
     // were then never looked under, and an import from one said it could not
     // be read. So a refusal anywhere in the two is said as what it is.
-    bool refused_before = kest_arena_refused_anywhere();
+    bool refused_before = kest_arena_refused_anywhere(arena);
     const char *root = directory_of(arena, paths[0]);
     Roots roots;
     roots_above(arena, units, paths[0], &roots);
-    if (!refused_before && kest_arena_refused_anywhere()) {
+    if (!refused_before && kest_arena_refused_anywhere(arena)) {
         kest_diags_starve(diags);
         return false;
     }
@@ -1021,15 +961,29 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
     return true;
 }
 
+// The first `length` bytes of `head` and then `tail`, in memory of the
+// machine's that the caller frees: as long as the two are, because a path cut
+// at a buffer's end names somewhere else. Only for the probes below, which are
+// gone before anything is answered, so what a build cost is what it kept.
+static char *joined(const char *head, size_t length, const char *tail) {
+    size_t more = strlen(tail);
+    char *path = malloc(length + more + 1);
+    if (path != NULL) {
+        memcpy(path, head, length);
+        memcpy(path + length, tail, more + 1);
+    }
+    return path;
+}
+
 // Whether the standard library is here, asked by looking for a file that is
 // always in it. A path that is merely plausible is worse than no path.
 static bool library_is_at(const char *directory) {
-    char probe[1024];
-    int written = snprintf(probe, sizeof(probe), "%sstd/io.kest", directory);
-    if (written <= 0 || (size_t)written >= sizeof(probe)) {
+    char *probe = joined(directory, strlen(directory), "std/io.kest");
+    if (probe == NULL) {
         return false;
     }
     FILE *file = fopen(probe, "rb");
+    free(probe);
     if (file == NULL) {
         return false;
     }
@@ -1079,18 +1033,18 @@ bool kest_library_has(const char *library, const char *name, size_t length) {
 #else
 #define KEST_PATH_LIST_SEPARATOR ':'
 #endif
-static bool found_on_path(const char *program, char *into, size_t room) {
+static char *found_on_path(const char *program) {
     // A host that hands over no program at all -- `kest_build` with no
     // library named does, through `build.c` -- is asking about the directory
     // it is standing in and not about any binary. Walking `PATH` for the
     // empty name would open each directory on it, which `fopen` on a
     // directory is happy to do on glibc, and answer with the first one.
     if (program == NULL || program[0] == '\0') {
-        return false;
+        return NULL;
     }
     const char *path = getenv("PATH");
     if (path == NULL || path[0] == '\0') {
-        return false;
+        return NULL;
     }
     for (const char *at = path; *at != '\0';) {
         const char *end = at;
@@ -1102,64 +1056,72 @@ static bool found_on_path(const char *program, char *into, size_t room) {
         // read as the root.
         if (end != at) {
             size_t length = (size_t)(end - at);
-            int written = snprintf(
-                into, room, "%.*s%s%s", (int)length, at,
-                KEST_PATH_SEPARATOR(at[length - 1]) ? "" : "/", program);
-            if (written > 0 && (size_t)written < room) {
+            char *directory = joined(
+                at, length, KEST_PATH_SEPARATOR(at[length - 1]) ? "" : "/");
+            char *into = directory == NULL
+                             ? NULL
+                             : joined(directory, strlen(directory), program);
+            free(directory);
+            if (into != NULL) {
                 FILE *file = fopen(into, "rb");
                 if (file != NULL) {
                     fclose(file);
-                    return true;
+                    return into;
                 }
+                free(into);
             }
         }
         at = *end == '\0' ? end : end + 1;
     }
-    return false;
+    return NULL;
 }
 
 const char *kest_library_path(KestArena *arena, const char *program) {
-    // A caller that has no arena yet gets one answer at a time, which is all
-    // anybody needs of this.
-    static char scratch[1024];
-
+    if (arena == NULL) {
+        return NULL;
+    }
     const char *given = getenv("KEST_LIB");
     if (given != NULL && given[0] != '\0') {
         size_t length = strlen(given);
-        snprintf(scratch, sizeof(scratch), "%s%s", given,
-                 given[length - 1] == '/' ? "" : "/");
-    } else {
-        char found[1024];
-        if (last_separator(program) == NULL &&
-            found_on_path(program, found, sizeof(found))) {
-            program = found;
+        size_t closing = given[length - 1] == '/' ? 0 : 1;
+        char *kept = kest_arena_alloc(arena, length + closing + 1, 1);
+        if (kept == NULL) {
+            return NULL;
         }
-        const char *slash = last_separator(program);
-        int length = slash == NULL ? 0 : (int)(slash - program) + 1;
-
-        // Beside the program, which is where it is in a source tree, and then
-        // where it is once installed, which is beside the program's own
-        // directory rather than inside it.
-        snprintf(scratch, sizeof(scratch), "%.*slib/", length, program);
-        if (!library_is_at(scratch)) {
-            snprintf(scratch, sizeof(scratch), "%.*s../lib/kest/", length,
-                     program);
-        }
-        // And where it was put when the language was installed, which is what
-        // a host that is not the command line has to fall back on.
-        if (!library_is_at(scratch)) {
-            snprintf(scratch, sizeof(scratch), "%s", KEST_LIB_DIR);
-        }
+        memcpy(kept, given, length);
+        memcpy(kept + length, "/", closing);
+        kept[length + closing] = '\0';
+        return kept;
     }
-
-    if (arena == NULL) {
-        return scratch;
+    char *found =
+        last_separator(program) == NULL ? found_on_path(program) : NULL;
+    if (found != NULL) {
+        program = found;
     }
-    // The same answer the caller with no arena gets, and the same promise: one
-    // at a time. A copy is what an arena is for and not what this needs to be
-    // right.
-    const char *kept = kest_arena_strndup(arena, scratch, strlen(scratch));
-    return kept == NULL ? scratch : kept;
+    const char *slash = last_separator(program);
+    size_t length = slash == NULL ? 0 : (size_t)(slash - program) + 1;
+    // Beside the program, which is where it is in a source tree, and then
+    // where it is once installed, which is beside the program's own directory
+    // rather than inside it. And where it was put when the language was
+    // installed, which is what a host that is not the command line has to fall
+    // back on.
+    const char *const beside[] = {"lib/", "../lib/kest/"};
+    for (size_t i = 0; i < 2; i++) {
+        char *probe = joined(program, length, beside[i]);
+        if (probe == NULL) {
+            free(found);
+            return NULL;
+        }
+        if (library_is_at(probe)) {
+            const char *kept = kest_arena_strndup(arena, probe, strlen(probe));
+            free(probe);
+            free(found);
+            return kept;
+        }
+        free(probe);
+    }
+    free(found);
+    return kest_arena_strndup(arena, KEST_LIB_DIR, strlen(KEST_LIB_DIR));
 }
 
 bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,

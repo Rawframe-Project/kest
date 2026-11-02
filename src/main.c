@@ -1377,13 +1377,15 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
         KestSource alone = {0};
         KestToken *tokens = NULL;
         uint32_t found = 0;
+        uint32_t token_room = 0;
         Comments comments = {NULL, 0};
         bool loaded;
         if (what == FILE_LEX) {
             loaded = kest_read_source(arena, &diags, paths[i], &alone);
             if (loaded) {
                 kest_diags_in(&diags, &alone);
-                tokens = kest_lex_all(arena, &alone, &diags, &found);
+                tokens =
+                    kest_lex_all(arena, &alone, &diags, &found, &token_room);
                 // Nothing but room makes the lexer answer nothing, and a file
                 // with no tokens listed and nothing said is a file that is
                 // empty, which this one is not. The same for the comments,
@@ -1469,7 +1471,7 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                     // and the weight can say whether reading a file cost the
                     // tokens or the sizes the array grew through.
                     fprintf(stdout, ",\"tokenBytes\":%zu,\"tokenRoom\":%u",
-                            sizeof(KestToken), kest_lex_room());
+                            sizeof(KestToken), token_room);
                     dump_tokens_json(tokens, found, &alone, stdout);
                     dump_comments_json(&comments, &alone, stdout);
                 }
@@ -2385,6 +2387,22 @@ static int write_hostile(const char *path, uint64_t seed, bool json) {
     return 0;
 }
 
+// Where the library is, for this command line: one answer for the process,
+// kept in an arena of the command line's own, which a host is free to keep
+// however it likes. NULL when there was no room, and a build handed NULL looks
+// for itself.
+static const char *library_of(const char *executable) {
+    static KestArena *kept;
+    static const char *found;
+    if (found == NULL) {
+        if (kept == NULL) {
+            kept = kest_arena_new();
+        }
+        found = kest_library_path(kept, executable);
+    }
+    return found;
+}
+
 // What a file declares and what it says about each, for somebody who is going
 // to call it rather than read it. It is built first, so what is described is a
 // program that checks, and a file that does not is refused in its own words.
@@ -2393,9 +2411,9 @@ static int write_doc(const char *executable, const char *path, bool json,
     if (path == NULL) {
         return refused_at_the_words(json, "K0649", "`%s` needs a file", "doc");
     }
-    KestBuild *build = kest_build(path, kest_library_path(NULL, executable),
-                                  json ? stdout : stderr,
-                                  json ? KEST_FORM_JSON : KEST_FORM_TEXT, room);
+    KestBuild *build =
+        kest_build(path, library_of(executable), json ? stdout : stderr,
+                   json ? KEST_FORM_JSON : KEST_FORM_TEXT, room);
     if (build == NULL) {
         return 1;
     }
@@ -2626,9 +2644,12 @@ static int look_over(const char *executable, const char *where, bool json) {
 // `include/` is one further up. Nought for one that is not there.
 static bool release_parts(const char *executable, char *header, char *archive,
                           size_t room) {
-    const char *library = kest_library_path(NULL, executable);
+    const char *library = library_of(executable);
     const char *headers[] = {"%s../include/kest.h", "%s../../include/kest.h"};
     header[0] = '\0';
+    if (library == NULL) {
+        return false;
+    }
     for (size_t i = 0; i < 2 && header[0] == '\0'; i++) {
         char probe[1024];
         snprintf(probe, sizeof(probe), headers[i], library);
@@ -2986,7 +3007,7 @@ static int run(const char *command, const char *executable, char **paths,
     // The binary a release made, once one has.
     char *released = NULL;
     KestBuild *build = kest_build_open_within(
-        kest_library_path(NULL, executable), paths,
+        library_of(executable), paths,
         strcmp(command, "call") == 0 ? 1 : path_count, room, work);
     if (build != NULL && weighing) {
         kest_build_clock(build, compiling_now, NULL,
@@ -4132,10 +4153,10 @@ static int project_here(KestArena *asking, bool json, KestProject **here) {
                            KEST_STARVED_SAYS);
         return 1;
     }
-    bool refused_before = kest_arena_refused_anywhere();
+    bool refused_before = kest_arena_refused_anywhere(asking);
     const char *why = NULL;
     *here = kest_project_read(asking, "", &why);
-    if (!refused_before && kest_arena_refused_anywhere()) {
+    if (!refused_before && kest_arena_refused_anywhere(asking)) {
         *here = NULL;
         kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
                            KEST_STARVED_SAYS);
@@ -4195,6 +4216,9 @@ static int run_tests(const char *executable, char **paths, int path_count,
 // still better than no library.
 static const char *library_from_root(const char *library, char *into,
                                      size_t room) {
+    if (library == NULL) {
+        return NULL;
+    }
     bool rooted = library[0] == '/' || library[0] == '\\' ||
                   (library[0] != '\0' && library[1] == ':');
     if (rooted || KEST_WORKING_DIRECTORY(into, room) == NULL) {
@@ -4264,10 +4288,9 @@ int main(int argc, char **argv) {
     // what its server wrote to the error stream, so that is where it is said.
     if (strcmp(argv[1], "lsp") == 0) {
         char rooted[2048];
-        int served =
-            kest_lsp_serve(library_from_root(kest_library_path(NULL, argv[0]),
-                                             rooted, sizeof(rooted)),
-                           stdin, stdout, project_files, resolved_path);
+        int served = kest_lsp_serve(
+            library_from_root(library_of(argv[0]), rooted, sizeof(rooted)),
+            stdin, stdout, project_files, resolved_path);
         if (served != 0) {
             kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
                                KEST_STARVED_SAYS);
@@ -4278,8 +4301,8 @@ int main(int argc, char **argv) {
     // editor's console and what it reads is nothing, because both standard
     // streams are the protocol.
     if (strcmp(argv[1], "dap") == 0) {
-        int served = kest_dap_serve(kest_library_path(NULL, argv[0]), make_host,
-                                    stdin, stdout);
+        int served =
+            kest_dap_serve(library_of(argv[0]), make_host, stdin, stdout);
         if (served != 0) {
             kest_diags_say_one(stderr, false, KEST_STARVED_CODE,
                                KEST_STARVED_SAYS);
