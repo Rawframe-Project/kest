@@ -396,14 +396,51 @@ static int usage(bool json) {
 // beside the words it is for, which is where everything that reads this tree
 // looks for the pair. Always 1, so a refusal is a `return` of what a command
 // answers with.
+// How much of `length` bytes of UTF-8 is whole characters: the length cut back
+// to where the last whole character ends.
+static size_t whole_characters(const char *text, size_t length) {
+    size_t lead = length;
+    while (lead > 0 && ((unsigned char)text[lead - 1] & 0xc0) == 0x80) {
+        lead--;
+    }
+    if (lead == 0) {
+        return length;
+    }
+    unsigned char first = (unsigned char)text[lead - 1];
+    size_t wide = first < 0x80 ? 1 : first < 0xe0 ? 2 : first < 0xf0 ? 3 : 4;
+    return length - (lead - 1) >= wide ? length : lead - 1;
+}
+
 static int refused_at_the_words(bool json, const char *code, const char *format,
                                 ...) {
-    char said[512];
+    // As long as the words are: a reason cut at a buffer's end can be cut
+    // inside a character, and JSON with half a character in it is JSON
+    // nothing reads. Only with no room for them is it cut, and then where a
+    // character ends.
+    char held[512];
     va_list words;
     va_start(words, format);
-    vsnprintf(said, sizeof(said), format, words);
+    va_list again;
+    va_copy(again, words);
+    int length = vsnprintf(held, sizeof(held), format, words);
     va_end(words);
+    char *said = held;
+    if (length >= 0 && (size_t)length >= sizeof(held)) {
+        char *whole = malloc((size_t)length + 1);
+        if (whole != NULL) {
+            vsnprintf(whole, (size_t)length + 1, format, again);
+            said = whole;
+        } else {
+            held[whole_characters(held, sizeof(held) - 1)] = '\0';
+        }
+    } else if (length < 0) {
+        held[0] = '\0';
+    }
+    va_end(again);
     kest_diags_say_one(json ? stdout : stderr, json, code, said);
+    if (said != held) {
+        free(said);
+    }
     return 1;
 }
 
@@ -2423,6 +2460,16 @@ static int write_doc(const char *executable, const char *path, bool json,
     return 0;
 }
 
+// The most bytes one directory of a project's name may have, which is the most
+// a file system takes for one name (`NAME_MAX` on Linux and macOS, and 255
+// characters on Windows).
+#define KEST_MOST_NAME_BYTES 255
+#if defined(_WIN32)
+#define KEST_NAME_SEPARATOR(c) ((c) == '/' || (c) == '\\')
+#else
+#define KEST_NAME_SEPARATOR(c) ((c) == '/')
+#endif
+
 // A file or directory of the project being made, as long as the name is: a
 // path cut short at a buffer's end names somewhere outside the project.
 static const char *in_project(KestArena *arena, const char *name,
@@ -2443,6 +2490,40 @@ static int make_project(const char *name, bool json) {
     if (name == NULL || name[0] == '\0') {
         refused_at_the_words(json, "K0649", "`new` needs a name");
         return 1;
+    }
+    // Asked before anything is made, so a name refused leaves nothing behind.
+    // The name is the manifest's `project` line, so it is one line of UTF-8,
+    // and each piece of it is a directory's name.
+    size_t length = strlen(name);
+    uint32_t bad = 0;
+    if (length > UINT32_MAX || !kest_utf8_whole(name, (uint32_t)length, &bad)) {
+        return refused_at_the_words(
+            json, "K0667",
+            "a project's name is UTF-8, and byte %u of this one is not",
+            (unsigned)bad + 1);
+    }
+    size_t piece = 0;
+    for (size_t i = 0; i < length; i++) {
+        unsigned char c = (unsigned char)name[i];
+        // C0, DEL and C1 (U+0080 to U+009F, written 0xC2 0x80 to 0xC2 0x9F).
+        bool control = c < 0x20 || c == 0x7f ||
+                       (c == 0xc2 && (unsigned char)name[i + 1] >= 0x80 &&
+                        (unsigned char)name[i + 1] <= 0x9f);
+        if (control) {
+            return refused_at_the_words(
+                json, "K0667",
+                "a project's name is one line with no control character in "
+                "it, and byte %zu of this one is one",
+                i + 1);
+        }
+        piece = KEST_NAME_SEPARATOR(name[i]) ? 0 : piece + 1;
+        if (piece > KEST_MOST_NAME_BYTES) {
+            return refused_at_the_words(
+                json, "K0667",
+                "each directory in a project's name is at most %d bytes, "
+                "which is what a file system names, and this one's is longer",
+                KEST_MOST_NAME_BYTES);
+        }
     }
     KestArena *arena = kest_arena_new();
     if (arena == NULL) {
