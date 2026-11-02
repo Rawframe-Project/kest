@@ -1901,13 +1901,6 @@ SAME_SHAPE = {
         "into an arm. Written the same because the question is the same "
         "shape; they are not one question, and a walk that answered both "
         "would be a walk asked what it was being asked",
-    frozenset(("fault",)):
-        "the two halves of this compiler saying the same news in the same "
-        "words: what the checker allowed and the stage after it cannot do is "
-        "this project's mistake rather than the program's, and it is said "
-        "from `compile.c` and from `lower.c` because either of them can be "
-        "the half that is wrong. One line each, and the line is the door "
-        "`kest_diags_disagree` is",
     frozenset(("kest_heap_used", "kest_heap_taken")):
         "what a program is holding and what it has ever been handed, each the "
         "sum of the same question asked of the two places a running program's "
