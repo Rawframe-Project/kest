@@ -150,6 +150,14 @@ typedef struct {
     // Whether this body has been told it holds more than `MOST_SLOTS`, which
     // is said once, where it first did.
     bool slots_said;
+    // Whether this body has been refused for going past one of the limits
+    // above. What is compiled after that counts past what an instruction
+    // holds, or reads a name that could not be taken, so it is no count of
+    // anything the compiler got wrong: nothing more is said as the compiler's
+    // fault, and the body is handed on as nothing but its end. One name too
+    // many in a `match` arm was told so and then four times that the compiler
+    // had lost track of it.
+    bool past_a_limit;
     // Whether this body has been told it holds more than
     // `KEST_MOST_CONSTANTS`, which is said once, where it first did.
     bool constants_said;
@@ -207,7 +215,22 @@ static void refuse(Compiler *compiler, KestSpan span, const char *code,
 // than an assert, because a program that trips it should be told rather than
 // stopped.
 static void fault(Compiler *compiler, KestSpan span, const char *what) {
+    if (compiler->past_a_limit) {
+        return;
+    }
     kest_diags_disagree(compiler->program->diags, span, "%s", what);
+}
+
+// A limit of this file's, which is the program's to change and refuses the
+// body it is met in.
+static void refuse_limit(Compiler *compiler, KestSpan span, const char *format,
+                         ...) {
+    compiler->past_a_limit = true;
+    va_list args;
+    va_start(args, format);
+    kest_diags_addv(compiler->program->diags, KEST_SEVERITY_ERROR, "K0502",
+                    span, format, args);
+    va_end(args);
 }
 
 static void stack_push(Compiler *compiler, uint32_t count) {
@@ -442,24 +465,27 @@ static uint16_t reserve_slot(Compiler *compiler, uint16_t size) {
 
 // A body past `MOST_SLOTS`, said where it first went past: at the name that
 // took its names past it, or at the value that took what it works on past
-// it. One that went past where nothing is named, a slot `for` keeps, is said
-// where the function is declared.
+// it. One that went past where nothing is named, a slot a `for`, a `match` or
+// a call written in place keeps, is said at the next value or name after it,
+// or where the function is declared when nothing comes after.
 static void hold_slots(Compiler *compiler, KestSpan span) {
     if (compiler->slots_said) {
         return;
     }
     if (compiler->slot_high_water > MOST_SLOTS) {
         compiler->slots_said = true;
-        refuse(compiler, span, "K0502",
-               "a function's names hold at most %u slots at once, and here "
-               "they hold %u",
-               MOST_SLOTS, compiler->slot_high_water);
+        refuse_limit(
+            compiler, span,
+            "a function's names hold at most %u slots at once, and here "
+            "they hold %u",
+            MOST_SLOTS, compiler->slot_high_water);
     } else if (compiler->stack_high_water > MOST_SLOTS) {
         compiler->slots_said = true;
-        refuse(compiler, span, "K0502",
-               "a function works on at most %u slots of values at once, and "
-               "here it works on %u",
-               MOST_SLOTS, compiler->stack_high_water);
+        refuse_limit(
+            compiler, span,
+            "a function works on at most %u slots of values at once, and "
+            "here it works on %u",
+            MOST_SLOTS, compiler->stack_high_water);
     } else {
         return;
     }
@@ -472,8 +498,8 @@ static void hold_slots(Compiler *compiler, KestSpan span) {
 static void bind_local(Compiler *compiler, KestSpan span, uint16_t slot,
                        uint16_t size) {
     if (compiler->local_count == MAX_LOCALS) {
-        refuse(compiler, span, "K0502", "a function holds at most %d names",
-               MAX_LOCALS);
+        refuse_limit(compiler, span, "a function holds at most %d names",
+                     MAX_LOCALS);
         return;
     }
     Local *local = &compiler->locals[compiler->local_count];
@@ -501,8 +527,8 @@ static void bind_local(Compiler *compiler, KestSpan span, uint16_t slot,
 static void hold_local(Compiler *compiler, KestSpan span, const KestType *type,
                        const KestValue *values, uint16_t slots) {
     if (compiler->local_count == MAX_LOCALS) {
-        refuse(compiler, span, "K0502", "a function holds at most %d names",
-               MAX_LOCALS);
+        refuse_limit(compiler, span, "a function holds at most %d names",
+                     MAX_LOCALS);
         return;
     }
     Local *local = &compiler->locals[compiler->local_count];
@@ -542,8 +568,8 @@ static uint32_t remember_name(Compiler *compiler, const Local *local) {
 static uint16_t declare_local(Compiler *compiler, KestSpan span,
                               const KestType *type) {
     if (compiler->local_count == MAX_LOCALS) {
-        refuse(compiler, span, "K0502", "a function holds at most %d names",
-               MAX_LOCALS);
+        refuse_limit(compiler, span, "a function holds at most %d names",
+                     MAX_LOCALS);
         return 0;
     }
     // Slots are reused between scopes and between functions, so everything a
@@ -1008,10 +1034,10 @@ static void hold_constants(Compiler *compiler, uint32_t count, KestSpan span) {
         return;
     }
     compiler->constants_said = true;
-    refuse(compiler, span, "K0502",
-           "a function holds at most %u constant values, counting every "
-           "element of a table it reads, and here it holds %u",
-           KEST_MOST_CONSTANTS, holds);
+    refuse_limit(compiler, span,
+                 "a function holds at most %u constant values, counting every "
+                 "element of a table it reads, and here it holds %u",
+                 KEST_MOST_CONSTANTS, holds);
     kest_diags_suggest(compiler->program->diags,
                        "read the tables from more than one function, or hold "
                        "one in a `[T]`");
@@ -2767,8 +2793,8 @@ static void compile_expansion(Compiler *compiler, const KestExpr *expr) {
         const char *name = kest_span_text(&unit->source, named);
         if (wanted != NULL && wanted->block) {
             if (here.block_count == MOST_BLOCKS) {
-                refuse(compiler, argument->span, "K0502",
-                       "a function takes at most %d blocks", MOST_BLOCKS);
+                refuse_limit(compiler, argument->span,
+                             "a function takes at most %d blocks", MOST_BLOCKS);
                 continue;
             }
             BlockBinding *bound = &here.blocks[here.block_count++];
@@ -3176,8 +3202,9 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     if (slot >= MAX_EXTERNS) {
         // The one below is written into the call in two bytes, so this is the
         // last one there is room to name.
-        refuse(compiler, callee->span, "K0502",
-               "a program asks the host for at most %d names", MAX_EXTERNS);
+        refuse_limit(compiler, callee->span,
+                     "a program asks the host for at most %d names",
+                     MAX_EXTERNS);
         return;
     }
     // What the program expects to cross, written down where a host can read
@@ -3953,9 +3980,7 @@ static void hold_width(Compiler *compiler, const KestExpr *expr,
         return;
     }
     hold_slots(compiler, expr->span);
-    // A body past `MOST_SLOTS` has been told so, and a count past it is no
-    // count of anything the compiler could have got wrong.
-    if (compiler->slots_said) {
+    if (compiler->past_a_limit) {
         return;
     }
     int32_t grew = (int32_t)compiler->stack_depth - (int32_t)before;
@@ -4271,8 +4296,7 @@ static void prove_walk(Compiler *compiler, uint32_t from, int32_t measured,
 
 static Loop *open_loop(Compiler *compiler, KestSpan span) {
     if (compiler->loop_count == MAX_LOOPS) {
-        refuse(compiler, span, "K0502", "loops nest more than %d deep",
-               MAX_LOOPS);
+        refuse_limit(compiler, span, "loops nest more than %d deep", MAX_LOOPS);
         return NULL;
     }
     Loop *loop = &compiler->loops[compiler->loop_count++];
@@ -4384,7 +4408,7 @@ static void hold_empty(Compiler *compiler, const KestStmt *stmt,
     if (compiler->out_of_memory) {
         return;
     }
-    if (compiler->slots_said) {
+    if (compiler->past_a_limit) {
         compiler->lost_count = false;
         return;
     }
@@ -4512,6 +4536,8 @@ typedef struct {
     uint32_t stack_depth;
     uint32_t depth;
     uint32_t loop_count;
+    bool slots_said;
+    bool past_a_limit;
     bool constants_said;
 } Written;
 
@@ -4533,6 +4559,8 @@ static Written written_so_far(const Compiler *compiler) {
                      compiler->stack_depth,
                      compiler->depth,
                      compiler->loop_count,
+                     compiler->slots_said,
+                     compiler->past_a_limit,
                      compiler->constants_said};
 }
 
@@ -4552,6 +4580,11 @@ static void take_back(Compiler *compiler, const Written *to) {
     compiler->stack_depth = to->stack_depth;
     compiler->depth = to->depth;
     compiler->loop_count = to->loop_count;
+    // What a form taken back was told goes with it, the limit with the rest:
+    // a body told it was past one by a form it does not keep is refused with
+    // nothing said, and is handed on as nothing but its end.
+    compiler->slots_said = to->slots_said;
+    compiler->past_a_limit = to->past_a_limit;
     // Taken back with what it said, so a loop whose unrolled form would hold
     // too many values is told nothing and is not unrolled.
     compiler->constants_said = to->constants_said;
@@ -5461,10 +5494,11 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             run_deferred(compiler, here->deferred, stmt->span);
             close_regions(compiler, here->regions, true, stmt->span);
             if (here->return_count == MAX_BREAKS) {
-                refuse(compiler, stmt->span, "K0502",
-                       "a function that takes a block returns in at most %d "
-                       "places",
-                       MAX_BREAKS);
+                refuse_limit(
+                    compiler, stmt->span,
+                    "a function that takes a block returns in at most %d "
+                    "places",
+                    MAX_BREAKS);
                 break;
             }
             here->returns[here->return_count++] = ir_go(compiler, stmt->span);
@@ -5527,8 +5561,8 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         run_deferred(compiler, loop->deferred, stmt->span);
         close_regions(compiler, loop->regions, true, stmt->span);
         if (loop->continue_count == MAX_BREAKS) {
-            refuse(compiler, stmt->span, "K0502",
-                   "a loop holds at most %d continues", MAX_BREAKS);
+            refuse_limit(compiler, stmt->span,
+                         "a loop holds at most %d continues", MAX_BREAKS);
             break;
         }
         loop->continues[loop->continue_count++] = ir_go(compiler, stmt->span);
@@ -5543,8 +5577,8 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         run_deferred(compiler, loop->deferred, stmt->span);
         close_regions(compiler, loop->regions, true, stmt->span);
         if (loop->break_count == MAX_BREAKS) {
-            refuse(compiler, stmt->span, "K0502",
-                   "a loop holds at most %d breaks", MAX_BREAKS);
+            refuse_limit(compiler, stmt->span, "a loop holds at most %d breaks",
+                         MAX_BREAKS);
             break;
         }
         loop->breaks[loop->break_count++] = ir_go(compiler, stmt->span);
@@ -5553,8 +5587,9 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
 
     case KEST_STMT_SCRATCH: {
         if (compiler->region_count == MAX_REGIONS) {
-            refuse(compiler, stmt->span, "K0502",
-                   "working-memory blocks nest more than %d deep", MAX_REGIONS);
+            refuse_limit(compiler, stmt->span,
+                         "working-memory blocks nest more than %d deep",
+                         MAX_REGIONS);
             break;
         }
         uint16_t names = compiler->local_count;
@@ -5582,8 +5617,8 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
 
     case KEST_STMT_DEFER:
         if (compiler->defer_count == MAX_DEFERS) {
-            refuse(compiler, stmt->span, "K0502",
-                   "a function defers at most %d things", MAX_DEFERS);
+            refuse_limit(compiler, stmt->span,
+                         "a function defers at most %d things", MAX_DEFERS);
             break;
         }
         compiler->deferred[compiler->defer_count++] = stmt->value;
@@ -5701,6 +5736,7 @@ static bool open_body(Compiler *compiler, KestChunk *chunk,
     compiler->stack_depth = 0;
     compiler->stack_high_water = 0;
     compiler->slots_said = false;
+    compiler->past_a_limit = false;
     compiler->constants_said = false;
     compiler->depth = 0;
     compiler->loop_count = 0;
@@ -5818,18 +5854,22 @@ static bool close_body(Compiler *compiler, const KestBlock *block,
         resume_where_waiting(compiler, block);
     }
     compile_block(compiler, block);
-    // A body refused for holding too many values names some of them past
-    // what an instruction holds, and the backend would say so as its own
-    // mistake. It is put back to nothing but its end, which is a body.
-    if (compiler->constants_said) {
+    hold_slots(compiler, declared);
+    // A body past a limit has been refused, and what was written for it
+    // names slots or constant values an instruction cannot hold, reads more
+    // values than one can, or reads a name that could not be taken. Handed on
+    // as it is, the backend refused it as the compiler's own mistake and the
+    // build stopped there, as though it had run out of memory, so nothing after
+    // it was said. It is put back to nothing but its end, which is a body.
+    if (compiler->past_a_limit) {
         take_back(compiler, &opened);
+        compiler->slot_high_water = compiler->next_slot;
         compiler->stack_high_water = 0;
     }
     // Every body ends by giving something back, so that nothing runs off the
     // end of one.
     uint32_t at = ir_emit(compiler, KEST_IR_GIVE, NULL, 0, NULL, 0, declared);
     ir_carries(compiler, at, 0, 0, 0);
-    hold_slots(compiler, declared);
     compiler->body->slot_count = (uint16_t)compiler->slot_high_water;
     compiler->body->stack_needed = (uint16_t)compiler->stack_high_water;
     // What a working-memory block keeps, followed over the whole body rather

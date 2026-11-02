@@ -306,6 +306,15 @@ def constants():
             "    return 7\n}\n\nfn main() -> i32 {\n    return pick(1) - 7\n}\n")
 
 
+# And more values than one instruction reads: the holes of one piece of text
+# are read by one join, which counts what it reads in two bytes. Past that the
+# body is past what it works on as well, and was refused twice more, as the
+# compiler's mistake and as a build that ran out of memory.
+def holes():
+    return ("fn main() -> i32 {\n    let n = 1\n    let s = \"%s\"\n"
+            "    return len(s)\n}\n" % ("{n}" * 65537))
+
+
 # One a row of the table, found by a phrase out of the row itself, so a row
 # nobody has written a program for is a row this names.
 # The number is not written here. It is the table's, read out of the row the
@@ -337,6 +346,7 @@ PROBES = [
     ("elements a `[T; N]` holds", elements, "K0326", "emit"),
     ("slots a function's names hold", named_slots, "K0502", "emit"),
     ("slots of values it works on", worked_slots, "K0502", "emit"),
+    ("slots of values it works on", holes, "K0502", "emit"),
     ("constant values in one function", constants, "K0502", "emit"),
 ]
 
@@ -450,6 +460,12 @@ for phrase, program, code, how in PROBES:
     if code not in out or number not in says:
         print("limits: one too many `%s` is not `%s` with %s in it; it said %r"
               % (phrase, code, number, out.strip()[:120]))
+        failed = 1
+    # And not the compiler's mistake as well: a program past a ceiling is told
+    # the ceiling, and a count that went on past it is not a fault it made.
+    elif "a fault in the compiler" in says:
+        print("limits: one too many `%s` was told it was a fault in the "
+              "compiler as well; it said %r" % (phrase, out.strip()[:200]))
         failed = 1
     else:
         met += 1
