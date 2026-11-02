@@ -4597,7 +4597,9 @@ for asking in "nonsense@unknown command \`nonsense\`" \
         "tick $scratch/refused/calling.kest 1,2 3@takes one count, and was given \`3\` as well" \
         "tick $scratch/refused/calling.kest 1,x@\`1,x\` is not a list of events" \
         "check --room@\`--room\` says how much, and there is nothing after it" \
-        "check --room 4X $scratch/refused/calling.kest@\`4X\` is not an amount of room"; do
+        "check --room 4X $scratch/refused/calling.kest@\`4X\` is not an amount of room" \
+        "check --room -1 $scratch/refused/calling.kest@\`-1\` is not an amount of room" \
+        "check --fuel -100 $scratch/refused/calling.kest@\`-100\` is not a number of instructions"; do
     words=${asking%%@*}
     refused_with=${asking#*@}
     answered=$("$kest" $words 2>&1 </dev/null)
