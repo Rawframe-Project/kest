@@ -848,6 +848,50 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
     }
 }
 
+size_t kest_utf8_width(const char *bytes, size_t length, bool *whole) {
+    *whole = false;
+    if (length == 0) {
+        return 0;
+    }
+    unsigned char lead = (unsigned char)bytes[0];
+    if (lead < 0x80) {
+        *whole = true;
+        return 1;
+    }
+    // How many follow the lead, and the range the first of them may be in:
+    // the narrower ones are what keep out a character written longer than it
+    // needs, a surrogate and anything past U+10FFFF.
+    size_t follow = 0;
+    unsigned char low = 0x80;
+    unsigned char high = 0xbf;
+    if (lead >= 0xc2 && lead <= 0xdf) {
+        follow = 1;
+    } else if (lead >= 0xe0 && lead <= 0xef) {
+        follow = 2;
+        low = lead == 0xe0 ? 0xa0 : 0x80;
+        high = lead == 0xed ? 0x9f : 0xbf;
+    } else if (lead >= 0xf0 && lead <= 0xf4) {
+        follow = 3;
+        low = lead == 0xf0 ? 0x90 : 0x80;
+        high = lead == 0xf4 ? 0x8f : 0xbf;
+    } else {
+        return 1;
+    }
+    for (size_t at = 1; at <= follow; at++) {
+        if (at == length) {
+            return at;
+        }
+        unsigned char next = (unsigned char)bytes[at];
+        if (next < low || next > high) {
+            return at;
+        }
+        low = 0x80;
+        high = 0xbf;
+    }
+    *whole = true;
+    return follow + 1;
+}
+
 void kest_json_text(const char *text, FILE *out) {
     kest_json_bytes(text, strlen(text), out);
 }
@@ -872,8 +916,18 @@ void kest_json_bytes(const char *text, size_t length, FILE *out) {
         default:
             if (*p < 0x20) {
                 fprintf(out, "\\u%04x", *p);
-            } else {
+            } else if (*p < 0x80) {
                 fputc(*p, out);
+            } else {
+                bool whole = false;
+                size_t width =
+                    kest_utf8_width((const char *)p, (size_t)(end - p), &whole);
+                if (whole) {
+                    fwrite(p, 1, width, out);
+                } else {
+                    fputs("\\ufffd", out);
+                }
+                p += width - 1;
             }
         }
     }

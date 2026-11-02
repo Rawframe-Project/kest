@@ -377,9 +377,21 @@ bool kest_diags_worth_saying(const KestDiags *diags, const KestDiag *one);
 const char *kest_diags_starved_words(const KestDiags *diags, const char **code,
                                      char *room, size_t space);
 
+// How many of the `length` bytes at `bytes` to take next, and in `whole`
+// whether they are one UTF-8 character. When they are not, they are the
+// longest start of one that is not cut by a byte no character has there, the
+// maximal subpart the Unicode Standard (chapter 3, U+FFFD substitution) and
+// WHATWG's decoder replace with one U+FFFD: `F0 9F 98 41` is one U+FFFD and
+// then `A`, and a byte that starts nothing is one U+FFFD on its own. Nought
+// only for no bytes.
+size_t kest_utf8_width(const char *bytes, size_t length, bool *whole);
+
 // Writes a string the way JSON spells one, quotes and escapes and all. Three
 // files compose JSON and the string is the part that has to be right, so there
-// is one of these rather than one each.
+// is one of these rather than one each. JSON is UTF-8, so what is not a
+// character is written as U+FFFD, one for each maximal subpart
+// `kest_utf8_width` finds: a file name is any bytes, and one written raw was an
+// answer no reader could decode.
 void kest_json_text(const char *text, FILE *out);
 
 // The same for `length` bytes where they stand, for a piece of a file: what
