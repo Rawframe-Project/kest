@@ -2,6 +2,12 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## 0.1.7 (2026-11-03)
+
+### Fixed
+
+- A handle a host hands to `kest_array_length`, `kest_lend_ends` or `kest_call`, or answers with from a door, has to be exactly what `kest_call` or `kest_borrow` gave: the front of an array or store header. Anything else in the machine's heap was read as a header. Text made with `kest_text` and beginning with the four bytes of an array's tag (`"RRAKAAAABBBBCC\001CDDDDDDDDEEEEEEEE"`) was an array 1094795585 long with room for 1111638594 to `kest_array_length`, a lend `kest_lend_ends` answered true for, and, handed to `kest_call` for a `[u8]` or answered from a door, stopped the host with a segmentation fault; a handle moved by one byte was read from the middle of a header. A call in or a door's answer with one is now refused with `K0636` or `K0652` ("an address of this machine's where no handle begins"), `kest_array_length` answers 0, and `kest_lend_ends` answers false with `K0637`. A handle the machine gave is answered exactly as before. ([#202](https://github.com/Rawframe-Project/kest/pull/202))
+
 ## 0.1.6 (2026-11-03)
 
 ### Fixed
