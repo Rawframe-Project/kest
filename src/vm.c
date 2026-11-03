@@ -3235,6 +3235,37 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                "over");
             return false;
         }
+        // And how many bytes it is, which is the host's number and not the
+        // machine's: the address being the machine's says nothing about the
+        // length beside it, and the program reads as many bytes as that says.
+        // Held to the place the address is in, which is what a piece of text
+        // the machine made -- or cut out of one -- never runs past.
+        int64_t length = frame[*at + 1].integer;
+        if (length < 0 ||
+            (!kest_ground_spans(runtime->ground, frame[*at].text,
+                                (size_t)length) &&
+             !kest_arena_spans(runtime->heap, frame[*at].text,
+                               (size_t)length) &&
+             !kest_arena_spans(runtime->module->arena, frame[*at].text,
+                               (size_t)length))) {
+            if (saying->at_a_crossing) {
+                crossing_failed(runtime, saying, "K0652",
+                                "`%s` answers with text in slot %u with %lld "
+                                "in its length slot, which the text there "
+                                "cannot be",
+                                name, *at, (long long)length);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes text in slot %u with %lld in its "
+                               "length slot, which the text there cannot be",
+                               name, *at, (long long)length);
+            }
+            kest_diags_suggest(runtime->diags,
+                               "the two slots `kest_text` writes go together: "
+                               "the second is how many bytes the first is");
+            return false;
+        }
         // Two slots: what it is made of, and how many bytes that is.
         *at += 2;
         return true;

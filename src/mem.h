@@ -201,6 +201,10 @@ size_t kest_arena_refused_holding(const KestArena *arena);
 // crossing and not at an instruction.
 bool kest_arena_holds(KestArena *arena, const void *at);
 
+// The same, for `length` bytes from the address: all of them inside what the
+// one block holding the address has handed out.
+bool kest_arena_spans(KestArena *arena, const void *at, size_t length);
+
 // The most this arena will ever hand out. Zero is none, which is what an arena
 // has until somebody says otherwise. Past it an allocation answers NULL, which
 // is what every caller already handles, because the alternative is a caller

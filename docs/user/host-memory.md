@@ -21,7 +21,7 @@ The build that checks itself (`kest-debug` in every build, or a library built wi
 
 ## Text
 
-`kest_text(runtime, bytes, length, &frame[i])` copies the host's bytes onto the machine's heap and writes the two slots a piece of text takes. The copy is the point: the program may keep text as long as it likes, which no host can promise for its own buffer. Bytes that are not UTF-8, or contain a zero, are refused (`K0611`). Handing the machine a pointer of the host's own as text is refused at the call, because it did not come from this machine.
+`kest_text(runtime, bytes, length, &frame[i])` copies the host's bytes onto the machine's heap and writes the two slots a piece of text takes. The copy is the point: the program may keep text as long as it likes, which no host can promise for its own buffer. Bytes that are not UTF-8, or contain a zero, are refused (`K0611`). Handing the machine a pointer of the host's own as text is refused at the call, because it did not come from this machine. So is a length in the second slot longer than the place the text is in, or below nought; a length shorter than the text is a piece of it.
 
 `kest_text_bytes(&slot, &length)` reads text back. It is not always a C string: text cut from the middle of other text is a place inside it and has no terminating zero, so a host passes the bytes and the length on together, or copies them.
 

@@ -742,6 +742,24 @@ size_t kest_ground_room(const KestGround *ground, const void *at) {
     return plot == NULL ? 0 : plot->stride;
 }
 
+bool kest_ground_spans(const KestGround *ground, const void *at,
+                       size_t length) {
+    if (ground == NULL) {
+        return false;
+    }
+    const Plot *plot = plot_holding(ground, at);
+    if (plot == NULL) {
+        return false;
+    }
+    uint32_t place = place_of(plot, at);
+    if ((plot->used[place / 64] & ((uint64_t)1 << (place % 64))) == 0) {
+        return false;
+    }
+    size_t into = (size_t)((const unsigned char *)at - plot->data) -
+                  (size_t)place * plot->stride;
+    return length <= plot->stride - into;
+}
+
 bool kest_ground_holds(const KestGround *ground, const void *at) {
     if (ground == NULL) {
         return false;
