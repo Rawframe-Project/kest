@@ -16,10 +16,10 @@
 #define KEST_VERSION_MINOR 1
 // x-release-please-end
 // x-release-please-start-patch
-#define KEST_VERSION_PATCH 5
+#define KEST_VERSION_PATCH 6
 // x-release-please-end
 // x-release-please-start-version
-#define KEST_VERSION_STRING "0.1.5"
+#define KEST_VERSION_STRING "0.1.6"
 // x-release-please-end
 
 // What shape the JSON every command writes is in, which is a different thing

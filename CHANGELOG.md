@@ -2,6 +2,13 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## 0.1.6 (2026-11-03)
+
+### Fixed
+
+- A function is not carried into its caller when the two frames, or the two stacks, would come to more than 65535 slots together; it is called instead, which is the same answer. The caller's frame was given the sum less 65536, and the verifier refused the body as a fault in the compiler: with `C` a constant of type `[[[bool; 25]; 25]; 40]` (25000 slots), a `fn copied` that copies its argument into a local and returns it, and `main` holding `C` and `copied(C)`, the program was refused under `kest` and `kest-debug`, by `kest emit` and by `kest build --release` with `K0408` ("`store.n` at 15 names slot 50000 of the 34464 there are"), and ran only under `KEST_PLAIN=1`. A program that never comes near 65535 slots compiles exactly as before. ([#200](https://github.com/Rawframe-Project/kest/pull/200))
+- The verifier ends its walk of a body whose operand stack reaches all 65535 slots it may be given. A place reached at that depth was taken for a place not reached yet and walked again: a chunk of `load.n 0, 65535` and a `loop` onto itself, with room for 65535 slots, was still being walked by `kest_module_prove` after a minute, where the same chunk one slot shallower is refused at once with `K0411`. It is now refused with `K0411` too. A body whose stack stays under 65535 slots is walked exactly as before. ([#197](https://github.com/Rawframe-Project/kest/pull/197))
+
 ## 0.1.5 (2026-11-03)
 
 ### Fixed
