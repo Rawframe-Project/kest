@@ -2,6 +2,13 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.1.5](https://github.com/Rawframe-Project/kest/compare/v0.1.4...v0.1.5) (2026-11-03)
+
+
+### Fixed
+
+* **vm:** count a struct with no fields as the one slot it is ([#194](https://github.com/Rawframe-Project/kest/issues/194)) ([95f551b](https://github.com/Rawframe-Project/kest/commit/95f551b9bb03aafea36371d65aff273a9c54162e)), closes [#193](https://github.com/Rawframe-Project/kest/issues/193)
+
 ## 0.1.4 (2026-11-02)
 
 ### Fixed
