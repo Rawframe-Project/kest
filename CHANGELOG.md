@@ -2,6 +2,22 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.3.0](https://github.com/Rawframe-Project/kest/compare/v0.2.0...v0.3.0) (2026-11-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **api:** kest_text answers false with K0630 for a length past 2,147,483,647 bytes, where it copied the bytes, or said K0605 at 4,294,967,295.
+* **api:** kest_gave_text answers -1 with K0632 for a frame whose text has an address that is not the machine's or a length running past the text there, where it copied those bytes out, and -1 with K0605 when there is no room to list the program's own text.
+
+### Fixed
+
+* **api:** answer a NULL name or path at the seven doors that read one ([#222](https://github.com/Rawframe-Project/kest/issues/222)) ([05f7e47](https://github.com/Rawframe-Project/kest/commit/05f7e47f964a4679c1cbb1165e2af26423321282)), closes [#220](https://github.com/Rawframe-Project/kest/issues/220)
+* **api:** hold the text kest_gave_text writes out to the text it is in ([#215](https://github.com/Rawframe-Project/kest/issues/215)) ([f065f37](https://github.com/Rawframe-Project/kest/commit/f065f370bc48ea7a99d95f0ed95be703ec062e8f)), closes [#213](https://github.com/Rawframe-Project/kest/issues/213)
+* **api:** refuse a file with no path handed to kest_build_from ([#221](https://github.com/Rawframe-Project/kest/issues/221)) ([056f5ac](https://github.com/Rawframe-Project/kest/commit/056f5ace1a052f63c28371d02441bc95da65127c)), closes [#218](https://github.com/Rawframe-Project/kest/issues/218)
+* **api:** refuse a NULL among the words kest_takes_text reads ([#219](https://github.com/Rawframe-Project/kest/issues/219)) ([4014c7e](https://github.com/Rawframe-Project/kest/commit/4014c7e0f890c084c60e805f0f0cb2e08f8a5d46)), closes [#217](https://github.com/Rawframe-Project/kest/issues/217)
+* **api:** refuse host text longer than len can count ([#216](https://github.com/Rawframe-Project/kest/issues/216)) ([d6b816a](https://github.com/Rawframe-Project/kest/commit/d6b816a24437d86e2d85e6378df44675b1388a72)), closes [#214](https://github.com/Rawframe-Project/kest/issues/214)
+
 ## 0.2.0 (2026-11-03)
 
 ### Changed
