@@ -2,6 +2,12 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## 0.1.5 (2026-11-03)
+
+### Fixed
+
+- A shape holding a struct with no fields is moved, read and handed over with that struct as the one slot it is laid out as. It was walked as no slots, so everything after it was found one slot early. A `struct After { e: Nothing; n: i64 }` pushed into an array and read back had `n` as 0 where it was 42, in both engines and compiled to C, and nothing was said; the same held behind a `[Nothing; 3]` or a `Nothing?`, and an enum behind one was read back as a tag with no case (`K0651`), though the program wrote it. A host asking `kest_case_of` about the tag behind one was told it had no cases, and a host handing over a value with text behind one, filled correctly, was refused with `K0636`. A value with no such struct in it is moved exactly as before. ([#194](https://github.com/Rawframe-Project/kest/pull/194))
+
 ## 0.1.4 (2026-11-02)
 
 ### Fixed
