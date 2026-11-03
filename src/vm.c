@@ -771,6 +771,12 @@ _Static_assert(offsetof(Frame, chunk) == offsetof(KestCall, chunk) &&
                    offsetof(Frame, said_at) == offsetof(KestCall, said_at),
                "a call keeps its pieces where the header says");
 
+// Where a piece of text the program was compiled with begins and ends.
+typedef struct {
+    uintptr_t start;
+    uintptr_t end;
+} TextRun;
+
 struct KestRuntime {
     // What this machine is made of, in an arena of its own: the stack, the
     // frames, the table of what the host provides, and this struct. It goes
@@ -810,6 +816,12 @@ struct KestRuntime {
     void **handed;
     uint32_t handed_count;
     uint32_t handed_room;
+    // Every piece of text the program was compiled with, in the order they
+    // start, each end raised to the furthest end before it. Written the first
+    // time a host hands one back, which most hosts never do.
+    TextRun *texts;
+    uint32_t text_count;
+    bool texts_read;
     // How much may be taken before a walk is worth doing. It is what was
     // still standing after the last walk, so a world that is bigger walks
     // less often for the same fraction of its size -- and never below a floor,
@@ -1418,6 +1430,88 @@ static bool ours(const KestRuntime *rt, const void *at) {
 static bool a_header(const KestRuntime *rt, const void *at) {
     return kest_ground_fronts(rt->ground, at, KEST_GROUND_ARRAY) ||
            kest_ground_fronts(rt->ground, at, KEST_GROUND_STORE);
+}
+
+static int by_start(const void *left, const void *right) {
+    uintptr_t a = ((const TextRun *)left)->start;
+    uintptr_t b = ((const TextRun *)right)->start;
+    return a < b ? -1 : a > b ? 1 : 0;
+}
+
+static bool read_texts(Vm *rt) {
+    const KestModule *module = rt->module;
+    size_t many = 0;
+    for (uint32_t i = 0; i < module->count; i++) {
+        const KestChunk *chunk = module->functions[i];
+        for (uint32_t c = 0; chunk != NULL && c + 1 < chunk->constant_count;
+             c++) {
+            if (chunk->constant_classes[c] == KEST_CONST_TEXT) {
+                many++;
+            }
+        }
+    }
+    TextRun *runs = NULL;
+    if (many > 0) {
+        runs = malloc(many * sizeof(TextRun));
+        if (runs == NULL) {
+            return false;
+        }
+    }
+    size_t count = 0;
+    for (uint32_t i = 0; i < module->count; i++) {
+        const KestChunk *chunk = module->functions[i];
+        for (uint32_t c = 0; chunk != NULL && c + 1 < chunk->constant_count;
+             c++) {
+            int64_t length = chunk->constants[c + 1].integer;
+            if (chunk->constant_classes[c] != KEST_CONST_TEXT || length < 0) {
+                continue;
+            }
+            uintptr_t start = (uintptr_t)chunk->constants[c].text;
+            runs[count].start = start;
+            runs[count].end = start + (uintptr_t)length;
+            count++;
+        }
+    }
+    if (count > 0) {
+        qsort(runs, count, sizeof(TextRun), by_start);
+    }
+    for (size_t i = 1; i < count; i++) {
+        if (runs[i].end < runs[i - 1].end) {
+            runs[i].end = runs[i - 1].end;
+        }
+    }
+    rt->texts = runs;
+    rt->text_count = (uint32_t)count;
+    rt->texts_read = true;
+    return true;
+}
+
+// Whether a run of bytes is inside one piece of text the program was compiled
+// with. Those are in the module's arena end to end with everything else the
+// compiler made, so the block an address is in says nothing about where the
+// text at it stops: the constant does. With the ends raised as they are, the
+// last run starting at or before the address reaches furthest of all of them,
+// and a run of bytes inside that reach is inside the one that reaches it.
+static bool compiled_spans(Vm *rt, const char *at, size_t length) {
+    if (!rt->texts_read && !read_texts(rt)) {
+        return false;
+    }
+    uintptr_t from = (uintptr_t)at;
+    uint32_t low = 0;
+    uint32_t high = rt->text_count;
+    while (low < high) {
+        uint32_t middle = low + (high - low) / 2;
+        if (rt->texts[middle].start <= from) {
+            low = middle + 1;
+        } else {
+            high = middle;
+        }
+    }
+    if (low == 0) {
+        return false;
+    }
+    uintptr_t end = rt->texts[low - 1].end;
+    return from <= end && length <= end - from;
 }
 
 static bool handed_over(Vm *rt, void *at) {
@@ -3233,6 +3327,36 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                "`kest_text` copies a host's bytes onto the "
                                "heap, and what it answers is what to hand "
                                "over");
+            return false;
+        }
+        // And how many bytes it is, which is the host's number and not the
+        // machine's: the address being the machine's says nothing about the
+        // length beside it, and the program reads as many bytes as that says.
+        // Held to the piece of text the address is in, which is what one the
+        // machine made -- or cut out of one -- never runs past: the bytes the
+        // place in the heap was asked for, or the text the program was
+        // compiled with. The machine makes no text in its own arena.
+        int64_t length = frame[*at + 1].integer;
+        if (length < 0 ||
+            (!kest_ground_spans(runtime->ground, frame[*at].text,
+                                (size_t)length) &&
+             !compiled_spans(runtime, frame[*at].text, (size_t)length))) {
+            if (saying->at_a_crossing) {
+                crossing_failed(runtime, saying, "K0652",
+                                "`%s` answers with text in slot %u with %lld "
+                                "in its length slot, which the text there "
+                                "cannot be",
+                                name, *at, (long long)length);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes text in slot %u with %lld in its "
+                               "length slot, which the text there cannot be",
+                               name, *at, (long long)length);
+            }
+            kest_diags_suggest(runtime->diags,
+                               "the two slots `kest_text` writes go together: "
+                               "the second is how many bytes the first is");
             return false;
         }
         // Two slots: what it is made of, and how many bytes that is.
@@ -7389,6 +7513,7 @@ bool kest_runtime_free(KestRuntime *runtime) {
     free(runtime->grey);
     free(runtime->held_by_host);
     free(runtime->handed);
+    free(runtime->texts);
     kest_arena_free(runtime->heap);
     // Released, because a build freed on another thread has to see everything
     // this machine did to the program before it counts itself off.
