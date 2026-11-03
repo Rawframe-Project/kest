@@ -713,6 +713,11 @@ static const KestType *named_at(const KestType *type, uint16_t want,
         return NULL;
     }
     if (type->tag == KEST_T_STRUCT) {
+        // One with nothing in it is one piece, as `describe` lays it out.
+        if (type->member_count == 0) {
+            *at = (uint16_t)(*at + 1);
+            return NULL;
+        }
         for (uint32_t i = 0; i < type->member_count; i++) {
             const KestType *found =
                 named_at(type->members[i].type, want, at, looking);
@@ -765,7 +770,9 @@ static uint16_t walked_slots(const KestType *type) {
         for (uint32_t i = 0; i < type->member_count; i++) {
             used = (uint16_t)(used + walked_slots(type->members[i].type));
         }
-        return used;
+        // One with nothing in it is one slot all the same, and what comes
+        // after it in a shape is after that slot.
+        return used == 0 ? 1 : used;
     }
     case KEST_T_FIXED:
         return (uint16_t)(type->count * walked_slots(type->element));
