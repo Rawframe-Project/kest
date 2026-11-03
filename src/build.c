@@ -2,6 +2,7 @@
 
 #include "verify.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -330,6 +331,19 @@ KestBuild *kest_build_from(const KestFile *files, uint32_t count,
         kest_diags_say_one(errors, form == KEST_FORM_JSON, "K0701",
                            "a build handed no files has no program to read");
         return NULL;
+    }
+    // And every one after it, which is matched by its path against each file
+    // the build looks for: a path of nothing was read through at the first
+    // import, whichever file was being looked for.
+    for (uint32_t i = 1; i < count; i++) {
+        if (files[i].path == NULL) {
+            char said[96];
+            snprintf(said, sizeof said,
+                     "file %u of the %u a build was handed has no path", i,
+                     count);
+            kest_diags_say_one(errors, form == KEST_FORM_JSON, "K0701", said);
+            return NULL;
+        }
     }
     char *paths[1] = {(char *)files[0].path};
     // A library a build was not told of is looked for on no disk: everything

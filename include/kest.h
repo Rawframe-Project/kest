@@ -1854,8 +1854,9 @@ uint64_t kest_build_work(const KestBuild *build);
 // `kest_build` is told where one is. Nothing is read from a disk or looked
 // for on one, so what is built is what was handed and nothing else, whatever
 // is beside the program where it is run. A file it asks for and was not
-// handed is refused the way one that is not on a disk is. What a release
-// binary starts with, carrying the program inside it.
+// handed is refused the way one that is not on a disk is, and a build handed
+// no files, or a file with no path, is NULL with `K0701` written to `errors`.
+// What a release binary starts with, carrying the program inside it.
 KestBuild *kest_build_from(const KestFile *files, uint32_t count,
                            const char *library, FILE *errors, KestForm form,
                            size_t room);
