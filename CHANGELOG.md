@@ -2,6 +2,15 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## 0.1.4 (2026-11-02)
+
+### Fixed
+
+- A function whose constant values come to more than 65536, counting every element of a table it reads, is refused with `K0502` and the number. Past that, an instruction naming one of them wrapped to the start of the function's values and read another, and nothing was said: a function reading two different tables of type `[[[bool; 32]; 32]; 32]` and then returning `7` answered 0, and a loop the compiler unrolls, two turns over one such table, counted 3 where the answer is 2. A function is not carried into one whose values it would take past the limit; it is called instead. A function within the limit compiles exactly as before. ([#190](https://github.com/Rawframe-Project/kest/pull/190))
+- A `[T; N]` copied through a generic function's signature, when a call settles what `T` is, is held to the 65535 bytes and slots a value may be, and one too big is refused with `K0327` at the call. Its size wrapped to nought: with `D` of 32768 bytes, pushing `two(D, D)` of `fn two<T>(a: T, b: T) -> [T; 2]` twice into a `[[T; 2]]` wrote past the end of the array's element, and a release `kest` aborted with `double free or corruption`. A literal laid out as a `[T; N]` too big is refused at the literal. A program whose `[T; N]`s fit is laid out exactly as before. ([#186](https://github.com/Rawframe-Project/kest/pull/186))
+- A function whose names hold more than 65535 slots at once, or which works on more than 65535 slots of values at once, is refused with `K0502` and the number, at the name or value that takes it past. It was refused with `K0505`, as a fault in the compiler, or with `K0408`, with a number that is not what it holds: `let both = [C, C]`, with `C` of 32768 slots, was said to leave -32768 slots of stack. A function within the limit compiles exactly as before. ([#187](https://github.com/Rawframe-Project/kest/pull/187))
+- A function refused for one of the compiler's limits (`K0502`) is told that and nothing else. What came after was said as the compiler's own fault (`K0505`), and the body was handed to the backend, which refused it too and stopped the build: a piece of text with 65537 holes was said as `K0502`, `K0505` and `K0639`, as though the build had run out of memory. A function within every limit compiles exactly as before. ([#192](https://github.com/Rawframe-Project/kest/pull/192))
+
 ## 0.1.3 (2026-11-02)
 
 ### Fixed
