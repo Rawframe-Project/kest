@@ -137,22 +137,24 @@ typedef union {
 } KestValue;
 
 // The bytes of a piece of text a slot holds, and how many there are. It is the
-// door to read one through: `text` above is what this language keeps text as
-// today -- a run of bytes ending in a nought, on the machine's heap -- and a
-// host that reads the member is a host written against that, where one that
-// asks is a host written against text. The two are the same bytes now and the
-// second is the one that survives this language carrying a length beside them.
+// door to read one through: `text` above is where the bytes start, on the
+// machine's heap, and a host that reads the member is a host written against
+// that, where one that asks is a host written against text, which is the
+// bytes and how many of them there are.
 //
 // `length` may be NULL for a host that only wants the bytes, and what it
 // answers costs nothing: how many bytes there are is the second slot of the
 // two a piece of text is, so this reads it rather than measuring. Nothing and
 // nought for a slot with no address in it.
 //
-// What it hands back is not always a C string. Text the machine made ends in a
-// nought and text cut out of the middle of some does not, because a cut is a
-// place inside what it was cut from and nothing is copied. A host that wants
-// one hands the bytes and the length to whatever it is calling, or copies
-// them.
+// What it hands back is not a C string. Text cut out of the middle of some
+// ends where the cut does, with no nought after it, because a cut is a place
+// inside what it was cut from and nothing is copied; and a nought is a
+// character text may hold anywhere, so a copy that stops at the first one
+// stops short without saying so. A host hands the bytes and the length on
+// together, and where only a C string will do -- a path, a name -- it refuses
+// text holding a nought, as the command line does for a file's name, before
+// copying it and ending the copy with one.
 //
 // Asked of a slot the program says is text: a slot carries no tag, so eight
 // bytes that are a number are not an address. `kest_frame_layout` is what says
