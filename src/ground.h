@@ -137,6 +137,14 @@ size_t kest_ground_room(const KestGround *ground, const void *at);
 // is at that address.
 bool kest_ground_holds(const KestGround *ground, const void *at);
 
+// Whether the address is the front of a place this handed out that holds
+// `kind`. A handle a host hands back is the front of its header or it is
+// nothing: an address inside a place, or the front of one holding text or
+// elements, is held by the question above and is not a header however its
+// first four bytes read.
+bool kest_ground_fronts(const KestGround *ground, const void *at,
+                        KestGroundKind kind);
+
 // Marks the thing an address is in, whether it is the start of it or a place
 // inside it, and says where that thing starts and what kind it is. Answers
 // whether it was not marked already: false for an address this did not hand

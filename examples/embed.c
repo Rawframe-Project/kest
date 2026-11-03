@@ -2259,6 +2259,81 @@ static bool built_from_files_handed_over(void) {
     return true;
 }
 
+// What a door answers with is read the way what a host hands in is, and a
+// handle is held to the same thing at both ends: it is exactly what the
+// machine gave. This door answers with a lend of this host's, with that lend
+// moved by a byte, or with a piece of text that spells an array's header.
+typedef struct {
+    KestValue lent;
+    int how;
+} Answering;
+
+static void gate_lent(KestValue *frame, KestRuntime *runtime, void *context) {
+    const Answering *answering = context;
+    frame[0] = answering->lent;
+    if (answering->how == 1) {
+        frame[0].object = (char *)answering->lent.object + 1;
+    } else if (answering->how == 2) {
+        const char *spelled = "RRAKAAAABBBBCC\001CDDDDDDDDEEEEEEEE";
+        KestValue forged[2];
+        if (kest_text(runtime, spelled, (uint32_t)strlen(spelled), forged)) {
+            frame[0].object = (void *)(uintptr_t)forged[0].text;
+        }
+    }
+}
+
+static bool answered_with_what_it_gave(void) {
+    static const char program[] = "module answering\n"
+                                  "\n"
+                                  "extern fn Gate.lent() -> [u8]\n"
+                                  "\n"
+                                  "fn count() -> i32 {\n"
+                                  "    return len(Gate.lent())\n"
+                                  "}\n";
+    const KestFile files[] = {
+        {"answering.kest", program, sizeof(program) - 1},
+    };
+    static Answering answering;
+    KestHost *host = kest_host_new();
+    KestBuild *build =
+        kest_build_from(files, 1, "lib/", stderr, KEST_FORM_TEXT, 0);
+    if (host == NULL || build == NULL ||
+        !kest_host_bind(host, "Gate.lent", gate_lent, &answering)) {
+        fprintf(stderr, "the answering program was not built\n");
+        return false;
+    }
+    KestRuntime *rt = kest_start(build, host, NULL);
+    unsigned char block[4] = {1, 2, 3, 4};
+    answering.lent =
+        rt == NULL ? (KestValue){0} : kest_borrow(rt, block, 4, "u8", 1);
+    int32_t count = rt == NULL ? -1 : kest_entry(rt, "count");
+    KestValue frame[2] = {{0}};
+    answering.how = 0;
+    if (answering.lent.object == NULL || count < 0 ||
+        !kest_call(rt, count, frame, 2) || frame[0].integer != 4) {
+        kest_report(rt, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "a door answering with a lend was not read\n");
+        return false;
+    }
+    for (answering.how = 1; answering.how <= 2; answering.how++) {
+        if (kest_call(rt, count, frame, 2) ||
+            !said_that(rt, "K0652",
+                       "answers with a handle in slot 0 that is an address "
+                       "of this machine's where no handle begins")) {
+            fprintf(stderr, "a door answering with %s was taken\n",
+                    answering.how == 1 ? "a lend moved by one"
+                                       : "a piece of text");
+            return false;
+        }
+    }
+    kest_runtime_free(rt);
+    kest_build_free(build);
+    kest_host_free(host);
+    printf("a door answering with a lend was read, and one answering with "
+           "the lend moved or with text was refused\n");
+    return true;
+}
+
 static bool held_across_a_reload(void) {
     KestHost *host = kest_host_new();
     KestHeld *held =
@@ -6817,6 +6892,54 @@ int main(int argc, char **argv) {
         printf("a lend of %zu bytes says it is %u long with room for %u\n",
                sizeof(words), many, room);
     }
+    // And memory of this machine's that is not a handle: the doors asked
+    // whose an address was and then read four bytes at it, and a piece of
+    // text is the machine's as much as a header is. This one spells an
+    // array's tag and then a length, a room, a block and a type, so it was
+    // an array 1094795585 long, a lend that `kest_lend_ends` ended, and a
+    // call in read the type it named and stopped this host. A handle moved
+    // by a byte was read the same way, from the middle of a header.
+    {
+        const char *spelled = "RRAKAAAABBBBCC\001CDDDDDDDDEEEEEEEE";
+        KestValue forged[2];
+        if (!kest_text(engine.runtime, spelled, (uint32_t)strlen(spelled),
+                       forged)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        KestValue lent_words = engine.frame[0];
+        KestValue not_handles[2] = {{0}, {0}};
+        not_handles[0].object = (void *)(uintptr_t)forged[0].text;
+        not_handles[1].object = (char *)lent_words.object + 1;
+        for (int i = 0; i < 2; i++) {
+            uint32_t room = 1;
+            if (kest_array_length(engine.runtime, not_handles[i], &room) != 0 ||
+                room != 0) {
+                fprintf(stderr, "%s was read as an array\n",
+                        i == 0 ? "a piece of text" : "a handle moved by one");
+                return 1;
+            }
+            if (kest_lend_ends(engine.runtime, not_handles[i]) ||
+                !said_that(engine.runtime, "K0637",
+                           "this is not a lend this machine gave out")) {
+                fprintf(stderr, "%s was ended as a lend\n",
+                        i == 0 ? "a piece of text" : "a handle moved by one");
+                return 1;
+            }
+            engine.frame[0] = not_handles[i];
+            if (kest_call(engine.runtime, engine.entry[HEAVIEST], engine.frame,
+                          sizeof(engine.frame) / sizeof(engine.frame[0])) ||
+                !said_that(engine.runtime, "K0636",
+                           "address of this machine's where no handle "
+                           "begins")) {
+                fprintf(stderr, "%s was taken as an array\n",
+                        i == 0 ? "a piece of text" : "a handle moved by one");
+                return 1;
+            }
+        }
+        engine.frame[0] = lent_words;
+        printf("and refused text and a moved handle where a handle goes\n");
+    }
     engine.frame[1].integer = 0;
     kest_text(engine.runtime, "kest", 4, &engine.frame[2]);
     if (engine.frame[0].object == NULL || engine.frame[2].text == NULL ||
@@ -8623,6 +8746,9 @@ int main(int argc, char **argv) {
         return 1;
     }
     if (!built_from_files_handed_over()) {
+        return 1;
+    }
+    if (!answered_with_what_it_gave()) {
         return 1;
     }
     if (!held_across_a_reload()) {
