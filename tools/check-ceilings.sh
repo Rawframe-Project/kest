@@ -969,6 +969,32 @@ else
     failed=1
 fi
 
+# And text a host hands over, which is held to what `len` counts before a byte
+# of it is read. A host handed 2,147,483,648 bytes over and the program's `len`
+# answered more than an `i32` holds. The command line reading its standard
+# input is a host handing text over, and a byte past the lowered ceiling is
+# where it is refused.
+cat > "$work/handed.kest" <<'KEST'
+extern fn Io.read() -> text
+
+fn main() -> i32 {
+    return len(Io.read())
+}
+KEST
+out=$(head -c 101 /dev/zero | tr '\0' a |
+      "$work/out/kest" run "$work/handed.kest" 2>&1)
+printf '%s' "$out" > "$scratch"/handed-said
+if grep -q K0630 "$scratch"/handed-said &&
+   grep -qF "handed over 101 bytes of text, and \`len\` counts no more than 100" \
+       "$scratch"/handed-said; then
+    reached=$((reached + 1))
+else
+    echo "ceilings: text a host handed over past what \`len\` counts was not" \
+         "refused with the number"
+    printf '%s\n' "$out" | sed 's/^/    /' | head -6
+    failed=1
+fi
+
 # And the one the same copy refuses while compiling: how many names a program
 # asks the host for. It is met with `emit` rather than `run`, because a program
 # refused for one of these has no machine to be run on, and the ceiling is

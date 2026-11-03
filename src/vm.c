@@ -1693,6 +1693,23 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
     // in: a host that handed a pointer of its own would be promising to keep
     // it as long as the program holds it, and a program holds a piece of text
     // for as long as it likes.
+    //
+    // As long as `len` can count, which is the most the program's own text is
+    // ever made (`K0630` where it would be), asked before a byte is read: the
+    // program counts text with an `i32`, and the room asked for a copy is a
+    // byte more, which at the top of a `uint32_t` was nought.
+    if (length > (uint32_t)MAX_COUNTED) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0630", nowhere,
+                       "this host handed over %u bytes of text, and `len` "
+                       "counts no more than %d",
+                       length, (int)MAX_COUNTED);
+        kest_diags_suggest(runtime->diags,
+                           "a host with more to say than that hands it over "
+                           "in pieces");
+        return false;
+    }
     // Text is UTF-8. A nought is a byte it may hold, and a byte
     // that begins no character is not: a host that hands over bytes of its own
     // is the boundary where that is worth one walk, because everything the
