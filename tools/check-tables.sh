@@ -1894,13 +1894,6 @@ SAME_SHAPE = {
         "a type is called -- and the third is written the same way beside "
         "them under the name `index_room`, which is the globals' own. Three "
         "tables, one rule for growing them",
-    frozenset(("is_numeric", "takes_what_follows")):
-        "two questions about what kind of expression something is, each a "
-        "list of the kinds it is true of: one is the kinds a number can be "
-        "written as and the other is the two that take whatever follows them "
-        "into an arm. Written the same because the question is the same "
-        "shape; they are not one question, and a walk that answered both "
-        "would be a walk asked what it was being asked",
     frozenset(("kest_heap_used", "kest_heap_taken")):
         "what a program is holding and what it has ever been handed, each the "
         "sum of the same question asked of the two places a running program's "

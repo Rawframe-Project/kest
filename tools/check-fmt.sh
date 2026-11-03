@@ -888,6 +888,37 @@ else
 fi
 rm -f "$lengthy" "$scratch"/fmt-lengthy-once "$scratch"/fmt-lengthy-twice
 
+# A block that gives a value, written where something follows it. Its value
+# takes as much as it can, as an `if` that gives a value does, so the brackets
+# are part of what was written: without them `(|| 41 + 1)()` is a block giving
+# `41 + 1()`. The formatter dropped them and answered nought, because what it
+# reads back is whether its output parses, is the one form and has the same
+# words, and a bracket that went missing is none of those. None of these
+# compile -- a block is handed to a function that takes one and is nothing
+# anywhere else -- and a file that does not compile yet is still one a
+# formatter must not change the meaning of.
+bracketed="$scratch"/fmt-bracketed.kest
+cat > "$bracketed" <<'EOF'
+fn f(c: i32) -> i32 {
+    let called = (|| 41 + 1)()
+    let scaled = (|| c + 1) * 2
+    let negated = -(|x| x)
+    let held = (|| c).n
+    return twice(|| c + 1)
+}
+EOF
+if ! "$kest" fmt "$bracketed" > "$scratch"/fmt-bracketed-once 2>&1; then
+    echo "a file with a block where something follows it was not written"
+    sed 's/^/    /' "$scratch"/fmt-bracketed-once | head -3
+    failed=1
+elif ! cmp -s "$bracketed" "$scratch"/fmt-bracketed-once; then
+    echo "a block that gives a value lost the brackets it is read by"
+    diff "$bracketed" "$scratch"/fmt-bracketed-once | sed 's/^/    /' |
+        head -6
+    failed=1
+fi
+rm -f "$bracketed" "$scratch"/fmt-bracketed-once
+
 # A file with nothing in it but a comment. Every other rule this holds is about
 # what a declaration looks like, and a file with no declarations has none of
 # them to be true of: a formatter that wrote nothing at all for one would parse
