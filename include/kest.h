@@ -590,12 +590,13 @@ typedef void (*KestNative)(KestValue *frame, KestRuntime *runtime,
 // would be undertaking to keep it as long as the program holds it, and a
 // program holds a piece of text for as long as it likes.
 //
-// Text ends at its first zero byte, so a zero inside `length` is a mistake
-// rather than a cut: it is `K0611` and what is written is empty. So is what is
-// written for no address to copy from, and for a heap with no room to copy
-// into, and this answers false for each of the three; which of them it was is
-// in the report. An empty piece of text is what a host asking for one gets,
-// and that answers true.
+// Text carries its length, so a zero inside `length` is a character like any
+// other and is copied with the rest. Bytes that are not UTF-8 are refused
+// with `K0611`, and so is a length with no address to copy from; a heap with
+// no room to copy into is `K0605`. For each of the three what is written is
+// empty and this answers false, and which of them it was is in the report. An
+// empty piece of text is what a host asking for one gets, and that answers
+// true.
 //
 // It writes two slots, because a piece of text is two: what it is made of, and
 // how many bytes that is. `into` is where the first goes.
