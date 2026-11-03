@@ -8968,6 +8968,24 @@ bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
                            "`kest_frame_slots` says how wide it has to be");
         return false;
     }
+    // And a word at each of them. A NULL among them is a list the host has
+    // not filled, and reading it as a word was reading through nothing. Asked
+    // of all of them before any is read, so a refusal writes nothing into the
+    // frame.
+    for (uint32_t i = 0; i < count; i++) {
+        if (words[i] == NULL) {
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0635",
+                           nowhere,
+                           "`%s` takes word %u and this host handed over no "
+                           "word there",
+                           name, i);
+            kest_diags_suggest(runtime->diags,
+                               "empty text is the empty word; every other "
+                               "argument is written the way a program writes "
+                               "it");
+            return false;
+        }
+    }
 
     uint32_t at = 0;
     for (uint32_t i = 0; i < count; i++) {
