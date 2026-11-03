@@ -132,6 +132,13 @@ void *kest_ground_grow(KestGround *ground, void *was, size_t had, size_t want);
 // it asked for is one that grows fewer times.
 size_t kest_ground_room(const KestGround *ground, const void *at);
 
+// Whether `length` bytes from the address are all inside what was asked for
+// of the one plain place this handed out that holds the address. A piece of
+// text a host hands back is an address and a length the host wrote, and only
+// the first of those is asked by whose the address is. The rest of the place
+// is not the text's: it is what a value there before left behind.
+bool kest_ground_spans(const KestGround *ground, const void *at, size_t length);
+
 // Whether this handed out the address, which a machine asks of a pointer it
 // was handed from outside: reading one it never gave out is reading whatever
 // is at that address.

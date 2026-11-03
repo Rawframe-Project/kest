@@ -2197,6 +2197,136 @@ static bool weighs_what_it_costs(Engine *engine) {
 // the world is the program's own after every step, a run of it is read where
 // it lies, a reload carries the world over and a refused one leaves it exactly
 // where it was, and a file edited under a build is noticed.
+// Text is two slots, an address and how many bytes are there, and a host
+// writes both. Whose the address is was asked and the length beside it was
+// not, so text of four bytes said to be 4096 was taken, and a program that
+// read it read past the place it was in. Held then to the place the text is
+// in, it still took text of four bytes said to be twelve in a place sixteen
+// wide, which is the bytes a value there before left behind, and text the
+// program was compiled with said to run on into whatever the compiler wrote
+// after it. Asked of a call in and of a door's answer, which are the two ways
+// text crosses into a program.
+static void gate_said(KestValue *frame, KestRuntime *runtime, void *context) {
+    const int64_t *said_long = context;
+    if (kest_text(runtime, "said", 4, frame)) {
+        frame[1].integer = *said_long;
+    }
+}
+
+static bool text_as_long_as_it_says(void) {
+    static const char program[] = "module saying\n"
+                                  "\n"
+                                  "extern fn Gate.said() -> text\n"
+                                  "\n"
+                                  "fn heard(t: text) -> i32 {\n"
+                                  "    return len(t)\n"
+                                  "}\n"
+                                  "\n"
+                                  "fn told() -> i32 {\n"
+                                  "    return len(Gate.said())\n"
+                                  "}\n"
+                                  "\n"
+                                  "fn word() -> text {\n"
+                                  "    return \"near\"\n"
+                                  "}\n";
+    const KestFile files[] = {
+        {"saying.kest", program, sizeof(program) - 1},
+    };
+    static int64_t said_long = 4;
+    KestHost *host = kest_host_new();
+    KestBuild *build =
+        kest_build_from(files, 1, "lib/", stderr, KEST_FORM_TEXT, 0);
+    if (host == NULL || build == NULL ||
+        !kest_host_bind(host, "Gate.said", gate_said, &said_long)) {
+        fprintf(stderr, "the saying program was not built\n");
+        return false;
+    }
+    KestRuntime *rt = kest_start(build, host, NULL);
+    int32_t hears = rt == NULL ? -1 : kest_entry(rt, "heard");
+    int32_t tells = rt == NULL ? -1 : kest_entry(rt, "told");
+    int32_t says = rt == NULL ? -1 : kest_entry(rt, "word");
+    KestValue frame[2] = {{0}, {0}};
+    // Cut short is a piece of what is there, which is what a program cutting
+    // text makes, and it is read as long as it says.
+    if (hears < 0 || tells < 0 || says < 0 ||
+        !kest_text(rt, "kept", 4, frame)) {
+        kest_report(rt, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    const char *kept = frame[0].text;
+    frame[1].integer = 3;
+    if (!kest_call(rt, hears, frame, 2) || frame[0].integer != 3) {
+        kest_report(rt, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "text cut short was not read\n");
+        return false;
+    }
+    const int64_t too_long[3] = {12, 4096, -1};
+    for (int i = 0; i < 3; i++) {
+        frame[0].text = kept;
+        frame[1].integer = too_long[i];
+        if (kest_call(rt, hears, frame, 2) ||
+            !said_that(rt, "K0636", "length slot, which the text there")) {
+            fprintf(stderr, "text of 4 bytes said to be %lld was taken\n",
+                    (long long)too_long[i]);
+            return false;
+        }
+    }
+    // The program's own text is as long as it was written, and handed back
+    // whole or cut it is read; said to be longer, it runs on into what the
+    // compiler wrote after it.
+    if (!kest_call(rt, says, frame, 2) || frame[1].integer != 4) {
+        kest_report(rt, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "the program's own text did not come back\n");
+        return false;
+    }
+    const char *spelled = frame[0].text;
+    const int64_t spelled_long[3] = {4, 2, 24};
+    for (int i = 0; i < 3; i++) {
+        frame[0].text = spelled;
+        frame[1].integer = spelled_long[i];
+        bool took = kest_call(rt, hears, frame, 2);
+        if (i < 2 && (!took || frame[0].integer != spelled_long[i])) {
+            kest_report(rt, stderr, KEST_FORM_TEXT);
+            fprintf(stderr,
+                    "the program's own text said to be %lld was not "
+                    "read\n",
+                    (long long)spelled_long[i]);
+            return false;
+        }
+        if (i == 2 &&
+            (took ||
+             !said_that(rt, "K0636", "length slot, which the text there"))) {
+            fprintf(stderr, "the program's own text of 4 bytes said to be 24 "
+                            "was taken\n");
+            return false;
+        }
+    }
+    if (!kest_call(rt, tells, frame, 2) || frame[0].integer != 4) {
+        kest_report(rt, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "a door answering with text was not read\n");
+        return false;
+    }
+    const int64_t answered_long[2] = {12, 4096};
+    for (int i = 0; i < 2; i++) {
+        said_long = answered_long[i];
+        if (kest_call(rt, tells, frame, 2) ||
+            !said_that(rt, "K0652", "length slot, which the text there")) {
+            fprintf(stderr,
+                    "a door answering with text of 4 bytes said to be "
+                    "%lld was taken\n",
+                    (long long)answered_long[i]);
+            return false;
+        }
+    }
+    said_long = 4;
+    kest_runtime_free(rt);
+    kest_build_free(build);
+    kest_host_free(host);
+    printf("text said to be longer than it is was refused going in and coming "
+           "back\n");
+    return true;
+}
+
 // A program built from files handed over rather than read, which is what a
 // release binary carries: the program, the modules it imports and the
 // library's, each where a build would have found it. What is handed is all
@@ -8752,6 +8882,9 @@ int main(int argc, char **argv) {
         return 1;
     }
     if (!held_across_a_reload()) {
+        return 1;
+    }
+    if (!text_as_long_as_it_says()) {
         return 1;
     }
     return 0;
