@@ -290,6 +290,57 @@ int main(int argc, char **argv) {
             memcpy(chunk->code + at, was, 5);
         }
     }
+    // A body given room for 65535 slots of stack that fills every one of
+    // them and then loops onto itself. The walk of the stack kept each
+    // place's depth in sixteen bits with 65535 meaning not reached yet, so
+    // the loop was a place never reached however often it was, and the walk
+    // went round it for ever. Reading 65535 slots nothing wrote is what it
+    // has to be refused for, as it is one slot shallower.
+    {
+        uint8_t load_n = 0;
+        uint8_t loop = 0;
+        uint8_t give = 0;
+        while (load_n < 255 && strcmp(kest_op_name(load_n), "load.n") != 0) {
+            load_n++;
+        }
+        while (loop < 255 && strcmp(kest_op_name(loop), "loop") != 0) {
+            loop++;
+        }
+        while (give < 255 && strcmp(kest_op_name(give), "return") != 0) {
+            give++;
+        }
+        KestChunk *chunk = NULL;
+        for (uint32_t f = 0; chunk == NULL && f < build->module.count; f++) {
+            if (strstr(build->module.functions[f]->name, "deeper") != NULL) {
+                chunk = build->module.functions[f];
+            }
+        }
+        if (chunk == NULL) {
+            printf("refuse: no `deeper` to fill to the brim\n");
+            missed++;
+        } else {
+            uint8_t brim[11] = {load_n, 0, 0, 0xFF, 0xFF, loop,
+                                3,      0, give, 1,   0};
+            uint8_t *code = chunk->code;
+            uint32_t code_count = chunk->code_count;
+            uint16_t slot_count = chunk->slot_count;
+            uint16_t stack_needed = chunk->stack_needed;
+            chunk->code = brim;
+            chunk->code_count = sizeof(brim);
+            chunk->slot_count = 0xFFFF;
+            chunk->stack_needed = 0xFFFF;
+            if (refused_with(build, "K0411")) {
+                refused++;
+            } else {
+                printf("refuse: a stack filled to its room was held\n");
+                missed++;
+            }
+            chunk->code = code;
+            chunk->code_count = code_count;
+            chunk->slot_count = slot_count;
+            chunk->stack_needed = stack_needed;
+        }
+    }
     if (!refused_with(build, NULL)) {
         printf("refuse: the program as it was compiled is not held once "
                "every case was put back\n");
