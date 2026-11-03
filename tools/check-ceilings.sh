@@ -2610,6 +2610,34 @@ int main(int argc, char **argv) {
         printf("%zu\n", sizeof(KestValue));
         return 0;
     }
+    /* The program's own text handed back in. The first time, the machine
+       writes down where each piece of it is, sixteen bytes a piece. */
+    if (strcmp(argv[1], "texts") == 0) {
+        static const char program[] = "module own\n\nfn word() -> text {\n"
+                                      "    return \"near\"\n}\n\n"
+                                      "fn heard(t: text) -> i32 {\n"
+                                      "    return len(t)\n}\n";
+        const KestFile files[] = {{"own.kest", program, sizeof(program) - 1}};
+        KestBuild *build =
+            kest_build_from(files, 1, NULL, NULL, KEST_FORM_TEXT, 0);
+        KestRuntime *runtime =
+            build == NULL ? NULL : kest_start(build, host, NULL);
+        KestValue frame[2] = {{0}, {0}};
+        if (runtime == NULL ||
+            !kest_call(runtime, kest_entry(runtime, "word"), frame, 2)) {
+            printf("not started\n");
+            return 0;
+        }
+        bool took = kest_call(runtime, kest_entry(runtime, "heard"), frame, 2);
+        printf("%s\n", took ? "taken" : "refused");
+        if (!took) {
+            kest_report(runtime, stdout, KEST_FORM_TEXT);
+        }
+        kest_runtime_free(runtime);
+        kest_build_free(build);
+        kest_host_free(host);
+        return 0;
+    }
     /* A world `save` walks a frame a cell, made deeper than the frames a
        machine has when its walk cannot say how many it needs. */
     bool deep = strcmp(argv[1], "deep") == 0 && argc > 2;
@@ -2646,6 +2674,39 @@ C
         if "${CC:-cc}" -O1 -Iinclude -o "$scratch"/own/held \
                "$scratch"/own/held.c "$build_dir"/libkest.a -lm \
                2>"$scratch"/own/made; then
+            # A machine with no room to write down where the program's own
+            # text is refused text of it handed back as though the host had
+            # written a length that ran past it. It is no room, and said so.
+            # How many pieces the program and what it reaches hold is not
+            # written here, so each count up to eight is refused in turn.
+            texts_short=no
+            texts=$("$scratch"/own/held texts 2>&1)
+            if [ "$texts" != taken ]; then
+                echo "ceilings: the program's own text handed back with room" \
+                     "said \`$texts\`"
+                failed=1
+            fi
+            for pieces in 1 2 3 4 5 6 7 8; do
+                for refuse_nth in 1 2 3 4; do
+                    texts=$(LD_PRELOAD="$scratch"/own/refuse.so \
+                            REFUSE_SIZE=$((pieces * 16)) \
+                            REFUSE_NTH=$refuse_nth \
+                            "$scratch"/own/held texts 2>&1)
+                    case "$texts" in
+                    *"which the text there cannot be"*)
+                        echo "ceilings: the program's own text handed back" \
+                             "with no room blamed its length: \`$texts\`"
+                        failed=1
+                        ;;
+                    *"K0605"*"no room to find which"*) texts_short=yes ;;
+                    esac
+                done
+            done
+            if [ $texts_short = no ]; then
+                echo "ceilings: no run refused the room to write down where" \
+                     "the program's own text is"
+                failed=1
+            fi
             files=$("$scratch"/own/held files)
             noticed=no
             for refuse_nth in 1 2 3 4 5 6 7 8; do

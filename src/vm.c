@@ -1492,10 +1492,8 @@ static bool read_texts(Vm *rt) {
 // text at it stops: the constant does. With the ends raised as they are, the
 // last run starting at or before the address reaches furthest of all of them,
 // and a run of bytes inside that reach is inside the one that reaches it.
-static bool compiled_spans(Vm *rt, const char *at, size_t length) {
-    if (!rt->texts_read && !read_texts(rt)) {
-        return false;
-    }
+// Asked once the list is written; before that it holds nothing.
+static bool compiled_spans(const Vm *rt, const char *at, size_t length) {
     uintptr_t from = (uintptr_t)at;
     uint32_t low = 0;
     uint32_t high = rt->text_count;
@@ -3337,10 +3335,33 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         // place in the heap was asked for, or the text the program was
         // compiled with. The machine makes no text in its own arena.
         int64_t length = frame[*at + 1].integer;
-        if (length < 0 ||
-            (!kest_ground_spans(runtime->ground, frame[*at].text,
-                                (size_t)length) &&
-             !compiled_spans(runtime, frame[*at].text, (size_t)length))) {
+        bool inside =
+            length >= 0 &&
+            kest_ground_spans(runtime->ground, frame[*at].text, (size_t)length);
+        // The list of the program's own text is written the first time one
+        // crosses back, and a machine with no room to write it has run out
+        // of memory, which is not the host's length being wrong.
+        if (!inside && length >= 0 && !runtime->texts_read &&
+            kest_arena_holds(runtime->module->arena, frame[*at].text) &&
+            !read_texts(runtime)) {
+            runtime->ran_out++;
+            if (saying->at_a_crossing) {
+                crossing_failed(runtime, saying, "K0605",
+                                "`%s` answers with text in slot %u from the "
+                                "program's own, and there is no room to find "
+                                "which",
+                                name, *at);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0605",
+                               nowhere,
+                               "`%s` takes text in slot %u from the program's "
+                               "own, and there is no room to find which",
+                               name, *at);
+            }
+            return false;
+        }
+        if (length < 0 || (!inside && !compiled_spans(runtime, frame[*at].text,
+                                                      (size_t)length))) {
             if (saying->at_a_crossing) {
                 crossing_failed(runtime, saying, "K0652",
                                 "`%s` answers with text in slot %u with %lld "
@@ -10482,7 +10503,7 @@ bool kest_value_same(KestRuntime *runtime, uint16_t layout,
     return values_equal(type, left, right);
 }
 
-// Two slots made out of bytes the arena handed back, which is the last thing
+// Two slots made out of bytes the heap handed back, which is the last thing
 // each of the four below does.
 static void text_lands(KestValue *into, const char *bytes, size_t length) {
     into[0].text = bytes;
