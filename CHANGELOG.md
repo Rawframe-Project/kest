@@ -2,21 +2,18 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
-## [0.3.0](https://github.com/Rawframe-Project/kest/compare/v0.2.0...v0.3.0) (2026-11-03)
+## 0.3.0 (2026-11-03)
 
+### Changed
 
-### ⚠ BREAKING CHANGES
-
-* **api:** kest_text answers false with K0630 for a length past 2,147,483,647 bytes, where it copied the bytes, or said K0605 at 4,294,967,295.
-* **api:** kest_gave_text answers -1 with K0632 for a frame whose text has an address that is not the machine's or a length running past the text there, where it copied those bytes out, and -1 with K0605 when there is no room to list the program's own text.
+- **Breaking:** `kest_gave_text` holds the text it writes out to the text it is in, as `kest_call` does for text handed in. It copied as many bytes as the frame's length slot said, from wherever its address slot pointed, asking only that the address was not NULL: a host that wrote 64 into the length of two bytes of text had 64 copied, and the checked build stopped on a read of poisoned memory; with -1 it read 4095 bytes. A frame whose text has an address that is not the machine's, or a length past the text there, now answers -1 with `K0632` ("slot N of the frame holds text with L in its length slot, which the text there cannot be, so it is not what `f` gave back"), and no room to list the program's own text answers -1 with `K0605`. What a call left in the frame is written out exactly as before. ([#215](https://github.com/Rawframe-Project/kest/pull/215))
+- **Breaking:** `kest_text` refuses a length past 2,147,483,647 bytes, the most `len` counts, with `K0630` and the number, before a byte is read. A host that handed 2,147,483,648 bytes over had them taken, and the program's `len` answered 2147483648, which no `i32` holds; at 4,294,967,295 bytes the room asked for the copy wrapped to nought and the refusal said `K0605` "out of memory". Text of 2,147,483,647 bytes or fewer is taken exactly as before. ([#216](https://github.com/Rawframe-Project/kest/pull/216))
 
 ### Fixed
 
-* **api:** answer a NULL name or path at the seven doors that read one ([#222](https://github.com/Rawframe-Project/kest/issues/222)) ([05f7e47](https://github.com/Rawframe-Project/kest/commit/05f7e47f964a4679c1cbb1165e2af26423321282)), closes [#220](https://github.com/Rawframe-Project/kest/issues/220)
-* **api:** hold the text kest_gave_text writes out to the text it is in ([#215](https://github.com/Rawframe-Project/kest/issues/215)) ([f065f37](https://github.com/Rawframe-Project/kest/commit/f065f370bc48ea7a99d95f0ed95be703ec062e8f)), closes [#213](https://github.com/Rawframe-Project/kest/issues/213)
-* **api:** refuse a file with no path handed to kest_build_from ([#221](https://github.com/Rawframe-Project/kest/issues/221)) ([056f5ac](https://github.com/Rawframe-Project/kest/commit/056f5ace1a052f63c28371d02441bc95da65127c)), closes [#218](https://github.com/Rawframe-Project/kest/issues/218)
-* **api:** refuse a NULL among the words kest_takes_text reads ([#219](https://github.com/Rawframe-Project/kest/issues/219)) ([4014c7e](https://github.com/Rawframe-Project/kest/commit/4014c7e0f890c084c60e805f0f0cb2e08f8a5d46)), closes [#217](https://github.com/Rawframe-Project/kest/issues/217)
-* **api:** refuse host text longer than len can count ([#216](https://github.com/Rawframe-Project/kest/issues/216)) ([d6b816a](https://github.com/Rawframe-Project/kest/commit/d6b816a24437d86e2d85e6378df44675b1388a72)), closes [#214](https://github.com/Rawframe-Project/kest/issues/214)
+- `kest_takes_text` refuses a NULL among its words with `K0635` naming the word, before any word is read and with nothing written into the frame. A list with a hole in it crashed the host: in the reader for a number, in `strlen` for text. ([#219](https://github.com/Rawframe-Project/kest/pull/219))
+- `kest_build_from` refuses a file with no path, the first or any after it, with `K0701` ("file N of the M a build was handed has no path", counted from nought) and answers NULL. A missing path after the first crashed the host at the first import, and one on the first file was said as a build handed no files. ([#221](https://github.com/Rawframe-Project/kest/pull/221))
+- Seven doors answer a NULL name or path instead of crashing the host. `kest_entry` and `kest_entry_of` answer -1. `kest_borrow` with no `element` answers a lend with nothing in it and `K0610`. `kest_build_layout` answers nought. `kest_build`, `kest_build_within` and `kest_held_new` with no `path` answer NULL with `K0701` ("a build handed no path has no program to read") written to `errors`. ([#222](https://github.com/Rawframe-Project/kest/pull/222))
 
 ## 0.2.0 (2026-11-03)
 
