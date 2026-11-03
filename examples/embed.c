@@ -2364,6 +2364,64 @@ static bool text_as_long_as_it_says(void) {
     return true;
 }
 
+// The two ways a rewind is refused that are about the mark rather than about
+// the machine running: a mark it never handed out, or one already used, and a
+// heap with something lent on it. Each is K0613 in its own words, and a host
+// that ends its lend and asks again is put back. Neither was asked by any
+// host here, and a refusal nobody makes happen is one that can stop being one.
+static bool rewound_only_to_its_marks(void) {
+    static const char program[] = "module rewinding\n"
+                                  "\n"
+                                  "struct Row {\n"
+                                  "    n: i32\n"
+                                  "}\n"
+                                  "\n"
+                                  "fn main() -> i32 {\n"
+                                  "    let rows: [Row] = array()\n"
+                                  "    return len(rows)\n"
+                                  "}\n";
+    const KestFile files[] = {{"rewinding.kest", program, sizeof(program) - 1}};
+    KestBuild *build =
+        kest_build_from(files, 1, "lib/", stderr, KEST_FORM_TEXT, 0);
+    KestRuntime *rt = build == NULL ? NULL : kest_start(build, NULL, NULL);
+    if (rt == NULL) {
+        fprintf(stderr, "the rewinding program was not built\n");
+        return false;
+    }
+    if (kest_scratch_rewind(rt, 999) ||
+        !said_that(rt, "K0613", "has no mark 999 to put the heap back to")) {
+        fprintf(stderr, "a mark never handed out was put back to\n");
+        return false;
+    }
+    uint32_t mark = kest_scratch_mark(rt);
+    int32_t row[1] = {7};
+    KestValue lent = kest_borrow(rt, row, 1, "Row", sizeof row);
+    if (mark == 0 || lent.object == NULL) {
+        kest_report(rt, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    if (kest_scratch_rewind(rt, mark) ||
+        !said_that(rt, "K0613", "cannot be put back while 1 thing is lent")) {
+        fprintf(stderr, "the heap was put back with a lend on it\n");
+        return false;
+    }
+    if (!kest_lend_ends(rt, lent) || !kest_scratch_rewind(rt, mark)) {
+        kest_report(rt, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "the heap was not put back once the lend ended\n");
+        return false;
+    }
+    if (kest_scratch_rewind(rt, mark) ||
+        !said_that(rt, "K0613", "has no mark")) {
+        fprintf(stderr, "a mark was put back to twice\n");
+        return false;
+    }
+    kest_runtime_free(rt);
+    kest_build_free(build);
+    printf("a rewind to a mark never given, one used, or over a lend was "
+           "refused\n");
+    return true;
+}
+
 // No name where a door takes one. Each of these read the name through
 // nothing and stopped the host; each now answers what it answers for a name
 // that is not there, and the two that make a build say why where they write.
@@ -9049,6 +9107,9 @@ int main(int argc, char **argv) {
         return 1;
     }
     if (!named_nothing()) {
+        return 1;
+    }
+    if (!rewound_only_to_its_marks()) {
         return 1;
     }
     if (!answered_with_what_it_gave()) {
