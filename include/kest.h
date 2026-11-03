@@ -653,7 +653,7 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
 // into the machine's own memory, and one sitting in the host's block is one
 // the machine did not put there, cannot vouch for, and cannot take back when
 // the lend ends. Hand those over a frame instead, where `kest_text` makes the
-// text the machine's.
+// text the machine's. An `element` of NULL names no type and is `K0610`.
 KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                       const char *element, size_t size);
 
@@ -910,7 +910,8 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
 // The name is the one the file writes. A file that says `module game.world`
 // registers its `spawn` as `world.spawn`, and this finds it either way.
 //
-// A name nothing knows is -1 and nothing else. That is the one answer at this
+// A name nothing knows is -1 and nothing else, and so is no name at all, a
+// NULL, for this and for `kest_entry_of`. That is the one answer at this
 // boundary that means no and says why nowhere, and it is the one where a host
 // asked a question rather than made a mistake: whether a program defines
 // something is what this is for. `kest_host_bind` is the other, and for a
@@ -1808,7 +1809,8 @@ bool kest_host_opened(const KestHost *host, const char *name);
 // Compiles a file and everything it imports. `library` is where `std` lives --
 // a directory, with a separator after it or without, the way `KEST_LIB` is
 // read -- or NULL for `lib/` beside the program. Returns NULL when it did not
-// compile.
+// compile, and for a `path` of NULL, which is `K0701` written to `errors`;
+// `kest_build_within` and `kest_held_new` answer the same.
 //
 // What it could not compile goes to `errors` in the form asked for, or nowhere
 // when that is NULL. A program that compiled and had something said about it --
@@ -2012,7 +2014,8 @@ const KestLayout *kest_extern_gives(const KestBuild *build, uint32_t at);
 // What the program lays a type out as where memory is shared, by the name a
 // host would lend it under. Answers how many types of that name the program
 // has, and fills `layout` when that is one: nought is a name it does not hold
-// in an array, which is exactly the set that cannot be lent, and more than one
+// in an array, or no name at all, which is exactly the set that cannot be
+// lent, and more than one
 // is a name that needs the module written in front of it, `world.Event`.
 //
 // This is what `kest_borrow` will compare a host's own `sizeof` against, asked
