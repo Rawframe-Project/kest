@@ -227,10 +227,14 @@ static const char *names_only_what_is_there(const KestModule *module,
 // asking any of that, so this is what makes an operand an operand. What cannot
 // be reached is not walked, because nothing runs it.
 static const char *stack_on_every_path(const KestModule *module,
-                                       const KestChunk *chunk, uint16_t *depth,
+                                       const KestChunk *chunk, uint32_t *depth,
                                        uint32_t *work, char *said,
                                        size_t room) {
-    const uint16_t unknown = UINT16_MAX;
+    // Wider than any depth: a body may be given room for 65535 slots and
+    // reach every one of them, and a place reached at the depth that meant
+    // not yet reached was walked again every time a way arrived at it, with
+    // nothing held against the depth it arrived with.
+    const uint32_t unknown = UINT32_MAX;
     for (uint32_t at = 0; at < chunk->code_count; at++) {
         depth[at] = unknown;
     }
@@ -294,7 +298,7 @@ static const char *stack_on_every_path(const KestModule *module,
             }
             if (lands != UINT32_MAX) {
                 if (depth[lands] == unknown) {
-                    depth[lands] = (uint16_t)after;
+                    depth[lands] = after;
                     work[waiting++] = lands;
                 } else if (depth[lands] != after) {
                     snprintf(said, room,
@@ -322,7 +326,7 @@ static const char *stack_on_every_path(const KestModule *module,
                 }
                 break;
             }
-            depth[next] = (uint16_t)after;
+            depth[next] = after;
             at = next;
         }
     }
@@ -2785,7 +2789,7 @@ static void tell_asked(Verifying *v, Asked *asked, const Kind *now,
 }
 
 static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
-                                       const uint16_t *depth, Kind *laid,
+                                       const uint32_t *depth, Kind *laid,
                                        uint32_t laid_room, KestArena *scratch,
                                        char *said, size_t room, Asked *asked) {
     const KestModule *module = v->module;
@@ -3000,11 +3004,11 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
     }
     KestArena *scratch = kest_arena_new_under(arena);
     uint8_t *starts = NULL;
-    uint16_t *depth = NULL;
+    uint32_t *depth = NULL;
     uint32_t *work = NULL;
     if (scratch != NULL) {
         starts = kest_arena_alloc(scratch, ((size_t)largest + 8) / 8, 1);
-        depth = KEST_ARENA_ARRAY(scratch, uint16_t, largest);
+        depth = KEST_ARENA_ARRAY(scratch, uint32_t, largest);
         work = KEST_ARENA_ARRAY(scratch, uint32_t, largest);
         if (depth == NULL || work == NULL) {
             starts = NULL;
@@ -3230,7 +3234,7 @@ KestProved kest_module_proved(const KestModule *module, uint32_t which,
     }
     uint32_t count = chunk->code_count;
     uint8_t *starts = kest_arena_alloc(scratch, ((size_t)count + 8) / 8, 1);
-    uint16_t *depth = KEST_ARENA_ARRAY(scratch, uint16_t, count);
+    uint32_t *depth = KEST_ARENA_ARRAY(scratch, uint32_t, count);
     uint32_t *work = KEST_ARENA_ARRAY(scratch, uint32_t, count);
     Kind *laid = KEST_ARENA_ARRAY(scratch, Kind, widest);
     const KestType **enums = KEST_ARENA_ARRAY(scratch, const KestType *, 256);
