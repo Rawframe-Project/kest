@@ -2,6 +2,13 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.1.7](https://github.com/Rawframe-Project/kest/compare/v0.1.6...v0.1.7) (2026-11-03)
+
+
+### Fixed
+
+* **api:** read a handle only at the front of a header ([#202](https://github.com/Rawframe-Project/kest/issues/202)) ([b8e767a](https://github.com/Rawframe-Project/kest/commit/b8e767a344fd452303850c546f0407fe9df5d59a)), closes [#201](https://github.com/Rawframe-Project/kest/issues/201)
+
 ## 0.1.6 (2026-11-03)
 
 ### Fixed
