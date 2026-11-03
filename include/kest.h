@@ -1111,7 +1111,9 @@ bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
 // This says what is in the frame rather than putting something there: a host
 // calls with `kest_call` and then asks. A frame nothing has been called with
 // is `K0632` and minus one, rather than a read of whatever the frame was made
-// out of.
+// out of. So is one whose text was written over after the call: an address
+// that is not this machine's, or a length running past the text there, is
+// refused before a byte of it is read, as `kest_call` refuses them.
 //
 // Nought less than nothing -- minus one -- for a function that gives nothing,
 // and for one that gives something the language has no text of its own for: a

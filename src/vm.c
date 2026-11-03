@@ -1512,6 +1512,42 @@ static bool compiled_spans(const Vm *rt, const char *at, size_t length) {
     return from <= end && length <= end - from;
 }
 
+// What a piece of text a host holds is, asked by every door that reads one
+// out of a host's frame: an address and a length, both the host's to write.
+// Whole is an address in this machine's heap or in the program's own text and
+// a length that stays inside the text there.
+typedef enum {
+    TEXT_WHOLE,
+    TEXT_NOT_OURS,
+    // The list of the program's own text is written the first time one
+    // crosses back, and a machine with no room to write it has run out of
+    // memory, which is not the host's length being wrong.
+    TEXT_NO_ROOM,
+    TEXT_TOO_LONG,
+} TextHeld;
+
+static TextHeld text_held(Vm *rt, const char *at, int64_t length) {
+    bool compiled = kest_arena_holds(rt->module->arena, at);
+    if (!ours(rt, at) && !compiled) {
+        return TEXT_NOT_OURS;
+    }
+    // Held to the piece of text the address is in, which is what one the
+    // machine made -- or cut out of one -- never runs past: the bytes the place
+    // in the heap was asked for, or the text the program was compiled with.
+    // The machine makes no text in its own arena.
+    bool inside =
+        length >= 0 && kest_ground_spans(rt->ground, at, (size_t)length);
+    if (!inside && length >= 0 && compiled && !rt->texts_read &&
+        !read_texts(rt)) {
+        rt->ran_out++;
+        return TEXT_NO_ROOM;
+    }
+    if (length < 0 || (!inside && !compiled_spans(rt, at, (size_t)length))) {
+        return TEXT_TOO_LONG;
+    }
+    return TEXT_WHOLE;
+}
+
 static bool handed_over(Vm *rt, void *at) {
     if (at == NULL) {
         return true;
@@ -3306,8 +3342,14 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                "an empty piece of it is text as well");
             return false;
         }
-        if (!ours(runtime, frame[*at].text) &&
-            !kest_arena_holds(runtime->module->arena, frame[*at].text)) {
+        // And how many bytes it is, which is the host's number and not the
+        // machine's: the address being the machine's says nothing about the
+        // length beside it, and the program reads as many bytes as that says.
+        int64_t length = frame[*at + 1].integer;
+        switch (text_held(runtime, frame[*at].text, length)) {
+        case TEXT_WHOLE:
+            break;
+        case TEXT_NOT_OURS:
             if (saying->at_a_crossing) {
                 crossing_failed(
                     runtime, saying, "K0652",
@@ -3326,25 +3368,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                "heap, and what it answers is what to hand "
                                "over");
             return false;
-        }
-        // And how many bytes it is, which is the host's number and not the
-        // machine's: the address being the machine's says nothing about the
-        // length beside it, and the program reads as many bytes as that says.
-        // Held to the piece of text the address is in, which is what one the
-        // machine made -- or cut out of one -- never runs past: the bytes the
-        // place in the heap was asked for, or the text the program was
-        // compiled with. The machine makes no text in its own arena.
-        int64_t length = frame[*at + 1].integer;
-        bool inside =
-            length >= 0 &&
-            kest_ground_spans(runtime->ground, frame[*at].text, (size_t)length);
-        // The list of the program's own text is written the first time one
-        // crosses back, and a machine with no room to write it has run out
-        // of memory, which is not the host's length being wrong.
-        if (!inside && length >= 0 && !runtime->texts_read &&
-            kest_arena_holds(runtime->module->arena, frame[*at].text) &&
-            !read_texts(runtime)) {
-            runtime->ran_out++;
+        case TEXT_NO_ROOM:
             if (saying->at_a_crossing) {
                 crossing_failed(runtime, saying, "K0605",
                                 "`%s` answers with text in slot %u from the "
@@ -3359,9 +3383,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                name, *at);
             }
             return false;
-        }
-        if (length < 0 || (!inside && !compiled_spans(runtime, frame[*at].text,
-                                                      (size_t)length))) {
+        case TEXT_TOO_LONG:
             if (saying->at_a_crossing) {
                 crossing_failed(runtime, saying, "K0652",
                                 "`%s` answers with text in slot %u with %lld "
@@ -8560,6 +8582,77 @@ static bool missing_text(const KestType *type, const KestValue *slots) {
     return false;
 }
 
+// The first piece of text in a value that is not whole, and the slot of the
+// frame it starts at, over what `missing_text` walks: the text this writes out
+// is what it reads, and the frame is the host's between the call and this.
+static TextHeld texts_held(Vm *rt, const KestType *type, const KestValue *slots,
+                           uint32_t at, uint32_t *slot) {
+    switch (type->tag) {
+    case KEST_T_TEXT: {
+        TextHeld held = text_held(rt, slots[0].text, slots[1].integer);
+        *slot = at;
+        return held;
+    }
+    case KEST_T_ENUM: {
+        uint32_t which = (uint32_t)slots[0].integer;
+        if (which >= type->case_count) {
+            return TEXT_WHOLE;
+        }
+        const KestVariantType *variant = &type->cases[which];
+        for (uint32_t p = 0; p < variant->payload_count; p++) {
+            TextHeld held =
+                texts_held(rt, variant->payload[p], slots + variant->offsets[p],
+                           at + variant->offsets[p], slot);
+            if (held != TEXT_WHOLE) {
+                return held;
+            }
+        }
+        return TEXT_WHOLE;
+    }
+    case KEST_T_STRUCT:
+        for (uint32_t m = 0; m < type->member_count; m++) {
+            TextHeld held = texts_held(rt, type->members[m].type,
+                                       slots + type->members[m].offset,
+                                       at + type->members[m].offset, slot);
+            if (held != TEXT_WHOLE) {
+                return held;
+            }
+        }
+        return TEXT_WHOLE;
+    case KEST_T_FIXED: {
+        uint16_t stride = type->element->slots == 0 ? 1 : type->element->slots;
+        for (uint32_t i = 0; i < type->count; i++) {
+            TextHeld held =
+                texts_held(rt, type->element, slots + (size_t)i * stride,
+                           at + i * stride, slot);
+            if (held != TEXT_WHOLE) {
+                return held;
+            }
+        }
+        return TEXT_WHOLE;
+    }
+    case KEST_T_OPTIONAL:
+        if (slots[type->element->slots].integer == 0) {
+            return TEXT_WHOLE;
+        }
+        return texts_held(rt, type->element, slots, at, slot);
+    case KEST_T_BOOL:
+    case KEST_T_INT:
+    case KEST_T_FLOAT:
+    case KEST_T_FLAGS:
+    case KEST_T_ERROR:
+    case KEST_T_VOID:
+    case KEST_T_ARRAY:
+    case KEST_T_REF:
+    case KEST_T_STORE:
+    case KEST_T_FN:
+    case KEST_T_PARAM:
+    case KEST_T_MODULE:
+        return TEXT_WHOLE;
+    }
+    return TEXT_WHOLE;
+}
+
 int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
                        const KestValue *frame, char *out, size_t room) {
     const KestChunk *chunk = frame_of(runtime, entry, NULL, 0);
@@ -8615,6 +8708,49 @@ int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
                            "call it with `kest_call` first; this says what is "
                            "there rather than putting something there");
         return -1;
+    }
+
+    // And the text in it, which is an address and a length the host may have
+    // written over since the call: copied out as it stood, a length past the
+    // text was a read of whatever came after it.
+    uint32_t slot = 0;
+    switch (texts_held(runtime, type, frame, 0, &slot)) {
+    case TEXT_WHOLE:
+        break;
+    case TEXT_NOT_OURS: {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0632", nowhere,
+                       "slot %u of the frame holds text that did not come "
+                       "from this machine, so it is not what `%s` gave back",
+                       slot, called);
+        kest_diags_suggest(runtime->diags,
+                           "this says what a call left in the frame; ask "
+                           "before writing anything else into it");
+        return -1;
+    }
+    case TEXT_NO_ROOM: {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0605", nowhere,
+                       "slot %u of the frame holds text from the program's "
+                       "own, and there is no room to find which",
+                       slot);
+        return -1;
+    }
+    case TEXT_TOO_LONG: {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0632", nowhere,
+                       "slot %u of the frame holds text with %lld in its "
+                       "length slot, which the text there cannot be, so it is "
+                       "not what `%s` gave back",
+                       slot, (long long)frame[slot + 1].integer, called);
+        kest_diags_suggest(runtime->diags,
+                           "this says what a call left in the frame; ask "
+                           "before writing anything else into it");
+        return -1;
+    }
     }
 
     // Text on its own is what it holds rather than the source that spells it,
