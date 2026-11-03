@@ -1408,6 +1408,18 @@ static bool ours(const KestRuntime *rt, const void *at) {
     return kest_arena_holds(rt->heap, at) || kest_ground_holds(rt->ground, at);
 }
 
+// Whether a host's handle is the front of a header this machine made, which is
+// the narrower question a door asks before it reads one. Every array and store
+// header is a place of its own in the ground and starts it, so an address
+// inside one, a piece of text and the elements of an array are each memory of
+// this machine's and none of them a handle: read as one, a piece of text that
+// begins with the four bytes of an array's tag was an array whose length, room
+// and block were whatever the text said next.
+static bool a_header(const KestRuntime *rt, const void *at) {
+    return kest_ground_fronts(rt->ground, at, KEST_GROUND_ARRAY) ||
+           kest_ground_fronts(rt->ground, at, KEST_GROUND_STORE);
+}
+
 static bool handed_over(Vm *rt, void *at) {
     if (at == NULL) {
         return true;
@@ -3271,6 +3283,30 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                "a handle is what `kest_call` or `kest_borrow` "
                                "gave back, and it belongs to the machine that "
                                "gave it");
+            return false;
+        }
+        // And the front of a header rather than anywhere else in this
+        // machine's memory: what is read next is the four bytes at the
+        // address, and a piece of text can spell them.
+        if (!a_header(runtime, frame[*at].object)) {
+            if (saying->at_a_crossing) {
+                crossing_failed(
+                    runtime, saying, "K0652",
+                    "`%s` answers with a handle in slot %u that is an address "
+                    "of this machine's where no handle begins",
+                    name, *at);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes a handle in slot %u and this is an "
+                               "address of this machine's where no handle "
+                               "begins",
+                               name, *at);
+            }
+            kest_diags_suggest(runtime->diags,
+                               "a handle is handed back exactly as `kest_call` "
+                               "or `kest_borrow` gave it, and text or an "
+                               "address moved from one is not one");
             return false;
         }
         // And which of the two kinds of handle it is. Both headers begin with
@@ -8702,11 +8738,12 @@ uint32_t kest_array_length(const KestRuntime *runtime, KestValue array,
         *room = 0;
     }
     // A handle is a pointer and nothing in it says whose: the same question
-    // every other door asks of one, which is whether this machine's heap
-    // handed it out. A number a host wrote into a slot is not an array however
-    // much it looks like one.
+    // a call in asks of one, which is whether it is the front of a header
+    // this machine's heap handed out. A number a host wrote into a slot, or a
+    // piece of the machine's own text, is not an array however much it looks
+    // like one.
     if (runtime == NULL || array.object == NULL ||
-        !ours(runtime, array.object)) {
+        !a_header(runtime, array.object)) {
         return 0;
     }
     const Array *held = array.object;
@@ -8777,7 +8814,7 @@ bool kest_lend_ends(KestRuntime *runtime, KestValue lent) {
     kest_diags_in(runtime->diags, NULL);
     // The same question a call in asks, for the same reason: what is at an
     // address the machine never handed out is whatever is there.
-    if (!ours(runtime, lent.object) ||
+    if (!kest_ground_fronts(runtime->ground, lent.object, KEST_GROUND_ARRAY) ||
         !KEST_HANDLE_IS(lent.object, KEST_IS_ARRAY)) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0637", nowhere,
                        "this is not a lend this machine gave out");

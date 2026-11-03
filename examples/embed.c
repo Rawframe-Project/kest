@@ -6817,6 +6817,54 @@ int main(int argc, char **argv) {
         printf("a lend of %zu bytes says it is %u long with room for %u\n",
                sizeof(words), many, room);
     }
+    // And memory of this machine's that is not a handle: the doors asked
+    // whose an address was and then read four bytes at it, and a piece of
+    // text is the machine's as much as a header is. This one spells an
+    // array's tag and then a length, a room, a block and a type, so it was
+    // an array 1094795585 long, a lend that `kest_lend_ends` ended, and a
+    // call in read the type it named and stopped this host. A handle moved
+    // by a byte was read the same way, from the middle of a header.
+    {
+        const char *spelled = "RRAKAAAABBBBCC\001CDDDDDDDDEEEEEEEE";
+        KestValue forged[2];
+        if (!kest_text(engine.runtime, spelled, (uint32_t)strlen(spelled),
+                       forged)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        KestValue lent_words = engine.frame[0];
+        KestValue not_handles[2] = {{0}, {0}};
+        not_handles[0].object = (void *)(uintptr_t)forged[0].text;
+        not_handles[1].object = (char *)lent_words.object + 1;
+        for (int i = 0; i < 2; i++) {
+            uint32_t room = 1;
+            if (kest_array_length(engine.runtime, not_handles[i], &room) != 0 ||
+                room != 0) {
+                fprintf(stderr, "%s was read as an array\n",
+                        i == 0 ? "a piece of text" : "a handle moved by one");
+                return 1;
+            }
+            if (kest_lend_ends(engine.runtime, not_handles[i]) ||
+                !said_that(engine.runtime, "K0637",
+                           "this is not a lend this machine gave out")) {
+                fprintf(stderr, "%s was ended as a lend\n",
+                        i == 0 ? "a piece of text" : "a handle moved by one");
+                return 1;
+            }
+            engine.frame[0] = not_handles[i];
+            if (kest_call(engine.runtime, engine.entry[HEAVIEST], engine.frame,
+                          sizeof(engine.frame) / sizeof(engine.frame[0])) ||
+                !said_that(engine.runtime, "K0636",
+                           "address of this machine's where no handle "
+                           "begins")) {
+                fprintf(stderr, "%s was taken as an array\n",
+                        i == 0 ? "a piece of text" : "a handle moved by one");
+                return 1;
+            }
+        }
+        engine.frame[0] = lent_words;
+        printf("and refused text and a moved handle where a handle goes\n");
+    }
     engine.frame[1].integer = 0;
     kest_text(engine.runtime, "kest", 4, &engine.frame[2]);
     if (engine.frame[0].object == NULL || engine.frame[2].text == NULL ||

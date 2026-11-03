@@ -754,6 +754,24 @@ bool kest_ground_holds(const KestGround *ground, const void *at) {
     return (plot->used[place / 64] & ((uint64_t)1 << (place % 64))) != 0;
 }
 
+bool kest_ground_fronts(const KestGround *ground, const void *at,
+                        KestGroundKind kind) {
+    if (ground == NULL) {
+        return false;
+    }
+    const Plot *plot = plot_holding(ground, at);
+    if (plot == NULL) {
+        return false;
+    }
+    uint32_t place = place_of(plot, at);
+    if ((const unsigned char *)at !=
+        plot->data + (size_t)place * plot->stride) {
+        return false;
+    }
+    uint64_t bit = (uint64_t)1 << (place % 64);
+    return (plot->used[place / 64] & bit) != 0 && kind_of(plot, place) == kind;
+}
+
 bool kest_ground_reached(KestGround *ground, const void *at, void **start,
                          KestGroundKind *kind) {
     if (start != NULL) {
