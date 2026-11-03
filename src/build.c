@@ -309,8 +309,23 @@ bool kest_build_emit(KestBuild *build) {
 static KestBuild *finished(KestBuild *build, FILE *errors, KestForm form,
                            size_t room);
 
+// A build handed no path has no program to read, said the way a build handed
+// no files is: there is no build to ask what went wrong, and reading the path
+// was reading through nothing.
+static bool pathless(const char *path, FILE *errors, KestForm form) {
+    if (path != NULL) {
+        return false;
+    }
+    kest_diags_say_one(errors, form == KEST_FORM_JSON, "K0701",
+                       "a build handed no path has no program to read");
+    return true;
+}
+
 KestBuild *kest_build(const char *path, const char *library, FILE *errors,
                       KestForm form, size_t room) {
+    if (pathless(path, errors, form)) {
+        return NULL;
+    }
     char *paths[1] = {(char *)path};
     return finished(kest_build_open(library, paths, 1, room), errors, form,
                     room);
@@ -319,6 +334,9 @@ KestBuild *kest_build(const char *path, const char *library, FILE *errors,
 KestBuild *kest_build_within(const char *path, const char *library,
                              FILE *errors, KestForm form, size_t room,
                              uint64_t work) {
+    if (pathless(path, errors, form)) {
+        return NULL;
+    }
     char *paths[1] = {(char *)path};
     return finished(kest_build_open_within(library, paths, 1, room, work),
                     errors, form, room);
@@ -612,7 +630,7 @@ const KestLayout *kest_extern_gives(const KestBuild *build, uint32_t at) {
 
 uint32_t kest_build_layout(const KestBuild *build, const char *name,
                            const KestLayout **layout) {
-    if (build == NULL) {
+    if (build == NULL || name == NULL) {
         if (layout != NULL) {
             *layout = NULL;
         }

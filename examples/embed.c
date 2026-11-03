@@ -2364,6 +2364,71 @@ static bool text_as_long_as_it_says(void) {
     return true;
 }
 
+// No name where a door takes one. Each of these read the name through
+// nothing and stopped the host; each now answers what it answers for a name
+// that is not there, and the two that make a build say why where they write.
+static bool named_nothing(void) {
+    static const char program[] = "module unnamed\n"
+                                  "\n"
+                                  "struct Row {\n"
+                                  "    n: i32\n"
+                                  "}\n"
+                                  "\n"
+                                  "fn main() -> i32 {\n"
+                                  "    let rows: [Row] = array()\n"
+                                  "    return len(rows)\n"
+                                  "}\n";
+    const KestFile files[] = {{"unnamed.kest", program, sizeof(program) - 1}};
+    KestHost *host = kest_host_new();
+    KestBuild *build =
+        kest_build_from(files, 1, "lib/", stderr, KEST_FORM_TEXT, 0);
+    KestRuntime *rt = build == NULL ? NULL : kest_start(build, host, NULL);
+    if (rt == NULL) {
+        fprintf(stderr, "the unnamed program was not built\n");
+        return false;
+    }
+    const KestLayout *laid = NULL;
+    int32_t row[1] = {0};
+    if (kest_entry(rt, NULL) != -1 || kest_entry_of(rt, NULL, 0) != -1 ||
+        kest_build_layout(build, NULL, &laid) != 0 || laid != NULL) {
+        fprintf(stderr, "a door asked about no name found something\n");
+        return false;
+    }
+    if (kest_borrow(rt, row, 1, NULL, sizeof row).object != NULL ||
+        !said_that(rt, "K0610", "of a type it did not name")) {
+        fprintf(stderr, "a lend of no type was made\n");
+        return false;
+    }
+    FILE *quiet = tmpfile();
+    if (kest_build(NULL, "lib/", quiet, KEST_FORM_TEXT, 0) != NULL ||
+        kest_build_within(NULL, "lib/", quiet, KEST_FORM_TEXT, 0, 0) != NULL ||
+        kest_held_new(NULL, "lib/", host, quiet) != NULL) {
+        fprintf(stderr, "a build handed no path was made\n");
+        return false;
+    }
+    char said[512] = {0};
+    if (quiet != NULL) {
+        rewind(quiet);
+        size_t got = fread(said, 1, sizeof(said) - 1, quiet);
+        said[got] = '\0';
+        fclose(quiet);
+    }
+    const char *first = strstr(said, "a build handed no path");
+    const char *second =
+        first == NULL ? NULL : strstr(first + 1, "a build handed no path");
+    const char *third =
+        second == NULL ? NULL : strstr(second + 1, "a build handed no path");
+    if (third == NULL || strstr(said, "K0701") == NULL) {
+        fprintf(stderr, "three builds handed no path said: %s\n", said);
+        return false;
+    }
+    kest_runtime_free(rt);
+    kest_build_free(build);
+    kest_host_free(host);
+    printf("seven doors handed no name answered as for a name not there\n");
+    return true;
+}
+
 // A program built from files handed over rather than read, which is what a
 // release binary carries: the program, the modules it imports and the
 // library's, each where a build would have found it. What is handed is all
@@ -8955,6 +9020,9 @@ int main(int argc, char **argv) {
         return 1;
     }
     if (!built_from_files_handed_over()) {
+        return 1;
+    }
+    if (!named_nothing()) {
         return 1;
     }
     if (!answered_with_what_it_gave()) {

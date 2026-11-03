@@ -1833,6 +1833,16 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // it: the machine cannot tell a bad address from a good one, and this is
     // the one address it can.
     KestSpan missing = {0, 0};
+    // And a lend of nothing named, which is no type to hold the block to.
+    if (element == NULL) {
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0610", missing,
+                       "this host lent %u of a type it did not name", length);
+        kest_diags_suggest(runtime->diags,
+                           "a lend names the type the program holds in an "
+                           "array, the way the program writes it");
+        return value;
+    }
     if (data == NULL && length > 0) {
         kest_diags_in(runtime->diags, NULL);
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0644", missing,
@@ -8398,7 +8408,9 @@ static int32_t nth_named(const KestModule *module, const char *name,
 }
 
 int32_t kest_entry_of(KestRuntime *runtime, const char *name, uint32_t at) {
-    if (runtime == NULL) {
+    // No name is no function, the answer a name the program does not have
+    // gets: read as one, it was a name read through nothing.
+    if (runtime == NULL || name == NULL) {
         return -1;
     }
     int32_t found = nth_named(runtime->module, name, at);
@@ -8418,7 +8430,7 @@ int32_t kest_entry_of(KestRuntime *runtime, const char *name, uint32_t at) {
 }
 
 int32_t kest_entry(KestRuntime *runtime, const char *name) {
-    if (runtime == NULL) {
+    if (runtime == NULL || name == NULL) {
         return -1;
     }
     // A host writes what the file writes, and the file registered its names
