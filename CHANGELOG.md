@@ -2,20 +2,13 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
-## [0.2.0](https://github.com/Rawframe-Project/kest/compare/v0.1.7...v0.2.0) (2026-11-03)
+## 0.2.0 (2026-11-03)
 
+### Breaking
 
-### ⚠ BREAKING CHANGES
-
-* **api:** when the machine has no room to list the program's own text the first time some crosses back, the call is refused with K0605 (no room) instead of K0636, or K0652 for a door's answer, and kest_runtime_ran_out counts it.
-* **cli:** `os.read`, under the command line and in a release binary, answers the file's text for a file holding a zero byte, where it answered `none`.
-* **api:** `kest_call` refuses text in its frame, and a door's answer is refused, when the length slot is below nought or runs past the end of the text the address is in, with `K0636` going in and `K0652` coming back. A call with a negative length was taken before and stopped with `K0630`, and a longer length was read past the text.
-
-### Fixed
-
-* **api:** hold text crossing in to the text it is in ([#205](https://github.com/Rawframe-Project/kest/issues/205)) ([ad2281b](https://github.com/Rawframe-Project/kest/commit/ad2281b5a365351a710700a2d2570d67db0552b5)), closes [#204](https://github.com/Rawframe-Project/kest/issues/204)
-* **api:** say no room when the program's text cannot be listed ([#212](https://github.com/Rawframe-Project/kest/issues/212)) ([045e554](https://github.com/Rawframe-Project/kest/commit/045e554338155faa44db1d80bdbbd6e6a369aef5)), closes [#211](https://github.com/Rawframe-Project/kest/issues/211)
-* **cli:** read a file holding a zero byte as the bytes it holds ([#210](https://github.com/Rawframe-Project/kest/issues/210)) ([ee0f7ce](https://github.com/Rawframe-Project/kest/commit/ee0f7ce746f1473963c0caeaa39101e975b42635)), closes [#208](https://github.com/Rawframe-Project/kest/issues/208)
+- Text a host hands to `kest_call`, or a door answers with, is held to the text its address is in: what the heap place was asked for, or the program's own text it was cut from. Its length slot was never asked about, and the program read as many bytes as it said. `fn echo(t: text) -> text { return "{t}!" }`, called with two bytes of text said to be 200, copied 200 bytes, and the checked build stopped on a read of poisoned heap memory; four bytes said to be 12 read what a value before them left in the place, and the program's own text said to be longer read on into whatever the compiler wrote after it. A length past the text, or below nought, is now refused with `K0636` going in and `K0652` coming back ("takes text in slot N with L in its length slot, which the text there cannot be"); a negative length was taken before and the program stopped with `K0630`. Text cut short is read as before, and text whose length fits is taken exactly as before. ([#205](https://github.com/Rawframe-Project/kest/pull/205))
+- When the machine has no room to list the program's own text, the first time some crosses back, the call is refused with `K0605` (no room) and `kest_runtime_ran_out` counts it. It was refused with `K0636`, or `K0652` for a door's answer, as though the host's length ran past the text. ([#212](https://github.com/Rawframe-Project/kest/pull/212))
+- `os.read`, under the command line and in a release binary, answers a file's text when the file holds a zero byte, where it answered `none`, which is what a missing file answers: a program could not read back what it had just written. A zero is a character of text and `Io.read` already handed it over. A path holding a zero still names no file. ([#210](https://github.com/Rawframe-Project/kest/pull/210))
 
 ## 0.1.7 (2026-11-03)
 
