@@ -169,6 +169,7 @@ enum {
     HALF_WRITTEN,
     HEAL,
     HURT_AT,
+    GAPPED,
     // What the list of names below has to be as long as. This host looked
     // each of them up into an array sized by the last name in this list,
     // so a name added after that one was a write past the end of it -- this
@@ -3612,7 +3613,15 @@ int main(int argc, char **argv) {
          {KEST_L_WORD, KEST_L_I32},
          2,
          {KEST_L_TAG, KEST_L_PAYLOAD},
-         2}};
+         2},
+        // A shape with nothing in it, then a tag and a piece of text: the
+        // nothing is one slot of its own.
+        {"gapped",
+         {KEST_L_NOTHING, KEST_L_TAG, KEST_L_PAYLOAD, KEST_L_PAYLOAD,
+          KEST_L_TEXT},
+         5,
+         {KEST_L_I32},
+         1}};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     // And what walking the names costs a host in news, which is nothing. The
@@ -6205,6 +6214,38 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and a made-up tag inside a shape was refused at the same door\n");
+
+    // And the same behind a shape with nothing in it, which is one slot: the
+    // tag is the second piece and the text the last two slots. A machine
+    // that walked the empty one as no slots told this host the tag had no
+    // cases, and looked for the text a slot early.
+    const KestLayout *gapped =
+        kest_frame_layout(engine.runtime, engine.entry[GAPPED], 0);
+    if (gapped == NULL || gapped->count != 5 ||
+        gapped->pieces[1].kind != KEST_L_TAG || !reads_the_cases(gapped, 1)) {
+        fprintf(stderr, "the tag behind a shape with nothing in it has no "
+                        "cases this host can read\n");
+        return 1;
+    }
+    KestValue gap_name[2] = {{0}, {0}};
+    if (!kest_text(engine.runtime, "kept", 4, gap_name)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    engine.frame[0].integer = 0;
+    engine.frame[1].integer = EVENT_HIT;
+    engine.frame[2].integer = 5;
+    engine.frame[3].integer = 0;
+    engine.frame[4] = gap_name[0];
+    engine.frame[5] = gap_name[1];
+    if (!asks(&engine, GAPPED) || engine.frame[0].integer != 9) {
+        fprintf(stderr, "a shape behind one with nothing in it answered %lld\n",
+                (long long)engine.frame[0].integer);
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    printf("and behind a shape with nothing in it: %lld\n",
+           (long long)engine.frame[0].integer);
 
     // And the pair the whole reading rests on: an enum whose cases carry
     // nothing is one slot of four bytes and so is an `i32`, so a tag beside a

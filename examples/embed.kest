@@ -961,3 +961,21 @@ fn heal(hurts: [Hurt], at: i32) no.alloc {
 fn hurtAt(hurts: [Hurt], at: i32) -> Hurt no.alloc {
     return hurts[at]
 }
+
+// A shape with nothing in it is one slot all the same, so what comes after one
+// in another shape is after that slot. The machine walked it as no slots, so
+// the tag here was looked for in the first slot and the text in the fourth: a
+// host asking the cases of the tag was told there were none, and a host handing
+// this over filled correctly was refused.
+struct Gap {
+}
+
+struct Gapped {
+    gap: Gap
+    what: Event
+    name: text
+}
+
+fn gapped(one: Gapped) -> i32 no.alloc {
+    return damageOf(one.what) + len(one.name)
+}

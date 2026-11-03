@@ -628,7 +628,8 @@ static uint16_t move_value(Walk *walk, const KestType *type, uint32_t slot,
                                       byte + type->members[i].byte_offset,
                                       reading, where));
         }
-        return used;
+        // One with nothing in it is one slot, which nothing moves.
+        return used == 0 ? 1 : used;
     }
     if (type->tag == KEST_T_FIXED) {
         uint16_t used = 0;

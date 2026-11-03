@@ -1,0 +1,62 @@
+// Guards against a struct with nothing in it moved as no slots: what came after
+// it in a shape was read out of an array one slot early, so a number after it
+// came back as nought and a tag after it as no case, in both engines and
+// compiled to C.
+
+module test.regress.hollow
+
+struct Nothing {
+}
+
+enum Door {
+    Shut
+    Open(i32)
+}
+
+struct After {
+    e: Nothing
+    n: i64
+}
+
+struct Many {
+    es: [Nothing; 3]
+    n: i64
+    name: text
+    door: Door
+}
+
+struct Maybe {
+    e: Nothing?
+    n: i64
+}
+
+fn main() -> i32 {
+    let afters: [After] = array()
+    push(afters, After(Nothing(), 42))
+    if afters[0].n != 42 {
+        return 1
+    }
+    let manys: [Many] = array()
+    let many = Many([Nothing(), Nothing(), Nothing()], 7, "seven", Door.Open(9))
+    push(manys, many)
+    let back = manys[0]
+    if back.n != 7 || back.name != "seven" {
+        return 2
+    }
+    let opened = match back.door {
+        Shut -> 0
+        Open(w) -> w
+    }
+    if opened != 9 {
+        return 3
+    }
+    if back != many {
+        return 4
+    }
+    let maybes: [Maybe] = array()
+    push(maybes, Maybe(Nothing(), 5))
+    if maybes[0].n != 5 {
+        return 5
+    }
+    return 0
+}

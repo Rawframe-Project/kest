@@ -3097,6 +3097,11 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         return true;
     }
     if (type->tag == KEST_T_STRUCT) {
+        // One with nothing in it is one slot, and nothing in it to look at.
+        if (type->member_count == 0) {
+            *at += 1;
+            return true;
+        }
         for (uint32_t i = 0; i < type->member_count; i++) {
             if (!handed_well(runtime, saying, name, type->members[i].type,
                              frame, at)) {
