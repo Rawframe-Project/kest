@@ -2,6 +2,14 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## 0.2.0 (2026-11-03)
+
+### Changed
+
+- **Breaking:** Text a host hands to `kest_call`, or a door answers with, is held to the text its address is in: what the heap place was asked for, or the program's own text it was cut from. Its length slot was never asked about, and the program read as many bytes as it said. `fn echo(t: text) -> text { return "{t}!" }`, called with two bytes of text said to be 200, copied 200 bytes, and the checked build stopped on a read of poisoned heap memory; four bytes said to be 12 read what a value before them left in the place, and the program's own text said to be longer read on into whatever the compiler wrote after it. A length past the text, or below nought, is now refused with `K0636` going in and `K0652` coming back ("takes text in slot N with L in its length slot, which the text there cannot be"); a negative length was taken before and the program stopped with `K0630`. Text cut short is read as before, and text whose length fits is taken exactly as before. ([#205](https://github.com/Rawframe-Project/kest/pull/205))
+- **Breaking:** When the machine has no room to list the program's own text, the first time some crosses back, the call is refused with `K0605` (no room) and `kest_runtime_ran_out` counts it. It was refused with `K0636`, or `K0652` for a door's answer, as though the host's length ran past the text. ([#212](https://github.com/Rawframe-Project/kest/pull/212))
+- **Breaking:** `os.read`, under the command line and in a release binary, answers a file's text when the file holds a zero byte, where it answered `none`, which is what a missing file answers: a program could not read back what it had just written. A zero is a character of text and `Io.read` already handed it over. A path holding a zero still names no file. ([#210](https://github.com/Rawframe-Project/kest/pull/210))
+
 ## 0.1.7 (2026-11-03)
 
 ### Fixed
