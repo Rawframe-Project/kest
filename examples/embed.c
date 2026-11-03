@@ -2715,6 +2715,32 @@ static bool held_across_a_reload(void) {
         return false;
     }
 
+    // Values said to be there and given no address, which were copied from
+    // nothing and stopped the host.
+    FILE *heard_none = tmpfile();
+    KestHeld *unhanded = host == NULL ? NULL
+                                      : kest_held_new("examples/held.kest",
+                                                      NULL, host, heard_none);
+    bool refused_none = unhanded != NULL &&
+                        !kest_held_begin(unhanded, "begin", NULL, 1) &&
+                        kest_held_begin(unhanded, "begin", &many, 1) &&
+                        !kest_held_call(unhanded, "step", NULL, 2, NULL);
+    char told[512] = {0};
+    if (heard_none != NULL) {
+        rewind(heard_none);
+        size_t got = fread(told, 1, sizeof(told) - 1, heard_none);
+        told[got] = '\0';
+        fclose(heard_none);
+    }
+    kest_held_free(unhanded);
+    if (!refused_none || strstr(told, "K0636") == NULL ||
+        strstr(told, "`begin` was handed 1 value and no address") == NULL ||
+        strstr(told, "`step` was handed 2 values and no address") == NULL) {
+        fprintf(stderr, "a held door handed no values was not refused: %s\n",
+                told);
+        return false;
+    }
+
     bool gone = kest_held_free(held) && kest_held_free(NULL) &&
                 kest_held_runtime(NULL) == NULL &&
                 !kest_held_call(NULL, "step", NULL, 0, NULL);
