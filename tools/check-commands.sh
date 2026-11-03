@@ -4750,6 +4750,44 @@ for handing in "-- alpha beta@2:alpha beta" "@0:"; do
     printf '%s\n' "$handed" >> "$scratch"/said
 done
 
+# A file holding a zero byte is read as the bytes it holds. Text carries its
+# length and a zero is a character of it, and the file doors of this command
+# line and of the host the C backend writes both answered `none` for such a
+# file, which is what a file that is not there answers: a program could not
+# read back what it had just written. Both engines, each in a room of its own,
+# because each writes the file where it runs.
+mkdir -p "$scratch"/zeroed/run "$scratch"/zeroed/built
+cat > "$scratch"/zeroed/inside.kest <<'KEST'
+module inside
+
+import std.os
+
+fn main() -> i32 {
+    if !os.write("kest-zero-inside.txt", "a\0b") {
+        return 1
+    }
+    if let back = os.read("kest-zero-inside.txt") {
+        if back != "a\0b" {
+            return 3
+        }
+        return 0
+    }
+    return 2
+}
+KEST
+zero_ran=$(cd "$scratch"/zeroed/run &&
+           "$kest" run ../inside.kest >/dev/null 2>&1 </dev/null
+           echo $?)
+zero_built=$(cd "$scratch"/zeroed/built &&
+             "$kest" build --release ../inside.kest >/dev/null 2>&1 \
+                 </dev/null &&
+             ./inside >/dev/null 2>&1 </dev/null
+             echo $?)
+if [ "$zero_ran" != 0 ] || [ "$zero_built" != 0 ]; then
+    complain "run: a file holding a zero byte, written and read back, \
+answered $zero_ran run and $zero_built compiled to C rather than 0"
+fi
+
 # And the ceiling this command line can be given, which is the one wall between
 # a broken compiler and the machine it is running on. Two ways to cross it and
 # a different sentence for each: one where there was not enough to begin with,
