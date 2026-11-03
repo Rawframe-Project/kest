@@ -1035,6 +1035,15 @@ static bool may_carry(const Lower *lower, uint16_t index) {
         KEST_MOST_CONSTANTS) {
         return false;
     }
+    // Nor one whose slots or stack, above this body's own, would take the
+    // frame past what a chunk counts in two bytes: the sum was cut to them,
+    // and a body that fits was refused for naming slots past a frame it had
+    // been given too few of.
+    if ((uint32_t)lower->body->slot_count + callee->slot_count > UINT16_MAX ||
+        (uint32_t)lower->body->stack_needed + callee->stack_needed >
+            UINT16_MAX) {
+        return false;
+    }
     for (uint32_t at = 0; at < callee->code_count;) {
         const Operand *operands = carried_operands(lower, callee->code[at]);
         if (operands == NULL) {
