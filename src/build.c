@@ -327,15 +327,16 @@ KestBuild *kest_build_within(const char *path, const char *library,
 KestBuild *kest_build_from(const KestFile *files, uint32_t count,
                            const char *library, FILE *errors, KestForm form,
                            size_t room) {
-    if (files == NULL || count == 0 || files[0].path == NULL) {
+    if (files == NULL || count == 0) {
         kest_diags_say_one(errors, form == KEST_FORM_JSON, "K0701",
                            "a build handed no files has no program to read");
         return NULL;
     }
-    // And every one after it, which is matched by its path against each file
-    // the build looks for: a path of nothing was read through at the first
-    // import, whichever file was being looked for.
-    for (uint32_t i = 1; i < count; i++) {
+    // And a path at every one of them, counted from nought. The first is the
+    // program, and each is matched by its path against every file the build
+    // looks for: a path of nothing was read through at the first import,
+    // whichever file was being looked for.
+    for (uint32_t i = 0; i < count; i++) {
         if (files[i].path == NULL) {
             char said[96];
             snprintf(said, sizeof said,

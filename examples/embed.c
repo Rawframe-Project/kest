@@ -2384,30 +2384,36 @@ static bool built_from_files_handed_over(void) {
         fprintf(stderr, "a build handed no files was made\n");
         return false;
     }
-    // And one handed a file with no path after the first. Every file looked
-    // for is matched by path against all of them, so the import read through
-    // the missing path and stopped the host.
-    const KestFile holed[3] = {
-        files[0],
-        {NULL, more, sizeof(more) - 1},
-        files[1],
+    // And files with no path, the first or one after it, counted from nought.
+    // Every file looked for is matched by path against all of them, so an
+    // import read through a missing path and stopped the host, and the first
+    // missing was said as a build handed no files at all.
+    const KestFile holed[2][3] = {
+        {{NULL, program, sizeof(program) - 1}, files[1], files[1]},
+        {files[0], {NULL, more, sizeof(more) - 1}, files[1]},
     };
-    FILE *pathless = tmpfile();
-    KestBuild *holed_build =
-        kest_build_from(holed, 3, "lib/", pathless, KEST_FORM_TEXT, 0);
-    char told[256] = {0};
-    if (pathless != NULL) {
-        rewind(pathless);
-        size_t got = fread(told, 1, sizeof(told) - 1, pathless);
-        told[got] = '\0';
-        fclose(pathless);
-    }
-    if (holed_build != NULL || strstr(told, "K0701") == NULL ||
-        strstr(told, "file 1 of the 3 a build was handed has no path") ==
-            NULL) {
-        fprintf(stderr, "a build handed a file with no path said: %s\n", told);
-        kest_build_free(holed_build);
-        return false;
+    const char *const holed_said[2] = {
+        "file 0 of the 3 a build was handed has no path",
+        "file 1 of the 3 a build was handed has no path",
+    };
+    for (int h = 0; h < 2; h++) {
+        FILE *pathless = tmpfile();
+        KestBuild *holed_build =
+            kest_build_from(holed[h], 3, "lib/", pathless, KEST_FORM_TEXT, 0);
+        char told[256] = {0};
+        if (pathless != NULL) {
+            rewind(pathless);
+            size_t got = fread(told, 1, sizeof(told) - 1, pathless);
+            told[got] = '\0';
+            fclose(pathless);
+        }
+        if (holed_build != NULL || strstr(told, "K0701") == NULL ||
+            strstr(told, holed_said[h]) == NULL) {
+            fprintf(stderr, "a build handed a file with no path said: %s\n",
+                    told);
+            kest_build_free(holed_build);
+            return false;
+        }
     }
     printf("a program handed over as files answered 42, and one handed "
            "short of a file was refused\n");
