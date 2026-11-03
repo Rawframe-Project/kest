@@ -137,22 +137,24 @@ typedef union {
 } KestValue;
 
 // The bytes of a piece of text a slot holds, and how many there are. It is the
-// door to read one through: `text` above is what this language keeps text as
-// today -- a run of bytes ending in a nought, on the machine's heap -- and a
-// host that reads the member is a host written against that, where one that
-// asks is a host written against text. The two are the same bytes now and the
-// second is the one that survives this language carrying a length beside them.
+// door to read one through: `text` above is where the bytes start, on the
+// machine's heap, and a host that reads the member is a host written against
+// that, where one that asks is a host written against text, which is the
+// bytes and how many of them there are.
 //
 // `length` may be NULL for a host that only wants the bytes, and what it
 // answers costs nothing: how many bytes there are is the second slot of the
 // two a piece of text is, so this reads it rather than measuring. Nothing and
 // nought for a slot with no address in it.
 //
-// What it hands back is not always a C string. Text the machine made ends in a
-// nought and text cut out of the middle of some does not, because a cut is a
-// place inside what it was cut from and nothing is copied. A host that wants
-// one hands the bytes and the length to whatever it is calling, or copies
-// them.
+// What it hands back is not a C string. Text cut out of the middle of some
+// ends where the cut does, with no nought after it, because a cut is a place
+// inside what it was cut from and nothing is copied; and a nought is a
+// character text may hold anywhere, so a copy that stops at the first one
+// stops short without saying so. A host hands the bytes and the length on
+// together, and where only a C string will do -- a path, a name -- it refuses
+// text holding a nought, as the command line does for a file's name, before
+// copying it and ending the copy with one.
 //
 // Asked of a slot the program says is text: a slot carries no tag, so eight
 // bytes that are a number are not an address. `kest_frame_layout` is what says
@@ -590,12 +592,13 @@ typedef void (*KestNative)(KestValue *frame, KestRuntime *runtime,
 // would be undertaking to keep it as long as the program holds it, and a
 // program holds a piece of text for as long as it likes.
 //
-// Text ends at its first zero byte, so a zero inside `length` is a mistake
-// rather than a cut: it is `K0611` and what is written is empty. So is what is
-// written for no address to copy from, and for a heap with no room to copy
-// into, and this answers false for each of the three; which of them it was is
-// in the report. An empty piece of text is what a host asking for one gets,
-// and that answers true.
+// Text carries its length, so a zero inside `length` is a character like any
+// other and is copied with the rest. Bytes that are not UTF-8 are refused
+// with `K0611`, and so is a length with no address to copy from; a heap with
+// no room to copy into is `K0605`. For each of the three what is written is
+// empty and this answers false, and which of them it was is in the report. An
+// empty piece of text is what a host asking for one gets, and that answers
+// true.
 //
 // It writes two slots, because a piece of text is two: what it is made of, and
 // how many bytes that is. `into` is where the first goes.
