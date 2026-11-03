@@ -4438,7 +4438,18 @@ int main(int argc, char **argv) {
     if (!said_that(engine.runtime, "K0635", "handed over")) {
         return 1;
     }
-    printf("a word that is not a number and an argument short were refused\n");
+    // And a list with a hole in it, which was read through: a NULL where a
+    // number goes stopped the host in the reader, and one where text goes in
+    // `strlen`.
+    const char *holed[2] = {"3.0", NULL};
+    if (kest_takes_text(engine.runtime, by_words, engine.frame, wide, holed,
+                        2) ||
+        !said_that(engine.runtime, "K0635", "takes word 1 and this host")) {
+        fprintf(stderr, "a NULL among the words was not refused\n");
+        return 1;
+    }
+    printf("a word that is not a number, an argument short and no word at all "
+           "were refused\n");
 
     engine.frame[0].real = 1.0;
     engine.frame[1].real = 2.0;

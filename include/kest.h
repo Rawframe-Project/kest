@@ -1094,8 +1094,9 @@ bool kest_frame_reads(KestRuntime *runtime, int32_t entry, const uint8_t *kinds,
 // the slots itself and says what it wrote with `kest_frame_fills`.
 //
 // True when the frame holds them. False when a word is not what the function
-// takes, when there is the wrong number of them, and when there is nothing at
-// `entry`; each says why into `kest_report`.
+// takes, when there is the wrong number of them, when one of them is NULL, and
+// when there is nothing at `entry`; each says why into `kest_report`, and a
+// NULL is asked about before any word is read.
 bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
                      uint32_t slots, const char *const *words, uint32_t count);
 
