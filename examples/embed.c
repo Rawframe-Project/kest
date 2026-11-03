@@ -2228,6 +2228,10 @@ static bool text_as_long_as_it_says(void) {
                                   "\n"
                                   "fn word() -> text {\n"
                                   "    return \"near\"\n"
+                                  "}\n"
+                                  "\n"
+                                  "fn again(t: text) -> text {\n"
+                                  "    return t\n"
                                   "}\n";
     const KestFile files[] = {
         {"saying.kest", program, sizeof(program) - 1},
@@ -2319,11 +2323,44 @@ static bool text_as_long_as_it_says(void) {
         }
     }
     said_long = 4;
+    // And asked what a call gave back, which reads the text out of the frame
+    // the host holds: it copied as many bytes as the length slot said, from
+    // wherever the address slot pointed. What the call left is written out;
+    // the program's own text said to be longer, heap text said to be longer,
+    // and an address of the host's own are refused before a byte is read.
+    int32_t echoes = kest_entry(rt, "again");
+    char written[64];
+    frame[0].text = kept;
+    frame[1].integer = 4;
+    if (echoes < 0 || !kest_call(rt, echoes, frame, 2) ||
+        kest_gave_text(rt, echoes, frame, written, sizeof written) != 4 ||
+        strcmp(written, "kept") != 0) {
+        kest_report(rt, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "what a call gave back was not written\n");
+        return false;
+    }
+    const char *const over[3] = {kept, spelled, "kept"};
+    const int64_t over_long[3] = {12, 24, 4};
+    const char *const over_why[3] = {"length slot, which the text there",
+                                     "length slot, which the text there",
+                                     "did not come from this machine"};
+    for (int i = 0; i < 3; i++) {
+        frame[0].text = over[i];
+        frame[1].integer = over_long[i];
+        if (kest_gave_text(rt, echoes, frame, written, sizeof written) != -1 ||
+            !said_that(rt, "K0632", over_why[i])) {
+            fprintf(stderr,
+                    "a frame written over after the call was read as "
+                    "what it gave back (%d)\n",
+                    i);
+            return false;
+        }
+    }
     kest_runtime_free(rt);
     kest_build_free(build);
     kest_host_free(host);
     printf("text said to be longer than it is was refused going in and coming "
-           "back\n");
+           "back, and asked of what a call gave back\n");
     return true;
 }
 
