@@ -2111,6 +2111,8 @@ KestRuntime *kest_held_runtime(KestHeld *held);
 // Calls `entry` with `count` values and keeps what it gives back as the world:
 // every slot of it, and every handle in it said to the machine, because this
 // host holds them between calls where no walk of the program's can see them.
+// An `args` of NULL with a `count` above nought is refused for this and the
+// door below, with `K0636` written to `errors`.
 bool kest_held_begin(KestHeld *held, const char *entry, const KestValue *args,
                      uint32_t count);
 

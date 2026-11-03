@@ -3,6 +3,7 @@
 #include "diag.h"
 #include "vm.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -211,9 +212,25 @@ static Called call_with(KestHeld *held, KestRuntime *runtime, int32_t entry,
     return CALLED;
 }
 
+// Values a host said it had and gave no address for, which were copied from
+// nothing: refused the way `kest_takes_text` refuses words with no list,
+// before a frame is made, and named the way the host named the door.
+static bool unhanded(const KestHeld *held, const char *entry,
+                     const KestValue *args, uint32_t count) {
+    if (args != NULL || count == 0) {
+        return false;
+    }
+    char said[256];
+    snprintf(said, sizeof said,
+             "`%s` was handed %u value%s and no address to find them at", entry,
+             count, count == 1 ? "" : "s");
+    kest_diags_say_one(held->errors, false, "K0636", said);
+    return true;
+}
+
 bool kest_held_begin(KestHeld *held, const char *entry, const KestValue *args,
                      uint32_t count) {
-    if (held == NULL || entry == NULL) {
+    if (held == NULL || entry == NULL || unhanded(held, entry, args, count)) {
         return false;
     }
     int32_t found = kest_entry(held->runtime, entry);
@@ -276,7 +293,7 @@ static Door *door_named(KestHeld *held, const char *name) {
 
 bool kest_held_call(KestHeld *held, const char *entry, const KestValue *args,
                     uint32_t count, KestValue *answer) {
-    if (held == NULL || entry == NULL) {
+    if (held == NULL || entry == NULL || unhanded(held, entry, args, count)) {
         return false;
     }
     Door *door = door_named(held, entry);
