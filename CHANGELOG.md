@@ -2,6 +2,14 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.1.6](https://github.com/Rawframe-Project/kest/compare/v0.1.5...v0.1.6) (2026-11-03)
+
+
+### Fixed
+
+* **compiler:** carry no function past the frame a chunk can count ([#200](https://github.com/Rawframe-Project/kest/issues/200)) ([68436b0](https://github.com/Rawframe-Project/kest/commit/68436b0d3eaee2a363a379d7a5efbf73ea3ba746)), closes [#198](https://github.com/Rawframe-Project/kest/issues/198)
+* **verifier:** end the walk of a body whose stack fills its room ([#197](https://github.com/Rawframe-Project/kest/issues/197)) ([da70285](https://github.com/Rawframe-Project/kest/commit/da70285513dab89726a359f24508749fc1df5e6f)), closes [#196](https://github.com/Rawframe-Project/kest/issues/196)
+
 ## 0.1.5 (2026-11-03)
 
 ### Fixed
