@@ -752,14 +752,6 @@ static void os_file_read(KestValue *frame, KestRuntime *runtime,
         nothing_read(runtime, frame);
         return;
     }
-    // A nought among the bytes would make text that stops early, and text that
-    // stops early is a file read as less than it is. Said as nothing rather
-    // than handed over short: a file is all of it or nothing.
-    if (memchr(bytes, 0, held) != NULL) {
-        free(bytes);
-        nothing_read(runtime, frame);
-        return;
-    }
     if (handed_back(runtime, bytes, held, frame)) {
         frame[2].integer = 1;
     }
