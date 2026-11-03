@@ -416,18 +416,6 @@ bool kest_arena_holds(KestArena *arena, const void *at) {
     return false;
 }
 
-bool kest_arena_spans(KestArena *arena, const void *at, size_t length) {
-    if (!kest_arena_holds(arena, at)) {
-        return false;
-    }
-    // The block that answered is the one kept as the last to answer.
-    const Block *block = arena->recent;
-    size_t reach =
-        block->used < block->capacity ? block->used : block->capacity;
-    size_t into = (size_t)((const unsigned char *)at - block->data);
-    return length <= reach - into;
-}
-
 void kest_arena_reset(KestArena *arena) {
     if (arena == NULL) {
         return;

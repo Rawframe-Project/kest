@@ -144,6 +144,14 @@ typedef struct Plot {
     // nine.
     uint64_t kind_low[BITMAP_WORDS];
     uint64_t kind_high[BITMAP_WORDS];
+    // Which plain places were asked for less than they are wide, each of which
+    // says by how much in the last of the bytes it was not asked for. A piece
+    // of text a host hands back is an address and a length the host wrote, and
+    // what the length is held to is what the text asked for: past that is what
+    // a value the place held before left behind. A bit a place here rather
+    // than a number, which would cost a quarter of what a plot of the
+    // narrowest places holds.
+    uint64_t short_of[BITMAP_WORDS];
 } Plot;
 
 static void say_kind(Plot *plot, uint32_t place, KestGroundKind kind) {
@@ -582,10 +590,65 @@ static void give_back(KestGround *ground, Plot *plot, uint32_t place) {
 static void *room_in_a_plot(KestGround *ground, size_t bytes,
                             KestGroundKind kind, Plot **held);
 
+// Writes down how much of a plain place was asked for, in the place: its last
+// byte is how many bytes short of the width that is, up to 255, and past that
+// the last byte is nought and the four before it say it. A place asked for
+// whole has no byte to spare and needs none.
+//
+// The bytes not asked for are poisoned in a checked build, and the sanitiser
+// opens and closes memory eight bytes at a time, so what is opened to write
+// or read the count is closed again from where the asking stopped: anything
+// narrower would leave a few of them open to a read past the end.
+static void say_asked(Plot *plot, uint32_t place, size_t bytes) {
+    uint64_t bit = (uint64_t)1 << (place % 64);
+    if (bytes >= plot->stride) {
+        plot->short_of[place / 64] &= ~bit;
+        return;
+    }
+    plot->short_of[place / 64] |= bit;
+    size_t short_by = plot->stride - bytes;
+    unsigned char *start = plot->data + (size_t)place * plot->stride;
+    unsigned char *end = start + plot->stride;
+    if (short_by < 256) {
+        OPEN(end - 1, 1);
+        end[-1] = (unsigned char)short_by;
+    } else {
+        uint32_t wide = (uint32_t)short_by;
+        OPEN(end - 5, 5);
+        memcpy(end - 5, &wide, sizeof(wide));
+        end[-1] = 0;
+    }
+    POISON(start + bytes, short_by);
+}
+
+// And reads it back.
+static size_t asked_of(const Plot *plot, uint32_t place) {
+    if ((plot->short_of[place / 64] & ((uint64_t)1 << (place % 64))) == 0) {
+        return plot->stride;
+    }
+    const unsigned char *start = plot->data + (size_t)place * plot->stride;
+    const unsigned char *end = start + plot->stride;
+    OPEN(end - 5, 5);
+    size_t short_by = end[-1];
+    if (short_by == 0) {
+        uint32_t wide = 0;
+        memcpy(&wide, end - 5, sizeof(wide));
+        short_by = wide;
+    }
+    POISON(start + (plot->stride - short_by), short_by);
+    return plot->stride - short_by;
+}
+
 void *kest_ground_take(KestGround *ground, size_t bytes, KestGroundKind kind) {
     Plot *plot = NULL;
     void *at = room_in_a_plot(ground, bytes, kind, &plot);
     if (at != NULL) {
+        uint32_t place = place_of(plot, at);
+        if (kind == KEST_GROUND_PLAIN) {
+            say_asked(plot, place, bytes);
+        } else {
+            plot->short_of[place / 64] &= ~((uint64_t)1 << (place % 64));
+        }
         ground->counted.allocations++;
         ground->counted.asked += bytes;
         ground->counted.given += plot->stride;
@@ -733,6 +796,10 @@ void *kest_ground_grow(KestGround *ground, void *was, size_t had, size_t want) {
     // value that used to be there left behind.
     OPEN((unsigned char *)was + had, want - had);
     memset((unsigned char *)was + had, 0, want - had);
+    uint32_t place = place_of(plot, was);
+    if (kind_of(plot, place) == KEST_GROUND_PLAIN) {
+        say_asked(plot, place, want);
+    }
     ground->counted.grown++;
     return was;
 }
@@ -755,9 +822,13 @@ bool kest_ground_spans(const KestGround *ground, const void *at,
     if ((plot->used[place / 64] & ((uint64_t)1 << (place % 64))) == 0) {
         return false;
     }
+    if (kind_of(plot, place) != KEST_GROUND_PLAIN) {
+        return false;
+    }
     size_t into = (size_t)((const unsigned char *)at - plot->data) -
                   (size_t)place * plot->stride;
-    return length <= plot->stride - into;
+    size_t asked = asked_of(plot, place);
+    return into <= asked && length <= asked - into;
 }
 
 bool kest_ground_holds(const KestGround *ground, const void *at) {
