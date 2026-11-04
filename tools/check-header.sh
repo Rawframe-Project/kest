@@ -66,4 +66,44 @@ if ! "$work/host"; then
     exit 1
 fi
 
-echo "the header stands alone: $count function(s), libc and nothing else"
+# And the hosts' own files, which are built without `-Wshadow`: each is one
+# long main of blocks that reuse short names. MSVC drops only a local hiding a
+# local (C4456) and refuses a local hiding a name at file scope (C4459), so
+# that one kind was found on Windows and nowhere before it. Neither gcc nor
+# clang can ask for it alone, so every shadow is said and the ones that hide a
+# name at file scope are read out of what was said. Those words are the
+# compiler's own, so a file that hides one on purpose is asked first: words
+# this check does not know stop it rather than let every host through.
+cat > "$work/hides.c" <<'C'
+static int count;
+
+int main(void) {
+    int count = 1;
+    return count;
+}
+C
+global='shadows a global declaration|shadows a variable in the global scope'
+"$cc" -std=c11 -Wshadow -fsyntax-only "$work/hides.c" >"$work/said" 2>&1
+if ! grep -qE "$global" "$work/said"; then
+    echo "$cc said this of a local hiding a name at file scope, which this" \
+         "check does not read as one:"
+    cat "$work/said"
+    exit 1
+fi
+hosts="examples/embed.c examples/engine.c"
+for host in $hosts; do
+    if ! "$cc" -std=c11 -Wshadow -fsyntax-only -Iinclude "$host" \
+            >"$work/said" 2>&1; then
+        echo "$host does not compile:"
+        cat "$work/said"
+        exit 1
+    fi
+    if grep -E "$global" "$work/said" >"$work/hidden"; then
+        echo "$host hides a name at file scope, which MSVC refuses (C4459):"
+        cat "$work/hidden"
+        exit 1
+    fi
+done
+
+echo "the header stands alone: $count function(s), libc and nothing else;" \
+     "and no host hides a name at file scope"
