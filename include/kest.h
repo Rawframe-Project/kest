@@ -655,6 +655,11 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
 // the machine did not put there, cannot vouch for, and cannot take back when
 // the lend ends. Hand those over a frame instead, where `kest_text` makes the
 // text the machine's. An `element` of NULL names no type and is `K0610`.
+//
+// What the program reads out of the block is held to its type where it is
+// read, because the host may go on writing to it: a tag with no case is
+// `K0651`, and a `bool` that is not nought or one, or a set with a bit none of
+// its names cover, is `K0668`.
 KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                       const char *element, size_t size);
 

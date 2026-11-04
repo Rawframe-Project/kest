@@ -599,6 +599,33 @@ static void move_one(Walk *walk, uint8_t kind, uint32_t slot, uint32_t byte,
         width, width, held, real ? "real" : "integer", byte);
 }
 
+// A truth or a set just read out of memory, held to being one of its type the
+// way the machine holds it where it reads one: a lend is bytes the host goes
+// on writing to, and a byte of 2 or a bit no name covers is no value of
+// either. Said in the machine's words through `kest_native_unmade`.
+static void held_to_its_type(Walk *walk, const KestType *type, uint32_t slot,
+                             uint32_t where) {
+    Where held;
+    at_stack(walk, held, slot);
+    if (type->tag == KEST_T_BOOL) {
+        say(walk->c, &walk->into->wrote,
+            "        if ((uint64_t)%s.integer > 1u) {\n"
+            "            return kest_native_unmade(rt, %u, NULL,\n"
+            "                (unsigned long long)%s.integer);\n"
+            "        }\n",
+            held, where, held);
+    } else if (type->tag == KEST_T_FLAGS && type->case_count < type->width) {
+        const char *written = kest_type_written(type);
+        say(walk->c, &walk->into->wrote,
+            "        if (((uint64_t)%s.integer >> %u) != 0) {\n"
+            "            return kest_native_unmade(rt, %u, \"%s\",\n"
+            "                (unsigned long long)%s.integer);\n"
+            "        }\n",
+            held, (unsigned)type->case_count, where,
+            written == NULL ? "a set of flags" : written, held);
+    }
+}
+
 // A whole value moved between memory and slots, by walking the type rather
 // than the flat list of pieces a layout carries. The machine has both walks
 // and picks between them -- a run of pieces for anything with no tag in it,
@@ -650,6 +677,9 @@ static uint16_t move_value(Walk *walk, const KestType *type, uint32_t slot,
     }
     if (type->tag != KEST_T_ENUM) {
         move_one(walk, kest_scalar_of(type), slot, byte, reading);
+        if (reading) {
+            held_to_its_type(walk, type, slot, where);
+        }
         return type->tag == KEST_T_TEXT ? 2 : 1;
     }
     Where tag;
@@ -733,6 +763,7 @@ static uint16_t move_value(Walk *walk, const KestType *type, uint32_t slot,
                 say(c, out,
                     "            %s.integer = carried ? %s.integer : 0;\n",
                     held, held);
+                held_to_its_type(walk, carrying->payload[piece], at, where);
             }
             if (carrying->offsets[piece] < 256) {
                 filled[carrying->offsets[piece]] = true;
@@ -3441,6 +3472,8 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry, const char *from,
         "                         const char *code, const char *message);\n"
         "bool kest_native_no_case(KestRuntime *runtime, uint32_t offset,\n"
         "                         const char *type, long long tag);\n"
+        "bool kest_native_unmade(KestRuntime *runtime, uint32_t offset,\n"
+        "                        const char *set, unsigned long long held);\n"
         "const volatile int *kest_native_asking(KestRuntime *runtime);\n"
         "bool kest_call_body(KestRuntime *runtime, uint32_t which,\n"
         "                    KestValue *base, uint16_t handed,\n"

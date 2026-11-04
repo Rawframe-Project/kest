@@ -316,6 +316,12 @@ bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,
 bool kest_native_no_case(KestRuntime *runtime, uint32_t offset,
                          const char *type, long long tag);
 
+// And what one says when it reads a truth that is neither, or a set with a bit
+// none of its names cover: the machine's own `K0668`, in its words. `set` is
+// the set's name, or NULL for a truth. Answers false.
+bool kest_native_unmade(KestRuntime *runtime, uint32_t offset, const char *set,
+                        unsigned long long held);
+
 // The word that says whether the host has asked the machine to stop, read by a
 // body written in C every `KEST_TURNS_ASKED` times it goes round a `while`,
 // with a count of its own in between that nothing outside the body can see, so
