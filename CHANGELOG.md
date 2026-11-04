@@ -2,22 +2,14 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
-## [0.5.0](https://github.com/Rawframe-Project/kest/compare/v0.4.0...v0.5.0) (2026-11-04)
+## 0.5.0 (2026-11-04)
 
+### Changed
 
-### ⚠ BREAKING CHANGES
-
-* **cli:** kest hostile writes a door that takes a set of flags called with sets that have flags in them, where it wrote the empty set every time, so the same file and seed write a different program.
-* **vm:** a program reading a `bool` that is not nought or one, or a set with a bit none of its names cover, out of memory a host lent is refused with K0668, where it read the byte as it was.
-* **compiler:** `~` on a set of flags flips only the bits the set has names for, and `S(bits)` keeps only those bits, so `u8(~S())` and `u8(S(bits))` answer differently where the set has fewer names than its width has bits. The deterministic profile is kest-det 4.
-* **lsp:** kest lsp and kest dap read a \u escape that is half of a UTF-16 pair with no other half as U+FFFD, where they read it as the bytes ED A0 80, which the language server refused with K0107.
-
-### Fixed
-
-* **cli:** have kest hostile hand a door sets with flags in them ([#243](https://github.com/Rawframe-Project/kest/issues/243)) ([f686ed2](https://github.com/Rawframe-Project/kest/commit/f686ed2cee8ec63a6729376a2ac28617052ed0e1)), closes [#241](https://github.com/Rawframe-Project/kest/issues/241)
-* **compiler:** hold a set of flags to the bits it has names for ([#238](https://github.com/Rawframe-Project/kest/issues/238)) ([fc06a4c](https://github.com/Rawframe-Project/kest/commit/fc06a4c5bab7d8ea7e22c23ce1adce6800def839))
-* **lsp:** read half of a UTF-16 pair with no other half as U+FFFD ([#233](https://github.com/Rawframe-Project/kest/issues/233)) ([2ce16ee](https://github.com/Rawframe-Project/kest/commit/2ce16ee24ef935a83095ba7d6dd4a0eb3d375fbd)), closes [#232](https://github.com/Rawframe-Project/kest/issues/232)
-* **vm:** refuse a lent truth or set that is no value of its type ([#239](https://github.com/Rawframe-Project/kest/issues/239)) ([d13bdf5](https://github.com/Rawframe-Project/kest/commit/d13bdf5741b1f58b143f7c6e4200898b34186677)), closes [#237](https://github.com/Rawframe-Project/kest/issues/237)
+- **Breaking:** `kest lsp` and `kest dap` read a `\u` escape that is half of a UTF-16 pair with no other half as U+FFFD (`EF BF BD`). They wrote the three bytes UTF-8 would use for that number, `\ud800` as `ED A0 80`, which spell no character: an editor holds its buffer as UTF-16 and can send a lone half this way, and the language server then published `K0107` ("the byte `0xed` starts no character") once for each of the three bytes, while the file the same editor saves, with U+FFFD in the half's place, checks with nothing to say under `kest check`. A buffer with a lone half now checks, and under `kest dap` a lone half in a path or an expression reads as U+FFFD. A whole pair, and every other `\u` escape, is read as before. ([#233](https://github.com/Rawframe-Project/kest/pull/233))
+- **Breaking:** A set of flags is held to the bits it has names for. `~` on a set flips only those bits, where it flipped every bit of its width, and `S(bits)` keeps only those bits, where it kept every bit it was given; either made a set that wrote itself as a set it did not equal. With `flags S: u8 { A B }`, `u8(S(u8(255)))` and `u8(~S())` answer 3 where they answered 255, `S(u8(12))` is `S()` where it held 12, and `~S() == S.A | S.B` is true where it was false, in every engine and compiled to C. `~` on a whole number, and a set with a name for every bit of its width, answer as before. A `deterministic` program observes this, so the profile moves from `kest-det 3` to `kest-det 4`. ([#238](https://github.com/Rawframe-Project/kest/pull/238))
+- **Breaking:** A program that reads a `bool` that is not nought or one, or a set of flags with a bit none of its names cover, out of memory a host lent is refused with `K0668` where it reads it, as a tag with no case is refused with `K0651`. It went on with a value that was neither: with `flags Mood: u8 { Hungry Tired }` and a lent `[Sense]` of `struct Sense { up: bool; mood: Mood }`, a host writing 2 into `up` had `if senses[0].up` take its branch while `senses[0].up == true` was false, and writing 255 into `mood` had `u8(senses[0].mood)` answer 255, a `Mood` that wrote itself as `Mood.Hungry | Mood.Tired` and was not equal to it. Each read now stops with "`bool` here holds 2, which is neither true nor false" or "`Mood` here holds 255, which has bits it has no names for". A body compiled to C refuses with the same code and the same sentence. A lend whose bytes are values of their types, and a program reading its own memory, answer as before. ([#239](https://github.com/Rawframe-Project/kest/pull/239))
+- **Breaking:** `kest hostile` hands a door that takes a set of flags one of four, chosen by the seed: the empty set, every flag the set names, one flag, or some of them. It wrote the empty set every time, so a door that went wrong on a flag was never handed one: for a door `Engine.felt(m: Mood)` with `flags Mood: u8 { Hungry Tired }`, seeds 1 to 8 wrote 64 calls of it, and every one was `Engine.felt(Mood())`. The same file and seed now write a different program wherever a door takes a set; a file with no such door is written as before, byte for byte. ([#243](https://github.com/Rawframe-Project/kest/pull/243))
 
 ## 0.4.0 (2026-11-04)
 
