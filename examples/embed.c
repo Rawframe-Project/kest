@@ -2751,6 +2751,176 @@ static bool held_across_a_reload(void) {
     return gone;
 }
 
+// A world for the reload refusals below, written with the one piece each of
+// them changes: what `step` is, what `save` answers, and which byte `restore`
+// reads.
+static bool wrote_world(const char *path, const char *step, bool bytes,
+                        int reads) {
+    FILE *file = fopen(path, "wb");
+    if (file == NULL) {
+        return false;
+    }
+    fprintf(file,
+            "module reloaded\n\nstruct World {\n    turns: [i32]\n}\n\n"
+            "fn begin(from: i32) -> World {\n"
+            "    return World(array(1, from))\n}\n\n"
+            "%s {\n    w.turns[0] += 1\n    return w.turns[0]\n}\n\n"
+            "fn save(w: World) -> [%s] {\n    let out: [%s] = array()\n"
+            "    push(out, %s)\n    return out\n}\n\n"
+            "fn restore(saved: [u8]) -> World {\n"
+            "    return World(array(1, i32(saved[%d])))\n}\n",
+            step, bytes ? "u8" : "i32", bytes ? "u8" : "i32",
+            bytes ? "u8(w.turns[0])" : "w.turns[0]", reads);
+    return fclose(file) == 0;
+}
+
+// Whether `said` ends on a whole character, the way a `said` too short for
+// what a reload has to say is cut.
+static bool ends_whole(const char *said) {
+    const unsigned char *at = (const unsigned char *)said;
+    while (*at != 0) {
+        size_t width = *at < 0x80 ? 1 : *at >= 0xf0 ? 4 : *at >= 0xe0 ? 3 : 2;
+        for (size_t i = 1; i < width; i++) {
+            if ((at[i] & 0xc0) != 0x80) {
+                return false;
+            }
+        }
+        at += width;
+    }
+    return true;
+}
+
+// Every stage a reload says it stopped at, each of which no check reached:
+// the new program has lost a door the host called, or takes more there, its
+// `restore` fails on what was saved, the running `save` answers something
+// other than bytes, and there is nothing held at all. After each the world is
+// where it was and steps on. And a first error cut to fit a short `said`,
+// which ends where a whole character ends whatever room was given.
+static bool reload_refused_where_it_said(void) {
+    const char *room = getenv("TMPDIR");
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/held-refused.kest",
+             room != NULL && room[0] != '\0' ? room : ".");
+    const char *step = "fn step(w: World) -> i32";
+    KestHost *host = kest_host_new();
+    FILE *heard = tmpfile();
+    KestHeld *held = NULL;
+    KestValue from = {.integer = 7};
+    KestValue turn = {0};
+    if (host == NULL || heard == NULL || !wrote_world(path, step, true, 0) ||
+        (held = kest_held_new(path, NULL, host, heard)) == NULL ||
+        !kest_held_begin(held, "begin", &from, 1) ||
+        !kest_held_call(held, "step", NULL, 0, &turn) || turn.integer != 8) {
+        fprintf(stderr, "a world to refuse reloads under was not made\n");
+        return false;
+    }
+
+    struct {
+        const char *step;
+        int reads;
+        const char *said;
+    } refusals[] = {
+        {"fn stride(w: World) -> i32", 0,
+         "refused: the new program has no `step`"},
+        {"fn step(w: World, by: i32) -> i32", 0,
+         "refused: `step` takes something other than it took"},
+        {step, 1,
+         "refused: `restore` would not make a world of what was saved"},
+    };
+    char said[256];
+    for (size_t i = 0; i < sizeof(refusals) / sizeof(refusals[0]); i++) {
+        long long was = turn.integer;
+        bool took =
+            !wrote_world(path, refusals[i].step, true, refusals[i].reads) ||
+            kest_held_reload(held, path, said, sizeof(said));
+        if (took || strcmp(said, refusals[i].said) != 0 ||
+            !kest_held_call(held, "step", NULL, 0, &turn) ||
+            turn.integer != was + 1) {
+            fprintf(stderr,
+                    "a reload meant to say `%s` said `%s`, and the world "
+                    "stepped to %lld\n",
+                    refusals[i].said, said, (long long)turn.integer);
+            return false;
+        }
+    }
+    char told[512] = {0};
+    rewind(heard);
+    told[fread(told, 1, sizeof(told) - 1, heard)] = '\0';
+    if (strstr(told, "K0604") == NULL ||
+        kest_held_reload(NULL, path, said, sizeof(said)) ||
+        strcmp(said, "nothing is held") != 0) {
+        fprintf(stderr, "a failed restore told `%s`, nothing held said `%s`\n",
+                told, said);
+        return false;
+    }
+
+    KestHeld *other = NULL;
+    bool unsaved = wrote_world(path, step, false, 0) &&
+                   (other = kest_held_new(path, NULL, host, heard)) != NULL &&
+                   kest_held_begin(other, "begin", &from, 1) &&
+                   wrote_world(path, step, true, 0) &&
+                   !kest_held_reload(other, path, said, sizeof(said)) &&
+                   strcmp(said, "refused: `save` did not answer bytes") == 0 &&
+                   kest_held_call(other, "step", NULL, 0, &turn) &&
+                   turn.integer == 8;
+    kest_held_free(other);
+    if (!unsaved) {
+        fprintf(stderr, "a save answering numbers was refused as `%s`\n", said);
+        return false;
+    }
+
+    // Two-byte characters in the first error's name, so that some rooms end
+    // inside one of them.
+    FILE *file = fopen(path, "wb");
+    if (file != NULL) {
+        fputs("module reloaded\n\nfn main() -> i32 {\n    return ", file);
+        for (int i = 0; i < 8; i++) {
+            fputs("\xc4\x9f", file);
+        }
+        fputs("\n}\n", file);
+        fclose(file);
+    }
+    const char *opening = "refused at building: error[K0306]: unknown name `";
+    char whole[512] = "";
+    if (file == NULL || kest_held_reload(held, path, whole, sizeof(whole)) ||
+        strncmp(whole, opening, strlen(opening)) != 0) {
+        fprintf(stderr, "a name of two-byte characters was refused as `%s`\n",
+                whole);
+        return false;
+    }
+    size_t short_of_room = 0;
+    for (size_t given = 1; given < 80; given++) {
+        char small[80];
+        memset(small, 'x', sizeof(small));
+        const char *end = kest_held_reload(held, path, small, given)
+                              ? NULL
+                              : memchr(small, '\0', given);
+        size_t got = end == NULL ? given : (size_t)(end - small);
+        if (got >= given || !ends_whole(small) ||
+            strncmp(small, whole, got) != 0) {
+            fprintf(stderr, "a reload with room for %zu said `%.*s`\n", given,
+                    (int)(got < given ? got : 0), small);
+            return false;
+        }
+        if (got + 1 < given && got < strlen(whole)) {
+            short_of_room++;
+        }
+    }
+    fclose(heard);
+    bool gone = kest_held_free(held);
+    kest_host_free(host);
+    remove(path);
+    if (short_of_room == 0 || !gone) {
+        fprintf(stderr, "no short `said` was cut back to a whole character\n");
+        return false;
+    }
+    printf("a reload was refused a lost door, a wider door, a failed restore, "
+           "a save of numbers and nothing held, and the world stepped on; a "
+           "short said was cut %zu time(s) back to a whole character\n",
+           short_of_room);
+    return true;
+}
+
 int main(int argc, char **argv) {
     // The first thing a host does, before it crosses at all: ask the library
     // what shape its doors are in and compare it with the number this host's
@@ -9055,6 +9225,9 @@ int main(int argc, char **argv) {
         return 1;
     }
     if (!held_across_a_reload()) {
+        return 1;
+    }
+    if (!reload_refused_where_it_said()) {
         return 1;
     }
     if (!text_as_long_as_it_says()) {
