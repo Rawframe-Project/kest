@@ -2,6 +2,16 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## 0.4.0 (2026-11-04)
+
+### Changed
+
+- **Breaking:** `kest fmt` keeps the brackets around a block that gives a value (`|x| value`) wherever it is an operand: before a call, a field or an index, after a unary operator, and inside a binary operator. It dropped them and wrote a different expression while answering 0: `(|| 41 + 1)()` came out as `|| 41 + 1()`, a block giving a call, and `(|| c + 1) * 2` as `|| c + 1 * 2`; where that form was not stable, `fmt` refused the file as a fault in the formatter. None of these blocks compile (`K0367`), so no program that runs changes, but `fmt` now writes different bytes for a file holding one. A block in braces, and a block handed to a function as an argument, are written as before. ([#227](https://github.com/Rawframe-Project/kest/pull/227))
+
+### Fixed
+
+- `kest_held_begin` and `kest_held_call` refuse an `args` of NULL with a count above nought, answering false and writing `K0636` to `errors` with the door as the host named it ("`step` was handed 2 values and no address to find them at"). They copied `count` values from NULL and crashed the host. Values handed with an address are copied exactly as before. ([#225](https://github.com/Rawframe-Project/kest/pull/225))
+
 ## 0.3.0 (2026-11-03)
 
 ### Changed
