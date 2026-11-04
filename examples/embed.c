@@ -2774,28 +2774,12 @@ static bool wrote_world(const char *path, const char *step, bool bytes,
     return fclose(file) == 0;
 }
 
-// Whether `said` ends on a whole character, the way a `said` too short for
-// what a reload has to say is cut.
-static bool ends_whole(const char *said) {
-    const unsigned char *at = (const unsigned char *)said;
-    while (*at != 0) {
-        size_t width = *at < 0x80 ? 1 : *at >= 0xf0 ? 4 : *at >= 0xe0 ? 3 : 2;
-        for (size_t i = 1; i < width; i++) {
-            if ((at[i] & 0xc0) != 0x80) {
-                return false;
-            }
-        }
-        at += width;
-    }
-    return true;
-}
-
 // Every stage a reload says it stopped at, each of which no check reached:
 // the new program has lost a door the host called, or takes more there, its
 // `restore` fails on what was saved, the running `save` answers something
 // other than bytes, and there is nothing held at all. After each the world is
 // where it was and steps on. And a first error cut to fit a short `said`,
-// which ends where a whole character ends whatever room was given.
+// which keeps every whole character that fits and nothing more.
 static bool reload_refused_where_it_said(void) {
     const char *room = getenv("TMPDIR");
     char path[1024];
@@ -2888,21 +2872,31 @@ static bool reload_refused_where_it_said(void) {
                 whole);
         return false;
     }
+    // Each room is told as much of the whole sentence as fits, and not a byte
+    // less: the longest prefix shorter than the room that ends where a
+    // character does, so a cut that went back further than it had to is caught
+    // as surely as one that split a character.
     size_t short_of_room = 0;
+    size_t length = strlen(whole);
     for (size_t given = 1; given < 80; given++) {
+        size_t fits = given - 1 < length ? given - 1 : length;
+        while (fits > 0 && ((unsigned char)whole[fits] & 0xc0) == 0x80) {
+            fits--;
+        }
         char small[80];
         memset(small, 'x', sizeof(small));
         const char *end = kest_held_reload(held, path, small, given)
                               ? NULL
                               : memchr(small, '\0', given);
         size_t got = end == NULL ? given : (size_t)(end - small);
-        if (got >= given || !ends_whole(small) ||
-            strncmp(small, whole, got) != 0) {
-            fprintf(stderr, "a reload with room for %zu said `%.*s`\n", given,
-                    (int)(got < given ? got : 0), small);
+        if (got != fits || strncmp(small, whole, got) != 0) {
+            fprintf(stderr,
+                    "a reload with room for %zu said %zu byte(s), `%.*s`, "
+                    "where %zu fit\n",
+                    given, got, (int)(got < given ? got : 0), small, fits);
             return false;
         }
-        if (got + 1 < given && got < strlen(whole)) {
+        if (fits + 1 < given) {
             short_of_room++;
         }
     }
