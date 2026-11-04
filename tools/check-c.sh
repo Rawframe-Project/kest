@@ -2110,6 +2110,70 @@ $unmaking_was" >>"$said"
     esac
 fi
 
+# And one of a run inside an element at an index past the run, written and
+# divided into, in a body compiled to C. Both are refused with the machine's
+# own `K0604` line before anything is read or written: the division is by
+# nought, so a read past the run would be said as a division instead, and the
+# write would go into whatever comes after the run.
+runpast_said="no write past a run inside an element was refused in C"
+runpast_ways=0
+for runpast_does in "= 9" "/= nought"; do
+    cat >"$work"/runpast.kest <<PROGRAM
+module runpast
+
+struct Row {
+    tag: i32
+    count: [i32; 3]
+}
+
+fn main() -> i32 {
+    let rows: [Row] = array()
+    push(rows, Row(7, [1, 2, 3]))
+    let at = len(rows) + 2
+    let nought = len(rows) - 1
+    rows[0].count[at] $runpast_does
+    return nought
+}
+PROGRAM
+    if ! $build_dir/kest emit --c "$work"/runpast.kest \
+            >"$work"/runpast.c 2>"$work"/why ||
+            ! $cc -O1 -Iinclude -o "$work"/runpast "$work"/runpast.c \
+                $build_dir/libkest.a -lm 2>>"$work"/why; then
+        {
+            echo "    a write past a run inside an element will not build \
+against the C this wrote:"
+            sed 's/^/        /' "$work"/why | head -5
+        } >>"$said"
+        wrong=$((wrong + 1))
+        continue
+    fi
+    runpast_compiled=$(KEST_LIB=lib/ "$work"/runpast "$work"/runpast.kest \
+                           2>&1 </dev/null | grep '^error')
+    runpast_machine=$(KEST_LIB=lib/ $build_dir/kest run "$work"/runpast.kest \
+                          2>&1 </dev/null | grep '^error')
+    case "$runpast_compiled" in
+    *"K0604"*"index 3 is outside 3 of them"*)
+        if [ "$runpast_compiled" = "$runpast_machine" ]; then
+            runpast_ways=$((runpast_ways + 1))
+        else
+            echo "    \`rows[0].count[at] $runpast_does\` past the run was \
+said \`$runpast_compiled\` in C and \`$runpast_machine\` by the machine" \
+                >>"$said"
+            wrong=$((wrong + 1))
+        fi
+        ;;
+    *)
+        echo "    \`rows[0].count[at] $runpast_does\` past the run said \
+\`${runpast_compiled:-nothing}\` in C" >>"$said"
+        wrong=$((wrong + 1))
+        ;;
+    esac
+done
+if [ "$runpast_ways" -eq 2 ]; then
+    runpast_said="a run inside an element written and divided into past its \
+end, refused in C with the machine's line"
+fi
+
 # And a walk that hands its array to the host, whose door calls back into the
 # program and shortens it. The walk proofs refuse a walk that calls the host,
 # because a host handed an array can do exactly this, and only a host can
@@ -2639,6 +2703,6 @@ host compiler takes, $both program(s) written here and $alike of this tree's \
 own run both ways for the same answer and the same words, $walked of those \
 again walking the heap before every allocation with $not_walked left out for \
 growing worlds, $sanitised again under the sanitisers, $fused_said, \
-$inside_said, $stopped_said, $tag_said, $unmade_said, \
+$inside_said, $stopped_said, $tag_said, $unmade_said, $runpast_said, \
 $wants_a_host that ask the host for what a file this wrote does not provide, \
 and $refused_walked allocation(s) of a host without its door refused in turn"
