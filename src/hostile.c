@@ -11,7 +11,8 @@
 // function of the host's, and what reaches it is whatever the program put in
 // the frame: every number there is at every width, every float including the
 // ones that are not numbers, text of no length and of a great deal and with a
-// nought in it, a case of every enum, an optional holding nothing. The verifier
+// nought in it, a case of every enum, a set of flags from none of them to
+// every one, an optional holding nothing. The verifier
 // holds a program to handing each door what the door declares; what the door
 // does with it is the host's to get right, and this is the program that asks.
 
@@ -242,7 +243,28 @@ static bool a_value(Written *out, const KestType *type, const char *module,
         if (name == NULL) {
             return false;
         }
-        put(out, "%s()", name);
+        // The empty set, every flag it has a name for, one of them, or some
+        // of them. A door handed a set is handed its bits, and the one with
+        // every named bit set is the widest a program can make; it was handed
+        // the empty one every time.
+        uint32_t named = type->case_count < 64 ? type->case_count : 64;
+        uint64_t all = named == 64 ? ~(uint64_t)0 : ((uint64_t)1 << named) - 1;
+        uint64_t which = next(state) % 4;
+        uint64_t bits = named == 0 || which == 0 ? 0
+                        : which == 1             ? all
+                        : which == 2 ? (uint64_t)1 << (next(state) % named)
+                                     : next(state) & all;
+        if (bits == 0) {
+            put(out, "%s()", name);
+            return true;
+        }
+        const char *between = "";
+        for (uint32_t c = 0; c < named; c++) {
+            if (((bits >> c) & 1u) != 0) {
+                put(out, "%s%s.%s", between, name, type->cases[c].name);
+                between = " | ";
+            }
+        }
         return true;
     }
     case KEST_T_OPTIONAL:

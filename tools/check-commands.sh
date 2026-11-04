@@ -318,6 +318,34 @@ elif ! (cd "$scratch"/hostile && KEST_LIB= "$kest" hostile doors.kest 3 \
     complain "hostile: a file \`check\` reads was refused from another \
 directory: $(head -1 "$scratch"/hostile/elsewhere)"
 fi
+# And a door that takes a set of flags, which `hostile` handed the empty set
+# and nothing else: a door was never handed a bit. Over eight seeds it is
+# handed the empty set, one flag, and every flag the set names, and every file
+# it writes checks with nothing to say.
+printf 'module sets\n\nflags Mood: u8 {\n    Hungry\n    Tired\n}\n\nextern fn Engine.felt(m: Mood) -> i32\n\nfn main() -> i32 {\n    return Engine.felt(Mood())\n}\n' \
+    >"$scratch"/hostile/sets.kest
+: >"$scratch"/hostile/sets-handed
+for seed in 1 2 3 4 5 6 7 8; do
+    if ! $kest hostile "$scratch"/hostile/sets.kest "$seed" \
+            >"$scratch"/hostile/sets-$seed.kest 2>/dev/null </dev/null ||
+       ! $kest check "$scratch"/hostile/sets-$seed.kest \
+            >/dev/null 2>&1 </dev/null; then
+        complain "hostile: seed $seed wrote a file with a set that does not check"
+    fi
+    sed -n '/^fn hostile/,$p' "$scratch"/hostile/sets-$seed.kest |
+        grep -o 'Engine\.felt([^)]*)' >>"$scratch"/hostile/sets-handed
+done
+if ! grep -qF 'Engine.felt(Mood()' "$scratch"/hostile/sets-handed; then
+    complain "hostile: no door was handed the empty set"
+fi
+if ! grep -qF 'Engine.felt(Mood.Hungry | Mood.Tired)' \
+        "$scratch"/hostile/sets-handed; then
+    complain "hostile: no door was handed every flag of a set"
+fi
+if ! grep -qE 'Engine\.felt\(Mood\.(Hungry|Tired)\)' \
+        "$scratch"/hostile/sets-handed; then
+    complain "hostile: no door was handed one flag of a set"
+fi
 if $kest debug --json examples/embed.kest >"$scratch"/hostile/debug \
         2>&1 </dev/null ||
    ! python3 -c '
