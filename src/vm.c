@@ -2471,6 +2471,25 @@ static void unmade_in(const KestType *type, const KestValue *slots, uint32_t at,
 
 #define LOOKED_AT(layout) (((const KestMoving *)(layout)->walk)->looks)
 
+// Whether a read starts inside memory a host lent. `LOAD_AT` reads through an
+// address worked out before it and is not told whose memory that is, and the
+// machine's own memory never holds a truth or a set that is no value, so it
+// asks here rather than walking every value it reads. Compared as numbers:
+// the address may be in no lend at all, and pointers into two blocks are not
+// ordered.
+static bool in_a_lend(const KestRuntime *rt, const unsigned char *at) {
+    uintptr_t place = (uintptr_t)at;
+    for (uint32_t i = 0; i < rt->lent_count; i++) {
+        const Array *one = rt->lent[i];
+        uintptr_t from = (uintptr_t)one->bytes;
+        if (place >= from &&
+            place - from < (uintptr_t)one->length * one->stride) {
+            return true;
+        }
+    }
+    return false;
+}
+
 #define READ_WHOLE(where, layout)                                              \
     do {                                                                       \
         Unmade unmade = {NULL, 0, false};                                      \
@@ -5222,7 +5241,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 OF_THE_MODULE(of_which, module->layout_count, "a layout");
                 const KestLayout *layout = &module->layouts[of_which];
                 const unsigned char *at = (--top)->object;
-                READ_INTO(top, layout, at + offset, true);
+                READ_INTO(top, layout, at + offset,
+                          LOOKED_AT(layout) && in_a_lend(rt, at + offset));
                 top += layout->slots;
                 NEXT;
             }

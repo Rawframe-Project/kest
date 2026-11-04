@@ -1954,7 +1954,9 @@ fi
 # type: a byte of 2 where a `bool` is, and a bit no name covers in a set. Each
 # was read as it was, a truth that was not `true` and took the branch for it,
 # and a set that wrote itself as one it did not equal. Both engines refuse the
-# read with `K0668` in one sentence.
+# read with `K0668` in one sentence, and so does the machine for a truth read
+# through an address worked out while running, where it is not told whose
+# memory that is.
 unmade_said="no truth or set that is no value was read from a lend"
 cat >"$work"/unmade.kest <<'PROGRAM'
 module unmade
@@ -1965,8 +1967,16 @@ flags Mood: u8 {
 }
 
 struct Sense {
+    seen: [bool; 2]
     up: bool
     mood: Mood
+}
+
+fn glanced(senses: [Sense], at: i32) -> i32 {
+    if senses[0].seen[at] {
+        return 1
+    }
+    return 2
 }
 
 fn felt(senses: [Sense]) -> i32 {
@@ -1993,13 +2003,15 @@ bool kest_natives_here(KestRuntime *runtime);
 
 // The program's struct as this host lays it out: a byte each.
 typedef struct {
+    unsigned char seen[2];
     unsigned char up;
     unsigned char mood;
 } Sense;
 
 // The line of the report with the code in it after reading `senses`, or NULL
 // when the run was not refused with it.
-static char *refused(const char *path, bool compiled, Sense first) {
+static char *refused(const char *path, bool compiled, const char *reader,
+                     Sense first) {
     KestBuild *build = kest_build(path, getenv("KEST_LIB"), stderr,
                                   KEST_FORM_TEXT, 0);
     KestHost *host = kest_host_new();
@@ -2010,13 +2022,14 @@ static char *refused(const char *path, bool compiled, Sense first) {
         fprintf(stderr, "no machine\n");
         return NULL;
     }
-    Sense senses[2] = {{1, 1}, {0, 0}};
+    Sense senses[2] = {{{0, 1}, 1, 1}, {{0, 0}, 0, 0}};
     KestValue slots[4];
     memset(slots, 0, sizeof slots);
     slots[0] = kest_borrow(rt, senses, 2, "Sense", sizeof(Sense));
+    slots[1].integer = 1;
     // Written after the lend, which is when a host's bytes change.
     senses[0] = first;
-    int32_t which = kest_entry(rt, "unmade.felt");
+    int32_t which = kest_entry(rt, reader);
     char *line = NULL;
     FILE *report = tmpfile();
     if (slots[0].object != NULL && which >= 0 && report != NULL &&
@@ -2046,11 +2059,14 @@ int main(int argc, char **argv) {
         fprintf(stderr, "usage: unmade <program>\n");
         return 2;
     }
-    const Sense wrong[2] = {{2, 1}, {1, 255}};
+    // The last is read through an address worked out while running, which
+    // the machine reads without being told whose memory it is.
+    const Sense wrong[3] = {{{0, 1}, 2, 1}, {{0, 1}, 1, 255}, {{0, 2}, 1, 1}};
+    const char *readers[3] = {"unmade.felt", "unmade.felt", "unmade.glanced"};
     int same = 1;
-    for (int i = 0; i < 2; i++) {
-        char *compiled = refused(argv[1], true, wrong[i]);
-        char *machine = refused(argv[1], false, wrong[i]);
+    for (int i = 0; i < 3; i++) {
+        char *compiled = refused(argv[1], true, readers[i], wrong[i]);
+        char *machine = refused(argv[1], false, readers[i], wrong[i]);
         printf("compiled %s", compiled == NULL ? "ran\n" : compiled);
         printf("machine %s", machine == NULL ? "ran\n" : machine);
         same = same && compiled != NULL && machine != NULL &&
@@ -2076,9 +2092,9 @@ else
     unmaking=$(KEST_LIB=lib/ "$work"/unmade "$work"/unmade.kest 2>&1 </dev/null)
     unmaking_was=$?
     case "$unmaking" in
-    *"compiled "*"\`bool\` here holds 2, which is neither true nor false"*"machine "*"compiled "*"\`Mood\` here holds 255, which has bits it has no names for"*"machine "*)
+    *"compiled "*"\`bool\` here holds 2, which is neither true nor false"*"machine "*"compiled "*"\`Mood\` here holds 255, which has bits it has no names for"*"machine "*"compiled "*"\`bool\` here holds 2"*"machine "*"\`bool\` here holds 2"*)
         unmade_said="a truth of 2 and a set with bits no name covers lent, \
-each refused in one sentence by both engines"
+each refused in one sentence by both engines, through an address too"
         if [ "$unmaking_was" -ne 0 ]; then
             echo "    a truth or a set that is no value was said two ways: \
 $(printf '%s' "$unmaking" | tr '\n' ' ')" >>"$said"
