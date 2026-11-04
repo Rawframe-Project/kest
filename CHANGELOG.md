@@ -2,6 +2,18 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.4.0](https://github.com/Rawframe-Project/kest/compare/v0.3.0...v0.4.0) (2026-11-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* **fmt:** kest fmt keeps the brackets around a |x| value block wherever it is an operand, so (|| 41 + 1)() formats as itself instead of || 41 + 1().
+
+### Fixed
+
+* **api:** refuse held values said to be there with no address ([#225](https://github.com/Rawframe-Project/kest/issues/225)) ([448c73b](https://github.com/Rawframe-Project/kest/commit/448c73bf65f51dfa675a44e8a62e72e888b00e21)), closes [#223](https://github.com/Rawframe-Project/kest/issues/223)
+* **fmt:** keep the brackets around a block that gives a value ([#227](https://github.com/Rawframe-Project/kest/issues/227)) ([0ffa8ae](https://github.com/Rawframe-Project/kest/commit/0ffa8ae1b78d5ac0f2f53f7b97078cff09378564)), closes [#226](https://github.com/Rawframe-Project/kest/issues/226)
+
 ## 0.3.0 (2026-11-03)
 
 ### Changed
