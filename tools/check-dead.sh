@@ -298,6 +298,19 @@ fn stormy(days: [Weather]) -> i32 no.alloc no.host deterministic {
     return wind
 }
 
+// A truth read out of a run, which a body this backend writes holds to being
+// nought or one and refuses through a door of the machine's when a host's
+// bytes say otherwise.
+fn seen(ups: [bool]) -> i32 no.alloc no.host deterministic {
+    let many = 0
+    for up in ups {
+        if up {
+            many += 1
+        }
+    }
+    return many
+}
+
 fn main() -> i32 {
     let counts: [i32] = array()
     for i in 0..4 {

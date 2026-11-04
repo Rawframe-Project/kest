@@ -974,6 +974,43 @@ static void cases_last(KestMoveStep *steps, uint32_t first, uint32_t end) {
 // among the steps so far in the order they were written, each of its cases as
 // a run of steps of its own -- which may hold tags, whose cases are written
 // when the walk reaches them. NULL for no memory.
+// Whether a value of this type holds a piece whose bytes can spell what the
+// type has no value for, beside a tag, which every read of one looks at: a
+// truth is nought or one in a byte, and a set is the bits it has names for in
+// its width.
+static bool looked_at(const KestType *type) {
+    if (type == NULL) {
+        return false;
+    }
+    switch (type->tag) {
+    case KEST_T_BOOL:
+        return true;
+    case KEST_T_FLAGS:
+        return type->case_count < type->width;
+    case KEST_T_OPTIONAL:
+    case KEST_T_FIXED:
+        return looked_at(type->element);
+    case KEST_T_STRUCT:
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            if (looked_at(type->members[i].type)) {
+                return true;
+            }
+        }
+        return false;
+    case KEST_T_ENUM:
+        for (uint32_t i = 0; i < type->case_count; i++) {
+            for (uint32_t p = 0; p < type->cases[i].payload_count; p++) {
+                if (looked_at(type->cases[i].payload[p])) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    default:
+        return false;
+    }
+}
+
 static const KestMoving *walk_of(KestArena *arena, const KestType *type) {
     uint32_t total = 0;
     uint32_t ranges = 0;
@@ -988,6 +1025,7 @@ static const KestMoving *walk_of(KestArena *arena, const KestType *type) {
     uint32_t n = merged(steps, 0, flatten(steps, 0, type, 0, 0));
     cases_last(steps, 0, n);
     walk->count = n;
+    walk->looks = looked_at(type);
     uint32_t r = 0;
     for (uint32_t i = 0; i < n; i++) {
         if (steps[i].kind != KEST_MOVE_CASES) {

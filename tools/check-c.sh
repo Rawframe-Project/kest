@@ -1950,6 +1950,150 @@ $tagging_was" >>"$said"
     esac
 fi
 
+# And a truth and a set a host wrote into a lend that are no value of their
+# type: a byte of 2 where a `bool` is, and a bit no name covers in a set. Each
+# was read as it was, a truth that was not `true` and took the branch for it,
+# and a set that wrote itself as one it did not equal. Both engines refuse the
+# read with `K0668` in one sentence.
+unmade_said="no truth or set that is no value was read from a lend"
+cat >"$work"/unmade.kest <<'PROGRAM'
+module unmade
+
+flags Mood: u8 {
+    Hungry
+    Tired
+}
+
+struct Sense {
+    up: bool
+    mood: Mood
+}
+
+fn felt(senses: [Sense]) -> i32 {
+    let felt = 0
+    for one in senses {
+        if one.up {
+            felt += 1
+        }
+        if one.mood == Mood.Hungry {
+            felt += 10
+        }
+    }
+    return felt
+}
+PROGRAM
+cat >"$work"/unmade.c <<'HOST'
+#include "kest.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+bool kest_natives_here(KestRuntime *runtime);
+
+// The program's struct as this host lays it out: a byte each.
+typedef struct {
+    unsigned char up;
+    unsigned char mood;
+} Sense;
+
+// The line of the report with the code in it after reading `senses`, or NULL
+// when the run was not refused with it.
+static char *refused(const char *path, bool compiled, Sense first) {
+    KestBuild *build = kest_build(path, getenv("KEST_LIB"), stderr,
+                                  KEST_FORM_TEXT, 0);
+    KestHost *host = kest_host_new();
+    KestRuntime *rt =
+        build == NULL || host == NULL ? NULL : kest_start(build, host, NULL);
+    kest_host_free(host);
+    if (rt == NULL || (compiled && !kest_natives_here(rt))) {
+        fprintf(stderr, "no machine\n");
+        return NULL;
+    }
+    Sense senses[2] = {{1, 1}, {0, 0}};
+    KestValue slots[4];
+    memset(slots, 0, sizeof slots);
+    slots[0] = kest_borrow(rt, senses, 2, "Sense", sizeof(Sense));
+    // Written after the lend, which is when a host's bytes change.
+    senses[0] = first;
+    int32_t which = kest_entry(rt, "unmade.felt");
+    char *line = NULL;
+    FILE *report = tmpfile();
+    if (slots[0].object != NULL && which >= 0 && report != NULL &&
+        !kest_call(rt, which, slots, 4)) {
+        kest_report(rt, report, KEST_FORM_TEXT);
+        rewind(report);
+        char read[1024];
+        while (line == NULL && fgets(read, sizeof read, report) != NULL) {
+            if (strstr(read, "K0668") != NULL) {
+                line = malloc(strlen(read) + 1);
+                if (line != NULL) {
+                    memcpy(line, read, strlen(read) + 1);
+                }
+            }
+        }
+    }
+    if (report != NULL) {
+        fclose(report);
+    }
+    kest_runtime_free(rt);
+    kest_build_free(build);
+    return line;
+}
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        fprintf(stderr, "usage: unmade <program>\n");
+        return 2;
+    }
+    const Sense wrong[2] = {{2, 1}, {1, 255}};
+    int same = 1;
+    for (int i = 0; i < 2; i++) {
+        char *compiled = refused(argv[1], true, wrong[i]);
+        char *machine = refused(argv[1], false, wrong[i]);
+        printf("compiled %s", compiled == NULL ? "ran\n" : compiled);
+        printf("machine %s", machine == NULL ? "ran\n" : machine);
+        same = same && compiled != NULL && machine != NULL &&
+               strcmp(compiled, machine) == 0;
+        free(compiled);
+        free(machine);
+    }
+    return same ? 0 : 1;
+}
+HOST
+if ! $build_dir/kest emit --c "$work"/unmade.kest >"$work"/unmade-body.c 2>"$work"/why ||
+        ! $cc -O1 -Iinclude -DKEST_NO_MAIN -c -o "$work"/unmade-body.o \
+            "$work"/unmade-body.c 2>>"$work"/why ||
+        ! $cc -O1 -Iinclude -o "$work"/unmade "$work"/unmade.c \
+            "$work"/unmade-body.o $build_dir/libkest.a -lm 2>>"$work"/why; then
+    {
+        echo "    a host lending a truth and a set that are no value will not \
+build against the C this wrote:"
+        sed 's/^/        /' "$work"/why | head -5
+    } >>"$said"
+    wrong=$((wrong + 1))
+else
+    unmaking=$(KEST_LIB=lib/ "$work"/unmade "$work"/unmade.kest 2>&1 </dev/null)
+    unmaking_was=$?
+    case "$unmaking" in
+    *"compiled "*"\`bool\` here holds 2, which is neither true nor false"*"machine "*"compiled "*"\`Mood\` here holds 255, which has bits it has no names for"*"machine "*)
+        unmade_said="a truth of 2 and a set with bits no name covers lent, \
+each refused in one sentence by both engines"
+        if [ "$unmaking_was" -ne 0 ]; then
+            echo "    a truth or a set that is no value was said two ways: \
+$(printf '%s' "$unmaking" | tr '\n' ' ')" >>"$said"
+            wrong=$((wrong + 1))
+        fi
+        ;;
+    *)
+        echo "    a truth and a set that are no value said \
+\`$(printf '%s' "$unmaking" | head -4 | tr '\n' ' ')\` and came back \
+$unmaking_was" >>"$said"
+        wrong=$((wrong + 1))
+        ;;
+    esac
+fi
+
 # And a walk that hands its array to the host, whose door calls back into the
 # program and shortens it. The walk proofs refuse a walk that calls the host,
 # because a host handed an array can do exactly this, and only a host can
@@ -2479,6 +2623,6 @@ host compiler takes, $both program(s) written here and $alike of this tree's \
 own run both ways for the same answer and the same words, $walked of those \
 again walking the heap before every allocation with $not_walked left out for \
 growing worlds, $sanitised again under the sanitisers, $fused_said, \
-$inside_said, $stopped_said, $tag_said, \
+$inside_said, $stopped_said, $tag_said, $unmade_said, \
 $wants_a_host that ask the host for what a file this wrote does not provide, \
 and $refused_walked allocation(s) of a host without its door refused in turn"

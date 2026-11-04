@@ -677,6 +677,10 @@ typedef struct {
     const KestMoveRun *ranges;
     // How many of the steps are the value's own, rather than a case's.
     uint32_t count;
+    // Whether the value holds a truth or a set with fewer names than bits,
+    // whose bytes can spell something the type has no value for: memory this
+    // machine did not write is held to the type where it is read.
+    bool looks;
 } KestMoving;
 
 typedef struct {

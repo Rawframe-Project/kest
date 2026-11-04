@@ -2398,12 +2398,105 @@ static bool values_equal(const KestType *type, const KestValue *a,
     "a tag in memory this machine did not write is the host's to get right, "  \
     "and `kest_case_of` names the cases"
 
+// And the other two pieces whose bytes can spell what their type has no value
+// for, in both engines' words: a truth, which is nought or one in a byte, and
+// a set, which is the bits it has names for in its width. A program cannot
+// write either, so they are found in memory a host wrote -- a lend, which it
+// goes on writing to after the lend was made, or a copy of one.
+#define NOT_A_TRUTH "`bool` here holds %lld, which is neither true nor false"
+#define NO_NAMES_FOR "`%s` here holds %llu, which has bits it has no names for"
+#define NOT_ITS_HELP                                                           \
+    "a truth is nought or one and a set is the bits it has names for, and "    \
+    "memory this machine did not write is the host's to get right"
+
+typedef struct {
+    const KestType *type;
+    uint64_t held;
+    bool found;
+} Unmade;
+
+// The first truth or set in the slots read for a value of `type` that is not
+// one, from slot `at`. A tag is already one of its cases here, because the
+// walk that read the slots looked at it first.
+static void unmade_in(const KestType *type, const KestValue *slots, uint32_t at,
+                      Unmade *found) {
+    if (type == NULL || found->found) {
+        return;
+    }
+    switch (type->tag) {
+    case KEST_T_BOOL:
+        if ((uint64_t)slots[at].integer > 1) {
+            *found = (Unmade){type, (uint64_t)slots[at].integer, true};
+        }
+        return;
+    case KEST_T_FLAGS:
+        if (type->case_count < 64 &&
+            ((uint64_t)slots[at].integer >> type->case_count) != 0) {
+            *found = (Unmade){type, (uint64_t)slots[at].integer, true};
+        }
+        return;
+    case KEST_T_OPTIONAL:
+        unmade_in(type->element, slots, at, found);
+        return;
+    case KEST_T_FIXED: {
+        uint32_t each = type->element == NULL || type->element->slots == 0
+                            ? 1
+                            : type->element->slots;
+        for (uint32_t i = 0; i < type->count; i++) {
+            unmade_in(type->element, slots, at + i * each, found);
+        }
+        return;
+    }
+    case KEST_T_STRUCT:
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            unmade_in(type->members[i].type, slots,
+                      at + type->members[i].offset, found);
+        }
+        return;
+    case KEST_T_ENUM: {
+        int64_t tag = slots[at].integer;
+        if (tag < 0 || (uint64_t)tag >= type->case_count) {
+            return;
+        }
+        const KestVariantType *one = &type->cases[tag];
+        for (uint32_t p = 0; p < one->payload_count; p++) {
+            unmade_in(one->payload[p], slots, at + one->offsets[p], found);
+        }
+        return;
+    }
+    default:
+        return;
+    }
+}
+
+#define LOOKED_AT(layout) (((const KestMoving *)(layout)->walk)->looks)
+
+#define READ_WHOLE(where, layout)                                              \
+    do {                                                                       \
+        Unmade unmade = {NULL, 0, false};                                      \
+        unmade_in((const KestType *)(layout)->type, (where), 0, &unmade);      \
+        if (unmade.found && unmade.type->tag == KEST_T_BOOL) {                 \
+            fail(vmp, frame, instruction, "K0668", NOT_A_TRUTH,                \
+                 (long long)unmade.held);                                      \
+        } else if (unmade.found) {                                             \
+            fail(vmp, frame, instruction, "K0668", NO_NAMES_FOR,               \
+                 kest_type_written(unmade.type) != NULL                        \
+                     ? kest_type_written(unmade.type)                          \
+                     : "a set of flags",                                       \
+                 (unsigned long long)unmade.held);                             \
+        }                                                                      \
+        if (unmade.found) {                                                    \
+            kest_diags_suggest(vmp->diags, NOT_ITS_HELP);                      \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
+
 // Reading a value out of memory, and what that turned up. A tag is the one
 // piece of a value whose number has to mean something -- the pieces beside it
 // are whatever it says they are -- so a number with no case behind it is read
 // here and nowhere else: the `match` that meets it has no arm to take, and
 // what it would do instead is take an arm belonging to another case.
-#define READ_INTO(where, layout, from)                                         \
+#define READ_INTO(where, layout, from, lent)                                   \
     do {                                                                       \
         TagRead told = {NULL, 0, false};                                       \
         MOVED(moved_unpacked, (layout)->size);                                 \
@@ -2422,6 +2515,9 @@ static bool values_equal(const KestType *type, const KestValue *a,
             }                                                                  \
             read_piece((where), (layout)->pieces[0].kind,                      \
                        (from) + (layout)->pieces[0].offset);                   \
+            if ((lent) && LOOKED_AT(layout)) {                                 \
+                READ_WHOLE((where), (layout));                                 \
+            }                                                                  \
             break;                                                             \
         }                                                                      \
         unpack((where), (layout), (from), &told);                              \
@@ -2433,6 +2529,9 @@ static bool values_equal(const KestType *type, const KestValue *a,
                  (long long)told.tag);                                         \
             kest_diags_suggest(vmp->diags, NO_SUCH_CASE_HELP);                 \
             return false;                                                      \
+        }                                                                      \
+        if ((lent) && LOOKED_AT(layout)) {                                     \
+            READ_WHOLE((where), (layout));                                     \
         }                                                                      \
     } while (0)
 
@@ -4814,7 +4913,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 HOLD(array, KEST_IS_ARRAY, "an array");
                 IN_ARRAY(index, array);
                 READ_INTO(top, layout,
-                          array->bytes + (size_t)index * array->stride);
+                          array->bytes + (size_t)index * array->stride,
+                          array->borrowed);
                 top += layout->slots;
                 NEXT;
             }
@@ -4839,7 +4939,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 HOLD(array, KEST_IS_ARRAY, "an array");
                 IN_ARRAY(index, array);
                 READ_INTO(top, layout,
-                          array->bytes + (size_t)index * array->stride);
+                          array->bytes + (size_t)index * array->stride,
+                          array->borrowed);
                 top += layout->slots;
                 NEXT;
             }
@@ -4862,7 +4963,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 HOLD(array, KEST_IS_ARRAY, "an array");
                 IN_ARRAY(index, array);
                 READ_INTO(top, layout,
-                          array->bytes + (size_t)index * array->stride);
+                          array->bytes + (size_t)index * array->stride,
+                          array->borrowed);
                 top += layout->slots;
                 NEXT;
             }
@@ -4886,7 +4988,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 }
 #endif
                 READ_INTO(mine + slot, layout,
-                          array->bytes + (size_t)index * array->stride);
+                          array->bytes + (size_t)index * array->stride,
+                          array->borrowed);
                 NEXT;
             }
         case KEST_OP_INDEX_TO_LL:
@@ -4911,7 +5014,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 HOLD(array, KEST_IS_ARRAY, "an array");
                 IN_ARRAY(index, array);
                 READ_INTO(mine + slot, layout,
-                          array->bytes + (size_t)index * array->stride);
+                          array->bytes + (size_t)index * array->stride,
+                          array->borrowed);
                 NEXT;
             }
         case KEST_OP_ELEM_FROM_LL:
@@ -4985,7 +5089,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 }
                 array->length--;
                 READ_INTO(top, layout,
-                          array->bytes + (size_t)array->length * array->stride);
+                          array->bytes + (size_t)array->length * array->stride,
+                          array->borrowed);
                 top += layout->slots;
                 (top++)->integer = 1;
                 NEXT;
@@ -5007,7 +5112,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 IN_ARRAY(index, array);
                 unsigned char *at =
                     array->bytes + (size_t)index * array->stride;
-                READ_INTO(top, layout, at);
+                READ_INTO(top, layout, at, array->borrowed);
                 top += layout->slots;
                 // And the taking away, which is the door a body the host's
                 // compiler compiled goes through: one answer about what a run
@@ -5056,8 +5161,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 HOLD(array, KEST_IS_ARRAY, "an array");
                 IN_ARRAY(index, array);
                 READ_INTO(top, layout,
-                          array->bytes + (size_t)index * array->stride +
-                              offset);
+                          array->bytes + (size_t)index * array->stride + offset,
+                          array->borrowed);
                 top += layout->slots;
                 NEXT;
             }
@@ -5117,7 +5222,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 OF_THE_MODULE(of_which, module->layout_count, "a layout");
                 const KestLayout *layout = &module->layouts[of_which];
                 const unsigned char *at = (--top)->object;
-                READ_INTO(top, layout, at + offset);
+                READ_INTO(top, layout, at + offset, true);
                 top += layout->slots;
                 NEXT;
             }
@@ -5139,8 +5244,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 HOLD(array, KEST_IS_ARRAY, "an array");
                 IN_ARRAY(index, array);
                 READ_INTO(top, layout,
-                          array->bytes + (size_t)index * array->stride +
-                              offset);
+                          array->bytes + (size_t)index * array->stride + offset,
+                          array->borrowed);
                 top += layout->slots;
                 NEXT;
             }
@@ -6441,7 +6546,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         /* Two, because a read of a piece is written for text as well. */      \
         KestValue element[2];                                                  \
         READ_INTO(element, layout,                                             \
-                  array->bytes + (size_t)index * array->stride);               \
+                  array->bytes + (size_t)index * array->stride,                \
+                  array->borrowed);                                            \
         int64_t left = element[0].integer;                                     \
         int64_t right = constants[which].integer;                              \
         if (!(test)) {                                                         \
@@ -10832,6 +10938,22 @@ bool kest_native_no_case(KestRuntime *runtime, uint32_t offset,
     said_here(runtime, where_from(runtime), where_asked(runtime, offset),
               "K0651", NO_SUCH_CASE, type, tag);
     kest_diags_suggest(runtime->diags, NO_SUCH_CASE_HELP);
+    return false;
+}
+
+bool kest_native_unmade(KestRuntime *runtime, uint32_t offset, const char *set,
+                        unsigned long long held) {
+    if (runtime == NULL) {
+        return false;
+    }
+    if (set == NULL) {
+        said_here(runtime, where_from(runtime), where_asked(runtime, offset),
+                  "K0668", NOT_A_TRUTH, (long long)held);
+    } else {
+        said_here(runtime, where_from(runtime), where_asked(runtime, offset),
+                  "K0668", NO_NAMES_FOR, set, held);
+    }
+    kest_diags_suggest(runtime->diags, NOT_ITS_HELP);
     return false;
 }
 
