@@ -420,10 +420,14 @@ static void print_items(Printer *printer, KestExpr **items, uint32_t count,
 // no precedence to compare against -- they end where the expression holding
 // them ends -- so one written where something follows is always bracketed.
 // Printing one without was a formatter that wrote a different program and said
-// nothing about it.
+// nothing about it. So is a block that gives a value, `|x| value`, whose value
+// takes as much as it can the same way: `(|| c + 1) * 2` without its brackets
+// is a block giving `c + 1 * 2`, and `(|| f)()` one giving `f()`. A block in
+// braces ends at its brace and needs none.
 static bool takes_what_follows(const KestExpr *expr) {
     return expr != NULL &&
-           (expr->kind == KEST_EXPR_IF || expr->kind == KEST_EXPR_MATCH);
+           (expr->kind == KEST_EXPR_IF || expr->kind == KEST_EXPR_MATCH ||
+            (expr->kind == KEST_EXPR_BLOCK && expr->lambda->value != NULL));
 }
 
 static void print_operand(Printer *printer, const KestExpr *expr, int limit) {
