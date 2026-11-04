@@ -2,6 +2,24 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.6.0](https://github.com/Rawframe-Project/kest/compare/v0.5.0...v0.6.0) (2026-11-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* **compiler:** a program writing one of a fixed run inside an element of an array at an index worked out while running was refused with K0505 and now compiles and runs.
+* **compiler:** a program reading one of a fixed run inside an element of an array at an index worked out while running, where the run is not the element's first field, was refused with K0505 and now compiles and runs.
+
+### Fixed
+
+* **compiler:** read a run inside an element at a running index ([#246](https://github.com/Rawframe-Project/kest/issues/246)) ([8d4db66](https://github.com/Rawframe-Project/kest/commit/8d4db664d9192cfaa80971010589a778d4c7e2bd)), closes [#244](https://github.com/Rawframe-Project/kest/issues/244)
+* **compiler:** write a run inside an element at a running index ([#250](https://github.com/Rawframe-Project/kest/issues/250)) ([d692b17](https://github.com/Rawframe-Project/kest/commit/d692b173de4910296256e592bb26005c21f75c86)), closes [#245](https://github.com/Rawframe-Project/kest/issues/245)
+
+
+### Changed
+
+* **vm:** walk a truth or set read through an address only in a lend ([#247](https://github.com/Rawframe-Project/kest/issues/247)) ([ca6f9c2](https://github.com/Rawframe-Project/kest/commit/ca6f9c2fe282037c48e729008c1a171c1581335a)), closes [#240](https://github.com/Rawframe-Project/kest/issues/240)
+
 ## 0.5.0 (2026-11-04)
 
 ### Changed
