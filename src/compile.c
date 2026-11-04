@@ -3546,17 +3546,10 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             uint16_t offset = 0;
             if (can_address(compiler, expr->index.object) &&
                 compile_address(compiler, expr->index.object, &offset)) {
-                // The address of the run, then one step into it.
-                if (offset > 0) {
-                    KestValue nothing = {0};
-                    nothing.integer = 0;
-                    emit_constant(compiler, nothing, KEST_CONST_INT,
-                                  whole_type(compiler), expr->span);
-                    stack_push(compiler, 1);
-                    stack_pop(compiler, 1);
-                    offset_addr(compiler, offset, 1, object->element,
-                                expr->span);
-                }
+                // One step from the address of what holds the run, and the
+                // run's own place in it read with the element: the address
+                // is still the holder's, which is what the step is checked
+                // against.
                 compile_expr(compiler, expr->index.index);
                 stack_pop(compiler, 1);
                 offset_addr(compiler, object->element->byte_size,
@@ -3564,7 +3557,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                             expr->span);
                 stack_pop(compiler, 1);
                 stack_push(compiler, stride);
-                load_at(compiler, 0, object->element, expr->span);
+                load_at(compiler, offset, object->element, expr->span);
                 break;
             }
             // The run is a constant, so it is in the chunk already: one of

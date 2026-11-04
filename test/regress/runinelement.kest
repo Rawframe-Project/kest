@@ -1,0 +1,77 @@
+// Guards against reading one of a fixed run inside an element of an array,
+// at an index worked out while running, when the run is not the element's
+// first field: the compiler counted one slot too many on its stack and
+// stepped the address by nothing, so the program was refused as a fault in
+// the compiler.
+
+module test.regress.runinelement
+
+struct Row {
+    tag: i32
+    seen: [bool; 3]
+    count: [i32; 3]
+}
+
+struct First {
+    seen: [bool; 2]
+    n: i32
+}
+
+struct Outer {
+    a: i64
+    inner: Row
+}
+
+fn seenAt(rows: [Row], k: i32, at: i32) -> bool {
+    return rows[k].seen[at]
+}
+
+fn countAt(rows: [Row], k: i32, at: i32) -> i32 {
+    return rows[k].count[at]
+}
+
+fn firstAt(firsts: [First], k: i32, at: i32) -> bool {
+    return firsts[k].seen[at]
+}
+
+fn innerAt(outers: [Outer], k: i32, at: i32) -> i32 {
+    return outers[k].inner.count[at]
+}
+
+fn main() -> i32 {
+    let rows: [Row] = array()
+    push(rows, Row(7, [true, false, true], [10, 20, 30]))
+    push(rows, Row(8, [false, true, false], [40, 50, 60]))
+    if seenAt(rows, 0, 1) || !seenAt(rows, 1, 1) || !seenAt(rows, 0, 2) {
+        return 1
+    }
+    if countAt(rows, 0, 2) != 30 || countAt(rows, 1, 0) != 40 {
+        return 2
+    }
+    let sum = 0
+    for k in 0..len(rows) {
+        for at in 0..3 {
+            sum += rows[k].count[at]
+            if rows[k].seen[at] {
+                sum += 1000
+            }
+        }
+    }
+    if sum != 3210 {
+        return 3
+    }
+    let firsts: [First] = array()
+    push(firsts, First([false, true], 5))
+    if firstAt(firsts, 0, 0) || !firstAt(firsts, 0, 1) {
+        return 4
+    }
+    let outers: [Outer] = array()
+    push(outers, Outer(1, Row(9, [true, true, true], [70, 80, 90])))
+    if innerAt(outers, 0, 1) != 80 {
+        return 5
+    }
+    if rows[1].tag != 8 || outers[0].inner.tag != 9 || firsts[0].n != 5 {
+        return 6
+    }
+    return 0
+}
