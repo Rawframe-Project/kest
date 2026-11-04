@@ -83,7 +83,7 @@ That gives a manifest, a program in `src/main.kest` and a test in `tests/adding.
 | `source src` | a directory the project's modules live under; one line per directory |
 | `tests tests` | the directory `kest test` runs |
 | `kest 0.0.1` | the version the project was written against |
-| `profile kest-det 3` | the deterministic profile it is written under, see [Determinism](determinism.md) |
+| `profile kest-det 4` | the deterministic profile it is written under, see [Determinism](determinism.md) |
 | `edition 2026` | the edition of the language it is written in, see [Versions and editions](editions.md) |
 
 An unknown name in the manifest is an error rather than a line that is skipped: every command run in the project refuses it with `K0709`, and `kest doctor` says what it read.

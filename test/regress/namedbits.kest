@@ -1,0 +1,58 @@
+// Guards against a set of flags holding bits none of its names cover: `~`
+// flipped the whole width and `S(bits)` kept every bit, so `~S()` wrote itself
+// as `S.A | S.B` and was not equal to it.
+
+module test.regress.namedbits
+
+flags S: u8 {
+    A
+    B
+}
+
+flags Full: u8 {
+    B0
+    B1
+    B2
+    B3
+    B4
+    B5
+    B6
+    B7
+}
+
+fn made(n: u8) -> S {
+    return S(n)
+}
+
+fn flipped(s: S) -> S {
+    return ~s
+}
+
+fn main() -> i32 {
+    if u8(~S()) != u8(3) || ~S() != S.A | S.B {
+        return 1
+    }
+    if flipped(S()) != S.A | S.B || flipped(S.A) != S.B {
+        return 2
+    }
+    if ~~S.A != S.A || flipped(flipped(S.B)) != S.B {
+        return 3
+    }
+    if S(u8(255)) != S.A | S.B || made(u8(255)) != S.A | S.B {
+        return 4
+    }
+    if made(u8(12)) != S() || u8(made(u8(13))) != u8(1) {
+        return 5
+    }
+    let count = 0
+    for flag in ~S() {
+        count += 1
+    }
+    if count != 2 {
+        return 6
+    }
+    if u8(~Full()) != u8(255) || u8(Full(u8(255))) != u8(255) {
+        return 7
+    }
+    return 0
+}

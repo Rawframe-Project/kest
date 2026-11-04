@@ -5,5 +5,5 @@ source src
 tests tests
 
 kest 0.0.1
-profile kest-det 3
+profile kest-det 4
 edition 2026

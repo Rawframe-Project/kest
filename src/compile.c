@@ -938,6 +938,23 @@ static void bind_local(Compiler *compiler, KestSpan span, uint16_t slot,
                        uint16_t size);
 static uint16_t reserve_slot(Compiler *compiler, uint16_t size);
 
+// A set is the bits it has names for, and nothing else: its text names those,
+// a walk of it visits those, and a host that hands one in with any other bit
+// set is refused. So what is on the stack is put through them with `kind`:
+// `&` keeps the named bits of a number made into a set, and `^` flips the
+// named bits of one, where flipping the whole width set bits no name covers
+// and made a set that wrote itself as one it did not equal.
+static void through_named(Compiler *compiler, const KestType *set,
+                          KestIrKind kind, KestSpan span) {
+    KestValue named = {0};
+    named.integer =
+        (int64_t)(set->case_count >= 64 ? ~(uint64_t)0
+                                        : ((uint64_t)1 << set->case_count) - 1);
+    emit_constant(compiler, named, KEST_CONST_INT, set, span);
+    stack_pop(compiler, 1);
+    ir_emit(compiler, kind, set, 2, set, 1, span);
+}
+
 // A constant is written into every use of it rather than loaded, which is
 // what makes it a constant rather than a variable nobody assigns to.
 // A function named where a value is wanted is which function it is. The
@@ -3105,9 +3122,11 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
             KestValue empty = {0};
             emit_constant(compiler, empty, KEST_CONST_INT, callee->type,
                           expr->span);
+            return;
         }
-        // A set made from a number of the same width is the same bits, so
-        // there is nothing to emit over what is already on the stack.
+        // A set made from a number of the same width is the bits of it that
+        // have names, as `u8(300)` is the bits of 300 a `u8` holds.
+        through_named(compiler, callee->type, KEST_IR_AND, expr->span);
         return;
     }
     if (callee->type != NULL && callee->type->tag == KEST_T_TEXT &&
@@ -3337,6 +3356,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         if (expr->unary.op == KEST_TOK_BANG) {
             ir_emit(compiler, KEST_IR_NOT, expr->type, 1, expr->type, 1,
                     expr->span);
+        } else if (expr->unary.op == KEST_TOK_TILDE && expr->type != NULL &&
+                   expr->type->tag == KEST_T_FLAGS) {
+            through_named(compiler, expr->type, KEST_IR_XOR, expr->span);
         } else if (expr->unary.op == KEST_TOK_TILDE) {
             ir_emit(compiler, KEST_IR_FLIP, expr->type, 1, expr->type, 1,
                     expr->span);

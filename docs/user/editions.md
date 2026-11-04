@@ -3,7 +3,7 @@
 `kest --version` prints five numbers, and each moves for a different reason:
 
 ```
-kest 0.0.1, abi 4, json 4, profile kest-det 3, edition 2026
+kest 0.0.1, abi 4, json 4, profile kest-det 4, edition 2026
 ```
 
 | Number | What it versions | Read by |
@@ -11,7 +11,7 @@ kest 0.0.1, abi 4, json 4, profile kest-det 3, edition 2026
 | `kest 0.0.1` | the release, by Semantic Versioning | people |
 | `abi 4` | the shape of the C API in `include/kest.h` (`KEST_ABI_VERSION`, `kest_abi_version()`) | hosts |
 | `json 4` | the shape of the JSON every command writes under `--json` (`schema` in each object, `KEST_JSON_SCHEMA`); `lsp` and `dap` speak their own protocols instead | tools |
-| `profile kest-det 3` | what `deterministic` promises (`kest_profile()`), see [Determinism](determinism.md) | hosts keeping replays and saves |
+| `profile kest-det 4` | what `deterministic` promises (`kest_profile()`), see [Determinism](determinism.md) | hosts keeping replays and saves |
 | `edition 2026` | the language a program is read in (`KEST_EDITION`) | programs |
 
 ## What a program is promised
