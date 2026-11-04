@@ -7259,6 +7259,68 @@ if [ "$far_numbers" != "yes" ]; then
     complain "lsp and dap: numbers out of range: $far_numbers"
 fi
 
+# And half of a UTF-16 pair with no other half, which an editor holding its
+# buffer as UTF-16 can hold and sends as `\ud800`. It was read as the three
+# bytes UTF-8 would use for that number, which no character is spelled with,
+# and the buffer was refused with `K0107` three times where the file the
+# editor saves, with U+FFFD in its place, checks with nothing to say. Alone,
+# low before high, and a whole pair beside them for the reading that works.
+lone_halves=$(python3 - "$build_dir"/kest-debug <<'PY'
+import json, subprocess, sys
+
+command = sys.argv[1]
+
+
+def framed(text):
+    body = text.encode()
+    return b"Content-Length: %d\r\n\r\n" % len(body) + body
+
+
+def heard(out):
+    said, at = [], 0
+    while True:
+        head = out.find(b"Content-Length: ", at)
+        blank = out.find(b"\r\n\r\n", head)
+        if head < 0 or blank < 0:
+            return said
+        many = int(out[head + 16:blank])
+        said.append(json.loads(out[blank + 4:blank + 4 + many]))
+        at = blank + 4 + many
+
+
+# Each `@` is a half, put into the JSON as its escape once the rest of the
+# text is written, since JSON is the only place a half can be spelled.
+text = ('fn main() -> i32 {\n'
+        '    let t = "a@d800b @dc00 @de00@d83d @d83d@de00"\n'
+        '    return len(t)\n'
+        '}\n')
+opened = json.dumps({"jsonrpc": "2.0", "method": "textDocument/didOpen",
+                     "params": {"textDocument": {
+                         "uri": "file:///halves.kest", "languageId": "kest",
+                         "version": 1, "text": text}}})
+lsp = [
+    '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}',
+    opened.replace("@", "\\u"),
+]
+ran = subprocess.run([command, "lsp"], capture_output=True, timeout=120,
+                     input=b"".join(framed(m) for m in lsp))
+published = [one["params"]["diagnostics"] for one in heard(ran.stdout)
+             if one.get("method") == "textDocument/publishDiagnostics"]
+if b"runtime error" in ran.stderr or b"Sanitizer" in ran.stderr:
+    print("lsp: " + ran.stderr.decode(errors="replace")
+          .split("runtime error")[-1][:80].strip())
+elif published != [[]]:
+    print("the buffer was answered %s" %
+          [(d.get("code"), d.get("message")) for one in published
+           for d in one])
+else:
+    print("yes")
+PY
+)
+if [ "$lone_halves" != "yes" ]; then
+    complain "lsp: half of a UTF-16 pair: $lone_halves"
+fi
+
 # And the same asked from where each name is declared rather than where it is
 # used: a rename or a reference list asked from the `n` of `fn doubled(n:` or
 # the `twice` of `let twice` was answered with nothing, because the index
