@@ -132,9 +132,10 @@ fn main() -> i32 {
         return 7
     }
 
-    // Every bit of a `u8` is eight of them, not the slot's sixty-four, so
-    // the complement of the empty set is every flag the width can hold.
-    if u8(~State()) != 255 {
+    // The complement of the empty set is every flag the set has a name for:
+    // four of them, not the eight bits of a `u8` or the slot's sixty-four.
+    let every = State.Moving | State.Airborne | State.Hurt | State.Armed
+    if u8(~State()) != 15 || ~State() != every {
         return 8
     }
     if State(u8(9)) != State.Moving | State.Armed {

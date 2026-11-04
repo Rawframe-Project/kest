@@ -1319,7 +1319,7 @@ static const char MANIFEST[] = "# a project\n"
                                "tests tests\n"
                                "\n"
                                "kest 0.0.1\n"
-                               "profile kest-det 3\n"
+                               "profile kest-det 4\n"
                                "edition " KEST_EDITION_STRING "\n";
 
 static const char *const MANIFEST_PIECES[] = {

@@ -1,6 +1,6 @@
 # Determinism
 
-A replay, a rollback or a lockstep game between two machines needs the same program to compute the same world everywhere. Kest writes that promise down as a versioned profile, `kest-det 3`, and a function promises to keep it with `deterministic`.
+A replay, a rollback or a lockstep game between two machines needs the same program to compute the same world everywhere. Kest writes that promise down as a versioned profile, `kest-det 4`, and a function promises to keep it with `deterministic`.
 
 ## Three questions
 
@@ -15,6 +15,8 @@ A replay, a rollback or a lockstep game between two machines needs the same prog
 **Where state comes from.** Every allocation starts as zeros, and no value a program can read comes from an address, a clock or the order files were read in. A reference is the one value that holds something from outside the program (which handout of the process it was), and a program cannot read that: a reference has no text and no number, and it hashes by its place.
 
 **Whole numbers.** Every width wraps at its own end. Narrowing keeps the low bits; widening a signed number carries its sign. Division truncates toward zero and the remainder takes the left side's sign. Division by zero is a fault, never a value.
+
+**Sets of flags.** A set holds the bits it has names for and no others. `~` flips those bits, and a set made from a number, `State(bits)`, keeps those of its bits and drops the rest, so a set always writes itself as the set it equals.
 
 **Floats.** `f32` arithmetic rounds to `f32` at every step, and a multiply followed by an add is always two roundings: nothing is ever fused into one. Subnormals behave as IEEE 754 says. The two zeros compare equal and hash alike. Every value that is not a number has one set of bits (`0x7FC00000` for `f32`, `0x7FF8000000000000` for `f64`) as far as `bits` and `hash` can see, because processors disagree about the sign of `inf - inf`.
 

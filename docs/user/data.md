@@ -287,7 +287,7 @@ hurt
 2 5 State.Moving | State.Hurt
 ```
 
-`&`, `|`, `^` and `~` combine two of one set; `==` and `!=` compare. `State()` is the empty set, `u8(state)` gives the bits and `State(bits)` takes them back. A set is not a number, so arithmetic on one is an error, and a ninth flag on a `u8` is an error rather than a silent change of layout. `match` does not apply to a set.
+`&`, `|`, `^` and `~` combine two of one set, and `~` flips only the bits the set has names for; `==` and `!=` compare. `State()` is the empty set, `u8(state)` gives the bits and `State(bits)` takes them back, keeping the bits that have names and dropping any other, as `u8(300)` keeps the bits a `u8` holds. A set is not a number, so arithmetic on one is an error, and a ninth flag on a `u8` is an error rather than a silent change of layout. `match` does not apply to a set.
 
 ## Optionals
 

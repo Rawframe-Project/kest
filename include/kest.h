@@ -55,7 +55,7 @@
 // replay or ships a save reads this and writes it down beside them, because a
 // run under one profile and a run under another are two runs.
 #define KEST_PROFILE_NAME "kest-det"
-#define KEST_PROFILE_VERSION 3
+#define KEST_PROFILE_VERSION 4
 
 // Which edition of the language a program is written in, which is a fifth
 // thing and the one a program chooses: a change that would stop a program
