@@ -176,7 +176,7 @@
       "configurePreset": "linux-clang",
       "filter": {
         "include": {
-          "name": "^(conformance|fast|guide|regressions|backend|doors|fuzzing|wasm)$"
+          "name": "^(conformance|fast|guide|regressions|header|backend|doors|fuzzing|wasm)$"
         }
       }
     },
