@@ -2787,12 +2787,12 @@ static bool reload_refused_where_it_said(void) {
              room != NULL && room[0] != '\0' ? room : ".");
     const char *step = "fn step(w: World) -> i32";
     KestHost *host = kest_host_new();
-    FILE *heard = tmpfile();
+    FILE *reported = tmpfile();
     KestHeld *held = NULL;
     KestValue from = {.integer = 7};
     KestValue turn = {0};
-    if (host == NULL || heard == NULL || !wrote_world(path, step, true, 0) ||
-        (held = kest_held_new(path, NULL, host, heard)) == NULL ||
+    if (host == NULL || reported == NULL || !wrote_world(path, step, true, 0) ||
+        (held = kest_held_new(path, NULL, host, reported)) == NULL ||
         !kest_held_begin(held, "begin", &from, 1) ||
         !kest_held_call(held, "step", NULL, 0, &turn) || turn.integer != 8) {
         fprintf(stderr, "a world to refuse reloads under was not made\n");
@@ -2828,8 +2828,8 @@ static bool reload_refused_where_it_said(void) {
         }
     }
     char told[512] = {0};
-    rewind(heard);
-    told[fread(told, 1, sizeof(told) - 1, heard)] = '\0';
+    rewind(reported);
+    told[fread(told, 1, sizeof(told) - 1, reported)] = '\0';
     if (strstr(told, "K0604") == NULL ||
         kest_held_reload(NULL, path, said, sizeof(said)) ||
         strcmp(said, "nothing is held") != 0) {
@@ -2839,14 +2839,14 @@ static bool reload_refused_where_it_said(void) {
     }
 
     KestHeld *other = NULL;
-    bool unsaved = wrote_world(path, step, false, 0) &&
-                   (other = kest_held_new(path, NULL, host, heard)) != NULL &&
-                   kest_held_begin(other, "begin", &from, 1) &&
-                   wrote_world(path, step, true, 0) &&
-                   !kest_held_reload(other, path, said, sizeof(said)) &&
-                   strcmp(said, "refused: `save` did not answer bytes") == 0 &&
-                   kest_held_call(other, "step", NULL, 0, &turn) &&
-                   turn.integer == 8;
+    bool unsaved =
+        wrote_world(path, step, false, 0) &&
+        (other = kest_held_new(path, NULL, host, reported)) != NULL &&
+        kest_held_begin(other, "begin", &from, 1) &&
+        wrote_world(path, step, true, 0) &&
+        !kest_held_reload(other, path, said, sizeof(said)) &&
+        strcmp(said, "refused: `save` did not answer bytes") == 0 &&
+        kest_held_call(other, "step", NULL, 0, &turn) && turn.integer == 8;
     kest_held_free(other);
     if (!unsaved) {
         fprintf(stderr, "a save answering numbers was refused as `%s`\n", said);
@@ -2900,7 +2900,7 @@ static bool reload_refused_where_it_said(void) {
             short_of_room++;
         }
     }
-    fclose(heard);
+    fclose(reported);
     bool gone = kest_held_free(held);
     kest_host_free(host);
     remove(path);
