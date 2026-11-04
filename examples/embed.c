@@ -2597,6 +2597,151 @@ static bool answered_with_what_it_gave(void) {
     return true;
 }
 
+// What a host answers `Engine.mood` with, which is whatever number it holds.
+static void mood_of(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    frame[0].integer = *(const int64_t *)context;
+}
+
+// A number a host writes that the program could not have made, at the three
+// places no check put one: a set of flags with a bit none of its names covers,
+// answered from a crossing, handed in on its own, and handed in inside a shape
+// beside a piece of text, where the walk over the shape is what reads it; and
+// in that shape an `f32` no `f32` holds and an `i8` too wide for it. Each is
+// refused with the slot and the number, and the machine answers the next call
+// with numbers it could make.
+static bool numbers_it_could_not_make(void) {
+    static const char program[] = "module unnamed\n"
+                                  "\n"
+                                  "flags Mood: u8 {\n"
+                                  "    hungry\n"
+                                  "    tired\n"
+                                  "}\n"
+                                  "\n"
+                                  "extern fn Engine.mood() -> Mood no.alloc\n"
+                                  "\n"
+                                  "fn asked() -> i32 {\n"
+                                  "    if Engine.mood() == Mood.hungry {\n"
+                                  "        return 1\n"
+                                  "    }\n"
+                                  "    return 2\n"
+                                  "}\n"
+                                  "\n"
+                                  "fn felt(m: Mood) -> i32 {\n"
+                                  "    if m == Mood.hungry {\n"
+                                  "        return 1\n"
+                                  "    }\n"
+                                  "    return 2\n"
+                                  "}\n"
+                                  "\n"
+                                  "struct Npc {\n"
+                                  "    name: text\n"
+                                  "    mood: Mood\n"
+                                  "    weight: f32\n"
+                                  "    age: i8\n"
+                                  "}\n"
+                                  "\n"
+                                  "fn aged(n: Npc) -> i32 {\n"
+                                  "    return len(n.name) + i32(n.age)\n"
+                                  "}\n";
+    const KestFile files[] = {
+        {"unnamed.kest", program, sizeof(program) - 1},
+    };
+    static int64_t mood = 1;
+    KestHost *host = kest_host_new();
+    KestBuild *build =
+        kest_build_from(files, 1, "lib/", stderr, KEST_FORM_TEXT, 0);
+    if (host == NULL || build == NULL ||
+        !kest_host_bind(host, "Engine.mood", mood_of, &mood)) {
+        fprintf(stderr, "the program with a set of flags was not built\n");
+        return false;
+    }
+    KestRuntime *rt = kest_start(build, host, NULL);
+    int32_t asked = rt == NULL ? -1 : kest_entry(rt, "asked");
+    int32_t felt = rt == NULL ? -1 : kest_entry(rt, "felt");
+    int32_t aged = rt == NULL ? -1 : kest_entry(rt, "aged");
+    KestValue frame[5] = {{0}};
+    if (asked < 0 || felt < 0 || aged < 0 || !kest_call(rt, asked, frame, 5) ||
+        frame[0].integer != 1) {
+        kest_report(rt, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+
+    // Answered from a crossing, and the bits it named answered after it.
+    mood = 0xff;
+    if (kest_call(rt, asked, frame, 5) ||
+        !said_that(rt, "K0652",
+                   "`Engine.mood` answers with `Mood` in slot 0 and 255 has "
+                   "bits it has no names for")) {
+        fprintf(stderr, "a mood with bits no name covers was answered with\n");
+        return false;
+    }
+    mood = 3;
+    if (!kest_call(rt, asked, frame, 5) || frame[0].integer != 2) {
+        kest_report(rt, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+
+    // Handed in on its own.
+    frame[0].integer = 4;
+    if (kest_call(rt, felt, frame, 5) ||
+        !said_that(rt, "K0636",
+                   "`unnamed.felt` takes `Mood` in slot 0 and 4 has bits it "
+                   "has no names for")) {
+        fprintf(stderr, "a mood with bits no name covers was handed in\n");
+        return false;
+    }
+    frame[0].integer = 3;
+    if (!kest_call(rt, felt, frame, 5) || frame[0].integer != 2) {
+        kest_report(rt, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+
+    // And inside a shape, a slot at a time.
+    struct {
+        int64_t mood;
+        double weight;
+        int64_t age;
+        const char *said;
+    } npcs[] = {
+        {4, 0.5, 7,
+         "`unnamed.aged` takes `Mood` in slot 2 and 4 has bits it has no "
+         "names for"},
+        {1, 0.1, 7,
+         "`unnamed.aged` takes `f32` in slot 3 and 0.10000000000000001 is not "
+         "one"},
+        {1, 0.5, 300, "`unnamed.aged` takes `i8` in slot 4 and 300 is not one"},
+        {1, 0.5, 7, NULL},
+    };
+    for (size_t i = 0; i < sizeof(npcs) / sizeof(npcs[0]); i++) {
+        KestValue npc[5] = {{0}};
+        if (!kest_text(rt, "ann", 3, npc)) {
+            kest_report(rt, stderr, KEST_FORM_TEXT);
+            return false;
+        }
+        npc[2].integer = npcs[i].mood;
+        npc[3].real = npcs[i].weight;
+        npc[4].integer = npcs[i].age;
+        bool called = kest_call(rt, aged, npc, 5);
+        if (npcs[i].said == NULL
+                ? !called || npc[0].integer != 10
+                : called || !said_that(rt, "K0636", npcs[i].said)) {
+            fprintf(stderr, "an npc meant to say `%s` was %s\n",
+                    npcs[i].said == NULL ? "nothing" : npcs[i].said,
+                    called ? "taken" : "refused");
+            kest_report(rt, stderr, KEST_FORM_TEXT);
+            return false;
+        }
+    }
+    kest_runtime_free(rt);
+    kest_build_free(build);
+    kest_host_free(host);
+    printf("a set of flags with a bit no name covers was refused answered, "
+           "handed in and inside a shape, and so were an f32 and an i8 no "
+           "program could make there\n");
+    return true;
+}
+
 static bool held_across_a_reload(void) {
     KestHost *host = kest_host_new();
     KestHeld *held =
@@ -9058,6 +9203,9 @@ int main(int argc, char **argv) {
         return 1;
     }
     if (!text_as_long_as_it_says()) {
+        return 1;
+    }
+    if (!numbers_it_could_not_make()) {
         return 1;
     }
     return 0;
