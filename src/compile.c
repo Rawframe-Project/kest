@@ -728,6 +728,21 @@ static uint32_t elem_place(Compiler *compiler, KestIrRef base, KestIrRef index,
     return at;
 }
 
+// An element place made one of a run inside the element, at the index above
+// the element's: how far apart the run's are and how many, and the place
+// `inside` bytes into one of them.
+static void in_the_run(Compiler *compiler, uint32_t place, const KestExpr *step,
+                       uint16_t inside) {
+    if (step == NULL || compiler->out_of_memory) {
+        return;
+    }
+    const KestType *run = step->index.object->type;
+    KestIrPlace *at = &compiler->body->places[place];
+    at->offset = (uint16_t)(at->offset + inside);
+    at->stride = (uint16_t)run->element->byte_size;
+    at->count = (uint16_t)run->count;
+}
+
 // Reading what is at an address, which is one value made of what was there.
 static void load_at(Compiler *compiler, uint16_t offset, const KestType *type,
                     KestSpan span) {
@@ -1720,6 +1735,47 @@ static bool can_address(Compiler *compiler, const KestExpr *expr) {
     }
     const KestType *sequence = expr->index.object->type;
     return sequence != NULL && sequence->tag == KEST_T_ARRAY;
+}
+
+// Whether an address of this is one held apart as an array and an index:
+// fields and runs at an index written down, all the way to an element.
+static bool in_an_element(Compiler *compiler, const KestExpr *expr) {
+    while (expr->kind == KEST_EXPR_FIELD ||
+           (expr->kind == KEST_EXPR_INDEX && expr->index.object->type != NULL &&
+            expr->index.object->type->tag == KEST_T_FIXED)) {
+        expr = expr->kind == KEST_EXPR_FIELD ? expr->field.object
+                                             : expr->index.object;
+    }
+    return expr->kind == KEST_EXPR_INDEX && can_address(compiler, expr);
+}
+
+// A place written to that is one of a fixed run inside an element of an
+// array, at an index worked out while running, or a field of one: the index
+// into the run and how far into one of the run the place is. NULL where the
+// place is anything else.
+static const KestExpr *
+run_in_element(Compiler *compiler, const KestExpr *target, uint16_t *inside) {
+    uint32_t far = 0;
+    const KestExpr *at = target;
+    while (at->kind == KEST_EXPR_FIELD) {
+        const KestMember *member = find_member(
+            at->field.object->type, span_text(compiler, at->field.name),
+            at->field.name.length);
+        if (member == NULL) {
+            return NULL;
+        }
+        far += member->byte_offset;
+        at = at->field.object;
+    }
+    if (at->kind != KEST_EXPR_INDEX || at->index.object->type == NULL ||
+        at->index.object->type->tag != KEST_T_FIXED ||
+        written_index(compiler, at->index.index) >= 0 ||
+        !can_address(compiler, at->index.object) ||
+        !in_an_element(compiler, at->index.object) || far > UINT16_MAX) {
+        return NULL;
+    }
+    *inside = (uint16_t)far;
+    return at;
 }
 
 static bool compile_address(Compiler *compiler, const KestExpr *expr,
@@ -4972,13 +5028,23 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         bool in_slots = resolve_place(compiler, target, &slot, &place_size);
 
         uint16_t offset = 0;
+        // One of a run inside the element, at an index worked out while
+        // running: the run's index is held apart too, above the element's.
+        uint16_t inside = 0;
+        const KestExpr *step =
+            in_slots ? NULL : run_in_element(compiler, target, &inside);
+        uint16_t held = step != NULL ? 3 : 2;
         if (!in_slots) {
             // Held apart: the array and the index rather than an address
             // worked out from them, because what is between here and the
             // store may move the block.
             compiler->place_apart = true;
-            bool made = compile_address(compiler, target, &offset);
+            bool made = compile_address(
+                compiler, step != NULL ? step->index.object : target, &offset);
             compiler->place_apart = false;
+            if (made && step != NULL) {
+                compile_expr(compiler, step->index.index);
+            }
             if (!made) {
                 fault(compiler, target->span,
                       "this assigns to something that is not a place");
@@ -5003,9 +5069,11 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
                 // The place stays where it is and the read is made from it,
                 // because the write below wants it again.
                 stack_push(compiler, read);
-                uint32_t where = elem_place(compiler, ir_top(compiler, 1),
-                                            ir_top(compiler, 0), offset,
-                                            target->type, stmt->span);
+                uint32_t where =
+                    elem_place(compiler, ir_top(compiler, held - 1),
+                               ir_top(compiler, held - 2), offset, target->type,
+                               stmt->span);
+                in_the_run(compiler, where, step, inside);
                 uint32_t at = ir_emit(compiler, KEST_IR_LOAD, target->type, 0,
                                       target->type, read, stmt->span);
                 ir_place_of(compiler, at, where);
@@ -5054,12 +5122,13 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             stack_pop(compiler, size);
             store_slots(compiler, slot, size, target->type, stmt->span);
         } else {
-            stack_pop(compiler, (uint32_t)(size + 2));
-            uint32_t where =
-                elem_place(compiler, ir_top(compiler, 2), ir_top(compiler, 1),
-                           offset, target->type, stmt->span);
-            uint32_t at = ir_emit(compiler, KEST_IR_PUT, target->type, 3, NULL,
-                                  0, stmt->span);
+            stack_pop(compiler, (uint32_t)(size + held));
+            uint32_t where = elem_place(compiler, ir_top(compiler, held),
+                                        ir_top(compiler, held - 1), offset,
+                                        target->type, stmt->span);
+            in_the_run(compiler, where, step, inside);
+            uint32_t at = ir_emit(compiler, KEST_IR_PUT, target->type,
+                                  (uint16_t)(held + 1), NULL, 0, stmt->span);
             ir_place_of(compiler, at, where);
         }
         break;

@@ -1434,6 +1434,19 @@ static void read_place(Lower *lower, const KestIrOp *op) {
         emit_u16(lower, place->count, op->span);
         return;
     case KEST_IR_PLACE_ELEM:
+        // One of a run inside the element is only ever a place a write is
+        // coming to: a read of one is an address stepped into the run.
+        if (place->count > 0) {
+            if (op->arg_count != 0) {
+                break;
+            }
+            emit(lower, KEST_OP_LOAD_ELEM_RUN, op->span);
+            emit_u16(lower, place->offset, op->span);
+            emit_u16(lower, place->layout, op->span);
+            emit_u16(lower, place->stride, op->span);
+            emit_u16(lower, place->count, op->span);
+            return;
+        }
         // Whether the handle and the index are read or left where they are is
         // what says which of the two this is: a read that consumes them is an
         // index, and one that does not is a place a write is coming to.
@@ -1513,6 +1526,14 @@ static void write_place(Lower *lower, const KestIrOp *op) {
         emit_u16(lower, place->count, op->span);
         return;
     case KEST_IR_PLACE_ELEM: {
+        if (place->count > 0) {
+            emit(lower, KEST_OP_STORE_ELEM_RUN, op->span);
+            emit_u16(lower, place->offset, op->span);
+            emit_u16(lower, place->layout, op->span);
+            emit_u16(lower, place->stride, op->span);
+            emit_u16(lower, place->count, op->span);
+            return;
+        }
         // And the same the other way round: a run of slots pushed and then
         // packed into the element. The push and the pack are the same slots.
         // One slot as well as many: `state[at] = next` is a whole number
@@ -1563,7 +1584,7 @@ static void write_place(Lower *lower, const KestIrOp *op) {
 
 static void take_address(Lower *lower, const KestIrOp *op) {
     const KestIrPlace *place = &lower->body->places[op->place];
-    if (place->kind == KEST_IR_PLACE_ELEM) {
+    if (place->kind == KEST_IR_PLACE_ELEM && place->count == 0) {
         emit(lower, KEST_OP_ELEM_ADDR, op->span);
         emit_u16(lower, place->layout, op->span);
         return;

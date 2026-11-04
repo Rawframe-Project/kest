@@ -1240,6 +1240,18 @@ static bool write_elem(Walk *walk, const KestIrOp *op, const KestIrPlace *place,
             held, index, (unsigned)place->offset, held, (unsigned)place->offset,
             op->span.offset);
     }
+    // One of a run inside the element, at the index held above the
+    // element's, asked the machine's own question about the run.
+    if (place->count > 0) {
+        Where within;
+        at_stack(walk, within, handle + 2);
+        say(c, out,
+            "        if (!kest_run_at(rt, %s.integer, %u, %u)) {\n"
+            "            return false;\n        }\n"
+            "        at += (size_t)%s.integer * %u;\n",
+            within, (unsigned)place->count, op->span.offset, within,
+            (unsigned)place->stride);
+    }
     uint16_t moved =
         move_value(walk, layout->type, value, 0, reading, op->span.offset);
     say(c, out, "    }\n");
@@ -1596,7 +1608,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             // leaves, and whether they are read away is which of the two
             // element reads it is: one that consumes them is an index, and
             // one that does not is a place a write is coming to.
-            uint32_t handle = reads == 0 ? walk->stack - 2 : base;
+            uint32_t handle =
+                reads == 0 ? walk->stack - (place->count > 0 ? 3 : 2) : base;
             if (!write_elem(walk, op, place, handle, base, true)) {
                 break;
             }
@@ -1653,11 +1666,12 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         if (place->kind == KEST_IR_PLACE_ELEM) {
             // The handle, the index, and then what is being written, which is
             // what the machine pops in that order.
-            if (reads < 3) {
+            uint32_t held = place->count > 0 ? 3 : 2;
+            if (reads < held + 1) {
                 cannot(walk, "a write of an element with nothing to write");
                 break;
             }
-            write_elem(walk, op, place, base, base + 2, false);
+            write_elem(walk, op, place, base, base + held, false);
             break;
         }
         if (place->kind == KEST_IR_PLACE_RUN) {

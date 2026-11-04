@@ -12,7 +12,7 @@ A body is one concrete function: a generic has one body per set of types. It is 
 - not a second checker: everything in it was decided already, and nothing in it refuses a program;
 - not a tree: control flow is a branch naming where it lands.
 
-Every place a value lives is written as what reaches it (a local's slots, a field of a field, an element of an array, a place in host memory through an address) rather than an address already worked out, so a backend chooses how to reach it. Names are kept beside the slots they own, for the debugger and anything else asking a body about itself.
+Every place a value lives is written as what reaches it (a local's slots, a field of a field, an element of an array, a place in host memory through an address) rather than an address already worked out, so a backend chooses how to reach it. An element is the array and its index until the moment it is read or written, and one of a fixed run inside an element, at an index worked out while running, carries that index too (`load.elem.run`, `store.elem.run`), so a value worked out between the place and the write, even one that grows that very array, cannot leave the write an address into a block that moved. Names are kept beside the slots they own, for the debugger and anything else asking a body about itself.
 
 [`src/compile.c`](../../src/compile.c) writes the bodies. What the checker allowed and the compiler cannot write is reported as a fault in the compiler, never written as something that means something else. The compile-time limits (names in a function, nested loops, `break`s, `defer`s, `scratch` nesting, the 65535-byte jump distance, 65536 doors) are defined here in one place, each a diagnostic with the number in it.
 
@@ -38,7 +38,7 @@ Every place a value lives is written as what reaches it (a local's slots, a fiel
 
 [`src/value.c`](../../src/value.c) holds one table of every instruction: its name, its operands and widths, what it takes from and gives to the operand stack, and whether it reaches the heap or the host. The verifier, the disassembler (`kest emit`), the second promise proof and the machine all read it, and `check-tables.sh` holds the names to the opcode enum in `value.h`. An instruction added without saying whether it allocates stops the build, because the proof asks the table and a missing answer is an error.
 
-There are 223 instructions. Operands are one or two bytes; jumps carry a two-byte forward distance, which is the 65535-byte limit. Each chunk keeps, beside every byte of code, four bytes saying where in the source it came from, which is what a runtime error's line and caret are read from.
+There are 225 instructions. Operands are one or two bytes; jumps carry a two-byte forward distance, which is the 65535-byte limit. Each chunk keeps, beside every byte of code, four bytes saying where in the source it came from, which is what a runtime error's line and caret are read from.
 
 ## Measuring the compiler
 
