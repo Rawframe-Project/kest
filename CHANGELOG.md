@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.5.0](https://github.com/Rawframe-Project/kest/compare/v0.4.0...v0.5.0) (2026-11-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** kest hostile writes a door that takes a set of flags called with sets that have flags in them, where it wrote the empty set every time, so the same file and seed write a different program.
+* **vm:** a program reading a `bool` that is not nought or one, or a set with a bit none of its names cover, out of memory a host lent is refused with K0668, where it read the byte as it was.
+* **compiler:** `~` on a set of flags flips only the bits the set has names for, and `S(bits)` keeps only those bits, so `u8(~S())` and `u8(S(bits))` answer differently where the set has fewer names than its width has bits. The deterministic profile is kest-det 4.
+* **lsp:** kest lsp and kest dap read a \u escape that is half of a UTF-16 pair with no other half as U+FFFD, where they read it as the bytes ED A0 80, which the language server refused with K0107.
+
+### Fixed
+
+* **cli:** have kest hostile hand a door sets with flags in them ([#243](https://github.com/Rawframe-Project/kest/issues/243)) ([f686ed2](https://github.com/Rawframe-Project/kest/commit/f686ed2cee8ec63a6729376a2ac28617052ed0e1)), closes [#241](https://github.com/Rawframe-Project/kest/issues/241)
+* **compiler:** hold a set of flags to the bits it has names for ([#238](https://github.com/Rawframe-Project/kest/issues/238)) ([fc06a4c](https://github.com/Rawframe-Project/kest/commit/fc06a4c5bab7d8ea7e22c23ce1adce6800def839))
+* **lsp:** read half of a UTF-16 pair with no other half as U+FFFD ([#233](https://github.com/Rawframe-Project/kest/issues/233)) ([2ce16ee](https://github.com/Rawframe-Project/kest/commit/2ce16ee24ef935a83095ba7d6dd4a0eb3d375fbd)), closes [#232](https://github.com/Rawframe-Project/kest/issues/232)
+* **vm:** refuse a lent truth or set that is no value of its type ([#239](https://github.com/Rawframe-Project/kest/issues/239)) ([d13bdf5](https://github.com/Rawframe-Project/kest/commit/d13bdf5741b1f58b143f7c6e4200898b34186677)), closes [#237](https://github.com/Rawframe-Project/kest/issues/237)
+
 ## 0.4.0 (2026-11-04)
 
 ### Changed
