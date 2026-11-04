@@ -5035,6 +5035,7 @@ K0604|run|fn main() -> i32 {\n    let n = 0 - 1\n    let s: store<i32> = store(n
 K0604|run|fn main() -> i32 {\n    let at = 1\n    return len(slice("ab", at, 9))\n}|9 bytes from 1 is outside text of 2 bytes
 K0604|run|fn main() -> i32 {\n    let b: [u8] = array()\n    push(b, 255)\n    return len(text(b))\n}|byte 0 begins no character, and text is UTF-8
 K0604|run|fn main() -> i32 {\n    let v: [i32; 2] = [1, 2]\n    let i = 5\n    return v[i]\n}|index 5 is outside 2 of them
+K0604|run|struct Row {\n    tag: i32\n    count: [i32; 3]\n}\n\nfn main() -> i32 {\n    let rows: [Row] = array()\n    push(rows, Row(7, [1, 2, 3]))\n    let i = 3\n    rows[0].count[i] = 9\n    return 0\n}|index 3 is outside 3 of them
 K0604|run|fn main() -> i32 {\n    let a: [i32] = array()\n    let i = 5\n    return a[i]\n}|index 5 is outside an array of length 0
 K0604|run|fn main() -> i32 {\n    let i = 9\n    return i32("ab"[i])\n}|index 9 is outside text of 2 bytes
 K0619|tick 2|fn onEvent(e: text) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|`onEvent` takes `text`, and tick has `i32` to give it

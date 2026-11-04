@@ -4198,6 +4198,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         [KEST_OP_LOAD_AT] = &&thread_KEST_OP_LOAD_AT,
         [KEST_OP_LOAD_ELEM] = &&thread_KEST_OP_LOAD_ELEM,
         [KEST_OP_STORE_ELEM] = &&thread_KEST_OP_STORE_ELEM,
+        [KEST_OP_LOAD_ELEM_RUN] = &&thread_KEST_OP_LOAD_ELEM_RUN,
+        [KEST_OP_STORE_ELEM_RUN] = &&thread_KEST_OP_STORE_ELEM_RUN,
         [KEST_OP_NEW_STORE] = &&thread_KEST_OP_NEW_STORE,
         [KEST_OP_ADD] = &&thread_KEST_OP_ADD,
         [KEST_OP_GET] = &&thread_KEST_OP_GET,
@@ -5283,6 +5285,52 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 IN_ARRAY(index, array);
                 MOVED(moved_packed, layout->size);
                 pack(array->bytes + (size_t)index * array->stride + offset,
+                     layout, value);
+                NEXT;
+            }
+        // The same with one of a run inside the element, at an index worked
+        // out while running and held above the element's: the verifier held
+        // the stride and the count to a run the element has there.
+        case KEST_OP_LOAD_ELEM_RUN:
+            THREADED(KEST_OP_LOAD_ELEM_RUN) {
+                uint16_t offset = READ_U16();
+                uint16_t of_which = READ_U16();
+                uint16_t stride = READ_U16();
+                uint16_t count = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                int64_t within = top[-1].integer;
+                int64_t index = top[-2].integer;
+                Array *array = top[-3].object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                IN_ARRAY(index, array);
+                IN_RUN(within, count);
+                READ_INTO(top, layout,
+                          array->bytes + (size_t)index * array->stride +
+                              offset + (size_t)within * stride,
+                          array->borrowed);
+                top += layout->slots;
+                NEXT;
+            }
+        case KEST_OP_STORE_ELEM_RUN:
+            THREADED(KEST_OP_STORE_ELEM_RUN) {
+                uint16_t offset = READ_U16();
+                uint16_t of_which = READ_U16();
+                uint16_t stride = READ_U16();
+                uint16_t count = READ_U16();
+                OF_THE_MODULE(of_which, module->layout_count, "a layout");
+                const KestLayout *layout = &module->layouts[of_which];
+                top -= layout->slots;
+                KestValue *value = top;
+                int64_t within = (--top)->integer;
+                int64_t index = (--top)->integer;
+                Array *array = (--top)->object;
+                HOLD(array, KEST_IS_ARRAY, "an array");
+                IN_ARRAY(index, array);
+                IN_RUN(within, count);
+                MOVED(moved_packed, layout->size);
+                pack(array->bytes + (size_t)index * array->stride + offset +
+                         (size_t)within * stride,
                      layout, value);
                 NEXT;
             }

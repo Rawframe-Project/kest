@@ -1371,6 +1371,27 @@ static bool run_holds(const KestType *whole, uint32_t step, uint32_t count,
     return false;
 }
 
+// The same of one of a run inside an element, read or written at an index
+// worked out while running: `count` of them `step` bytes apart, with the
+// field `offset` bytes into the first.
+static const char *element_run(Kinds *w, Kind array, uint32_t offset,
+                               uint32_t field, uint32_t step, uint32_t count) {
+    uint32_t of = LAID_OF(array);
+    if (HOLDS_OF(array) == HOLDS_ZERO) {
+        return NULL;
+    }
+    if (of == 0 || count == 0 ||
+        !run_holds(w->module->layout_types[of - 1], step, count, offset,
+                   w->module->layout_types[field])) {
+        snprintf(w->said, w->room,
+                 "`%s` at %u reads %u of layout %u at %u bytes into an "
+                 "element that has no such run there",
+                 w->name, w->at, count, field, offset);
+        return "K0411";
+    }
+    return NULL;
+}
+
 // Every address this body holds, once something may have moved what they
 // point into: an array that grew, one a call was handed, a block of working
 // memory given back.
@@ -1886,6 +1907,31 @@ static const char *kinds_step(Kinds *w) {
         }
         push_laid_at(w, u[1], DEPTH_OF(FROM_TOP(w, 2)));
         return NULL;
+    case KEST_OP_LOAD_ELEM_RUN:
+        if ((wrong = needs_top(w, 1, NEEDS_NUMBER)) != NULL ||
+            (wrong = needs_top(w, 2, NEEDS_NUMBER)) != NULL ||
+            (wrong = needs_top(w, 3, NEEDS_ARRAY)) != NULL ||
+            (wrong = element_run(w, FROM_TOP(w, 3), u[0], u[1], u[2], u[3])) !=
+                NULL) {
+            return wrong;
+        }
+        push_laid_at(w, u[1], DEPTH_OF(FROM_TOP(w, 3)));
+        return NULL;
+    case KEST_OP_STORE_ELEM_RUN: {
+        uint32_t slots = module->layouts[u[1]].slots;
+        if ((wrong = fits_top(w, u[1], slots)) != NULL ||
+            (wrong = needs_top(w, slots + 1, NEEDS_NUMBER)) != NULL ||
+            (wrong = needs_top(w, slots + 2, NEEDS_NUMBER)) != NULL ||
+            (wrong = needs_top(w, slots + 3, NEEDS_ARRAY)) != NULL ||
+            (wrong = element_run(w, FROM_TOP(w, slots + 3), u[0], u[1], u[2],
+                                 u[3])) != NULL ||
+            (wrong = kept_in(w, FROM_TOP(w, slots + 3), slots, slots)) !=
+                NULL) {
+            return wrong;
+        }
+        w->depth -= slots + 3;
+        return NULL;
+    }
     case KEST_OP_STORE_ELEM: {
         uint32_t slots = module->layouts[u[1]].slots;
         if ((wrong = fits_top(w, u[1], slots)) != NULL ||

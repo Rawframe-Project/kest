@@ -66,6 +66,8 @@ typedef struct {
     const KestType *type;
     uint16_t slots;
     // SLOT and RUN: where in the frame. RUN adds the index times the stride.
+    // ELEM with a count: one of a run inside the element, at the index held
+    // above the element's, that many of them `stride` bytes apart.
     uint16_t slot;
     uint16_t stride;
     uint16_t count;

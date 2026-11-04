@@ -1464,6 +1464,8 @@ static const Instruction INSTRUCTIONS[] = {
     {"new.store", U16_U16, {IS_NUMBER, IS_LAYOUT}},
     {"load.elem", U16_U16, {IS_NUMBER, IS_LAYOUT}},
     {"store.elem", U16_U16, {IS_NUMBER, IS_LAYOUT}},
+    {"load.elem.run", U16_X4, {IS_NUMBER, IS_LAYOUT, IS_NUMBER, IS_NUMBER}},
+    {"store.elem.run", U16_X4, {IS_NUMBER, IS_LAYOUT, IS_NUMBER, IS_NUMBER}},
     {"index.to", U16_U16, {IS_LAYOUT, IS_SLOT}},
     {"elem.from", U16_U16_U16, {IS_NUMBER, IS_LAYOUT, IS_SLOT}},
     {"add.i.narrow.to", U16_U16, {IS_NUMBER, IS_SLOT}},
@@ -2109,6 +2111,8 @@ bool kest_op_allocates(uint8_t op) {
     // and the block is the one the array already has.
     case KEST_OP_LOAD_ELEM:
     case KEST_OP_STORE_ELEM:
+    case KEST_OP_LOAD_ELEM_RUN:
+    case KEST_OP_STORE_ELEM_RUN:
     case KEST_OP_INDEX_TO:
     case KEST_OP_ELEM_FROM:
     case KEST_OP_INDEX_TO_LL:
@@ -2526,6 +2530,13 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
         break;
     case KEST_OP_STORE_ELEM:
         t = 2 + LAID(1);
+        break;
+    case KEST_OP_LOAD_ELEM_RUN:
+        t = 3;
+        g = 3 + LAID(1);
+        break;
+    case KEST_OP_STORE_ELEM_RUN:
+        t = 3 + LAID(1);
         break;
     case KEST_OP_LEN:
     case KEST_OP_COUNT:

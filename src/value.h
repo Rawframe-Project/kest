@@ -156,6 +156,11 @@ typedef enum {
     // happens in between can move the block out from under it.
     KEST_OP_LOAD_ELEM,  // u16 offset, u16 layout; reads, leaves the place
     KEST_OP_STORE_ELEM, // u16 offset, u16 layout; writes, takes the place
+    // One of a fixed run inside an element, or a field of one, at an index
+    // worked out while running: the run's index is the third thing under what
+    // is read or written.
+    KEST_OP_LOAD_ELEM_RUN,  // u16 offset, u16 layout, u16 stride, u16 how many
+    KEST_OP_STORE_ELEM_RUN, // u16 offset, u16 layout, u16 stride, u16 how many
     // An element read straight into the frame, and one written straight out of
     // it. `one = world[at]` is an index that unpacks a struct onto the stack
     // and a store that copies it off again, and `world[at] = one` is the same

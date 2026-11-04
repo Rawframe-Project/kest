@@ -92,6 +92,19 @@ fn main() -> i32 {
         return 7
     }
 
+    // And written into the same way. What is written is worked out after the
+    // place is, and may grow the very array the place is in, so the place is
+    // the array, the row and the cell until the moment it is written.
+    many[which].cells[cell].weight = 2.5
+    many[which].cells[cell].at += 10
+    if many[which].cells[cell].at != 13 ||
+            many[which].cells[cell].weight != 2.5 {
+        return 14
+    }
+    if many[which].cells[cell - 1].at != 2 || many[0].cells[cell].at != 3 {
+        return 15
+    }
+
     // A struct with nothing in it, built where it stands and read from a
     // constant, with numbers after it either way. Pushed as no slots at all,
     // both of these answered whatever the stack was holding.

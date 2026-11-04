@@ -1,0 +1,130 @@
+// Guards against writing one of a fixed run inside an element of an array at
+// an index worked out while running: every such write, `=` and `+=` alike, was
+// refused as a fault in the compiler, because only a run held in a local could
+// be written at such an index.
+
+module test.regress.runwrite
+
+struct Cell {
+    hp: i32
+    up: bool
+}
+
+struct Row {
+    tag: i32
+    count: [i32; 3]
+    seen: [bool; 2]
+    cells: [Cell; 2]
+}
+
+struct First {
+    count: [i32; 2]
+    n: i32
+}
+
+struct Outer {
+    a: i64
+    inner: Row
+}
+
+// Grows the array the place being written is in, while what is written is
+// worked out.
+fn grown(rows: [Row]) -> i32 {
+    for n in 0..64 {
+        push(
+            rows,
+            Row(n, [0, 0, 0], [false, false], [Cell(0, false), Cell(0, false)])
+        )
+    }
+    return 5
+}
+
+fn bump(rows: [Row], k: i32, at: i32, by: i32) {
+    rows[k].count[at] += by
+}
+
+fn main() -> i32 {
+    let rows: [Row] = array()
+    push(
+        rows,
+        Row(7, [10, 20, 30], [false, false], [Cell(1, false), Cell(2, false)])
+    )
+    push(
+        rows,
+        Row(8, [40, 50, 60], [false, false], [Cell(3, false), Cell(4, false)])
+    )
+    let at = len(rows) - 1
+    rows[at].count[at] = 99
+    rows[0].count[at + 1] -= 5
+    bump(rows, 1, 2, 7)
+    if rows[1].count[1] != 99 ||
+            rows[0].count[2] != 25 ||
+            rows[1].count[2] != 67 {
+        return 1
+    }
+    if rows[0].count[0] != 10 ||
+            rows[0].count[1] != 20 ||
+            rows[1].count[0] != 40 {
+        return 2
+    }
+    rows[0].seen[at] = true
+    if rows[0].seen[0] || !rows[0].seen[1] || rows[1].seen[1] {
+        return 3
+    }
+    rows[1].cells[at].hp = 44
+    rows[1].cells[at - 1].up = true
+    if rows[1].cells[1].hp != 44 ||
+            !rows[1].cells[0].up ||
+            rows[1].cells[0].hp != 3 {
+        return 4
+    }
+    rows[0].cells[at] = Cell(9, true)
+    if rows[0].cells[1].hp != 9 ||
+            !rows[0].cells[1].up ||
+            rows[0].cells[0].hp != 1 {
+        return 5
+    }
+    if rows[0].tag != 7 || rows[1].tag != 8 {
+        return 6
+    }
+    let firsts: [First] = array()
+    push(firsts, First([1, 2], 3))
+    firsts[0].count[at] = 5
+    if firsts[0].count[1] != 5 || firsts[0].count[0] != 1 || firsts[0].n != 3 {
+        return 7
+    }
+    let outers: [Outer] = array()
+    push(
+        outers,
+        Outer(
+            1,
+            Row(
+                9,
+                [70, 80, 90],
+                [false, false],
+                [Cell(5, false), Cell(6, false)]
+            )
+        )
+    )
+    outers[0].inner.count[at] += 1
+    if outers[0].inner.count[1] != 81 ||
+            outers[0].inner.tag != 9 ||
+            outers[0].a != 1 {
+        return 8
+    }
+    let total = 0
+    for k in 0..len(rows) {
+        for i in 0..3 {
+            rows[k].count[i] += 1
+            total += rows[k].count[i]
+        }
+    }
+    if total != 10 + 20 + 25 + 40 + 99 + 67 + 6 {
+        return 9
+    }
+    rows[1].count[at] = grown(rows)
+    if rows[1].count[1] != 5 || rows[1].count[2] != 68 || len(rows) != 66 {
+        return 10
+    }
+    return 0
+}
