@@ -163,6 +163,14 @@ static KestJson *read_text(Reading *reading) {
                     reading->at += 6;
                 }
             }
+            // And a half with no other half is no character, which UTF-8 has
+            // no bytes for: what it would take are three bytes the lexer says
+            // start nothing. An editor saving the same buffer writes U+FFFD in
+            // its place, so that is what is read, and the buffer is the
+            // program `kest check` reads from the file.
+            if (code >= 0xd800 && code <= 0xdfff) {
+                code = 0xfffd;
+            }
             used += put_utf8(out + used, code);
             break;
         }
