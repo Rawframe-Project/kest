@@ -224,13 +224,17 @@ int main(int argc, char **argv) {
          "K0410"},
         // `outers[k].ins[1].xs[j]`: a run 24 bytes into an `Outer`, inside
         // the second of its two `Inner`s. Twenty bytes in is that one's
-        // `tag`, where no run is, and forty is past the last of them.
+        // `tag`, where no run is. Forty-four is where the `xs` of a third
+        // would be, past the end of the forty bytes there are, which only
+        // the run's own length says: its place in one `Inner` is a run.
         {"a run read where one of a run holds none", "load.at", 0, 20,
          "K0411"},
-        {"a run read past the last of the run it is in", "load.at", 0, 40,
+        {"a run read past the last of the run it is in", "load.at", 0, 44,
          "K0411"},
         {"a run written where one of a run holds none", "store.elem.run", 0,
          20, "K0411"},
+        {"a run written past the last of the run it is in", "store.elem.run",
+         0, 44, "K0411"},
     };
     uint32_t refused = 0;
     uint32_t missed = 0;
