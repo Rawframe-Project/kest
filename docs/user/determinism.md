@@ -1,6 +1,6 @@
 # Determinism
 
-A replay, a rollback or a lockstep game between two machines needs the same program to compute the same world everywhere. Kest writes that promise down as a versioned profile, `kest-det 4`, and a function promises to keep it with `deterministic`.
+A replay, a rollback or a lockstep game between two machines needs the same program to compute the same world everywhere. Kest writes that promise down as a versioned profile, `kest-det 5`, and a function promises to keep it with `deterministic`.
 
 ## Three questions
 
@@ -23,6 +23,8 @@ A replay, a rollback or a lockstep game between two machines needs the same prog
 **Floats to whole numbers.** Truncate toward zero, stop at the ends of the width, and give 0 for a value that is not a number, the same while compiling and while running.
 
 **Mathematics.** `sin`, `cos`, `pow` and `atan2` in `std.math` are written in Kest out of additions, multiplications and divisions (fdlibm's algorithms, in `std.fdlibm`), so they are the same steps on every machine. They are within an ulp of the C library's for ordinary arguments. `sqrt`, `floor` and `ceil` are host doors that IEEE 754 requires to be exact, and `std.math` declares them `deterministic`.
+
+**Rounding.** `round` in `std.math` is the nearest whole number with a half going up (`round(2.5)` is 3, `round(-2.5)` is -2), for every `f64` and `f32`, a whole number answering itself. It is worked out from `floor` and what is left above it rather than as `floor(value + 0.5)`, whose addition is rounded before `floor` sees it.
 
 **Order.** An array walks by index, a store by place, text by byte, a range from first to last, and a table in the order its puts and removes left, which the same operations always reproduce.
 

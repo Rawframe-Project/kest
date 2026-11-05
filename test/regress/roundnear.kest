@@ -1,0 +1,74 @@
+// Guards against `round` of an `f64` answering one more than the nearest whole
+// number: it was `floor(value + 0.5)`, and the addition is rounded first, so
+// the `f64` just under a half answered 1 and an odd whole number past 2^52
+// answered the even one above it.
+
+module test.regress.roundnear
+
+import std.math
+
+// Worked out while running, so nothing here is folded before `round` sees it.
+fn rounded(value: f64) -> f64 {
+    return math.round(value)
+}
+
+fn main() -> i32 {
+    let under: f64 = 0.49999999999999994
+    if rounded(under) != 0.0 || rounded(0.0 - under) != 0.0 {
+        return 1
+    }
+    let odd: f64 = 4503599627370497.0
+    let top: f64 = 9007199254740991.0
+    let edge: f64 = 4503599627370496.0
+    if rounded(edge - 1.0) != edge - 1.0 ||
+            rounded(edge) != edge ||
+            rounded(0.0 - edge - 1.0) != 0.0 - edge - 1.0 ||
+            rounded(odd) != odd ||
+            rounded(0.0 - odd) != 0.0 - odd ||
+            rounded(top) != top ||
+            rounded(odd + 0.5) != odd + 1.0 {
+        return 2
+    }
+    // A half goes up, on either side of nought.
+    if rounded(2.5) != 3.0 ||
+            rounded(0.0 - 2.5) != 0.0 - 2.0 ||
+            rounded(0.5) != 1.0 ||
+            rounded(0.0 - 0.5) != 0.0 ||
+            rounded(1.5) != 2.0 ||
+            rounded(0.0 - 1.5) != 0.0 - 1.0 {
+        return 3
+    }
+    // Just either side of a half, and just under nought, where what is left
+    // above the whole number below is more than a half and not exact.
+    let tiny: f64 = 0.0000000000000000001
+    if rounded(2.4999999999999996) != 2.0 ||
+            rounded(2.5000000000000004) != 3.0 ||
+            rounded(0.0 - tiny) != 0.0 ||
+            rounded(0.0 - 0.30000000000000004) != 0.0 ||
+            rounded(0.0 - 0.7) != 0.0 - 1.0 {
+        return 4
+    }
+    // What is already whole, or not a number at all, answers itself.
+    let wide: f64 = 1.0e300
+    let none_of_them: f64 = 0.0 / 0.0
+    if rounded(wide) != wide ||
+            rounded(1.0 / 0.0) != 1.0 / 0.0 ||
+            rounded(0.0 - 1.0 / 0.0) != 0.0 - 1.0 / 0.0 ||
+            math.isNumber(rounded(none_of_them)) {
+        return 5
+    }
+    // And `f32`, which was right and stays so: an `f32` and a half are added
+    // in `f64`, which holds every such sum exactly.
+    let narrow: f32 = 0.49999997
+    let whole: f32 = 8388609.0
+    if math.round(narrow) != 0.0 ||
+            math.round(f32(0.0) - narrow) != 0.0 ||
+            math.round(whole) != whole ||
+            math.round(f32(0.0) - whole) != f32(0.0) - whole ||
+            math.round(f32(2.5)) != 3.0 ||
+            math.round(f32(0.0 - 2.5)) != 0.0 - 2.0 ||
+            math.round(f32(0.0 - 0.5)) != 0.0 {
+        return 6
+    }
+    return 0
+}
