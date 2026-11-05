@@ -87,6 +87,15 @@ static const char *PROGRAM =
     "    return 1 + deeper(n - 1)\n"
     "}\n"
     "\n"
+    "struct Inner {\n"
+    "    tag: i32\n"
+    "    xs: [i32; 4]\n"
+    "}\n"
+    "\n"
+    "struct Outer {\n"
+    "    ins: [Inner; 2]\n"
+    "}\n"
+    "\n"
     "fn main() -> i32 {\n"
     "    let xs: [Pair] = array()\n"
     "    let n = 0\n"
@@ -97,8 +106,14 @@ static const char *PROGRAM =
     "    let p = xs[2]\n"
     "    let total = xs[1].b + deeper(3) + p.a + p.b + pieces(1) +\n"
     "        wide(Shape.Box(2, 3)) + made(4).b\n"
-    "    io.print(\"{total}\")\n"
+    "    let outers: [Outer] = array()\n"
+    "    io.print(\"{total} {inside(outers, 0, 2)}\")\n"
     "    return total % 7\n"
+    "}\n"
+    "\n"
+    "fn inside(outers: [Outer], k: i32, j: i32) -> i32 {\n"
+    "    outers[k].ins[1].xs[j] = 9\n"
+    "    return outers[k].ins[1].xs[j]\n"
     "}\n";
 
 // Whether the module is held, and if not, whether what was said carries this
@@ -207,6 +222,15 @@ int main(int argc, char **argv) {
         {"a rotation of none", "rotate", 0, 0, "K0410"},
         {"a piece taken past the end of its value", "field", 0, 0xFFFF,
          "K0410"},
+        // `outers[k].ins[1].xs[j]`: a run 24 bytes into an `Outer`, inside
+        // the second of its two `Inner`s. Twenty bytes in is that one's
+        // `tag`, where no run is, and forty is past the last of them.
+        {"a run read where one of a run holds none", "load.at", 0, 20,
+         "K0411"},
+        {"a run read past the last of the run it is in", "load.at", 0, 40,
+         "K0411"},
+        {"a run written where one of a run holds none", "store.elem.run", 0,
+         20, "K0411"},
     };
     uint32_t refused = 0;
     uint32_t missed = 0;
