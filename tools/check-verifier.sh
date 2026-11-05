@@ -96,6 +96,11 @@ static const char *PROGRAM =
     "    ins: [Inner; 2]\n"
     "}\n"
     "\n"
+    "struct Many {\n"
+    "    grid: [[i32; 4]; 2]\n"
+    "    nest: [[Inner; 3]; 2]\n"
+    "}\n"
+    "\n"
     "fn main() -> i32 {\n"
     "    let xs: [Pair] = array()\n"
     "    let n = 0\n"
@@ -107,13 +112,19 @@ static const char *PROGRAM =
     "    let total = xs[1].b + deeper(3) + p.a + p.b + pieces(1) +\n"
     "        wide(Shape.Box(2, 3)) + made(4).b\n"
     "    let outers: [Outer] = array()\n"
-    "    io.print(\"{total} {inside(outers, 0, 2)}\")\n"
+    "    let manys: [Many] = array()\n"
+    "    io.print(\"{total} {inside(outers, 0, 2)} {many(manys, 0, 1, 2)}\")\n"
     "    return total % 7\n"
     "}\n"
     "\n"
     "fn inside(outers: [Outer], k: i32, j: i32) -> i32 {\n"
     "    outers[k].ins[1].xs[j] = 9\n"
     "    return outers[k].ins[1].xs[j]\n"
+    "}\n"
+    "\n"
+    "fn many(manys: [Many], k: i32, i: i32, j: i32) -> i32 {\n"
+    "    manys[k].grid[i][j] = 9\n"
+    "    return k\n"
     "}\n";
 
 // Whether the module is held, and if not, whether what was said carries this
@@ -134,12 +145,18 @@ static bool refused_with(KestBuild *build, const char *code) {
 }
 
 // The first instruction anywhere in the module carrying an operand of this
-// kind, as the chunk, where the instruction is and which operand.
+// kind, as the chunk, where the instruction is and which operand, or the
+// first in the function `body` names when it names one.
 // One that carries nought is passed over when what is written is one fewer.
 static bool first_with(KestModule *module, const char *named, uint32_t operand,
-                       bool counted, KestChunk **in, uint32_t *at) {
+                       bool counted, const char *body, KestChunk **in,
+                       uint32_t *at) {
     for (uint32_t f = 0; f < module->count; f++) {
         KestChunk *chunk = module->functions[f];
+        if (body != NULL &&
+            (chunk->wrote == NULL || strcmp(chunk->wrote, body) != 0)) {
+            continue;
+        }
         for (uint32_t i = 0; i < chunk->code_count;
              i += kest_op_wide(chunk->code[i])) {
             if (strcmp(kest_op_name(chunk->code[i]), named) == 0 &&
@@ -242,7 +259,7 @@ int main(int argc, char **argv) {
         KestChunk *chunk = NULL;
         uint32_t at = 0;
         if (!first_with(&build->module, cases[c].op, cases[c].operand,
-                        cases[c].written == FEWER, &chunk, &at)) {
+                        cases[c].written == FEWER, NULL, &chunk, &at)) {
             printf("refuse: no `%s` in the program for %s\n", cases[c].op,
                    cases[c].what);
             missed++;
@@ -270,6 +287,34 @@ int main(int argc, char **argv) {
         }
         chunk->code[place] = low;
         chunk->code[place + 1] = high;
+    }
+    // `manys[k].grid[i][j]`: eight `i32` read as one run, 0 bytes into a
+    // `Many`. Thirty-six bytes in is the `xs` of the first `Inner` of `nest`,
+    // a run of four that is not all of its `Inner`, so eight from there would
+    // step on into the next one's `tag`. Asked of `many`'s own write, because
+    // the first one in the module is `inside`'s.
+    {
+        KestChunk *chunk = NULL;
+        uint32_t at = 0;
+        if (!first_with(&build->module, "store.elem.run", 0, false,
+                        "refused.many", &chunk, &at)) {
+            printf("refuse: no `store.elem.run` in `many`\n");
+            missed++;
+        } else {
+            uint8_t low = chunk->code[at + 1];
+            uint8_t high = chunk->code[at + 2];
+            chunk->code[at + 1] = 36;
+            chunk->code[at + 2] = 0;
+            if (refused_with(build, "K0411")) {
+                refused++;
+            } else {
+                printf("refuse: a run of runs written where a run of them "
+                       "holds a shorter run was held\n");
+                missed++;
+            }
+            chunk->code[at + 1] = low;
+            chunk->code[at + 2] = high;
+        }
     }
     // A piece of text and another piece's length, side by side and each
     // what it says it is: `load.n` of the first text's two slots made a

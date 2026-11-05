@@ -4194,6 +4194,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         [KEST_OP_ELEM_AT] = &&thread_KEST_OP_ELEM_AT,
         [KEST_OP_LOAD_SLOTS] = &&thread_KEST_OP_LOAD_SLOTS,
         [KEST_OP_STORE_SLOTS] = &&thread_KEST_OP_STORE_SLOTS,
+        [KEST_OP_IN_RUN] = &&thread_KEST_OP_IN_RUN,
         [KEST_OP_OFFSET_ADDR] = &&thread_KEST_OP_OFFSET_ADDR,
         [KEST_OP_LOAD_AT] = &&thread_KEST_OP_LOAD_AT,
         [KEST_OP_LOAD_ELEM] = &&thread_KEST_OP_LOAD_ELEM,
@@ -5192,18 +5193,20 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 uint16_t base = READ_U16();
                 uint16_t stride = READ_U16();
                 uint16_t count = READ_U16();
+                uint16_t width = READ_U16();
                 int64_t index = (--top)->integer;
                 IN_RUN(index, count);
 #if KEST_CHECKED
                 if (!own_slots(vmp, frame, instruction, base,
-                               (uint32_t)base + (uint32_t)count * stride)) {
+                               (uint32_t)base + (uint32_t)(count - 1) * stride +
+                                   width)) {
                     return false;
                 }
 #endif
-                MOVED(moved_loaded, (uint64_t)stride * sizeof(KestValue));
+                MOVED(moved_loaded, (uint64_t)width * sizeof(KestValue));
                 memcpy(top, mine + base + (size_t)index * stride,
-                       sizeof(KestValue) * stride);
-                top += stride;
+                       sizeof(KestValue) * width);
+                top += width;
                 NEXT;
             }
         case KEST_OP_STORE_SLOTS:
@@ -5211,19 +5214,27 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 uint16_t base = READ_U16();
                 uint16_t stride = READ_U16();
                 uint16_t count = READ_U16();
-                top -= stride;
+                uint16_t width = READ_U16();
+                top -= width;
                 KestValue *value = top;
                 int64_t index = (--top)->integer;
                 IN_RUN(index, count);
 #if KEST_CHECKED
                 if (!own_slots(vmp, frame, instruction, base,
-                               (uint32_t)base + (uint32_t)count * stride)) {
+                               (uint32_t)base + (uint32_t)(count - 1) * stride +
+                                   width)) {
                     return false;
                 }
 #endif
-                MOVED(moved_stored, (uint64_t)stride * sizeof(KestValue));
+                MOVED(moved_stored, (uint64_t)width * sizeof(KestValue));
                 memcpy(mine + base + (size_t)index * stride, value,
-                       sizeof(KestValue) * stride);
+                       sizeof(KestValue) * width);
+                NEXT;
+            }
+        case KEST_OP_IN_RUN:
+            THREADED(KEST_OP_IN_RUN) {
+                uint16_t count = READ_U16();
+                IN_RUN(top[-1].integer, count);
                 NEXT;
             }
         case KEST_OP_OFFSET_ADDR:

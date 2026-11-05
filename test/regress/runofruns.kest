@@ -1,0 +1,181 @@
+// Guards against writing one of a run of runs at an index worked out while
+// running, and one of a run in a local with an operator or into a field of
+// one: `grid[i][j] = 9`, `grid[i][2] = 9`, `xs[i] += 5` and `ps[i].y = 9`
+// were each refused as a fault in the compiler, in a local, and the first two
+// inside an element of an array as well.
+
+module test.regress.runofruns
+
+struct P {
+    x: i32
+    y: i32
+}
+
+struct Cell {
+    hp: i32
+    up: bool
+}
+
+struct Board {
+    tag: i32
+    grid: [[i32; 3]; 2]
+    seen: [[bool; 2]; 2]
+    cells: [[Cell; 2]; 2]
+    cube: [[[i32; 2]; 3]; 2]
+}
+
+fn board(tag: i32) -> Board {
+    return Board(
+        tag,
+        [[1, 2, 3], [4, 5, 6]],
+        [[false, false], [false, false]],
+        [[Cell(1, false), Cell(2, false)], [Cell(3, false), Cell(4, false)]],
+        [[[0, 0], [0, 0], [0, 0]], [[0, 0], [0, 0], [0, 0]]]
+    )
+}
+
+// Grows the array the place being written is in, while what is written is
+// worked out.
+fn grown(boards: [Board]) -> i32 {
+    for n in 0..64 {
+        push(boards, board(n))
+    }
+    return 77
+}
+
+fn local(i: i32, j: i32) -> i32 {
+    let grid: [[i32; 3]; 2] = [[1, 2, 3], [4, 5, 6]]
+    grid[i][j] = 9
+    grid[i - 1][j] += 10
+    grid[i][j - 1] *= 3
+    grid[i][2 - j] -= 4
+    grid[i - 1][j - 1] /= 2
+    if grid[0][0] != 1 ||
+            grid[0][1] != 1 ||
+            grid[0][2] != 13 ||
+            grid[1][0] != 0 ||
+            grid[1][1] != 15 ||
+            grid[1][2] != 9 {
+        return 1
+    }
+    grid[i][0] = 21
+    grid[i - 1][2] += 1
+    if grid[1][0] != 21 || grid[0][2] != 14 {
+        return 1
+    }
+    let xs: [i32; 3] = [1, 2, 3]
+    let ps: [P; 2] = [P(1, 2), P(3, 4)]
+    xs[i] += 5
+    xs[j] -= 1
+    ps[i].y = 9
+    ps[i - 1].x += 7
+    ps[i] = P(ps[i].x * 2, ps[i].y)
+    if xs[0] != 1 ||
+            xs[1] != 7 ||
+            xs[2] != 2 ||
+            ps[0].x != 8 ||
+            ps[0].y != 2 ||
+            ps[1].x != 6 ||
+            ps[1].y != 9 {
+        return 2
+    }
+    let b = board(5)
+    b.grid[i][j] = 40
+    b.seen[i][i] = true
+    b.cells[i][j - 1].hp += 10
+    b.cells[i - 1][i].up = true
+    b.cube[i][j][i - 1] = 8
+    b.cube[i][1][j - 1] = 6
+    if b.grid[1][2] != 40 ||
+            !b.seen[1][1] ||
+            b.seen[0][0] ||
+            b.cells[1][1].hp != 14 ||
+            !b.cells[0][1].up ||
+            b.cells[1][1].up ||
+            b.cube[1][2][0] != 8 ||
+            b.cube[1][1][1] != 6 ||
+            b.tag != 5 {
+        return 3
+    }
+    let vs: [vec2; 2] = [vec2(1.0, 2.0), vec2(3.0, 4.0)]
+    vs[i] += vec2(0.5, 0.5)
+    if vs[1].x != 3.5 || vs[1].y != 4.5 || vs[0].x != 1.0 {
+        return 4
+    }
+    return 0
+}
+
+fn element(boards: [Board], k: i32, i: i32, j: i32) -> i32 {
+    boards[k].grid[i][j] = 9
+    boards[k].grid[i - 1][j] += 10
+    boards[k].grid[i][2 - j] -= 4
+    if boards[k].grid[0][2] != 13 ||
+            boards[k].grid[1][2] != 9 ||
+            boards[k].grid[1][0] != 0 ||
+            boards[k].grid[1][1] != 5 {
+        return 5
+    }
+    boards[k].grid[i][1] *= 2
+    boards[k].grid[i - 1][0] = 30
+    if boards[k].grid[1][1] != 10 || boards[k].grid[0][0] != 30 {
+        return 5
+    }
+    boards[k].seen[i][j - 1] = true
+    boards[k].cells[i][i].hp *= 5
+    boards[k].cells[i - 1][j - 2].up = true
+    boards[k].cube[i][j][i] = 3
+    boards[k].cube[i - 1][1][j - 2] = 2
+    if !boards[k].seen[1][1] ||
+            boards[k].seen[1][0] ||
+            boards[k].cells[1][1].hp != 20 ||
+            !boards[k].cells[0][0].up ||
+            boards[k].cube[1][2][1] != 3 ||
+            boards[k].cube[0][1][0] != 2 ||
+            boards[k].tag != 7 {
+        return 6
+    }
+    return 0
+}
+
+fn main() -> i32 {
+    let failed = local(1, 2)
+    if failed != 0 {
+        return failed
+    }
+    let boards: [Board] = array()
+    push(boards, board(6))
+    push(boards, board(7))
+    failed = element(boards, 1, 1, 2)
+    if failed != 0 {
+        return failed
+    }
+    if boards[0].grid[1][2] != 6 || boards[0].tag != 6 {
+        return 7
+    }
+    let total = 0
+    for k in 0..len(boards) {
+        for i in 0..2 {
+            for j in 0..3 {
+                boards[k].grid[i][j] = k * 100 + i * 3 + j
+            }
+        }
+    }
+    for k in 0..len(boards) {
+        for i in 0..2 {
+            for j in 0..3 {
+                total += boards[k].grid[i][j]
+            }
+        }
+    }
+    if total != 630 {
+        return 8
+    }
+    let at = len(boards) - 1
+    boards[at].grid[at][at + 1] = grown(boards)
+    if boards[1].grid[1][2] != 77 ||
+            boards[1].grid[1][1] != 104 ||
+            len(boards) != 66 {
+        return 9
+    }
+    return 0
+}

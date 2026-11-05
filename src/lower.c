@@ -1432,6 +1432,7 @@ static void read_place(Lower *lower, const KestIrOp *op) {
         emit_u16(lower, place->slot, op->span);
         emit_u16(lower, place->stride, op->span);
         emit_u16(lower, place->count, op->span);
+        emit_u16(lower, place->slots, op->span);
         return;
     case KEST_IR_PLACE_ELEM:
         // One of a run inside the element is only ever a place a write is
@@ -1524,6 +1525,7 @@ static void write_place(Lower *lower, const KestIrOp *op) {
         emit_u16(lower, place->slot, op->span);
         emit_u16(lower, place->stride, op->span);
         emit_u16(lower, place->count, op->span);
+        emit_u16(lower, place->slots, op->span);
         return;
     case KEST_IR_PLACE_ELEM: {
         if (place->count > 0) {
@@ -1774,6 +1776,10 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         emit_u16(lower, op->imm[0], span);
         return;
     }
+    case KEST_IR_IN_RUN:
+        emit(lower, KEST_OP_IN_RUN, span);
+        emit_u16(lower, op->imm[0], span);
+        return;
     case KEST_IR_TO_FLOAT:
         emit(lower, kest_is_unsigned(op->type) ? KEST_OP_U2F : KEST_OP_I2F,
              span);

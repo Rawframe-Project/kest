@@ -159,12 +159,18 @@ static const char *names_only_what_is_there(const KestModule *module,
             previous = value;
         }
         // Three read a run with a stride between its pieces, and what they
-        // read last is the first plus the stride times the count.
+        // read last is the first plus the stride times the count, or, of the
+        // two in the frame, as far into the last as they read of each.
         if (op == KEST_OP_CONST_AT || op == KEST_OP_LOAD_SLOTS ||
             op == KEST_OP_STORE_SLOTS) {
             uint32_t first = kest_chunk_u16(chunk, at + 1);
-            uint32_t reach = first + kest_chunk_u16(chunk, at + 3) *
-                                         kest_chunk_u16(chunk, at + 5);
+            uint32_t stride = kest_chunk_u16(chunk, at + 3);
+            uint32_t count = kest_chunk_u16(chunk, at + 5);
+            uint32_t reach = first + stride * count;
+            if (op != KEST_OP_CONST_AT && count > 0) {
+                reach = first + stride * (count - 1) +
+                        kest_chunk_u16(chunk, at + 7);
+            }
             uint32_t has = op == KEST_OP_CONST_AT ? chunk->constant_count
                                                   : chunk->slot_count;
             if (reach > has) {
@@ -1345,17 +1351,34 @@ static const char *element_field(Kinds *w, Kind array, uint32_t offset,
     return NULL;
 }
 
-// Whether `whole` holds, somewhere inside it, a run of `count` things each
-// `step` bytes wide with a value of type `field` at `offset` bytes into the
-// first of them: what an address stepped along that run reads.
+// Whether all of `whole` is a run of `count` things each `step` bytes wide
+// with a value of type `field` at `offset` bytes into the first of them: a
+// fixed run of them, or a run of runs read as one run of what the innermost
+// holds, which is how a place at more than one index worked out while running
+// is reached. Each of the outer run's has to be all of a run of the inner, and
+// nothing less: a run found inside one of them would be stepped along past its
+// end into the next.
+static bool all_a_run(const KestType *whole, uint32_t step, uint32_t count,
+                      uint32_t offset, const KestType *field) {
+    if (whole == NULL || whole->tag != KEST_T_FIXED || whole->element == NULL) {
+        return false;
+    }
+    if (whole->count == count && whole->element->byte_size == step &&
+        offset < step && field_of(NULL, whole->element, offset, field)) {
+        return true;
+    }
+    return whole->count > 0 && count % whole->count == 0 &&
+           all_a_run(whole->element, step, count / whole->count, offset, field);
+}
+
+// Whether `whole` holds, somewhere inside it, such a run: what an address
+// stepped along that run reads.
 static bool run_holds(const KestType *whole, uint32_t step, uint32_t count,
                       uint32_t offset, const KestType *field) {
     if (whole == NULL) {
         return false;
     }
-    if (whole->tag == KEST_T_FIXED && whole->count == count &&
-        whole->element != NULL && whole->element->byte_size == step &&
-        offset < step && field_of(NULL, whole->element, offset, field)) {
+    if (all_a_run(whole, step, count, offset, field)) {
         return true;
     }
     if (whole->tag == KEST_T_STRUCT) {
@@ -1959,7 +1982,7 @@ static const char *kinds_step(Kinds *w) {
             return wrong;
         }
         w->depth--;
-        for (uint32_t k = 0; k < u[1]; k++) {
+        for (uint32_t k = 0; k < u[3]; k++) {
             Kind all = resolved(v, w->now, 0, u[0] + k);
             for (uint32_t row = 1; row < u[2]; row++) {
                 all = joined(v, all,
@@ -1975,26 +1998,28 @@ static const char *kinds_step(Kinds *w) {
     case KEST_OP_STORE_SLOTS: {
         // A row a run chooses is any of them, so each is what it held or what
         // is written, whichever it turns out to be.
-        for (uint32_t k = 0; k < u[1]; k++) {
-            if ((wrong = needs_top(w, u[1] - k, NEEDS_ANYTHING)) != NULL) {
+        for (uint32_t k = 0; k < u[3]; k++) {
+            if ((wrong = needs_top(w, u[3] - k, NEEDS_ANYTHING)) != NULL) {
                 return wrong;
             }
         }
-        if ((wrong = needs_top(w, u[1] + 1, NEEDS_NUMBER)) != NULL) {
+        if ((wrong = needs_top(w, u[3] + 1, NEEDS_NUMBER)) != NULL) {
             return wrong;
         }
         for (uint32_t row = 0; row < u[2]; row++) {
-            for (uint32_t k = 0; k < u[1]; k++) {
+            for (uint32_t k = 0; k < u[3]; k++) {
                 uint32_t s = u[0] + row * u[1] + k;
                 SLOT(w, s) =
                     joined(v, resolved(v, w->now, 0, s),
                            resolved(v, w->now, chunk->slot_count,
-                                    chunk->slot_count + w->depth - (u[1] - k)));
+                                    chunk->slot_count + w->depth - (u[3] - k)));
             }
         }
-        w->depth -= u[1] + 1;
+        w->depth -= u[3] + 1;
         return NULL;
     }
+    case KEST_OP_IN_RUN:
+        return needs_top(w, 1, NEEDS_NUMBER);
 
     case KEST_OP_LEN:
         return simply(w, "h", "n");

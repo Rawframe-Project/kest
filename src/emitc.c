@@ -253,9 +253,10 @@ static uint8_t *slot_modes(KestArena *scratch, const KestIrBody *body) {
     }
     for (uint32_t p = 0; p < body->place_count; p++) {
         const KestIrPlace *place = &body->places[p];
-        if (place->kind == KEST_IR_PLACE_RUN) {
+        if (place->kind == KEST_IR_PLACE_RUN && place->count > 0) {
             mark_frame(modes, slots, place->slot,
-                       (uint32_t)place->count * place->stride);
+                       (uint32_t)(place->count - 1) * place->stride +
+                           place->slots);
         }
     }
     for (uint32_t i = 0; i < body->op_count; i++) {
@@ -1522,6 +1523,7 @@ static bool in_memory(const Walk *walk, const KestIrOp *op) {
     case KEST_IR_SHL:
     case KEST_IR_SHR:
     case KEST_IR_NARROW:
+    case KEST_IR_IN_RUN:
     case KEST_IR_TO_FLOAT:
     case KEST_IR_TO_WHOLE:
     case KEST_IR_BITS:
@@ -1631,7 +1633,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             // it runs. The index is held aside because what comes back sits
             // where it was, and the machine's own sentence answers for an
             // index that is not one of them.
-            if (reads != 1 || leaves != place->stride) {
+            if (reads != 1 || leaves != place->slots) {
                 cannot(walk, "one of a run read at something other than an "
                              "index");
                 break;
@@ -1642,7 +1644,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
                 "        if (!kest_run_at(rt, which, %u, %u)) {\n"
                 "            return false;\n        }\n",
                 first, (unsigned)place->count, op->span.offset);
-            for (uint16_t k = 0; k < place->stride; k++) {
+            for (uint16_t k = 0; k < place->slots; k++) {
                 at_stack(walk, first, base + k);
                 say(c, out, "        %s = f[%u + which * %u];\n", first,
                     (unsigned)place->slot + k, (unsigned)place->stride);
@@ -1677,7 +1679,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         if (place->kind == KEST_IR_PLACE_RUN) {
             // And the same the other way round: the index under what is being
             // written, which is what the machine pops in that order.
-            if (reads != (uint32_t)place->stride + 1 || leaves != 0) {
+            if (reads != (uint32_t)place->slots + 1 || leaves != 0) {
                 cannot(walk, "one of a run written at something other than an "
                              "index");
                 break;
@@ -1688,7 +1690,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
                 "        if (!kest_run_at(rt, which, %u, %u)) {\n"
                 "            return false;\n        }\n",
                 first, (unsigned)place->count, op->span.offset);
-            for (uint16_t k = 0; k < place->stride; k++) {
+            for (uint16_t k = 0; k < place->slots; k++) {
                 at_stack(walk, second, base + 1 + k);
                 say(c, out, "        f[%u + which * %u] = %s;\n",
                     (unsigned)place->slot + k, (unsigned)place->stride, second);
@@ -1959,6 +1961,19 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         say(c, out, "\n");
         break;
     }
+    case KEST_IR_IN_RUN:
+        // One of the indexes into a run of runs, asked the machine's own
+        // question about its own count before the run is reached as one.
+        if (reads != 1 || leaves != 1) {
+            cannot(walk, "an index held to a run that is not one number");
+            break;
+        }
+        at_stack(walk, first, base);
+        say(c, out,
+            "    if (!kest_run_at(rt, %s.integer, %u, %u)) {\n"
+            "        return false;\n    }\n",
+            first, (unsigned)op->imm[0], op->span.offset);
+        break;
     case KEST_IR_TO_FLOAT:
         at_stack(walk, first, base);
         at_stack(walk, second, base);

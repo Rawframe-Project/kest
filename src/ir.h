@@ -49,7 +49,8 @@ typedef enum {
     // A run of slots in the frame: a name, or a field of one, or one of a
     // fixed run at an index written down.
     KEST_IR_PLACE_SLOT,
-    // One of a fixed run in the frame at an index worked out while running.
+    // One of a fixed run in the frame at an index worked out while running,
+    // or as many slots of one as `slots` says, from the first slot on.
     KEST_IR_PLACE_RUN,
     // One of an array or of a store, as the handle and the index.
     KEST_IR_PLACE_ELEM,
@@ -167,6 +168,10 @@ typedef enum {
     // because a backend may put the two together and one that does not is
     // still right.
     KEST_IR_NARROW,
+    // An index held to how many there are, `imm[0]`, and left as it was: one
+    // of the indexes into a run of runs, which is written as one run whose
+    // own check cannot say which index was outside.
+    KEST_IR_IN_RUN,
     // Between whole numbers and floats. Each one is somewhere a type was
     // named, so none of them happens on its own.
     KEST_IR_TO_FLOAT,

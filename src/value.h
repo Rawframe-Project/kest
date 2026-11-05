@@ -84,9 +84,14 @@ typedef enum {
     KEST_OP_ELEM_AT, // u16 offset, u16 layout
     // That many of something, laid out where it stands. The index is worked
     // out while running, so these take a base and a stride rather than the
-    // single slot `load` and `store` take.
-    KEST_OP_LOAD_SLOTS,  // u16 base, u16 stride, u16 count
-    KEST_OP_STORE_SLOTS, // u16 base, u16 stride, u16 count
+    // single slot `load` and `store` take, and how many slots of one of them
+    // are read or written: a field of one is fewer than the stride.
+    KEST_OP_LOAD_SLOTS,  // u16 base, u16 stride, u16 count, u16 width
+    KEST_OP_STORE_SLOTS, // u16 base, u16 stride, u16 count, u16 width
+    // An index worked out while running held to how many there are, and left
+    // where it is: one of the indexes into a run of runs, which is reached as
+    // one run and so is asked about each of its own.
+    KEST_OP_IN_RUN, // u16 count
     // The address of one of them inside memory the host laid out.
     KEST_OP_OFFSET_ADDR, // u16 stride, u16 count
     KEST_OP_LOAD_AT,     // u16 byte offset, u16 layout

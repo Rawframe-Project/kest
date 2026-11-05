@@ -2174,6 +2174,69 @@ if [ "$runpast_ways" -eq 2 ]; then
 end, refused in C with the machine's line"
 fi
 
+# And one of a run of runs written with its second index past its run, in a
+# local and inside an element. The runs are reached as one run, which the
+# index still fits, so only each index's own check refuses it: without it,
+# the write goes into the next row and the program answers what is there.
+runsof_said="no write past a run of runs was refused in C"
+runsof_ways=0
+for runsof_place in "grid" "boards[0].grid"; do
+    cat >"$work"/runsof.kest <<PROGRAM
+module runsof
+
+struct Board {
+    tag: i32
+    grid: [[i32; 3]; 2]
+}
+
+fn main() -> i32 {
+    let grid: [[i32; 3]; 2] = [[1, 2, 3], [4, 5, 6]]
+    let boards: [Board] = array()
+    push(boards, Board(7, [[1, 2, 3], [4, 5, 6]]))
+    let at = len(boards) + 2
+    let nought = len(boards) - 1
+    $runsof_place[nought][at] = 9
+    return $runsof_place[1][0] + grid[0][0] - 1
+}
+PROGRAM
+    if ! $build_dir/kest emit --c "$work"/runsof.kest \
+            >"$work"/runsof.c 2>"$work"/why ||
+            ! $cc -O1 -Iinclude -o "$work"/runsof "$work"/runsof.c \
+                $build_dir/libkest.a -lm 2>>"$work"/why; then
+        {
+            echo "    a write past a run of runs will not build against the \
+C this wrote:"
+            sed 's/^/        /' "$work"/why | head -5
+        } >>"$said"
+        wrong=$((wrong + 1))
+        continue
+    fi
+    runsof_compiled=$(KEST_LIB=lib/ "$work"/runsof "$work"/runsof.kest \
+                          2>&1 </dev/null | grep '^error')
+    runsof_machine=$(KEST_LIB=lib/ $build_dir/kest run "$work"/runsof.kest \
+                         2>&1 </dev/null | grep '^error')
+    case "$runsof_compiled" in
+    *"K0604"*"index 3 is outside 3 of them"*)
+        if [ "$runsof_compiled" = "$runsof_machine" ]; then
+            runsof_ways=$((runsof_ways + 1))
+        else
+            echo "    \`$runsof_place[nought][at] = 9\` past the run was said \
+\`$runsof_compiled\` in C and \`$runsof_machine\` by the machine" >>"$said"
+            wrong=$((wrong + 1))
+        fi
+        ;;
+    *)
+        echo "    \`$runsof_place[nought][at] = 9\` past the run said \
+\`${runsof_compiled:-nothing}\` in C" >>"$said"
+        wrong=$((wrong + 1))
+        ;;
+    esac
+done
+if [ "$runsof_ways" -eq 2 ]; then
+    runsof_said="a run of runs written past its second run, in a local and \
+in an element, refused in C with the machine's line"
+fi
+
 # And a walk that hands its array to the host, whose door calls back into the
 # program and shortens it. The walk proofs refuse a walk that calls the host,
 # because a host handed an array can do exactly this, and only a host can
@@ -2704,5 +2767,5 @@ own run both ways for the same answer and the same words, $walked of those \
 again walking the heap before every allocation with $not_walked left out for \
 growing worlds, $sanitised again under the sanitisers, $fused_said, \
 $inside_said, $stopped_said, $tag_said, $unmade_said, $runpast_said, \
-$wants_a_host that ask the host for what a file this wrote does not provide, \
+$runsof_said, $wants_a_host that ask the host for what a file this wrote does not provide, \
 and $refused_walked allocation(s) of a host without its door refused in turn"
