@@ -1433,8 +1433,9 @@ static const Instruction INSTRUCTIONS[] = {
     {"clear", NONE, {}},
     {"elem.addr", U16, {IS_NUMBER}},
     {"elem.at", U16_U16, {IS_NUMBER, IS_LAYOUT}},
-    {"load.slots", U16_U16_U16, {IS_SLOT, IS_NUMBER, IS_NUMBER}},
-    {"store.slots", U16_U16_U16, {IS_SLOT, IS_NUMBER, IS_NUMBER}},
+    {"load.slots", U16_X4, {IS_SLOT, IS_NUMBER, IS_NUMBER, IS_NUMBER}},
+    {"store.slots", U16_X4, {IS_SLOT, IS_NUMBER, IS_NUMBER, IS_NUMBER}},
+    {"in.run", U16, {IS_NUMBER}},
     {"offset.addr", U16_U16, {IS_NUMBER, IS_NUMBER}},
     {"load.at", U16_U16, {IS_NUMBER, IS_LAYOUT}},
     {"len", NONE, {}},
@@ -2137,6 +2138,7 @@ bool kest_op_allocates(uint8_t op) {
     case KEST_OP_SUB_F_LL:
     case KEST_OP_LOAD_SLOTS:
     case KEST_OP_STORE_SLOTS:
+    case KEST_OP_IN_RUN:
     case KEST_OP_OFFSET_ADDR:
     case KEST_OP_LOAD_AT:
     case KEST_OP_LEN:
@@ -2366,12 +2368,15 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
         t = u[1];
         break;
     case KEST_OP_CONST_AT:
-    case KEST_OP_LOAD_SLOTS:
         t = 1;
         g = u[1];
         break;
+    case KEST_OP_LOAD_SLOTS:
+        t = 1;
+        g = u[3];
+        break;
     case KEST_OP_STORE_SLOTS:
-        t = u[1] + 1;
+        t = u[3] + 1;
         break;
     case KEST_OP_STORE:
     case KEST_OP_POP:
@@ -2546,6 +2551,7 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
     case KEST_OP_NEG_I:
     case KEST_OP_NOT_I:
     case KEST_OP_NARROW:
+    case KEST_OP_IN_RUN:
     case KEST_OP_I2F:
     case KEST_OP_U2F:
     case KEST_OP_F2I:
@@ -2935,6 +2941,17 @@ static uint32_t disassemble_one(const KestModule *module,
                 offset + 5 + read_u16(chunk, offset + 3));
         break;
     case U16_X4:
+        // The slots of a run read as `const.at` reads the constants of one,
+        // with how many of each when that is not all of it.
+        if (op == KEST_OP_LOAD_SLOTS || op == KEST_OP_STORE_SLOTS) {
+            fprintf(out, "+%u  %u of %u", read_u16(chunk, offset + 1),
+                    read_u16(chunk, offset + 3), read_u16(chunk, offset + 5));
+            if (read_u16(chunk, offset + 7) != read_u16(chunk, offset + 3)) {
+                fprintf(out, "  %u of each", read_u16(chunk, offset + 7));
+            }
+            fprintf(out, "\n");
+            break;
+        }
         fprintf(out, "%u  %u  %u[%u]\n", read_u16(chunk, offset + 1),
                 read_u16(chunk, offset + 3), read_u16(chunk, offset + 5),
                 read_u16(chunk, offset + 7));

@@ -5038,6 +5038,11 @@ K0604|run|fn main() -> i32 {\n    let v: [i32; 2] = [1, 2]\n    let i = 5\n    r
 K0604|run|struct Row {\n    tag: i32\n    count: [i32; 3]\n}\n\nfn main() -> i32 {\n    let rows: [Row] = array()\n    push(rows, Row(7, [1, 2, 3]))\n    let i = 3\n    rows[0].count[i] = 9\n    return 0\n}|index 3 is outside 3 of them
 K0604|run|struct Row {\n    tag: i32\n    count: [i32; 3]\n}\n\nfn main() -> i32 {\n    let rows: [Row] = array()\n    push(rows, Row(7, [1, 2, 3]))\n    let i = 3\n    rows[0].count[i] += 9\n    return 0\n}|index 3 is outside 3 of them
 K0604|run|struct Row {\n    tag: i32\n    count: [i32; 3]\n}\n\nfn main() -> i32 {\n    let rows: [Row] = array()\n    push(rows, Row(7, [1, 2, 3]))\n    let i = 3\n    let z = 0\n    rows[0].count[i] /= z\n    return 0\n}|index 3 is outside 3 of them
+K0604|run|fn main() -> i32 {\n    let grid: [[i32; 3]; 2] = [[1, 2, 3], [4, 5, 6]]\n    let i = 2\n    let j = 0\n    grid[i][j] = 9\n    return 0\n}|index 2 is outside 2 of them
+K0604|run|fn main() -> i32 {\n    let grid: [[i32; 3]; 2] = [[1, 2, 3], [4, 5, 6]]\n    let i = 0\n    let j = 3\n    grid[i][j] = 9\n    return grid[1][0]\n}|index 3 is outside 3 of them
+K0604|run|struct Board {\n    tag: i32\n    grid: [[i32; 3]; 2]\n}\n\nfn main() -> i32 {\n    let boards: [Board] = array()\n    push(boards, Board(7, [[1, 2, 3], [4, 5, 6]]))\n    let i = 0\n    let j = 3\n    boards[0].grid[i][j] += 9\n    return 0\n}|index 3 is outside 3 of them
+K0604|run|fn main() -> i32 {\n    let xs: [i32; 3] = [1, 2, 3]\n    let i = 3\n    xs[i] += 5\n    return 0\n}|index 3 is outside 3 of them
+K0604|run|struct P {\n    x: i32\n    y: i32\n}\n\nfn main() -> i32 {\n    let ps: [P; 2] = [P(1, 2), P(3, 4)]\n    let i = 2\n    ps[i].y = 9\n    return 0\n}|index 2 is outside 2 of them
 K0604|run|fn main() -> i32 {\n    let a: [i32] = array()\n    let i = 5\n    return a[i]\n}|index 5 is outside an array of length 0
 K0604|run|fn main() -> i32 {\n    let i = 9\n    return i32("ab"[i])\n}|index 9 is outside text of 2 bytes
 K0619|tick 2|fn onEvent(e: text) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|`onEvent` takes `text`, and tick has `i32` to give it

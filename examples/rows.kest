@@ -105,6 +105,16 @@ fn main() -> i32 {
         return 15
     }
 
+    // A run of runs held where it stands, written at both indexes worked out
+    // while it runs: one run of six cells, with each index held to its own
+    // count first, so one past its row is not taken for the next row's.
+    let grid: [[Cell; 3]; 2] = [made(1).cells, made(2).cells]
+    grid[which][cell].at = 7
+    grid[which - 1][cell].weight += 1.0
+    if grid[1][2].at != 7 || grid[0][2].weight != 2.0 || grid[1][1].at != 2 {
+        return 16
+    }
+
     // A struct with nothing in it, built where it stands and read from a
     // constant, with numbers after it either way. Pushed as no slots at all,
     // both of these answered whatever the stack was holding.
