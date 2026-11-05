@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.7.0](https://github.com/Rawframe-Project/kest/compare/v0.6.0...v0.7.0) (2026-11-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **compiler:** a program writing one of a run inside one of another run, each at an index worked out while running, with a field or an index written down between them, was refused with K0505 and now compiles and runs.
+* **compiler:** a program writing one of a run of runs at an index worked out while running, in a local or inside an element of an array, or writing one of a run in a local at such an index with an operator or into a field of one, was refused with K0505 and now compiles and runs.
+* **verifier:** a program reading or writing one of a fixed run at an index worked out while running, where the run is inside one of another run at an index written down, inside an element of an array, was refused with K0411 and now compiles and runs.
+
+### Fixed
+
+* **compiler:** write a run inside one of a run at two running indexes ([#257](https://github.com/Rawframe-Project/kest/issues/257)) ([9702918](https://github.com/Rawframe-Project/kest/commit/9702918cd56a56e4787a9740076bed0c71f10522)), closes [#252](https://github.com/Rawframe-Project/kest/issues/252)
+* **compiler:** write runs of runs and local runs at running indexes ([#256](https://github.com/Rawframe-Project/kest/issues/256)) ([cd939e9](https://github.com/Rawframe-Project/kest/commit/cd939e9c819b454c42d29a83c67210c5f670e2fa)), closes [#249](https://github.com/Rawframe-Project/kest/issues/249) [#251](https://github.com/Rawframe-Project/kest/issues/251)
+* **verifier:** find a run inside one of a run at a running index ([#254](https://github.com/Rawframe-Project/kest/issues/254)) ([b95fbf3](https://github.com/Rawframe-Project/kest/commit/b95fbf3294ad61028e108ce7181daa72e6f3b661)), closes [#253](https://github.com/Rawframe-Project/kest/issues/253)
+
 ## 0.6.0 (2026-11-04)
 
 ### Changed
