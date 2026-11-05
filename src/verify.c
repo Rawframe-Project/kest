@@ -1368,6 +1368,14 @@ static bool run_holds(const KestType *whole, uint32_t step, uint32_t count,
             }
         }
     }
+    // Inside one of a run at an index written down: each of them is laid out
+    // alike, so the one the offset falls in is asked, as `field_of` does.
+    if (whole->tag == KEST_T_FIXED && whole->element != NULL &&
+        whole->element->byte_size > 0 && offset < whole->byte_size &&
+        run_holds(whole->element, step, count,
+                  offset % whole->element->byte_size, field)) {
+        return true;
+    }
     return false;
 }
 

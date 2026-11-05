@@ -1,0 +1,79 @@
+// Guards against reading or writing one of a fixed run at an index worked out
+// while running, where the run is inside one of another run at an index
+// written down, inside an element of an array: `boxes[k].ss[1].xs[j]` and
+// `boards[k].grid[1][j]` were refused by the verifier as a fault in the
+// compiler, because it looked for the run in the fields of a struct and not
+// in one of a run.
+
+module test.regress.runinrun
+
+struct S {
+    tag: i32
+    xs: [i32; 4]
+    seen: [bool; 3]
+}
+
+struct Box {
+    a: i64
+    ss: [S; 2]
+}
+
+struct Board {
+    tag: i32
+    grid: [[i32; 3]; 2]
+}
+
+fn box(a: i64) -> Box {
+    return Box(
+        a,
+        [
+            S(1, [1, 2, 3, 4], [false, false, false]),
+            S(2, [5, 6, 7, 8], [false, false, false])
+        ]
+    )
+}
+
+fn main() -> i32 {
+    let boxes: [Box] = array()
+    push(boxes, box(10))
+    push(boxes, box(20))
+    let k = len(boxes) - 1
+    let j = k + 1
+    if boxes[k].ss[1].xs[j] != 7 || boxes[k].ss[0].xs[j] != 3 {
+        return 1
+    }
+    boxes[k].ss[1].xs[j] = 9
+    boxes[k].ss[0].xs[j + 1] += 10
+    boxes[k].ss[1].seen[j] = true
+    if boxes[1].ss[1].xs[2] != 9 ||
+            boxes[1].ss[0].xs[3] != 14 ||
+            !boxes[1].ss[1].seen[2] ||
+            boxes[1].ss[0].seen[2] ||
+            boxes[0].ss[1].xs[2] != 7 ||
+            boxes[1].a != 20 ||
+            boxes[1].ss[1].tag != 2 {
+        return 2
+    }
+    let total = 0
+    for at in 0..4 {
+        boxes[0].ss[1].xs[at] *= 2
+        total += boxes[0].ss[1].xs[at]
+    }
+    if total != 52 {
+        return 3
+    }
+    let boards: [Board] = array()
+    push(boards, Board(7, [[1, 2, 3], [4, 5, 6]]))
+    if boards[0].grid[1][j] != 6 || boards[0].grid[0][j - 1] != 2 {
+        return 4
+    }
+    boards[0].grid[1][j - 2] = 40
+    boards[0].grid[0][j] -= 1
+    if boards[0].grid[1][0] != 40 ||
+            boards[0].grid[0][2] != 2 ||
+            boards[0].grid[1][2] != 6 ||
+            boards[0].tag != 7 {
+        return 5
+    }
+    return 0
+}
