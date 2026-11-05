@@ -4987,6 +4987,264 @@ static void compile_counting(Compiler *compiler, const KestStmt *stmt) {
     }
 }
 
+// What an assignment writes: the value, worked out with what the target held
+// when there is an operator, which was read onto the stack above anything the
+// place keeps there, or is read where it is.
+static void assigned_value(Compiler *compiler, const KestStmt *stmt,
+                           uint16_t slot, bool read_in_place) {
+    const KestType *type = stmt->assign.target->type;
+    // A vector is read whole and worked out a component at a time, which is
+    // what its operators are anywhere.
+    if (stmt->assign.op != KEST_TOK_EQ && kest_is_vector(type)) {
+        VectorSide was = {slot, type};
+        if (!read_in_place) {
+            was = vector_kept(compiler, type, stmt->span);
+        }
+        VectorSide by = vector_side(compiler, stmt->assign.value);
+        vector_arith(compiler, arithmetic_of(stmt->assign.op), was, by, type,
+                     stmt->span);
+        return;
+    }
+    compile_expr(compiler, stmt->assign.value);
+    if (stmt->assign.op == KEST_TOK_EQ) {
+        return;
+    }
+    stack_pop(compiler, 1);
+    KestIrKind does = KEST_IR_DIV;
+    switch (stmt->assign.op) {
+    case KEST_TOK_PLUSEQ:
+        does = KEST_IR_ADD;
+        break;
+    case KEST_TOK_MINUSEQ:
+        does = KEST_IR_SUB;
+        break;
+    case KEST_TOK_STAREQ:
+        does = KEST_IR_MUL;
+        break;
+    default:
+        break;
+    }
+    ir_emit(compiler, does, type, 2, type, 1, stmt->span);
+    if (stmt->assign.op != KEST_TOK_SLASHEQ || dividing_can_leave(type)) {
+        ir_narrow(compiler, type, stmt->span);
+    }
+}
+
+// Whether a write can start from what a way's runs are in: a local's slots,
+// or an element's bytes held apart as the array and the index.
+static bool way_starts(Compiler *compiler, const RunWay *way) {
+    uint16_t base = 0;
+    uint16_t size = 0;
+    return resolve_place(compiler, way->holder, &base, &size) ||
+           (can_address(compiler, way->holder) &&
+            in_an_element(compiler, way->holder));
+}
+
+// The ways a write goes through to its target, innermost first, written into
+// `ways` when it is not NULL, and how many: nought when there is no such way
+// out to a local or an element. More than one is a run inside one of a run,
+// each at an index worked out while running, with a field or an index written
+// down between them (`ss[i].xs[j]`): one of the outer run holds more than the
+// inner run, so the two cannot be read as one run.
+static uint32_t run_ways(Compiler *compiler, const KestExpr *target,
+                         RunWay *ways) {
+    uint32_t count = 0;
+    RunWay way = {0};
+    for (const KestExpr *at = target; run_way(compiler, at, &way);
+         at = way.holder) {
+        if (ways != NULL) {
+            ways[count] = way;
+        }
+        count++;
+        if (way_starts(compiler, &way)) {
+            return count;
+        }
+    }
+    return 0;
+}
+
+// A write through more than one way: each way past the innermost reaches a
+// run that is copied out of the copy of the next way out, or of what holds the
+// outermost, and written back into it once the target in it is written.
+typedef struct {
+    const RunWay *ways;
+    uint32_t count;
+    // The slot each way's index is kept in, and each way's copy of what it
+    // reaches. Inside an element, the outermost's index is not kept in a slot:
+    // it stays on the stack above the array and the element's index.
+    uint16_t *index;
+    uint16_t *copy;
+    bool element;
+    uint16_t base;
+    uint16_t offset;
+} Through;
+
+// One of a way's run in the frame, read onto the stack, or written from the
+// slots at `from`.
+static void way_in_slots(Compiler *compiler, const RunWay *way, uint16_t index,
+                         uint16_t at, const KestType *type, uint16_t wide,
+                         bool reading, uint16_t from, KestSpan span) {
+    const KestType *whole = whole_type(compiler);
+    stack_push(compiler, 1);
+    load_slots(compiler, index, 1, whole, span);
+    if (reading) {
+        stack_pop(compiler, 1);
+        stack_push(compiler, wide);
+        uint32_t where = run_place(compiler, at, value_slots(way->one),
+                                   (uint16_t)way->count, wide, type, span);
+        uint32_t read =
+            ir_emit(compiler, KEST_IR_LOAD, type, 1, type, wide, span);
+        ir_place_of(compiler, read, where);
+        return;
+    }
+    stack_push(compiler, wide);
+    load_slots(compiler, from, wide, type, span);
+    stack_pop(compiler, (uint32_t)(wide + 1));
+    uint32_t where = run_place(compiler, at, value_slots(way->one),
+                               (uint16_t)way->count, wide, type, span);
+    uint32_t put = ir_emit(compiler, KEST_IR_PUT, type, 2, NULL, 0, span);
+    ir_place_of(compiler, put, where);
+}
+
+// Way `m`'s copy, taken out of what holds it or written back into it.
+static void through_one(Compiler *compiler, const Through *through, uint32_t m,
+                        bool out, KestSpan span) {
+    const RunWay *way = &through->ways[m];
+    const KestType *type = through->ways[m - 1].holder->type;
+    uint16_t wide = value_slots(type);
+    uint16_t copy = through->copy[m];
+    bool outermost = m + 1 == through->count;
+    if (!outermost || !through->element) {
+        uint16_t at = outermost ? through->base : through->copy[m + 1];
+        if (out) {
+            way_in_slots(compiler, way, through->index[m],
+                         (uint16_t)(at + way->slots), type, wide, true, 0,
+                         span);
+            stack_pop(compiler, wide);
+            store_slots(compiler, copy, wide, type, span);
+        } else {
+            way_in_slots(compiler, way, through->index[m],
+                         (uint16_t)(at + way->slots), type, wide, false, copy,
+                         span);
+        }
+        return;
+    }
+    // The array, the element's index and the run's are the top three, and a
+    // read leaves them there for the write.
+    uint16_t stride = (uint16_t)way->one->byte_size;
+    if (out) {
+        stack_push(compiler, wide);
+        uint32_t where =
+            elem_place(compiler, ir_top(compiler, 2), ir_top(compiler, 1),
+                       through->offset, type, span);
+        in_the_run(compiler, where, stride, (uint16_t)way->count,
+                   (uint16_t)way->bytes);
+        uint32_t read =
+            ir_emit(compiler, KEST_IR_LOAD, type, 0, type, wide, span);
+        ir_place_of(compiler, read, where);
+        stack_pop(compiler, wide);
+        store_slots(compiler, copy, wide, type, span);
+        return;
+    }
+    stack_push(compiler, wide);
+    load_slots(compiler, copy, wide, type, span);
+    stack_pop(compiler, (uint32_t)(wide + 3));
+    uint32_t where =
+        elem_place(compiler, ir_top(compiler, 3), ir_top(compiler, 2),
+                   through->offset, type, span);
+    in_the_run(compiler, where, stride, (uint16_t)way->count,
+               (uint16_t)way->bytes);
+    uint32_t put = ir_emit(compiler, KEST_IR_PUT, type, 4, NULL, 0, span);
+    ir_place_of(compiler, put, where);
+}
+
+static void copies_out(Compiler *compiler, const Through *through,
+                       KestSpan span) {
+    for (uint32_t m = through->count - 1; m > 0; m--) {
+        through_one(compiler, through, m, true, span);
+    }
+}
+
+// A write to one of a run that is inside one of another run, each at an index
+// worked out while running, with a field or an index written down between
+// them. The indexes are worked out in the order they were written, the
+// copies are taken, the target is written in the innermost copy and the
+// copies are written back, innermost first. A call reaches nothing in the
+// frame, so in a local the copies can be taken before the value is worked out;
+// inside an element they are taken again after it, because what works it out
+// may have written the element. False when the target is not one of these.
+static bool assign_through_runs(Compiler *compiler, const KestStmt *stmt) {
+    const KestExpr *target = stmt->assign.target;
+    uint32_t count = run_ways(compiler, target, NULL);
+    if (count < 2) {
+        return false;
+    }
+    RunWay *ways = KEST_ARENA_ARRAY(compiler->ir->arena, RunWay, count);
+    uint16_t *index = KEST_ARENA_ARRAY(compiler->ir->arena, uint16_t, count);
+    uint16_t *copy = KEST_ARENA_ARRAY(compiler->ir->arena, uint16_t, count);
+    if (ways == NULL || index == NULL || copy == NULL) {
+        compiler->out_of_memory = true;
+        return true;
+    }
+    run_ways(compiler, target, ways);
+    Through through = {ways, count, index, copy, false, 0, 0};
+    const RunWay *outer = &ways[count - 1];
+    uint16_t size = 0;
+    through.element =
+        !resolve_place(compiler, outer->holder, &through.base, &size);
+
+    uint32_t slots_before = compiler->next_slot;
+    const KestType *whole = whole_type(compiler);
+    if (through.element) {
+        compiler->place_apart = true;
+        bool made = compile_address(compiler, outer->holder, &through.offset);
+        compiler->place_apart = false;
+        if (!made) {
+            fault(compiler, target->span,
+                  "this assigns to something that is not a place");
+            return true;
+        }
+        compile_run_index(compiler, outer, stmt->span);
+    }
+    for (uint32_t m = through.element ? count - 1 : count; m-- > 0;) {
+        compile_run_index(compiler, &ways[m], stmt->span);
+        index[m] = reserve_slot(compiler, 1);
+        hold_slots(compiler, stmt->span);
+        stack_pop(compiler, 1);
+        store_slots(compiler, index[m], 1, whole, stmt->span);
+    }
+    for (uint32_t m = 1; m < count; m++) {
+        copy[m] = reserve_slot(compiler, value_slots(ways[m - 1].holder->type));
+    }
+    hold_slots(compiler, stmt->span);
+
+    const KestType *type = target->type;
+    uint16_t wide = value_slots(type);
+    uint16_t at = (uint16_t)(copy[1] + ways[0].slots);
+    bool operating = stmt->assign.op != KEST_TOK_EQ;
+    if (operating) {
+        copies_out(compiler, &through, stmt->span);
+        uint16_t read = kest_is_vector(type) ? wide : 1;
+        way_in_slots(compiler, &ways[0], index[0], at, type, read, true, 0,
+                     stmt->span);
+    }
+    assigned_value(compiler, stmt, 0, false);
+    uint16_t value = reserve_slot(compiler, wide);
+    hold_slots(compiler, stmt->span);
+    stack_pop(compiler, wide);
+    store_slots(compiler, value, wide, type, stmt->span);
+    if (!operating || through.element) {
+        copies_out(compiler, &through, stmt->span);
+    }
+    way_in_slots(compiler, &ways[0], index[0], at, type, wide, false, value,
+                 stmt->span);
+    for (uint32_t m = 1; m < count; m++) {
+        through_one(compiler, &through, m, false, stmt->span);
+    }
+    compiler->next_slot = slots_before;
+    return true;
+}
+
 static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt);
 
 static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
@@ -5140,6 +5398,10 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         bool in_an_elements_run = stepped && !in_a_run &&
                                   can_address(compiler, way.holder) &&
                                   in_an_element(compiler, way.holder);
+        if (stepped && !in_a_run && !in_an_elements_run &&
+            assign_through_runs(compiler, stmt)) {
+            break;
+        }
         uint16_t stride = 0;
         uint16_t count = 0;
         if (in_a_run || in_an_elements_run) {
@@ -5226,43 +5488,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             }
         }
 
-        if (stepping_vector) {
-            VectorSide was = {slot, target->type};
-            if (!read_in_place) {
-                was = vector_kept(compiler, target->type, stmt->span);
-            }
-            VectorSide by = vector_side(compiler, stmt->assign.value);
-            vector_arith(compiler, arithmetic_of(stmt->assign.op), was, by,
-                         target->type, stmt->span);
-        } else {
-            compile_expr(compiler, stmt->assign.value);
-        }
-
-        if (stepping_vector) {
-            // Worked out above.
-        } else if (stmt->assign.op != KEST_TOK_EQ) {
-            stack_pop(compiler, 1);
-            KestIrKind does = KEST_IR_DIV;
-            switch (stmt->assign.op) {
-            case KEST_TOK_PLUSEQ:
-                does = KEST_IR_ADD;
-                break;
-            case KEST_TOK_MINUSEQ:
-                does = KEST_IR_SUB;
-                break;
-            case KEST_TOK_STAREQ:
-                does = KEST_IR_MUL;
-                break;
-            default:
-                break;
-            }
-            ir_emit(compiler, does, target->type, 2, target->type, 1,
-                    stmt->span);
-            if (stmt->assign.op != KEST_TOK_SLASHEQ ||
-                dividing_can_leave(target->type)) {
-                ir_narrow(compiler, target->type, stmt->span);
-            }
-        }
+        assigned_value(compiler, stmt, slot, read_in_place);
 
         if (in_slots) {
             stack_pop(compiler, size);

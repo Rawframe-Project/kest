@@ -1,0 +1,162 @@
+// Guards against writing one of a run that is a field of one of another run,
+// each at an index worked out while running: `ss[i].xs[j] = 9` was refused as
+// a fault in the compiler, in a local and inside an element of an array, and
+// so was every operator into it and every deeper place of the same shape.
+
+module test.regress.runinfield
+
+struct Cell {
+    at: i32
+    weight: f32
+}
+
+struct S {
+    tag: i32
+    xs: [i32; 4]
+    cells: [Cell; 2]
+    grid: [[i32; 2]; 2]
+    vs: [vec2; 2]
+}
+
+struct Row {
+    s: [S; 2]
+    seen: bool
+}
+
+struct Box {
+    a: i64
+    ss: [S; 2]
+}
+
+fn made(tag: i32) -> S {
+    return S(
+        tag,
+        [tag, tag + 1, tag + 2, tag + 3],
+        [Cell(tag, 0.5), Cell(tag + 1, 1.5)],
+        [[1, 2], [3, 4]],
+        [vec2(1.0, 2.0), vec2(3.0, 4.0)]
+    )
+}
+
+// What the value of a write writes into the element being written, which the
+// write has to keep: the tag and another of the run.
+fn tagged(boxes: [Box], k: i64, i: i64) -> i32 {
+    boxes[k].ss[i].tag = 77
+    boxes[k].ss[i].xs[0] = 66
+    return 5
+}
+
+fn bumped(boxes: [Box], k: i64, i: i64) -> i32 {
+    boxes[k].ss[i].xs[0] += 1
+    return 1
+}
+
+// And one that grows the array being written.
+fn grown(boxes: [Box]) -> i32 {
+    for n in 0..64 {
+        push(boxes, Box(0, [made(n), made(n)]))
+    }
+    return 64
+}
+
+fn local(i: i64, j: i64) -> i32 {
+    let ss: [S; 2] = [made(10), made(20)]
+    ss[i].xs[j] = 9
+    ss[i - 1].xs[j + 1] += 5
+    ss[i].xs[j - 1] -= 3
+    ss[i - 1].xs[j - 2] *= 2
+    ss[i].xs[j + 1] /= 2
+    if ss[1].xs[2] != 9 ||
+            ss[0].xs[3] != 18 ||
+            ss[1].xs[1] != 18 ||
+            ss[0].xs[0] != 20 ||
+            ss[1].xs[3] != 11 ||
+            ss[1].xs[0] != 20 ||
+            ss[0].tag != 10 ||
+            ss[1].tag != 20 {
+        return 1
+    }
+    ss[i].cells[j - 1].at = 40
+    ss[i - 1].cells[j - 2].weight += 1.0
+    ss[i].grid[j - 1][j - 2] = 50
+    ss[i - 1].grid[i][j - 1] += 7
+    ss[i].vs[j - 2] += vec2(1.0, 1.0)
+    if ss[1].cells[1].at != 40 ||
+            ss[1].cells[1].weight != 1.5 ||
+            ss[0].cells[0].weight != 1.5 ||
+            ss[1].grid[1][0] != 50 ||
+            ss[0].grid[1][1] != 11 ||
+            ss[1].vs[0] != vec2(2.0, 3.0) ||
+            ss[1].vs[1] != vec2(3.0, 4.0) {
+        return 2
+    }
+    let rows: [Row; 2] = [
+        Row([made(1), made(2)], false),
+        Row([made(3), made(4)], true)
+    ]
+    rows[i].s[i - 1].xs[j] = 99
+    rows[i - 1].s[i].cells[j - 1].at += 100
+    if rows[1].s[0].xs[2] != 99 ||
+            rows[0].s[1].cells[1].at != 103 ||
+            rows[1].s[0].xs[1] != 4 ||
+            !rows[1].seen ||
+            rows[0].s[1].tag != 2 {
+        return 3
+    }
+    let total = 0
+    for a in 0..2 {
+        for b in 0..4 {
+            ss[a].xs[b] += 1
+            total += ss[a].xs[b]
+        }
+    }
+    if total != 127 {
+        return 4
+    }
+    return 0
+}
+
+fn element(boxes: [Box], k: i64, i: i64, j: i64) -> i32 {
+    boxes[k].ss[i].xs[j] = 9
+    boxes[k].ss[i - 1].xs[j + 1] += 5
+    boxes[k].ss[i].cells[j - 1].at = 40
+    boxes[k].ss[i].grid[j - 1][j - 2] = 50
+    boxes[k].ss[i - 1].vs[j - 1] += vec2(1.0, 1.0)
+    if boxes[1].ss[1].xs[2] != 9 ||
+            boxes[1].ss[0].xs[3] != 18 ||
+            boxes[1].ss[1].cells[1].at != 40 ||
+            boxes[1].ss[1].grid[1][0] != 50 ||
+            boxes[1].ss[0].vs[1] != vec2(4.0, 5.0) ||
+            boxes[0].ss[1].xs[2] != 22 ||
+            boxes[1].a != 2 {
+        return 5
+    }
+    boxes[k].ss[i].xs[j + 1] = tagged(boxes, k, i)
+    if boxes[1].ss[1].xs[3] != 5 ||
+            boxes[1].ss[1].xs[0] != 66 ||
+            boxes[1].ss[1].tag != 77 {
+        return 6
+    }
+    boxes[k].ss[i].xs[j] -= bumped(boxes, k, i)
+    if boxes[1].ss[1].xs[2] != 8 || boxes[1].ss[1].xs[0] != 67 {
+        return 8
+    }
+    boxes[k].ss[i].xs[j - 1] += grown(boxes)
+    if len(boxes) != 66 ||
+            boxes[1].ss[1].xs[1] != 85 ||
+            boxes[65].ss[1].xs[1] != 64 {
+        return 7
+    }
+    return 0
+}
+
+fn main() -> i32 {
+    let answer = local(1, 2)
+    if answer != 0 {
+        return answer
+    }
+    let boxes: [Box] = array()
+    push(boxes, Box(1, [made(10), made(20)]))
+    push(boxes, Box(2, [made(10), made(20)]))
+    return element(boxes, 1, 1, 2)
+}
