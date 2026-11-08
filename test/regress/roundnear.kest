@@ -70,5 +70,11 @@ fn main() -> i32 {
             math.round(f32(0.0 - 0.5)) != 0.0 {
         return 6
     }
+    // Nought keeps its sign: the whole number below it is itself, and nothing
+    // is left above it. The sum it was took nought under nought to nought.
+    let under_nought: f64 = 0.0 * (0.0 - 1.0)
+    if 1.0 / rounded(under_nought) > 0.0 || 1.0 / rounded(0.0) < 0.0 {
+        return 7
+    }
     return 0
 }
