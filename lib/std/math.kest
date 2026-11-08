@@ -234,17 +234,29 @@ fn acos(value: f32) -> f32? no.alloc deterministic {
 }
 
 // The nearest whole number, with a half going up: `round(2.5)` is 3 and
-// `round(-2.5)` is -2, which is what `floor(value + 0.5)` says and what a
-// program that wanted anything else would write for itself.
+// `round(-2.5)` is -2, which is what a program that wanted anything else would
+// write for itself.
+//
+// What is left above the whole number below is asked rather than half added
+// first, because the addition is rounded before `floor` sees it: the `f64`
+// just under a half and a half make exactly halfway to 1, which goes up, and
+// past 2^52 an odd whole number and a half go to the even one above. What is
+// left is exact from nought up and from -1/2 down, and between them it is more
+// than a half, which rounding cannot take under one.
 //
 // Written here rather than declared. Every `extern` in this module is a
 // function every host of every program that imports it has to provide, so one
 // more is a thing every host has to be changed for; what can be built out of
 // what is already declared is built.
 fn round(value: f64) -> f64 no.alloc deterministic {
-    return floor(value + 0.5)
+    let below = floor(value)
+    if value - below >= 0.5 {
+        return below + 1.0
+    }
+    return below
 }
 
+// An `f32` and a half are added in `f64`, which holds every such sum exactly.
 fn round(value: f32) -> f32 no.alloc deterministic {
     return f32(floor(f64(value) + 0.5))
 }
