@@ -19,6 +19,14 @@ defaults:
   run:
     shell: bash
 
+# Lua's source by version and SHA-256. The tarball is kept in a cache keyed by
+# this pin, saved only from main, and checked against the pin whether it came
+# from the cache or from lua.org: lua.org did not answer the Windows job twice
+# in a row, and a run that has kept it no longer asks.
+env:
+  LUA_VERSION: 5.4.9
+  LUA_SHA256: 2335b6c582a52654f94612bf10d2f4672805d05329aa6568b1d8cd9e5c6fb8e6
+
 jobs:
   unix:
     permissions:
@@ -42,6 +50,33 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Restore Lua's source
+        id: lua
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/lua
+          key: lua-${{ runner.os }}-${{ env.LUA_VERSION }}-${{ env.LUA_SHA256 }}
+      - name: Lua's source, held to its pin
+        run: |
+          kept=.cache/lua/lua-$LUA_VERSION.tar.gz
+          sum() { (sha256sum "$1" 2>/dev/null || shasum -a 256 "$1") | cut -d' ' -f1; }
+          if [ ! -f "$kept" ] || [ "$(sum "$kept")" != "$LUA_SHA256" ]; then
+            mkdir -p .cache/lua
+            # Asked again when the far end drops the connection, which it did.
+            curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 \
+              -o "$kept" "https://www.lua.org/ftp/lua-$LUA_VERSION.tar.gz"
+          fi
+          if [ "$(sum "$kept")" != "$LUA_SHA256" ]; then
+            echo "::error::lua-$LUA_VERSION.tar.gz is not the file its SHA-256 pins"
+            exit 1
+          fi
+          cp "$kept" lua.tar.gz
+      - name: Keep Lua's source
+        if: steps.lua.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/lua
+          key: ${{ steps.lua.outputs.cache-primary-key }}
       - name: Kest, and the comparators built from their own source
         run: |
           if ! command -v ninja >/dev/null; then
@@ -49,11 +84,8 @@ jobs:
           fi
           cmake --preset dev -DKEST_CHECKED=OFF
           cmake --build --preset dev --target kest
-          # Asked again when the far end drops the connection, which it did.
-          curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 \
-            -o lua.tar.gz https://www.lua.org/ftp/lua-5.4.9.tar.gz
           tar xzf lua.tar.gz
-          make -C lua-5.4.9 -j "$( [ "$(uname)" = Darwin ] && echo macosx || echo linux )" >/dev/null
+          make -C "lua-$LUA_VERSION" -j "$( [ "$(uname)" = Darwin ] && echo macosx || echo linux )" >/dev/null
           git clone -q https://github.com/LuaJIT/LuaJIT.git luajit
           # LuaJIT's makefile will not guess which macOS it is building for.
           if [ "$(uname)" = Darwin ]; then
@@ -69,7 +101,7 @@ jobs:
         run: |
           export KEST_LIB=lib/
           PLATFORM=${{ matrix.platform }} KEST=out/dev/kest \
-            LUA=lua-5.4.9/src/lua LUAJIT=luajit/src/luajit \
+            LUA=lua-$LUA_VERSION/src/lua LUAJIT=luajit/src/luajit \
             LUAU=$( [ -x luau-bin/luau ] && echo luau-bin/luau ) NODE=node \
             OUT=answers-${{ matrix.platform }}.tsv sh bench/determinism.sh
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -87,6 +119,33 @@ jobs:
         with:
           persist-credentials: false
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      - name: Restore Lua's source
+        id: lua
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/lua
+          key: lua-${{ runner.os }}-${{ env.LUA_VERSION }}-${{ env.LUA_SHA256 }}
+      - name: Lua's source, held to its pin
+        run: |
+          kept=.cache/lua/lua-$LUA_VERSION.tar.gz
+          sum() { (sha256sum "$1" 2>/dev/null || shasum -a 256 "$1") | cut -d' ' -f1; }
+          if [ ! -f "$kept" ] || [ "$(sum "$kept")" != "$LUA_SHA256" ]; then
+            mkdir -p .cache/lua
+            # Asked again when the far end drops the connection, which it did.
+            curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 \
+              -o "$kept" "https://www.lua.org/ftp/lua-$LUA_VERSION.tar.gz"
+          fi
+          if [ "$(sum "$kept")" != "$LUA_SHA256" ]; then
+            echo "::error::lua-$LUA_VERSION.tar.gz is not the file its SHA-256 pins"
+            exit 1
+          fi
+          cp "$kept" lua.tar.gz
+      - name: Keep Lua's source
+        if: steps.lua.outputs.cache-hit != 'true' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/lua
+          key: ${{ steps.lua.outputs.cache-primary-key }}
       - name: Kest
         run: |
           cmake --preset windows-msvc
@@ -94,10 +153,8 @@ jobs:
       - name: Lua 5.4 and LuaJIT from their own source, and Luau's release
         shell: pwsh
         run: |
-          Invoke-WebRequest -Uri https://www.lua.org/ftp/lua-5.4.9.tar.gz -OutFile lua.tar.gz `
-            -MaximumRetryCount 5 -RetryIntervalSec 10
           tar xzf lua.tar.gz
-          $sources = Get-ChildItem lua-5.4.9\src\*.c |
+          $sources = Get-ChildItem "lua-$env:LUA_VERSION\src\*.c" |
             Where-Object Name -ne 'luac.c' | ForEach-Object FullName
           cl /nologo /O2 /MD $sources /Fe:lua.exe
           if ($LASTEXITCODE -ne 0) { throw "Lua would not build" }
