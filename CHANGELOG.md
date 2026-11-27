@@ -2,6 +2,25 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.8.0](https://github.com/Rawframe-Project/kest/compare/v0.7.0...v0.8.0) (2026-11-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **checker:** a function type whose parameter promises more than the function's own parameter, and an array, store or reference whose element promises more or less than the one wanted, are refused with K0310.
+* **std:** `math.round` of an `f64` answers 0 for 0.49999999999999994, and an odd whole number past 2^52 answers itself, where both answered one more. `round(-0.0)` is -0.0 where it was 0.0. The determinism profile is `kest-det 5`.
+
+### Added
+
+* **tools:** run the fast tests before every push ([#266](https://github.com/Rawframe-Project/kest/issues/266)) ([ee5a7e2](https://github.com/Rawframe-Project/kest/commit/ee5a7e200fb27a0f7b5f32ca416705359adc879d))
+
+
+### Fixed
+
+* **checker:** let no function value reach a type promising more ([#269](https://github.com/Rawframe-Project/kest/issues/269)) ([43b6a69](https://github.com/Rawframe-Project/kest/commit/43b6a69a390ad90c84d44ff2499575453f8291f7))
+* **checker:** tell two functions apart by a promise in either order ([#271](https://github.com/Rawframe-Project/kest/issues/271)) ([7a01017](https://github.com/Rawframe-Project/kest/commit/7a010170d282343baa44d4345a0fa58d9bf5ce42))
+* **std:** round an f64 to the nearest whole number ([#261](https://github.com/Rawframe-Project/kest/issues/261)) ([42c2619](https://github.com/Rawframe-Project/kest/commit/42c26197ea213be6d44943e8c7ed729fc2dc965d)), closes [#258](https://github.com/Rawframe-Project/kest/issues/258)
+
 ## 0.7.0 (2026-11-05)
 
 ### Changed
