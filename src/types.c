@@ -3689,13 +3689,17 @@ static const char *symbol_of(KestProgram *program, const char *name,
 }
 
 // Whether these two take exactly the same things, which is the only way two
-// functions of one name are the same function.
+// functions of one name are the same function. Asked both ways, because
+// `kest_type_equal` lets a function value promise more than is wanted: one way
+// alone made `take(cb: fn() no.alloc)` and `take(cb: fn())` the same function
+// when they were written in that order and two functions in the other.
 static bool same_parameters(const KestType *a, const KestType *b) {
     if (a->param_count != b->param_count) {
         return false;
     }
     for (uint32_t i = 0; i < a->param_count; i++) {
-        if (!kest_type_equal(a->params[i], b->params[i])) {
+        if (!kest_type_equal(a->params[i], b->params[i]) ||
+            !kest_type_equal(b->params[i], a->params[i])) {
             return false;
         }
     }
