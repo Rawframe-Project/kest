@@ -26,7 +26,7 @@ The words this project uses with a fixed meaning, in code, comments, diagnostics
 | **plot** | a 16 KB region of the heap that hands out places of one width |
 | **scratch** | a block of working memory: `scratch { }` in a program, or a host's mark and rewind |
 | **promise** | `no.alloc`, `no.host` or `deterministic`, written after a function's result and proved |
-| **profile** | the named, versioned set of rules `deterministic` promises (`kest-det 4`) |
+| **profile** | the named, versioned set of rules `deterministic` promises (`kest-det 5`) |
 | **edition** | the version of the language a program is read in (`2026`) |
 | **chunk** | one compiled function in bytecode, with its constants, slot count and source origins |
 | **body** | one concrete function in IR; a generic has one body per set of types |
