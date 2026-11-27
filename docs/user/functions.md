@@ -140,7 +140,7 @@ Nothing is boxed: a copy over `[vec2]` knows a `vec2` is two `f32`s. The cost is
 
 ## Function values
 
-A function's name is a value of its function type, and the promises are part of the type: `fn(i32) -> i32 no.alloc`. A value that promises more may go where one that promises less is wanted, never the other way.
+A function's name is a value of its function type, and the promises are part of the type: `fn(i32) -> i32 no.alloc`. A value that promises more may go where one that promises less is wanted, never the other way. What a function takes goes the other way: a function taking any `fn()` may be held as one taking a `fn() no.alloc`, since it is handed less than it can take, but a function taking a `fn() no.alloc` is never held as one taking any `fn()`, since it would be handed one that allocates. An array, a store or a reference is written on both sides, so the promises of what it holds must be the same: a `[fn() no.alloc]` is not a `[fn()]`, or whoever was handed it could put a function that allocates into it.
 
 ```kest
 module apply

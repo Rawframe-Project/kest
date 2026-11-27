@@ -1,0 +1,29 @@
+// Refused with K0310. Guards against a run of `fn() no.alloc` handed where a
+// run of `fn()` was wanted: the callee put a function that allocates into it,
+// and the caller then called it inside its promise, which only the machine
+// caught.
+
+module test.refused.widened
+
+fn grows() {
+    let xs = [1, 2, 3]
+    xs[0] = 4
+}
+
+fn quiet() no.alloc {
+}
+
+fn widen(into: [fn()]) {
+    into[0] = grows
+}
+
+fn run(all: [fn() no.alloc]) no.alloc {
+    all[0]()
+}
+
+fn main() -> i32 {
+    let tight: [fn() no.alloc] = [quiet]
+    widen(tight)
+    run(tight)
+    return 0
+}

@@ -1,0 +1,20 @@
+// Refused with K0310. Guards against a function that takes a `fn() no.alloc`
+// being held as one that takes any `fn()`: it was then handed one that
+// allocates and called it inside its promise, which only the machine caught.
+
+module test.refused.handedon
+
+fn grows() {
+    let xs = [1, 2, 3]
+    xs[0] = 4
+}
+
+fn careful(step: fn() no.alloc) no.alloc {
+    step()
+}
+
+fn main() -> i32 {
+    let loose: fn(fn()) = careful
+    loose(grows)
+    return 0
+}
