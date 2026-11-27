@@ -1,7 +1,7 @@
 // Guards against two functions of one name, one taking a `fn() no.alloc` and
 // the other a `fn()`, being refused as one function said twice when the one
 // that promises is written first: the order they are written in decides
-// nothing.
+// nothing, and naming one as a value picks the one whose shape is asked for.
 
 module test.regress.promisedapart
 
@@ -20,9 +20,22 @@ fn grows() {
     xs[0] = 4
 }
 
+fn quiet() no.alloc {
+}
+
 fn main() -> i32 {
     if take(grows) != 2 {
         return 1
+    }
+    // Named as a value, each is the one whose shape is the one asked for,
+    // not the first written that fits it.
+    let loose: fn(fn()) -> i32 = take
+    if loose(grows) != 2 {
+        return 2
+    }
+    let tight: fn(fn() no.alloc) -> i32 = take
+    if tight(quiet) != 1 {
+        return 3
     }
     return 0
 }

@@ -587,17 +587,24 @@ static KestSymbol *named_function(Checker *checker, const char *name,
     if (count <= 1 || expected == NULL || expected->tag != KEST_T_FN) {
         return NULL;
     }
-    for (uint32_t i = 0; i < count; i++) {
-        // One that takes types is not one of them: its shape holds names that
-        // compare equal to anything, so it would answer for every wanted
-        // shape. Which copy of it is meant is settled after this, by what is
-        // wanted (`copy_for_shape`).
-        if (all[i]->type->type_param_count > 0) {
-            continue;
-        }
-        if (kest_type_equal(all[i]->type, expected)) {
-            all[i]->named = true;
-            return all[i];
+    // The one that is exactly what is wanted first, and only then one that
+    // fits it. A function value may promise more than is wanted, so two of a
+    // name told apart by a promise can both fit; the first of them written
+    // was the one named, whether or not the other was the shape asked for.
+    for (int exact = 1; exact >= 0; exact--) {
+        for (uint32_t i = 0; i < count; i++) {
+            // One that takes types is not one of them: its shape holds names
+            // that compare equal to anything, so it would answer for every
+            // wanted shape. Which copy of it is meant is settled after this,
+            // by what is wanted (`copy_for_shape`).
+            if (all[i]->type->type_param_count > 0) {
+                continue;
+            }
+            if (kest_type_equal(all[i]->type, expected) &&
+                (!exact || kest_type_equal(expected, all[i]->type))) {
+                all[i]->named = true;
+                return all[i];
+            }
         }
     }
     return NULL;
