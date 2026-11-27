@@ -5033,7 +5033,12 @@ const char *kest_nearest_member(const KestType *type, const char *name,
     return best;
 }
 
-bool kest_type_equal(const KestType *a, const KestType *b) {
+// Whether a value of type `a` may stand where a `b` is wanted. `exact` asks
+// for the promises inside to be the same rather than for `a`'s to be more: a
+// run, a store or a reference is a place both sides write into, so a run of
+// `fn() no.alloc` handed where a run of `fn()` was wanted is a run the callee
+// may put any `fn()` into, and the caller then calls it as one that promised.
+static bool fits(const KestType *a, const KestType *b, bool exact) {
     if (a == NULL || b == NULL) {
         return true;
     }
@@ -5054,23 +5059,34 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
     case KEST_T_ARRAY:
     case KEST_T_REF:
     case KEST_T_STORE:
+        return fits(a->element, b->element, true);
+    // Copied where it is handed over, so what the callee writes into its copy
+    // is never read back as the caller's.
     case KEST_T_OPTIONAL:
-        return kest_type_equal(a->element, b->element);
+        return fits(a->element, b->element, exact);
     case KEST_T_FIXED:
-        return a->count == b->count && kest_type_equal(a->element, b->element);
+        return a->count == b->count && fits(a->element, b->element, exact);
     case KEST_T_FN: {
         // Called as (given, wanted): a value that promises more fits where
         // less is asked for.
         // A block and a function value are two things however alike their
         // shapes: one is code run where it was written, the other a value.
         if (a->block != b->block || a->param_count != b->param_count ||
-            !kest_type_equal(a->result, b->result)) {
+            !fits(a->result, b->result, exact)) {
             return false;
         }
+        // What it takes goes the other way. The function is handed what the
+        // type it is called as takes, so a function that wants a `fn()
+        // no.alloc` called as one that takes any `fn()` is handed one that
+        // allocates, and calls it as one that does not.
         for (uint32_t i = 0; i < a->param_count; i++) {
-            if (!kest_type_equal(a->params[i], b->params[i])) {
+            if (!fits(b->params[i], a->params[i], exact)) {
                 return false;
             }
+        }
+        if (exact) {
+            return a->no_alloc == b->no_alloc && a->no_host == b->no_host &&
+                   a->deterministic == b->deterministic;
         }
         // A value promising more may go where one promising less is wanted,
         // and each promise is asked about on its own: one that promises the
@@ -5106,6 +5122,10 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
         return false;
     }
     return false;
+}
+
+bool kest_type_equal(const KestType *a, const KestType *b) {
+    return fits(a, b, false);
 }
 
 // Where a file says what it calls itself, for pointing at the line. Whether it

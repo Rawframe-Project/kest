@@ -1,0 +1,47 @@
+// Guards against a function that takes any `fn()` being refused where one
+// taking a `fn() no.alloc` was wanted: what it takes may promise less than
+// what it is handed, and a function value promising more may still go where
+// one promising less is wanted.
+
+module test.regress.takesless
+
+fn quiet() no.alloc {
+}
+
+fn grows() {
+    let xs = [1, 2, 3]
+    xs[0] = 4
+}
+
+fn calls(step: fn()) -> i32 {
+    step()
+    return 1
+}
+
+fn twice(step: fn() no.alloc) -> i32 no.alloc {
+    step()
+    step()
+    return 2
+}
+
+fn handed(using: fn(fn() no.alloc) -> i32, step: fn() no.alloc) -> i32 {
+    return using(step)
+}
+
+fn main() -> i32 {
+    let tight: fn(fn() no.alloc) -> i32 = calls
+    if tight(quiet) != 1 {
+        return 1
+    }
+    if handed(calls, quiet) != 1 {
+        return 2
+    }
+    if handed(twice, quiet) != 2 {
+        return 3
+    }
+    let any: fn() = quiet
+    if calls(any) != 1 || calls(grows) != 1 {
+        return 4
+    }
+    return 0
+}
