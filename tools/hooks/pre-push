@@ -1,0 +1,29 @@
+#!/bin/sh
+# Builds and runs the fast tests before every push, so a change that breaks
+# the language is caught here instead of in the shared CI. The whole gate is
+# still what "it passes" means; this is the part cheap enough to run on every
+# push. Install once per checkout:
+#
+#   git config core.hooksPath tools/hooks
+#
+# Inside the Rawframe workspace it takes a slot of the workspace's heavy-job
+# wrapper, which sets the parallelism and waits for a free slot, and on
+# Windows it runs on Linux, in the workspace's WSL distribution
+# (tools/linux.sh); elsewhere it runs directly.
+set -eu
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+workspace=""
+dir=$root
+while [ "$dir" != "$(dirname "$dir")" ]; do
+    dir=$(dirname "$dir")
+    if [ -f "$dir/tools/heavy.sh" ] && [ -f "$dir/tools/linux.sh" ]; then
+        workspace=$dir
+        break
+    fi
+done
+[ -n "$workspace" ] || exec cmake --workflow --preset dev-fast
+case "$(uname -s)" in
+MINGW* | MSYS* | CYGWIN*) exec "$workspace/tools/heavy.sh" "$workspace/tools/linux.sh" cmake --workflow --preset dev-fast ;;
+*) exec "$workspace/tools/heavy.sh" cmake --workflow --preset dev-fast ;;
+esac

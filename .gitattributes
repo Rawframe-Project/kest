@@ -1,3 +1,8 @@
 # The trace every platform has to print byte for byte, kept with LF endings in
 # every checkout, Windows' included, so it is compared with the bytes it holds.
 test/conformance.trace text eol=lf
+
+# Shell scripts and hooks keep LF endings in every checkout, so Git's bash
+# on Windows runs them as written.
+*.sh text eol=lf
+tools/hooks/* text eol=lf

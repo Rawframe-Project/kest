@@ -49,7 +49,7 @@ cmake --workflow --preset dev                      # everything: run before sayi
 ctest --preset dev -R regressions                  # one test of the gate
 ```
 
-Every check script runs on its own from the root of the tree after a build, reading the build from `KEST_BUILD` (`out/dev` by default). On the shared development server, run the `dev` workflow, fuzzing and the benchmarks through the workspace's heavy-job wrapper.
+Every check script runs on its own from the root of the tree after a build, reading the build from `KEST_BUILD` (`out/dev` by default). On the workspace's machine, run the `dev` workflow, fuzzing and the benchmarks through the workspace's heavy-job wrapper.
 
 ## Environment switches
 
