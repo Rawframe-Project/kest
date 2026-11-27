@@ -13,6 +13,12 @@
 set -eu
 root=$(git rev-parse --show-toplevel)
 cd "$root"
+# The check runs on the working tree, not on what is pushed, so a change left
+# out of the commit would pass here and fail in CI.
+if ! git -C "$root" diff --quiet HEAD --; then
+    echo "pre-push: tracked files differ from HEAD; commit or stash them, so the check tests what is pushed" >&2
+    exit 1
+fi
 workspace=""
 dir=$root
 while [ "$dir" != "$(dirname "$dir")" ]; do
