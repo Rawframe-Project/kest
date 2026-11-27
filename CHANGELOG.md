@@ -2,24 +2,16 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
-## [0.8.0](https://github.com/Rawframe-Project/kest/compare/v0.7.0...v0.8.0) (2026-11-27)
+## 0.8.0 (2026-11-27)
 
+### Changed
 
-### ⚠ BREAKING CHANGES
-
-* **checker:** a function type whose parameter promises more than the function's own parameter, and an array, store or reference whose element promises more or less than the one wanted, are refused with K0310.
-* **std:** `math.round` of an `f64` answers 0 for 0.49999999999999994, and an odd whole number past 2^52 answers itself, where both answered one more. `round(-0.0)` is -0.0 where it was 0.0. The determinism profile is `kest-det 5`.
-
-### Added
-
-* **tools:** run the fast tests before every push ([#266](https://github.com/Rawframe-Project/kest/issues/266)) ([ee5a7e2](https://github.com/Rawframe-Project/kest/commit/ee5a7e200fb27a0f7b5f32ca416705359adc879d))
-
+- **Breaking:** `math.round` of an `f64` answers the nearest whole number, a half going up, where it answered `floor(value + 0.5)` with the addition rounded before `floor` saw it. `math.round(0.49999999999999994)` answers `0` where it answered `1`; an odd whole number past 2^52, such as `4503599627370497.0`, answers itself where it answered the even number above it; and `math.round(-0.0)` is `-0.0` where it was `0.0`. `math.round(2.5)` is still `3` and `math.round(-2.5)` is still `-2`, and `math.round` of an `f32` is unchanged. A `deterministic` program sees the new answers, so the determinism profile is `kest-det 5` (`kest_profile()`): a replay or a save written under `kest-det 4` that rounds an `f64` may not play back the same. ([#261](https://github.com/Rawframe-Project/kest/pull/261))
+- **Breaking:** A function value can no longer be held as a type that promises more than it does. A function taking a `fn() no.alloc` held as one taking any `fn()` (`let loose: fn(fn()) = careful`), and a `[fn() no.alloc]` handed where a `[fn()]` is wanted, are refused with `K0310`. The checker accepted both, so a `no.alloc`, `no.host` or `deterministic` function could be handed a function that broke its promise, and the machine stopped the program at that call with `K0623`, calling it a fault in the compiler. A store and a reference are held to the same promises as what they hold, like an array. The other way round now compiles where it was refused: a function taking any `fn()` may be held as one taking a `fn() no.alloc`. ([#269](https://github.com/Rawframe-Project/kest/pull/269))
 
 ### Fixed
 
-* **checker:** let no function value reach a type promising more ([#269](https://github.com/Rawframe-Project/kest/issues/269)) ([43b6a69](https://github.com/Rawframe-Project/kest/commit/43b6a69a390ad90c84d44ff2499575453f8291f7))
-* **checker:** tell two functions apart by a promise in either order ([#271](https://github.com/Rawframe-Project/kest/issues/271)) ([7a01017](https://github.com/Rawframe-Project/kest/commit/7a010170d282343baa44d4345a0fa58d9bf5ce42))
-* **std:** round an f64 to the nearest whole number ([#261](https://github.com/Rawframe-Project/kest/issues/261)) ([42c2619](https://github.com/Rawframe-Project/kest/commit/42c26197ea213be6d44943e8c7ed729fc2dc965d)), closes [#258](https://github.com/Rawframe-Project/kest/issues/258)
+- Two functions of one name that differ only in a promise on a function they take, such as `take(step: fn() no.alloc)` and `take(step: fn())`, are two functions whichever is written first. With the promising one first, the second was refused with `K0304` ("`take` is already declared"). A call with a function that keeps the promise matches both and is refused with `K0329`; a call with one that does not picks `take(step: fn())`. Named where a function type is wanted, as in `let f: fn(fn()) -> i32 = take`, the name is the one whose type is exactly that one. ([#271](https://github.com/Rawframe-Project/kest/pull/271))
 
 ## 0.7.0 (2026-11-05)
 
