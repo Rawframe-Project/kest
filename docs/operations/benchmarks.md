@@ -46,4 +46,4 @@ Comparators are found, not built: a row whose engine is not given is left out.
 
 ## Taking them
 
-On the shared server every benchmark goes through the workspace's heavy-job wrapper, and a sitting is taken on a quiet machine: a row records how busy the machine was, and a busy row is retaken rather than kept. `.github/workflows/determinism.yml` runs `determinism.sh` on every CI platform and writes `bench/determinism.tsv`, drawn as `chart-determinism.svg`.
+On the workspace's machine every benchmark goes through the workspace's heavy-job wrapper, and a sitting is taken on a quiet machine: a row records how busy the machine was, and a busy row is retaken rather than kept. `.github/workflows/determinism.yml` runs `determinism.sh` on every CI platform and writes `bench/determinism.tsv`, drawn as `chart-determinism.svg`.

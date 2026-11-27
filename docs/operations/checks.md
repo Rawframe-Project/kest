@@ -12,7 +12,7 @@ Every check is a ctest test of the build it runs against, labeled with its tier 
 | `cmake --workflow --preset dev` | the build, then every test below | several minutes |
 | `ctest --preset dev -R fuzzing` | the seeded fuzzer, eight seeds of 400 inputs over each boundary, under the sanitizers | under a minute |
 
-`dev-fast` is the loop while writing a change; `dev` is what passing means. On the shared server both go through the workspace's heavy-job wrapper. Each check also runs on its own from the root of the tree (`sh tools/check-c.sh ...`), against `out/dev` or the build `KEST_BUILD` names.
+`dev-fast` is the loop while writing a change; `dev` is what passing means. On the workspace's machine both go through the workspace's heavy-job wrapper. Each check also runs on its own from the root of the tree (`sh tools/check-c.sh ...`), against `out/dev` or the build `KEST_BUILD` names.
 
 ## What the gate holds
 
