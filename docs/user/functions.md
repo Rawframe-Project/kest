@@ -62,7 +62,7 @@ fn main() -> i32 {
 a number, text of 3 bytes
 ```
 
-When nothing matches, the error lists every function of the name with what it takes, nearest first. `main` may not be overloaded. A file may add its own `len`, `get`, `set`, `find`, `add` or `remove`; the builtin still answers for the types the file's own does not take.
+When nothing matches, the error lists every function of the name with what it takes, nearest first. A function type that promises more is another type, so `take(step: fn() no.alloc)` and `take(step: fn())` are two functions whichever is written first; a function value that keeps the promise fits both, and a call with one is refused as matching more than one (`K0329`). `main` may not be overloaded. A file may add its own `len`, `get`, `set`, `find`, `add` or `remove`; the builtin still answers for the types the file's own does not take.
 
 ## `x.f(a)`
 

@@ -1,0 +1,28 @@
+// Guards against two functions of one name, one taking a `fn() no.alloc` and
+// the other a `fn()`, being refused as one function said twice when the one
+// that promises is written first: the order they are written in decides
+// nothing.
+
+module test.regress.promisedapart
+
+fn take(step: fn() no.alloc) -> i32 {
+    step()
+    return 1
+}
+
+fn take(step: fn()) -> i32 {
+    step()
+    return 2
+}
+
+fn grows() {
+    let xs = [1, 2, 3]
+    xs[0] = 4
+}
+
+fn main() -> i32 {
+    if take(grows) != 2 {
+        return 1
+    }
+    return 0
+}

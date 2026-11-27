@@ -1,0 +1,20 @@
+// Refused with K0329. Guards against two functions of one name, one taking a
+// `fn() no.alloc` and the other a `fn()`, being one function said twice
+// (K0304) when written in this order and two functions in the other.
+
+module test.refused.promisedtwice
+
+fn take(step: fn() no.alloc) -> i32 {
+    return 1
+}
+
+fn take(step: fn()) -> i32 {
+    return 2
+}
+
+fn quiet() no.alloc {
+}
+
+fn main() -> i32 {
+    return take(quiet)
+}
