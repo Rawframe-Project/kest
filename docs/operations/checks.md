@@ -40,7 +40,7 @@ Each check prints one summary line when it passes; anything else is a failure wi
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every pull request, on every push to `main`, and every night at 00:07 UTC. A new push to a pull request cancels its running CI; runs on `main` are never cancelled.
+`.github/workflows/ci.yml` runs on every pull request, on every push to `main`, and every night at 00:07 UTC. A new push to a pull request cancels its running CI. A run on `main` already going finishes, and the pushes waiting behind it collapse into the newest, which holds every earlier one, so `main` is checked in full once per batch of pushes; the nightly run and a run started by hand keep groups of their own.
 
 | Job | Runs |
 | --- | --- |
