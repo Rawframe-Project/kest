@@ -2,6 +2,13 @@
 
 All notable changes to this project are recorded here, grouped as Added, Changed, Fixed, Removed and Security. The project uses [Semantic Versioning](https://semver.org/). Before 1.0.0, any minor release may change the language, the C API, the ABI and the JSON the command line writes; each entry says what a program or a host has to do about it.
 
+## [0.8.1](https://github.com/Rawframe-Project/kest/compare/v0.8.0...v0.8.1) (2026-11-28)
+
+
+### Fixed
+
+* **tools:** refuse a push while tracked files differ from HEAD ([#272](https://github.com/Rawframe-Project/kest/issues/272)) ([736c893](https://github.com/Rawframe-Project/kest/commit/736c893dccab342ac772a3181350e33c558f6b0c))
+
 ## 0.8.0 (2026-11-27)
 
 ### Changed
